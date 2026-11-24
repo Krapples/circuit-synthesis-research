@@ -38,3 +38,40 @@ observations, conjectures, and unresolved questions.
 Commit after each major step. Use focused commits that capture the implementation, relevant
 verification, and reproducible records for that milestone. Inspect the staged diff and run the
 applicable checks before committing.
+
+## Research map
+
+| Start here | What it contains |
+| --- | --- |
+| [RESEARCH_NOTES.md](RESEARCH_NOTES.md) | Current results, open endpoints, and links to the detailed records. |
+| [NOTES_SYNTHESIS_BENCH.md](sat-search/NOTES_SYNTHESIS_BENCH.md) and [NOTES_SYNTHESIS_FOLLOWUP.md](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md) | Frozen corpus, endpoint verification, sharing hardness, and regional certificate proofs. |
+| [NOTES_PORT_CERTIFICATES.md](sat-search/NOTES_PORT_CERTIFICATES.md) | Port ranks, provider eligibility, global capacity, known regressions, and negative ablations. |
+| [NOTES_L1343.md](sat-search/NOTES_L1343.md) | Fixed-prefix and cube-search work, with exact shard scope and surviving cube IDs. |
+| [sat-search/experiments](sat-search/experiments) | Research implementations, correctness references, and reproducible checks. |
+| [sat-search/results](sat-search/results) | Frozen targets, matched run records, witness circuits, and proof packets. |
+
+Update the quick reference when a bound, minimum, implementation default, or research priority
+changes. Add the proof assumptions, counterexamples, verification scope, and commands to the
+topic notes. Keep raw matched results and checked proof artifacts beside their manifests in
+`sat-search/results`. Put transient logs in `sat-search/logs` and link or archive runs that
+support a durable result. Give each new regression an explicit expected verdict and keep the
+independent reference available.
+
+## Current direction and stopping rules
+
+Prioritize complete-function FPT synthesis, counted-NOT and nonmonotone synthesis, affine
+certificate reconstruction, construction upper bounds, and hybrids with SAT. Audit proofs
+separately from the prototypes that motivated them. Confirm a candidate with small independent
+enumeration or formal proof before making an asymptotic claim.
+
+Close the universal `rank(H) <= 2e` direction once the rank-tight family is confirmed. Revisit
+sharing-only FPT for arbitrary partial labels only when a new restriction addresses the known
+hardness. Archive explicit enumeration work superseded by certificate completion. Resume
+provider matching, exact rectangle allocation, and capacity refinements when there is evidence
+of stronger whole-function bounds or an end-to-end benefit. Reopen SAT propagation changes
+with a measurable effect or a new sound pruning argument.
+
+Prefer general methods and mathematically motivated changes to instance-specific rules, GPU
+work, repeated benchmark replays, or longer caps. Record why a direction was closed and what
+result would justify reopening it. Coordinate complementary theory work with ChatGPT so
+implementation and independent review advance the same questions without duplicating effort.
