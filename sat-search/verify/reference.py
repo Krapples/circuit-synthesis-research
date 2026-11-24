@@ -140,7 +140,8 @@ def brute_exists(n, tt, G, basis='monotone', prefix=(), all_read=True):
 
 # ---------------------------------------------------------------- direct SAT encoding
 
-def sat_exists(n, tt, G, basis='monotone', prefix=(), all_read=True, solver='cadical195', proof=False):
+def sat_exists(n, tt, G, basis='monotone', prefix=(), all_read=True, solver='cadical195', proof=False,
+               seconds=None):
     """Returns (witness or None, info). info has clause/variable counts and, with proof=True and a solver
     supporting it, the DRUP proof lines of an UNSAT answer together with the CNF."""
     if G < max(1, len(prefix)):
@@ -192,7 +193,17 @@ def sat_exists(n, tt, G, basis='monotone', prefix=(), all_read=True, solver='cad
             cnf.append(readers)
     info = dict(vars=pool.top, clauses=len(cnf), solver=solver)
     with Solver(name=solver, bootstrap_with=cnf, with_proof=proof) as s:
-        ok = s.solve()
+        if seconds is None:
+            ok = s.solve()
+        else:                       # time-limited: None means undecided (never treated as UNSAT)
+            import threading
+            timer = threading.Timer(seconds, s.interrupt)
+            timer.start()
+            ok = s.solve_limited(expect_interrupt=True)
+            timer.cancel()
+            if ok is None:
+                info['undecided'] = True
+                return None, info
         if not ok:
             if proof:
                 info['proof'] = s.get_proof()
@@ -209,7 +220,7 @@ def sat_exists(n, tt, G, basis='monotone', prefix=(), all_read=True, solver='cad
     return gates, info
 
 
-def minimum(n, tt, basis='monotone', prefix=(), all_read=True, Gmax=None, backend=sat_exists):
+def minimum(n, tt, basis='monotone', prefix=(), all_read=True, Gmax=None, backend=sat_exists, seconds=None):
     """Smallest G with an exact-G circuit (None if none up to Gmax). With all_read the search starts at the
     counting floor n + G - 1 <= 2G (every non-output wire needs a reader slot) for binary-only bases."""
     lo = max(1, len(prefix))
@@ -217,7 +228,9 @@ def minimum(n, tt, basis='monotone', prefix=(), all_read=True, Gmax=None, backen
         lo = max(lo, n - 1)
     Gmax = Gmax if Gmax is not None else 4 * n + len(prefix)
     for G in range(lo, Gmax + 1):
-        r = backend(n, tt, G, basis, prefix, all_read)
+        r = backend(n, tt, G, basis, prefix, all_read, seconds=seconds) if seconds else             backend(n, tt, G, basis, prefix, all_read)
+        if isinstance(r, tuple) and r[1].get('undecided'):
+            return 'undecided', None
         w = r[0] if isinstance(r, tuple) else r
         if w is not None:
             return G, w

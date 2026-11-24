@@ -1914,9 +1914,37 @@ def frontier_requirements(n, masks, prefix, monotone):
     return binary_prefix + max(0, reads - 1), cuts
 
 
+# Rules whose encodings unpack each target term as a graph edge (exactly two inputs). On other monotone
+# families they crash (verify/differential.py, run full-20261124); the contract below rejects them up front.
+GRAPH_ONLY_FLAGS = ('sens', 'bypass', 'elim', 'readerbudget', 'closedcone', 'outdec', 'matchinginterface')
+
+
+def checked_masks(n, masks, flags, fanout):
+    """Input contract for run_cube. Terms must be nonzero bitmasks over n inputs. Duplicate and non-minimal
+    terms are dropped (the function is unchanged; counts such as the typed OR bound use the term list, so a
+    repeated edge made them unsound). Graph-only rules require every term to have exactly two inputs."""
+    out = []
+    for m in masks:
+        if not isinstance(m, int) or m <= 0 or m >> n:
+            raise ValueError(f'term {m!r} is not a nonzero bitmask over {n} inputs')
+        if m not in out:
+            out.append(m)
+    out = [m for m in out if not any(o != m and o & m == o for o in out)]
+    if any(m.bit_count() != 2 for m in out):
+        bad = [f for f in GRAPH_ONLY_FLAGS if flags.get(f)] + (['fanout'] if fanout else [])
+        if bad:
+            raise ValueError(f'rules {bad} require a graph function (every term has exactly two inputs)')
+    return out
+
+
 def run_cube(args):
     n, masks, G, solver_name, cube, fanout, readonce = args[:7]
     flags = args[7] if len(args) > 7 else {}
+    masks = checked_masks(n, masks, flags, fanout)
+    if flags.get('minimal') and (flags.get('fixgates') or flags.get('colex_from', 0)):
+        # Counterexample (verify/AUDIT.md): MAJ3, pinned OR(0,1), AND(0,1), size 4 is a minimum circuit, but
+        # the duplicate-gate op ordering assumes adjacent equal-operand gates can be swapped.
+        raise ValueError('--minimal is unsound with pinned gates (fixgates / colex_from)')
     if os.path.exists(STOP):
         return cube, 'STOPPED', None, 0.0, ''
     target = lambda x: any(x & m == m for m in masks)
@@ -2234,6 +2262,33 @@ def orbit_min(cube, auts):
     return True
 
 
+def _require_minimal_evidence(ap, a, n, edges):
+    """--minimal is sound only if exact sizes size-1 and size-2 are UNSAT for the whole function (then no
+    circuit has fewer than size gates: padding by two gates preserves the every-wire-read model, and dead
+    gates can be removed when all inputs are essential). Sizes below n - 1 are UNSAT by counting reads.
+    Accept only complete, non-minimal runs whose header names this graph (edges=...) and basis."""
+    import re
+    key = ','.join(f'{u}-{v}' for u, v in sorted(edges))
+    need = {s for s in (a.size - 1, a.size - 2) if s >= n - 1}
+    for path in a.minimal_evidence:
+        ok_header, size = False, None
+        for line in open(path, encoding='utf-8'):
+            h = re.search(r'search: n=(\d+), (\d+) edges, exactly (\d+) gates', line)
+            if h:
+                ek = re.search(r'edges=(\S+)', line)
+                size = int(h.group(3))
+                ok_header = (int(h.group(1)) == n and ek is not None and ek.group(1).rstrip('.;,') == key
+                             and ('mode=monotone' in line) == bool(a.nonot) and 'MINIMALITY' not in line
+                             and 'already UNSAT in logs' in line and ', 0 already UNSAT in logs' in line)
+                continue
+            r = re.search(r'RESULT: ALL UNSAT \(exactly (\d+) gates\)', line)
+            if r and ok_header and int(r.group(1)) == size:
+                need.discard(size)
+    if need:
+        ap.error(f'--minimal requires --minimal-evidence logs with ALL UNSAT at sizes {sorted(need)} '
+                 f'(complete runs without --minimal or skipped pieces, header edges={key})')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--n', type=int, required=True)
@@ -2272,6 +2327,9 @@ def main():
     ap.add_argument('--coupledprojections', action='store_true', help='match suffix-input sets before and after pinned gates')
     ap.add_argument('--minimal', action='store_true',
                     help='minimality rules: ONLY sound if sizes size-1 and size-2 are already UNSAT')
+    ap.add_argument('--minimal-evidence', action='append', default=[],
+                    help='with --minimal: logs of complete runs (without --minimal) showing ALL UNSAT at sizes '
+                         'size-1 and size-2 for this exact graph and basis; required')
     ap.add_argument('--trust-log', action='append', default=[],
                     help='like --skip-log, for an older log without an edge list that you vouch is this exact graph')
     ap.add_argument('--elimbypass', action='store_true', help='with --elim --bypass: constant gates force bypass paths')
@@ -2352,7 +2410,17 @@ def main():
     if os.path.exists(STOP):
         os.remove(STOP)
     n = a.n
-    edges = [tuple(map(int, e.split('-'))) for e in a.edges.split(',')]
+    raw = [tuple(map(int, e.split('-'))) for e in a.edges.split(',') if e.strip()]
+    edges = []
+    for e in raw:           # input contract: a simple graph on 0..n-1; duplicate or reversed edges merged
+        if len(e) != 2 or not all(0 <= v < n for v in e) or e[0] == e[1]:
+            ap.error(f'--edges: {e} is not an edge of a simple graph on vertices 0..{n - 1}')
+        if tuple(sorted(e)) not in edges:
+            edges.append(tuple(sorted(e)))
+    if len(edges) != len(raw):
+        print(f'note: {len(raw) - len(edges)} duplicate or reversed edges merged', flush=True)
+    if a.minimal:
+        _require_minimal_evidence(ap, a, n, edges)
     masks = [(1 << u) | (1 << v) for u, v in edges]
     allc = [(op, l, r) for op in (0, 1) for r in range(n) for l in range(r)]
     if not a.nonot:
