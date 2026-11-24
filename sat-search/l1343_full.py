@@ -6,7 +6,7 @@ Two cases cover the shard:
 Sizes <= 13 (both cases) were already UNSAT with mono_shard.py (results/l1343_shard2.log).
 Early stop: a size is abandoned if it runs longer than max(120 s, 5 x the previous size's wall time).
 Usage: python l1343_full.py [Gmin] [Gmax] [reuse] [logfile] [extra flags, comma-separated]"""
-import json, sys, time
+import json, os, sys, time
 from multiprocessing import Pool
 import cube_search as cs
 
@@ -46,7 +46,19 @@ if __name__ == '__main__':
     log = open(sys.argv[4] if len(sys.argv) > 4 else 'results/l1343_shard2_fast.log', 'a', encoding='utf-8')
     EXTRA = [x for x in (sys.argv[5].split(',') if len(sys.argv) > 5 else []) if x]
     RACE = 'race' in EXTRA
-    EXTRA = [x for x in EXTRA if x != 'race']
+    ONLY = None
+    for x in EXTRA:
+        if x.startswith('only='):            # only=a:0-1-2;b:1-3-12  -> run just these pieces
+            ONLY = {(q.split(':')[0], tuple(int(v) for v in q.split(':')[1].split('-'))) for q in x[5:].split(';')}
+    EXTRA = [x for x in EXTRA if x != 'race' and not x.startswith('only=')]
+    PIECES = 'results/l1343_pieces.jsonl'     # one record per finished piece; UNSAT pieces are skipped on rerun
+    proven = set()
+    if os.path.exists(PIECES):
+        for line in open(PIECES, encoding='utf-8'):
+            r = json.loads(line)
+            if r['status'] == 'UNSAT':
+                proven.add((r['case'], r['G'], tuple(r['piece'])))
+    plog = open(PIECES, 'a', encoding='utf-8')
     for x in EXTRA:
         FAST[x] = True
     if 'orderedports' in EXTRA or 'monoports' in EXTRA:
@@ -59,7 +71,10 @@ if __name__ == '__main__':
         f'unused (size G-1); edges {EDGES}; persistent solvers: {REUSE}; extra {EXTRA}')
     prev = None
     for G in range(g0, g1 + 1):
-        tasks = tasks_for(G)
+        all_tasks = tasks_for(G)
+        tasks = [t for t in all_tasks if (t[0], G, t[2]) not in proven and (ONLY is None or (t[0], t[2]) in ONLY)]
+        say(f'size {G}: {len(all_tasks)} pieces, {sum(1 for t in all_tasks if (t[0], G, t[2]) in proven)} already UNSAT '
+            f'in {PIECES}, running {len(tasks)}')
         limit = max(120.0, 5 * prev) if prev else 3600.0
         p = Pool(22); t0 = time.time()
         res = [p.apply_async(run, (t,)) for t in tasks]
@@ -85,6 +100,10 @@ if __name__ == '__main__':
                     pending.remove(k); last_done = time.time()
                     case, GG, c, (cube, st, circ, dt, stats) = out
                     done += 1; slow = max(slow, dt)
+                    plog.write(json.dumps(dict(case=case, G=G, piece=list(c), status=st, seconds=round(dt, 1),
+                                               extra=EXTRA, reuse=REUSE)) + chr(10)); plog.flush()
+                    if dt > 120:
+                        say(f'size {G}: slow piece {case}{c}: {st} in {dt:.0f}s')
                     if st == 'UNSAT':
                         unsat += 1
                     elif st == 'WITNESS':
@@ -115,10 +134,13 @@ if __name__ == '__main__':
         if pending:
             say(f'size {G}: STOPPED at {limit:.0f}s with {done}/{len(tasks)} pieces done ({unsat} UNSAT); not finished')
             break
+        if ONLY is not None:
+            say(f'size {G}: ran {len(tasks)} selected pieces: {unsat} UNSAT in {wall:.0f}s'); continue
         if unsat != len(tasks):
             say(f'size {G}: finished but only {unsat}/{len(tasks)} pieces UNSAT (others stopped or errored); not a proof')
             break
-        say(f'size {G}: ALL {len(tasks)} pieces UNSAT (case a: {sum(1 for t in tasks if t[0] == "a")}, case b: '
-            f'{sum(1 for t in tasks if t[0] == "b")}) in {wall:.0f}s, slowest piece {slow:.0f}s')
+        say(f'size {G}: ALL {len(all_tasks)} pieces UNSAT ({len(all_tasks) - len(tasks)} from earlier runs, {len(tasks)} now; '
+            f'case a: {sum(1 for t in all_tasks if t[0] == "a")}, case b: {sum(1 for t in all_tasks if t[0] == "b")}) '
+            f'in {wall:.0f}s, slowest piece {slow:.0f}s')
         prev = wall
     say('done')

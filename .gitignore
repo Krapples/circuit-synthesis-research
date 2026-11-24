@@ -17,3 +17,4 @@ pequalnp-proofs/
 !sat-search/results/*.log
 sat-search/STOP
 sat-search/STOP_FILLER
+!sat-search/results/*.jsonl
