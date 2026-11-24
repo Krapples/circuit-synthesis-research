@@ -25,9 +25,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STOP = os.path.join(HERE, 'STOP')
 
 
-def build(n, G, colex_from=0):
+def build(n, G, colex_from=0, *, require_used=True):
     """colex_from: apply the adjacent-gate ordering only from gate n + colex_from on (callers that pin the
-    first gates, e.g. a shard seed, must not let the ordering constrain the pinned prefix)."""
+    first gates, e.g. a shard seed, must not let the ordering constrain the pinned prefix).
+    require_used=False leaves out the reader clauses and their fan-out budget for padded at-most encodings."""
     output = n - 1 + G
     pool = IDPool(); clauses = []
     ops = {j: [pool.id((j, op)) for op in ('and', 'or', 'not')] for j in range(n, output + 1)}
@@ -50,6 +51,8 @@ def build(n, G, colex_from=0):
             for l in range(i):
                 for k in range(l):
                     clauses.append([-right[i], -nr[i], -left[l], -nl[k]])
+    if not require_used:
+        return output, pool, clauses, ops, select
     for i in range(output):
         clauses.append([select[j, k][i] for j in range(max(n, i + 1), output + 1) for k in range(2)])
     # Implied bound, stated explicitly to help the solver: AND/OR read two different wires and NOT reads
@@ -60,6 +63,19 @@ def build(n, G, colex_from=0):
     elif bound < G:
         clauses.extend(CardEnc.atmost([ops[j][2] for j in ops], bound=bound, vpool=pool).clauses)
     return output, pool, clauses, ops, select
+
+
+def truth_gate_clauses(x, values, pool, ops, select):
+    """Exact AND/OR/NOT truth values on one row, independent of the output choice."""
+    for j, (a, o, no) in ops.items():
+        l, r = [pool.id(('arg', x, j, k)) for k in range(2)]
+        for k, arg in enumerate((l, r)):
+            for i, sel in enumerate(select[j, k]):
+                yield [-sel, -arg, values[i]]
+                yield [-sel, arg, -values[i]]
+        f = values[j]
+        yield from ([-a, -l, -r, f], [-a, l, -f], [-a, r, -f], [-o, l, r, -f], [-o, -l, f],
+                    [-o, -r, f], [-no, -l, -f], [-no, l, f])
 
 
 def add_fanout_rules(n, masks, ops, select, clauses):
@@ -1745,6 +1761,14 @@ def evaluate(n, circ, x):
     return v[-1]
 
 
+@lru_cache(maxsize=32)
+def boundary_rows(n, masks):
+    """Minimal true and maximal false rows of the graph function."""
+    target = lambda x: any(x & m == m for m in masks)
+    return _anti(masks), tuple(x for x in range(1 << n) if not target(x)
+                               and all(target(x | 1 << i) for i in range(n) if not x >> i & 1))
+
+
 def run_cube(args):
     n, masks, G, solver_name, cube, fanout, readonce = args[:7]
     flags = args[7] if len(args) > 7 else {}
@@ -2036,8 +2060,9 @@ def main():
     ap.add_argument('--portbounds', action='store_true', help='with --recursivebounds: region connection bound')
     ap.add_argument('--monoports', action='store_true', help='with --portbounds, monotone circuits only: Sperner/chain ports')
     ap.add_argument('--orderedports', action='store_true', help='with --portbounds: ordered terminal groups')
-    ap.add_argument('--portcertrank', nargs='?', const='rank', choices=PORT_CERTIFICATE_LEVELS,
-                    help='monotone ordered port bounds at rank, clique, or exact level (default: rank)')
+    ap.add_argument('--portcertrank', nargs='?', const='rank',
+                    choices=('compatibility', *PORT_CERTIFICATE_LEVELS),
+                    help='monotone ordered port bounds (default: rank)')
     ap.add_argument('--portcertoutput', action='store_true',
                     help='with --portcertrank: include all certificates in the output-region bound')
     ap.add_argument('--formulaports', action='store_true',
@@ -2048,8 +2073,8 @@ def main():
                          '--usens --bypass --elim --elimclosure --signeddom --recursivebounds --notbypass '
                          '--recclosure --identifybounds --fanoutelim --pairro --colorbounds --sharecolor --colorbudget')
     a = ap.parse_args()
-    if a.portcertoutput and a.portcertrank is None:
-        ap.error('--portcertoutput requires --portcertrank')
+    if a.portcertoutput and a.portcertrank not in PORT_CERTIFICATE_LEVELS:
+        ap.error('--portcertoutput requires a rank, clique, or exact port certificate level')
     if a.portcertrank is not None:
         if not a.nonot:
             ap.error('--portcertrank requires --monotone')
