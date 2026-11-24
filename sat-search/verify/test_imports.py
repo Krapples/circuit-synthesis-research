@@ -32,9 +32,12 @@ class ModuleResolution(unittest.TestCase):
         self.assertTrue(os.path.abspath(pysat.__file__).startswith(os.path.abspath(SCRATCH)), pysat.__file__)
 
     def test_solver_imports_resolve_in_repository(self):
-        for name in ('partial_ordered', 'monotone_interface', 'port_certificates', 'provider_certificates',
-                     'provider_capacity'):
+        required = ('partial_ordered', 'monotone_interface', 'port_certificates', 'provider_certificates')
+        optional = ('provider_capacity',)          # imported only by newer versions of cube_search.py
+        for name in required + optional:
             mod = sys.modules.get(name)
+            if mod is None and name in optional:
+                continue
             self.assertIsNotNone(mod, name)
             self.assertTrue(os.path.abspath(mod.__file__).startswith(os.path.abspath(SAT)), mod.__file__)
 
