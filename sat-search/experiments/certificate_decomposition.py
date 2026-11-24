@@ -2,6 +2,7 @@
 
 from collections import Counter
 from functools import lru_cache
+from typing import NamedTuple
 
 from certificate_compatibility import (compatible_tree, indices, obstruction_clause, restrict_certificates,
                                        tree_leaves)
@@ -10,6 +11,7 @@ from cograph_formulas import CographFormula
 from regional_synthesis import CardEnc, IDPool, RegionalSolution, Solver, _bits
 from port_certificates import (PORT_CERTIFICATE_LEVELS, incompatible_primary_pairs, incoming_port_bound,
                                minimal_zero_certificates)
+from provider_certificates import PROVIDER_LEVELS, provider_obstruction, provider_residual
 
 
 def _reader_counts(excess):
@@ -91,6 +93,17 @@ def _add_topology(row_wires, col_wires, readers, certificates, pool, clauses):
     return None
 
 
+class LazyTopology(NamedTuple):
+    owners: tuple
+    atoms: tuple
+    memberships: tuple
+    visits: tuple
+
+
+def _port_sources(readers):
+    return tuple(i + 1 for i, degree in enumerate(readers) for _ in range(degree))
+
+
 def _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clauses):
     owners, atoms, selections = _terminal_domains(row_wires, col_wires, readers, certificates, pool, clauses)
     groups = (row_wires, col_wires)
@@ -118,11 +131,12 @@ def _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clause
                 rows.append(tuple(local))
             axes.append(tuple(rows))
         memberships.append(tuple(axes))
-    return owners, atoms, memberships
+    visits = tuple(tuple(tuple(vertex for vertex, _ in row) for row in wires) for wires in groups)
+    return LazyTopology(tuple(owners), atoms, tuple(memberships), visits)
 
 
 def _lazy_port_cuts(topology, model, certificates, level, include_output=False):
-    owners, atoms, memberships = topology
+    owners, atoms, memberships, _ = topology
     first_primary = len(owners) - len(atoms)
     port_owners, primary_owners = owners[:first_primary], owners[first_primary:]
     cuts = []
@@ -162,7 +176,7 @@ def _positive_port_costs(certificates, atoms, level, output):
 
 
 def _add_static_port_bounds(topology, certificates, level, include_output, pool, clauses):
-    owners, atoms, memberships = topology
+    owners, atoms, memberships, _ = topology
     first_primary = len(owners) - len(atoms)
     port_owners, primary_owners = owners[:first_primary], owners[first_primary:]
     conflicts = incompatible_primary_pairs(*certificates)
@@ -189,8 +203,80 @@ def _add_static_port_bounds(topology, certificates, level, include_output, pool,
                 clauses.append([*guard, thresholds[lower]])
 
 
+def _add_provider_ancestry(topology, readers, certificates, pool, clauses):
+    """Propagate the implied reachability of atoms distinguishing provider visits."""
+    sources = _port_sources(readers)
+    port_owners, primary_owners = topology.owners[:len(sources)], topology.owners[len(sources):]
+    reachable = {}
+    for region in range(len(readers), 0, -1):
+        upstream = [(source, picks[region]) for source, picks in zip(sources, port_owners) if region < len(picks)]
+        for atom, picks in zip(topology.atoms, primary_owners):
+            if not upstream:
+                reachable[region, atom] = picks[region]
+                continue
+            reach = reachable[region, atom] = pool.id()
+            paths = [picks[region]]
+            for source, owner in upstream:
+                path = pool.id()
+                paths.append(path)
+                clauses.extend(([-path, owner], [-path, reachable[source, atom]]))
+            clauses.append([-reach, *paths])
+    for a, positive in zip(certificates[0], topology.visits[0]):
+        for b, negative in zip(certificates[1], topology.visits[1]):
+            shared = _bits(a & b)
+            for region, (high, low) in enumerate(zip(positive, negative), 1):
+                clauses.append([-high, -low, *(reachable[region, bit] for bit in shared)])
+
+
+def _provider_model_cuts(topology, readers, model, certificates, level):
+    sources = _port_sources(readers)
+    chosen = tuple(next(r for r, pick in enumerate(picks) if pick in model) for picks in topology.owners)
+    groups = [0] * (len(readers) + 1)
+    providers = [Counter() for _ in groups]
+    for atom, region in zip(topology.atoms, chosen[len(sources):]):
+        groups[region] |= atom
+    for source, region in zip(sources, chosen):
+        providers[region][source] += 1
+    supports = groups.copy()
+    cones = [1 << r for r in range(len(groups))]
+    for region in range(len(groups) - 1, -1, -1):
+        for source in providers[region]:
+            supports[region] |= supports[source]
+            cones[region] |= cones[source]
+
+    # These are the union of obligations from every reader of the source.
+    positive, negative = topology.visits
+    for region in range(1, len(groups)):
+        high = [(a, row[region - 1]) for a, row in zip(certificates[0], positive) if row[region - 1] in model]
+        low = [(b, row[region - 1]) for b, row in zip(certificates[1], negative) if row[region - 1] in model]
+        for a, visit_high in high:
+            for b, visit_low in low:
+                if a & b & supports[region]:
+                    continue
+                cone = cones[region]
+                # The cone can gain a distinguishing atom only through a new
+                # primary owner inside it, or an incoming port from outside.
+                escape = [pick for atom, picks in zip(topology.atoms, topology.owners[len(sources):])
+                          if atom & a & b for r, pick in enumerate(picks) if cone >> r & 1]
+                escape.extend(pick for source, picks in zip(sources, topology.owners) if not cone >> source & 1
+                              for r, pick in enumerate(picks) if cone >> r & 1)
+                return 'consistency', [(-visit_high, -visit_low, *escape)]
+    for region, (primary, local) in enumerate(zip(groups, providers)):
+        if not primary and region:
+            continue
+        query = provider_residual(*certificates, primary, output=region == 0)
+        if query is None:
+            # The existing formula-compatibility check supplies the primary
+            # obstruction. Keep this layer specific to provider feasibility.
+            continue
+        obstruction = provider_obstruction(query, ((supports[src], cap) for src, cap in local.items()), level)
+        if obstruction is not None:
+            return obstruction, [tuple(-picks[r] for picks, r in zip(topology.owners, chosen))]
+    return None, ()
+
+
 def _lazy_formulas(topology, model):
-    owners, _, memberships = topology
+    owners, _, memberships, _ = topology
     leaves = [0] * len(memberships)
     for i, choices in enumerate(owners):
         owner = next(r for r, pick in enumerate(choices) if pick in model)
@@ -216,7 +302,7 @@ def _lazy_formulas(topology, model):
 
 
 def _decode_lazy(formulas, atoms, readers):
-    targets = tuple(i + 1 for i, degree in enumerate(readers) for _ in range(degree))
+    targets = _port_sources(readers)
     used = [tuple(indices(tree_leaves(tree))) for tree in formulas]
     reachable = {0}
     for r, leaves in enumerate(used):
@@ -258,7 +344,8 @@ def _decode_topology(topology, readers, model):
 
 
 def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certificates=None, lazy=False,
-                         local_intersection=False, portcertrank=None, portcertoutput=False, stats=None):
+                         local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
+                         stats=None):
     """Encode one ordered reader-count pattern, without constructing circuit gates."""
     pool = IDPool()
     clauses = []
@@ -289,6 +376,11 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
     topology = None
     if lazy:
         topology = _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clauses)
+        if provider_level is not None and local_intersection:
+            before = len(clauses)
+            _add_provider_ancestry(topology, readers, certificates, pool, clauses)
+            if stats is not None:
+                stats['provider_static_clauses'] += len(clauses) - before
         if portcertrank is not None and local_intersection:
             before = len(clauses)
             _add_static_port_bounds(topology, certificates, portcertrank, portcertoutput, pool, clauses)
@@ -302,7 +394,7 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
                 clauses.append([])
                 continue
             if local_intersection:
-                owners, atoms, _ = topology
+                owners, atoms = topology.owners, topology.atoms
                 local = [[] for _ in range(len(readers) + 1)]
                 ports = [common(x, y) for (_, a), (_, b) in zip(row_wires[i], col_wires[j]) for x, y in zip(a, b)]
                 for edge, choices in zip(ports, owners):
@@ -336,7 +428,7 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
 
 def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cells=400, conflicts=2000,
                          verify_unsat=None, certificates=None, on_sat=None, backend='complete-terminal', stats=None,
-                         local_intersection=False, portcertrank=None, portcertoutput=False):
+                         local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None):
     """Return SAT, UNSAT, or UNKNOWN for the relaxation at an at-most excess budget."""
     matrix = tuple(map(tuple, matrix))
     if excess < 0 or any(value < 0 for row in matrix for value in row):
@@ -351,6 +443,9 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
     if portcertrank is not None:
         if not lazy or portcertrank not in PORT_CERTIFICATE_LEVELS:
             raise ValueError('certificate port bounds require a valid level and the lazy backend')
+    if provider_level is not None and (not lazy or provider_level not in PROVIDER_LEVELS):
+        raise ValueError('provider bounds require a valid level and the lazy backend')
+    if portcertrank is not None or provider_level is not None:
         minterms, zero_certificates = certificates = tuple(map(tuple, certificates))
         if (not minterms or not zero_certificates or any(term <= 0 for term in minterms + zero_certificates)
                 or any(a != b and a & b == a for a in minterms for b in minterms)
@@ -390,6 +485,7 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                                                                 certificates=certificates, lazy=lazy,
                                                                 local_intersection=local_intersection,
                                                                 portcertrank=portcertrank, portcertoutput=portcertoutput,
+                                                                provider_level=provider_level,
                                                                 stats=stats)
             stats['patterns'] += 1
             stats['initial_variables'] += variables
@@ -418,11 +514,15 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                     if cuts:
                         stats['port_cuts'] += len(cuts)
                         stats['port_cut_literals'] += sum(map(len, cuts))
-                    else:
+                    if not cuts and provider_level is not None and not local_intersection:
+                        reason, cuts = _provider_model_cuts(topology, readers, model, certificates, provider_level)
+                        if cuts:
+                            stats[f'provider_{reason}_cuts'] += len(cuts)
+                    if not cuts:
                         formulas, cuts = _lazy_formulas(topology, model)
                     if not cuts:
                         if on_sat is not None:
-                            on_sat(used, _decode_lazy(formulas, topology[1], readers))
+                            on_sat(used, _decode_lazy(formulas, topology.atoms, readers))
                         break
                     stats['cuts'] += len(cuts)
                     stats['cut_literals'] += sum(map(len, cuts))

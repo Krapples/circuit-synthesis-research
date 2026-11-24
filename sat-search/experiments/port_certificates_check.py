@@ -276,7 +276,7 @@ def ordered_profile(level):
     return dict(status='OK', cases=rows)
 
 
-def lazy_job(name, budget, level, conflicts, proof, local_intersection=True, proof_dir=None):
+def lazy_job(name, budget, level, conflicts, proof, local_intersection=True, proof_dir=None, provider_level=None):
     case = load_cases(MANIFEST)[name]
     p, z = complete_certificates(case.n, case.truth)
     stats, checked, witnesses, packets = Counter(), [], [], []
@@ -308,7 +308,8 @@ def lazy_job(name, budget, level, conflicts, proof, local_intersection=True, pro
     status = complete_status(p, z, budget - rterms_support(p).bit_count() + 1, backend='lazy-certificates',
                              local_intersection=local_intersection,
                              portcertrank='rank' if level == 'rank-output' else level,
-                             portcertoutput=level == 'rank-output', conflicts=conflicts, stats=stats, on_sat=witness,
+                             portcertoutput=level == 'rank-output', provider_level=provider_level,
+                             conflicts=conflicts, stats=stats, on_sat=witness,
                              verify_unsat=verify if proof else None)
     return dict(status=status, stats=stats, witnesses=witnesses, checked=checked, packets=packets)
 
