@@ -2,6 +2,7 @@
 
 from collections import Counter
 from functools import lru_cache
+from itertools import combinations, product
 from typing import NamedTuple
 
 from certificate_compatibility import (compatible_tree, indices, obstruction_clause, restrict_certificates,
@@ -12,6 +13,7 @@ from regional_synthesis import CardEnc, IDPool, RegionalSolution, Solver, _bits
 from port_certificates import (PORT_CERTIFICATE_LEVELS, incompatible_primary_pairs, incoming_port_bound,
                                minimal_zero_certificates)
 from provider_certificates import PROVIDER_LEVELS, provider_obstruction, provider_residual
+from provider_capacity import CAPACITY_LEVELS, capacity_obstruction, prepare_capacity_layout
 
 
 def _reader_counts(excess):
@@ -102,6 +104,69 @@ class LazyTopology(NamedTuple):
 
 def _port_sources(readers):
     return tuple(i + 1 for i, degree in enumerate(readers) for _ in range(degree))
+
+
+def _capacity_owner_cut(topology, readers, certificates, assignments, level, stats, stage):
+    groups = [0] * (len(readers) + 1)
+    for atom, region in zip(topology.atoms, assignments):
+        groups[region] |= atom
+    layout, obstruction = prepare_capacity_layout(*certificates, tuple(reversed(groups)), tuple(reversed(readers)))
+    if obstruction is None:
+        obstruction = capacity_obstruction(layout, level)
+    stats[f'capacity_{stage}_layouts'] += 1
+    if obstruction is None or obstruction.kind == 'primary':
+        return None  # The existing formula compatibility check handles primary conflicts.
+    stats[f'capacity_{stage}_{obstruction.kind}'] += 1
+    owners = topology.owners[len(topology.owners) - len(topology.atoms):]
+    return tuple(-choices[region] for choices, region in zip(owners, assignments))
+
+
+def _capacity_prefix_clauses(topology, readers, certificates, level, stats, *, limit=96):
+    """Budgeted prescreen for fixed prefixes, before the membership SAT solve."""
+    owners = topology.owners[len(topology.owners) - len(topology.atoms):]
+    capacities = tuple(reversed(readers))
+    conflicts = incompatible_primary_pairs(*certificates)
+    clauses = []
+    pending = limit
+
+    def visit(groups, remaining):
+        nonlocal pending
+        output = len(groups) == len(readers)
+        bits = _bits(remaining)
+        candidates = ((remaining,) if output else
+                      (sum(group) for size in range(int(not groups), len(bits) + 1)
+                       for group in combinations(bits, size)))
+        for primary in candidates:
+            if not pending:
+                break
+            pending -= 1
+            if any(primary & pair == pair for pair in conflicts):
+                continue
+            fixed = (*groups, primary)
+            caps = capacities if output else capacities[:len(fixed)]
+            layout, obstruction = prepare_capacity_layout(*certificates, fixed, caps, output=output)
+            if obstruction is None:
+                obstruction = capacity_obstruction(layout, 'subsets' if level == 'exact' and not output else level)
+            stats['capacity_prefix_layouts'] += 1
+            if obstruction is None:
+                if not output:
+                    visit(fixed, remaining ^ primary)
+                continue
+            if obstruction.kind == 'primary':
+                continue
+            stats[f'capacity_prefix_{obstruction.kind}'] += 1
+            fixed_regions = tuple(range(len(readers), len(readers) - len(fixed), -1))
+            guard = []
+            for atom, choices in zip(topology.atoms, owners):
+                owned = next((r for r, group in zip(fixed_regions, fixed) if atom & group), None)
+                if owned is None:
+                    guard.extend(choices[r] for r in fixed_regions)
+                else:
+                    guard.append(-choices[owned])
+            clauses.append(tuple(guard))
+
+    visit((), sum(topology.atoms))
+    return clauses
 
 
 def _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clauses):
@@ -428,7 +493,8 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
 
 def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cells=400, conflicts=2000,
                          verify_unsat=None, certificates=None, on_sat=None, backend='complete-terminal', stats=None,
-                         local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None):
+                         local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
+                         provider_capacity=None):
     """Return SAT, UNSAT, or UNKNOWN for the relaxation at an at-most excess budget."""
     matrix = tuple(map(tuple, matrix))
     if excess < 0 or any(value < 0 for row in matrix for value in row):
@@ -445,7 +511,9 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
             raise ValueError('certificate port bounds require a valid level and the lazy backend')
     if provider_level is not None and (not lazy or provider_level not in PROVIDER_LEVELS):
         raise ValueError('provider bounds require a valid level and the lazy backend')
-    if portcertrank is not None or provider_level is not None:
+    if provider_capacity is not None and (not lazy or provider_capacity not in CAPACITY_LEVELS):
+        raise ValueError('provider capacity requires a valid level and the lazy backend')
+    if portcertrank is not None or provider_level is not None or provider_capacity is not None:
         minterms, zero_certificates = certificates = tuple(map(tuple, certificates))
         if (not minterms or not zero_certificates or any(term <= 0 for term in minterms + zero_certificates)
                 or any(a != b and a & b == a for a in minterms for b in minterms)
@@ -487,6 +555,24 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                                                                 portcertrank=portcertrank, portcertoutput=portcertoutput,
                                                                 provider_level=provider_level,
                                                                 stats=stats)
+            capacity_owners = ()
+            checked_layouts = set()
+            if provider_capacity is not None and readers:
+                count = len(topology.atoms)
+                if (len(readers) + 1) ** count <= 128 and provider_capacity != 'exact':
+                    # Check small primary layouts without constructing any port
+                    # ownership or certificate membership for them.
+                    for assignments in product(range(len(readers) + 1), repeat=count):
+                        cut = _capacity_owner_cut(topology, readers, certificates, assignments,
+                                                  provider_capacity, stats, 'static')
+                        if cut is not None:
+                            clauses.append(cut)
+                elif local_intersection:
+                    # Local intersections imply capacity on complete models.
+                    # Look for useful prefix clauses before asking SAT for one.
+                    clauses.extend(_capacity_prefix_clauses(topology, readers, certificates, provider_capacity, stats))
+                else:
+                    capacity_owners = topology.owners[len(topology.owners) - count:]
             stats['patterns'] += 1
             stats['initial_variables'] += variables
             stats['initial_clauses'] += len(clauses)
@@ -509,11 +595,21 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                             on_sat(used, _decode_topology(topology, readers, set(solver.get_model())))
                         break
                     model = set(solver.get_model())
-                    cuts = (_lazy_port_cuts(topology, model, certificates, portcertrank, portcertoutput)
-                            if portcertrank and not local_intersection else ())
-                    if cuts:
-                        stats['port_cuts'] += len(cuts)
-                        stats['port_cut_literals'] += sum(map(len, cuts))
+                    cuts = ()
+                    if capacity_owners:
+                        assignments = tuple(next(r for r, pick in enumerate(choices) if pick in model)
+                                            for choices in capacity_owners)
+                        if assignments not in checked_layouts:
+                            checked_layouts.add(assignments)
+                            cut = _capacity_owner_cut(topology, readers, certificates, assignments,
+                                                      provider_capacity, stats, 'lazy')
+                            if cut is not None:
+                                cuts = (cut,)
+                    if not cuts and portcertrank and not local_intersection:
+                        cuts = _lazy_port_cuts(topology, model, certificates, portcertrank, portcertoutput)
+                        if cuts:
+                            stats['port_cuts'] += len(cuts)
+                            stats['port_cut_literals'] += sum(map(len, cuts))
                     if not cuts and provider_level is not None and not local_intersection:
                         reason, cuts = _provider_model_cuts(topology, readers, model, certificates, provider_level)
                         if cuts:

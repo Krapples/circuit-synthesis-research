@@ -44,12 +44,12 @@ def _cross_rows(positives, zeros, support):
     return tuple(sum(1 << j for j, b in enumerate(zeros) if a & b & support) for a in positives)
 
 
-def prepare_capacity_layout(positives, zeros, groups, capacities, *, supports=None):
-    """Build a full-certificate layout in provider-to-output topological order."""
+def prepare_capacity_layout(positives, zeros, groups, capacities, *, supports=None, output=True):
+    """Build an ordered layout, or a fixed prefix of non-output regions."""
     positives, zeros, groups, capacities = map(tuple, (positives, zeros, groups, capacities))
     positives = tuple(dict.fromkeys(positives))
     zeros = tuple(dict.fromkeys(zeros))
-    if not groups or len(groups) != len(capacities) + 1 or any(cap < 0 for cap in capacities):
+    if not groups or len(groups) != len(capacities) + int(output) or any(cap < 0 for cap in capacities):
         raise ValueError('expected one outgoing capacity per non-output region')
     prefix = 0
     prefix_supports = []
@@ -58,11 +58,11 @@ def prepare_capacity_layout(positives, zeros, groups, capacities, *, supports=No
             raise ValueError('expected disjoint nonnegative primary sets')
         prefix |= primary
         prefix_supports.append(prefix)
-    if any(term & ~prefix for term in (*positives, *zeros)):
+    if output and any(term & ~prefix for term in (*positives, *zeros)):
         raise ValueError('primary groups must cover the full certificates')
     # Any ancestor of a non-output terminal belongs to its own group or an
     # earlier group. Optional caller-supplied supports must be sound supersets.
-    supports = tuple(prefix_supports[:-1]) if supports is None else tuple(supports)
+    supports = tuple(prefix_supports[:len(capacities)]) if supports is None else tuple(supports)
     if (len(supports) != len(capacities)
             or any(group & ~mask or mask & ~upper
                    for group, mask, upper in zip(groups, supports, prefix_supports))):
@@ -86,7 +86,7 @@ def prepare_capacity_layout(positives, zeros, groups, capacities, *, supports=No
     zero_ids = {term: i for i, term in enumerate(zeros)}
     regions = []
     for region, primary in enumerate(groups):
-        residual = provider_residual(positives, zeros, primary, output=region == len(groups) - 1)
+        residual = provider_residual(positives, zeros, primary, output=output and region == len(groups) - 1)
         if residual is None:
             return None, CapacityObstruction('primary', region=region)
         row_ids = tuple(positive_ids[a] for a in residual.positives)

@@ -16,6 +16,7 @@ from certificate_decomposition import complete_status, decomposition_status
 from certificate_rank import analyze, intersection_matrix
 from certificate_rank_check import RESULTS, complete_certificates, gate_count, graph_certificates
 from certify_synthesis import check_proof
+from provider_capacity import CAPACITY_LEVELS
 from regional_synthesis import _formulas
 from synthesis_cases import full_rows
 from synthesis_followup import load_cases
@@ -146,7 +147,7 @@ class LazyCertificateChecks(unittest.TestCase):
                         self.assertTrue(proofs)
 
 
-def job(name, budget, mode, conflicts, proof):
+def job(name, budget, mode, conflicts, proof, provider_capacity=None):
     case = load_cases(RESULTS / 'synthesis_cases.json')[name]
     if case.known != full_rows(case.n):
         raise ValueError('the backend expects complete certificates')
@@ -165,9 +166,10 @@ def job(name, budget, mode, conflicts, proof):
 
     before = perf_counter()
     status = complete_status(p, z, excess, conflicts=conflicts, stats=stats, on_sat=witness,
-                             verify_unsat=verified if proof else None, **options(mode))
+                             verify_unsat=verified if proof else None, provider_capacity=provider_capacity,
+                             **options(mode))
     print(json.dumps(dict(name=name, budget=budget, mode=mode, status=status, seconds=round(perf_counter() - before, 4),
-                          stats=stats, gates=gates, checked=proofs)), flush=True)
+                          stats=stats, gates=gates, checked=proofs, provider_capacity=provider_capacity)), flush=True)
 
 
 def main():
@@ -180,6 +182,8 @@ def main():
     parser.add_argument('--conflicts', type=int, default=1500)
     parser.add_argument('--rounds', type=int, default=1, help='frontier steps per case while budgets are excluded')
     parser.add_argument('--proof', action='store_true')
+    parser.add_argument('--providercapacity', nargs='?', const='subsets', choices=CAPACITY_LEVELS,
+                        help='prescreen lazy regional layouts with shared outgoing capacities')
     args = parser.parse_args()
     if not args.seconds > 0 or args.conflicts < 1 or args.rounds < 1:
         parser.error('seconds, conflicts, and rounds must be positive')
@@ -187,7 +191,9 @@ def main():
         name, budget, mode = args.job
         if mode not in MODES:
             parser.error(f'expected a backend in {MODES}')
-        job(name, int(budget), mode, args.conflicts, args.proof)
+        if args.providercapacity and mode == MODES[0]:
+            parser.error('--providercapacity requires a lazy backend')
+        job(name, int(budget), mode, args.conflicts, args.proof, args.providercapacity)
     else:
         for name, budget in FRONTIER_JOBS if args.frontier else JOBS:
             for mode in MODES[-1:] if args.frontier else MODES:
@@ -197,6 +203,8 @@ def main():
                                '--conflicts', str(args.conflicts)]
                     if args.proof:
                         command.append('--proof')
+                    if args.providercapacity and mode != MODES[0]:
+                        command.extend(('--providercapacity', args.providercapacity))
                     try:
                         child = run(command, timeout=args.seconds, capture_output=True, text=True)
                         if child.returncode:
@@ -204,7 +212,8 @@ def main():
                                                f'{child.stdout}{child.stderr}')
                         record = json.loads(child.stdout)
                     except TimeoutExpired:
-                        record = dict(name=name, budget=current, mode=mode, status='TIMEOUT', seconds=args.seconds)
+                        record = dict(name=name, budget=current, mode=mode, status='TIMEOUT', seconds=args.seconds,
+                                      provider_capacity=args.providercapacity if mode != MODES[0] else None)
                     print(json.dumps(record), flush=True)
                     if record['status'] != 'UNSAT':
                         break
