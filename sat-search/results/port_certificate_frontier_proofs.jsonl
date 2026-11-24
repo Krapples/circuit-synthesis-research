@@ -1,0 +1,17 @@
+{"conflicts": 2500, "endpoints_sha256": "3f52b801c5764014c6730275915a33c46d089aecf7a5ac7e8ef7cdc813c3e7dc", "jobs": [["hypergraph-09", 11], ["hypergraph-10", 12], ["hypergraph-09", 12], ["hypergraph-10", 13]], "kind": "meta", "manifest_sha256": "3abb4efc3342e94498c253ed9b4ff2afeb571b8de0a8bd8546f14aa66d01da98", "proof": true, "seconds": 5.0}
+{"budget": 11, "kind": "lazy", "level": null, "name": "hypergraph-09", "peak_bytes": 51650560, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 11, "kind": "lazy", "level": "rank", "name": "hypergraph-09", "peak_bytes": 51740672, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 11, "kind": "lazy", "level": "clique", "name": "hypergraph-09", "peak_bytes": 51691520, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 11, "kind": "lazy", "level": "exact", "name": "hypergraph-09", "peak_bytes": 51769344, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": null, "name": "hypergraph-10", "peak_bytes": 55586816, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": "rank", "name": "hypergraph-10", "peak_bytes": 55840768, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": "clique", "name": "hypergraph-10", "peak_bytes": 55721984, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": "exact", "name": "hypergraph-10", "peak_bytes": 55734272, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": null, "name": "hypergraph-09", "peak_bytes": 51343360, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": "rank", "name": "hypergraph-09", "peak_bytes": 52326400, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": "clique", "name": "hypergraph-09", "peak_bytes": 51503104, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 12, "kind": "lazy", "level": "exact", "name": "hypergraph-09", "peak_bytes": 51912704, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 13, "kind": "lazy", "level": null, "name": "hypergraph-10", "peak_bytes": 55537664, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 13, "kind": "lazy", "level": "rank", "name": "hypergraph-10", "peak_bytes": 55623680, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 13, "kind": "lazy", "level": "clique", "name": "hypergraph-10", "peak_bytes": 55590912, "seconds": 5.0, "status": "TIMEOUT"}
+{"budget": 13, "kind": "lazy", "level": "exact", "name": "hypergraph-10", "peak_bytes": 55414784, "seconds": 5.0, "status": "TIMEOUT"}
