@@ -19,7 +19,7 @@ from cube_search import ordered_port_lb, port_costs, rterms_support
 from port_certificates import (PORT_CERTIFICATE_LEVELS, incoming_port_bound, minimal_zero_certificates,
                                modular_rank, rectangle_clique, rectangle_partition, residual_matrix)
 from synthesis_bench import peak_bytes
-from synthesis_cases import Witness, full_rows, trim, truth_table
+from synthesis_cases import Builder, Witness, full_rows, trim, truth_table
 from synthesis_followup import digest, load_cases, read_rows
 from pysat.solvers import Solver
 
@@ -98,6 +98,23 @@ def check_with_minisat(variables, clauses, proof):
                 return count
             checker.add_clause(clause)
     raise ValueError('proof never derived the empty clause')
+
+
+def flatten_witness(n, candidate):
+    """Compile the decoded regional formulas to independently checkable gates."""
+    builder = Builder(n)
+    signals = []
+
+    def compile_tree(tree, leaves):
+        if isinstance(tree, int):
+            return leaves[tree]
+        op, left, right = tree
+        return builder.gate(op, compile_tree(left, leaves), compile_tree(right, leaves))
+
+    for group, ports, formula in zip(candidate.groups, candidate.providers, candidate.formulas):
+        leaves = [i for i in range(n) if group >> i & 1] + [signals[i] for i in ports]
+        signals.append(compile_tree(formula, leaves))
+    return builder.finish(signals[-1])
 
 
 class PortCertificateChecks(unittest.TestCase):
@@ -266,10 +283,12 @@ def lazy_job(name, budget, level, conflicts, proof, local_intersection=True, pro
 
     def witness(_, candidate):
         gates = gate_count(candidate)
-        if gates > budget or any(candidate.evaluate(row) != high for row, high in case.labels().items()):
+        circuit = flatten_witness(case.n, candidate)
+        if (gates > budget or len(circuit.gates) > gates or truth_table(case.n, circuit) != case.truth
+                or any(candidate.evaluate(row) != high for row, high in case.labels().items())):
             raise RuntimeError(f'invalid witness for {name} at {budget}')
         witnesses.append(dict(gates=gates, groups=candidate.groups, providers=candidate.providers,
-                              formulas=candidate.formulas))
+                              formulas=candidate.formulas, circuit=circuit.gates, output=circuit.output))
 
     def verify(readers, variables, clauses, trace):
         proof_lines = [*(trace or ()), '0']

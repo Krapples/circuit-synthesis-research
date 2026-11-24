@@ -10,6 +10,7 @@ its solver within ~5 s and the run exits (no orphaned processes).
 Usage: python cube_search.py --n 9 --edges 0-1,1-2,... --size 11 [--workers 11] [--log run.log]
 """
 import argparse, itertools, os, sys, threading, time
+from functools import lru_cache
 from math import comb
 for _v in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
     os.environ.setdefault(_v, '1')
