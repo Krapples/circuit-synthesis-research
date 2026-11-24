@@ -18,6 +18,8 @@ def indices(mask):
 class ProviderResidual:
     common: tuple
     rows: tuple
+    positives: tuple = ()
+    zeros: tuple = ()
 
 
 @lru_cache(maxsize=2048)
@@ -32,7 +34,7 @@ def provider_residual(positives, zeros, primary, *, output=False):
         if any(value.bit_count() > 1 for value in local):
             return None
         rows.append(sum(1 << j for j, value in enumerate(local) if not value))
-    return ProviderResidual(common, tuple(rows))
+    return ProviderResidual(common, tuple(rows), positive_rows, negative_rows)
 
 
 @lru_cache(maxsize=2048)
@@ -87,19 +89,18 @@ def _forced_consistent(query, eligibility, supports):
                for i in indices(rows[provider]) for j in indices(columns[provider]))
 
 
-def clique_capacity(eligibility, capacities, *, max_cells=80, max_cliques=16):
-    """Test a bounded sample of incompatible cliques against their slot lists."""
-    cells = [(i, j) for i, row in enumerate(eligibility) for j, options in enumerate(row) if options]
+def incompatibility_cliques(eligibility, subset=None, *, max_cells=80, max_cliques=16):
+    """Yield certified cliques of cells whose lists are contained in subset."""
+    cells = [(i, j) for i, row in enumerate(eligibility) for j, options in enumerate(row)
+             if options and (subset is None or not options & ~subset)]
+    if not cells:
+        return
     if len(cells) > max_cells:
         cells.sort(key=lambda pos: (eligibility[pos[0]][pos[1]].bit_count(), pos))
         half = max_cells // 2
         tail = cells[half:]
         cells = cells[:half] + [tail[i * len(tail) // (max_cells - half)]
                                 for i in range(max_cells - half)]
-    if len(cells) < 2:
-        return True
-    if len(capacities) == 1 and capacities[0] >= len(cells):
-        return True
     options = [eligibility[i][j] for i, j in cells]
     conflicts = [0] * len(cells)
     for u, (i, j) in enumerate(cells):
@@ -119,11 +120,69 @@ def clique_capacity(eligibility, capacities, *, max_cells=80, max_cliques=16):
                 if candidates >> cell & 1:
                     clique |= 1 << cell
                     candidates &= conflicts[cell]
-            if clique not in checked and clique.bit_count() > 1:
+            if clique not in checked:
                 checked.add(clique)
-                if not has_capacity(tuple(options[i] for i in indices(clique)), capacities):
-                    return False
-    return True
+                yield tuple(cells[i] for i in indices(clique))
+
+
+def clique_capacity(eligibility, capacities):
+    """Test a bounded sample of incompatible cliques against their slot lists."""
+    if len(capacities) == 1 and capacities[0] >= sum(sum(map(bool, row)) for row in eligibility):
+        return True
+    return all(has_capacity(tuple(eligibility[i][j] for i, j in clique), capacities)
+               for clique in incompatibility_cliques(eligibility) if len(clique) > 1)
+
+
+def rectangle_masks(rows, width):
+    """Enumerate nonempty all-one rectangles of a bitmask matrix."""
+    for row_mask in range(1, 1 << len(rows)):
+        selected = tuple(indices(row_mask))
+        columns = (1 << width) - 1
+        for i in selected:
+            columns &= rows[i]
+        column_mask = columns
+        while column_mask:
+            cells = sum(column_mask << (i * width) for i in selected)
+            yield row_mask, column_mask, cells
+            column_mask = (column_mask - 1) & columns
+
+
+def allocate_rectangles(full, choices, obligations, cross_masks, max_states):
+    """Cover disjoint cells while accumulating each provider's full obligations."""
+    for rectangles in choices:
+        rectangles.sort(key=lambda item: -item[0].bit_count())
+    pivots = sorted(indices(full), key=lambda i: len(choices[i]))
+    states = 0
+
+    class StateLimit(Exception):
+        pass
+
+    @lru_cache(maxsize=None)
+    def search(remaining, assigned):
+        nonlocal states
+        if not remaining:
+            return True
+        states += 1
+        if states > max_states:
+            raise StateLimit
+        pivot = next(i for i in pivots if remaining >> i & 1)
+        for cells, provider, row_mask, column_mask in choices[pivot]:
+            capacity, prior_rows, prior_columns = assigned[provider]
+            if not capacity or cells & remaining != cells:
+                continue
+            combined_rows = prior_rows | row_mask
+            combined_columns = prior_columns | column_mask
+            if any(combined_columns & ~cross_masks[provider][i] for i in indices(combined_rows)):
+                continue
+            updated = (capacity - 1, combined_rows, combined_columns)
+            if search(remaining ^ cells, (*assigned[:provider], updated, *assigned[provider + 1:])):
+                return True
+        return False
+
+    try:
+        return search(full, obligations)
+    except StateLimit:
+        return None
 
 
 def compatible_partition(query, providers, *, max_states=12_000):
@@ -149,51 +208,11 @@ def compatible_partition(query, providers, *, max_states=12_000):
         cross_masks.append(allowed)
         if not capacity:
             continue
-        for row_mask in range(1, 1 << height):
-            rectangle_rows = tuple(indices(row_mask))
-            columns = (1 << width) - 1
-            for i in rectangle_rows:
-                columns &= rows[i] & allowed[i]
-            column_mask = columns
-            while column_mask:
-                cells = sum(column_mask << (i * width) for i in rectangle_rows)
-                for cell in indices(cells):
-                    choices[cell].append((cells, provider, row_mask, column_mask))
-                column_mask = (column_mask - 1) & columns
-    for rectangles in choices:
-        rectangles.sort(key=lambda item: -item[0].bit_count())
-    pivots = sorted(indices(full), key=lambda i: len(choices[i]))
-    states = 0
-
-    class StateLimit(Exception):
-        pass
-
-    @lru_cache(maxsize=None)
-    def search(remaining, obligations):
-        nonlocal states
-        if not remaining:
-            return True
-        states += 1
-        if states > max_states:
-            raise StateLimit
-        pivot = next(i for i in pivots if remaining >> i & 1)
-        for cells, provider, row_mask, column_mask in choices[pivot]:
-            capacity, prior_rows, prior_columns = obligations[provider]
-            if not capacity or cells & remaining != cells:
-                continue
-            combined_rows = prior_rows | row_mask
-            combined_columns = prior_columns | column_mask
-            if any(combined_columns & ~cross_masks[provider][i] for i in indices(combined_rows)):
-                continue
-            updated = (capacity - 1, combined_rows, combined_columns)
-            if search(remaining ^ cells, (*obligations[:provider], updated, *obligations[provider + 1:])):
-                return True
-        return False
-
-    try:
-        return search(full, tuple((capacity, 0, 0) for _, capacity in providers))
-    except StateLimit:
-        return None
+        for row_mask, column_mask, cells in rectangle_masks(tuple(a & b for a, b in zip(rows, allowed)), width):
+            for cell in indices(cells):
+                choices[cell].append((cells, provider, row_mask, column_mask))
+    return allocate_rectangles(full, choices, tuple((capacity, 0, 0) for _, capacity in providers),
+                               cross_masks, max_states)
 
 
 def provider_obstruction(query, providers, level='eligibility'):
