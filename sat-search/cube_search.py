@@ -23,6 +23,7 @@ from partial_ordered import projected_suffix_bounds, suffix_projections
 from monotone_interface import matching_cuts, pinned_interface_excess
 from port_certificates import (PORT_CERTIFICATE_LEVELS, incompatible_primary_pairs, incoming_port_bound,
                                minimal_zero_certificates)
+from provider_certificates import required_distinctions
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STOP = os.path.join(HERE, 'STOP')
@@ -1107,9 +1108,10 @@ def separation_clique(ctx, limit=12):
 
 class PortCosts(dict):
     """Port-cost table with monotone-only and output-region metadata."""
-    def __init__(self, d, mono=False, pout=None):
+    def __init__(self, d, mono=False, pout=None, provider_eligibility=False):
         super().__init__(d)
         self.mono, self.pout = mono, pout
+        self.provider_eligibility = provider_eligibility
 
 
 def port_cost_key(costs):
@@ -1117,7 +1119,8 @@ def port_cost_key(costs):
         return None
     pout = getattr(costs, 'pout', None)
     return (tuple(sorted(costs.items())), bool(getattr(costs, 'mono', False)),
-            tuple(sorted(pout.items())) if pout is not None else None)
+            tuple(sorted(pout.items())) if pout is not None else None,
+            bool(getattr(costs, 'provider_eligibility', False)))
 
 
 _FZERO, _FONE, _FINF = (), (0,), 10 ** 6
@@ -1281,11 +1284,11 @@ def profile_ports(terms, Smask, ctx):
 
 
 def port_costs(terms, mono=False, separation=False, profile=False, formula=False, output=False, polarity=False,
-               certificate_level=None, certificate_output=False):
+               certificate_level=None, certificate_output=False, provider_eligibility=False):
     """For every set S of inputs that is independent in the incompatibility graph J: p(S) = ceil(log2 q*(S)),
     q*(S) = number of distinct non-constant functions of S obtained by fixing all other inputs. Only outside
     neighbours of S matter (other outside inputs either make f constant 1 or do nothing)."""
-    if certificate_level is not None and not mono:
+    if (certificate_level is not None or provider_eligibility) and not mono:
         raise ValueError('certificate port costs require a complete monotone target')
     if certificate_output and certificate_level not in PORT_CERTIFICATE_LEVELS:
         raise ValueError('output certificate costs require a rank, clique, or exact level')
@@ -1347,7 +1350,8 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
         for Sm, cost in costs.items():
             lower = incoming_port_bound(terms, zero_certificates, Sm, certificate_level, output=True)
             pout[Sm] = max(pout.get(Sm, cost), lower)
-    return PortCosts(costs, mono=bool(mono or (formula and not polarity)), pout=pout)
+    return PortCosts(costs, mono=bool(mono or (formula and not polarity)), pout=pout,
+                     provider_eligibility=provider_eligibility)
 
 
 _ord_cache = {}
@@ -1435,7 +1439,7 @@ def multi_gate_lb(masks, gates, depth, port=None):
     return L
 
 
-def ordered_port_lb(terms, costs, H=0):
+def ordered_port_lb(terms, costs, H=0, *, stats=None):
     """Ordered terminal groups. Sort the groups by their terminals: an input of a later group cannot reach an
     earlier terminal (its unique path ends at its own terminal first), so group S's terminal depends only on
     S and the inputs P of earlier groups. Hence two outside assignments agreeing on P give the same
@@ -1447,6 +1451,7 @@ def ordered_port_lb(terms, costs, H=0):
     n = bin(sup).count('1')
     cst = {S: c for S, c in costs.items() if not (S & H) or bin(S).count('1') == 1}
     ctxs = {S: port_contexts(terms, S) for S in cst}
+    zeros = minimal_zero_certificates(tuple(terms)) if getattr(costs, 'provider_eligibility', False) else None
     elig_cache = {}
 
     def eligible(S, P):
@@ -1461,6 +1466,14 @@ def ordered_port_lb(terms, costs, H=0):
                 ok = False
                 break
             seen[k_] = sig
+        if ok and zeros is not None:
+            # The DP knows the union of earlier primary groups. It does not
+            # know the individual provider supports or occurrence capacities.
+            masks = required_distinctions(tuple(terms), zeros, S)
+            ok = masks is not None and all(P & mask for mask in masks)
+            if stats is not None:
+                stats['provider_queries'] += 1
+                stats['provider_rejected'] += int(not ok)
         elig_cache[key] = ok
         return ok
     INF = 10 ** 9
@@ -2292,6 +2305,8 @@ def main():
                     help='monotone ordered port bounds (default: rank)')
     ap.add_argument('--portcertoutput', action='store_true',
                     help='with --portcertrank: include all certificates in the output-region bound')
+    ap.add_argument('--portproviders', action='store_true',
+                    help='require residual pairs to have an eligible earlier provider (monotone)')
     ap.add_argument('--formulaports', action='store_true',
                     help='with --portbounds: regional formula costs (polarity version, valid with NOT gates)')
     ap.add_argument('--polaritydom', action='store_true', help='with --bypass --parity: polarity dominator')
@@ -2302,9 +2317,9 @@ def main():
     a = ap.parse_args()
     if a.portcertoutput and a.portcertrank not in PORT_CERTIFICATE_LEVELS:
         ap.error('--portcertoutput requires a rank, clique, or exact port certificate level')
-    if a.portcertrank is not None:
+    if a.portcertrank is not None or a.portproviders:
         if not a.nonot:
-            ap.error('--portcertrank requires --monotone')
+            ap.error('certificate port and provider bounds require --monotone')
         a.portbounds = a.monoports = a.orderedports = a.recursivebounds = True
     if a.cert and not a.nonot:
         ap.error('--cert requires --monotone')
@@ -2392,6 +2407,7 @@ def main():
         f'{", isolated-color" if a.isolatedcolor else ""}{", port-bounds" if a.portbounds else ""}'
         f'{", certificate port bounds=" + a.portcertrank if a.portcertrank is not None else ""}'
         f'{", output certificate ports" if a.portcertoutput else ""}'
+        f'{", provider eligibility" if a.portproviders else ""}'
         f'{", MINIMALITY RULES (requires sizes " + str(a.size - 1) + " and " + str(a.size - 2) + " UNSAT)" if a.minimal else ""}'
         f'; edges={edge_key}. '
         f'Stop with: create file {STOP}')
@@ -2401,7 +2417,8 @@ def main():
     t0 = time.time()
     done = 0; times = []; result = 'ALL UNSAT'
     costs = (port_costs(_anti(masks), mono=a.monoports, formula=a.formulaports, polarity=not a.monoports,
-                        certificate_level=a.portcertrank, certificate_output=a.portcertoutput)
+                        certificate_level=a.portcertrank, certificate_output=a.portcertoutput,
+                        provider_eligibility=a.portproviders)
              if a.portbounds else None)
     with Pool(a.workers) as p:
         for cube, status, circ, dt, stats in p.imap_unordered(
