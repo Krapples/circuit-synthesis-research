@@ -1124,6 +1124,67 @@ def formula_dp(U, F):
     return best
 
 
+def _dual_terms(f):
+    """Dual of a monotone function given as an antichain (minimal transversals); 0 <-> 1."""
+    if f == _FZERO:
+        return _FONE
+    if f == _FONE:
+        return _FZERO
+    cur = {0}
+    for t in f:
+        nxt = set()
+        for h in cur:
+            if h & t:
+                nxt.add(h)
+            else:
+                b = t
+                while b:
+                    lb = b & -b
+                    nxt.add(h | lb)
+                    b ^= lb
+        cur = set(_fanti(nxt))
+    return _fanti(cur)
+
+
+def polarity_formula_cost(Smask, sigs):
+    """formula_dp for circuits WITH free NOT gates. Push NOTs to the leaves (negation normal form, same binary
+    count). Read once, each input of S is a literal of one sign. In a context with restricted function g
+    (monotone, non-constant), the region's terminal is g or NOT g (downstream is id / NOT / const), so all
+    essential inputs of g share a sign: positive -> the formula computes g; negative -> substituting y = NOT x
+    the formula computes the dual g^d(y). Signs are constant on components of the co-essentiality graph;
+    flipping all signs swaps AND/OR (same cost), so 2^(c-1) sign choices. Returns the minimum cost."""
+    funcs = list(sigs)
+    ess = []
+    for g in funcs:
+        m = 0
+        for t in g:
+            m |= t
+        ess.append(m)
+    comps = []
+    for m in ess:
+        if not m:
+            continue
+        merged = m
+        keep = []
+        for c in comps:
+            if c & merged:
+                merged |= c
+            else:
+                keep.append(c)
+        comps = keep + [merged]
+    best = _FINF
+    for sign in range(1 << max(0, len(comps) - 1)):
+        neg = 0
+        for i, c in enumerate(comps[1:]):
+            if sign >> i & 1:
+                neg |= c
+        fam = tuple(_dual_terms(g) if (m & neg) else g for g, m in zip(funcs, ess))
+        best = min(best, formula_dp(Smask, fam))
+        if best <= 1:
+            break
+    return best
+
+
 def output_family(terms, Smask):
     """All restrictions the output region must realize on S: the non-constant ones, plus constant 0 if some
     context makes f identically 0 (no term inside S), plus constant 1 if a term lies entirely outside S."""
@@ -1158,7 +1219,7 @@ def profile_ports(terms, Smask, ctx):
     return len(profiles - {allz})
 
 
-def port_costs(terms, mono=False, separation=False, profile=False, formula=False, output=False):
+def port_costs(terms, mono=False, separation=False, profile=False, formula=False, output=False, polarity=False):
     """For every set S of inputs that is independent in the incompatibility graph J: p(S) = ceil(log2 q*(S)),
     q*(S) = number of distinct non-constant functions of S obtained by fixing all other inputs. Only outside
     neighbours of S matter (other outside inputs either make f constant 1 or do nothing)."""
@@ -1187,7 +1248,7 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
             if profile and len(sigs) > 1:
                 cost = max(cost, profile_ports(terms, Smask, port_contexts(terms, Smask)))
             if formula and len(sigs) > 1:
-                fc = formula_dp(Smask, tuple(sigs))
+                fc = polarity_formula_cost(Smask, sigs) if polarity else formula_dp(Smask, tuple(sigs))
                 if fc < _FINF:
                     cost = max(cost, fc)
             if mono and len(sigs) > 1:
@@ -1203,12 +1264,12 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
             costs[Smask] = cost
         Smask = (Smask - 1) & sup
     pout = None
-    if output and formula:
+    if output and formula and not polarity:     # output-region costs: monotone only
         pout = {}
         for Sm, c in costs.items():
             fc = formula_dp(Sm, tuple(output_family(terms, Sm)))
             pout[Sm] = max(c, fc) if fc < _FINF else c
-    return PortCosts(costs, mono=bool(mono or formula), pout=pout)
+    return PortCosts(costs, mono=bool(mono or (formula and not polarity)), pout=pout)
 
 
 _ord_cache = {}
@@ -1740,9 +1801,28 @@ def run_cube(args):
         if flags.get('readerbudget') and readonce:
             add_readerbudget(n, G, masks, pool, ops, clauses)
 
+    cert = bool(flags.get('cert')) and bool(flags.get('nonot'))
+
     def row(x):
         val = [pool.id(('val', x, j)) for j in range(output + 1)]
         yield from ([val[i] if x >> i & 1 else -val[i]] for i in range(n))
+        if cert:
+            # Monotone certificates: on a true row, val = 1 must be justified (val -> gate true); on a false
+            # row, val = 0 must be justified (not val -> gate false). Actual values satisfy these, so every
+            # other rule stays sound; a certified output is correct on that row (models are re-verified).
+            t = target(x)
+            for j, (a, o, no) in ops.items():
+                l, r = [pool.id(('arg', x, j, k)) for k in range(2)]
+                for k, arg in enumerate((l, r)):
+                    for i, sel in enumerate(select[j, k]):
+                        yield [-sel, -arg, val[i]] if t else [-sel, arg, -val[i]]
+                f = val[j]
+                if t:
+                    yield from ([-a, l, -f], [-a, r, -f], [-o, l, r, -f])
+                else:
+                    yield from ([-a, -l, -r, f], [-o, -l, f], [-o, -r, f])
+            yield [val[-1] if t else -val[-1]]
+            return
         for j, (a, o, no) in ops.items():
             l, r = [pool.id(('arg', x, j, k)) for k in range(2)]
             for k, arg in enumerate((l, r)):
@@ -1929,6 +2009,8 @@ def main():
     ap.add_argument('--portbounds', action='store_true', help='with --recursivebounds: region connection bound')
     ap.add_argument('--monoports', action='store_true', help='with --portbounds, monotone circuits only: Sperner/chain ports')
     ap.add_argument('--orderedports', action='store_true', help='with --portbounds: ordered terminal groups')
+    ap.add_argument('--formulaports', action='store_true',
+                    help='with --portbounds: regional formula costs (polarity version, valid with NOT gates)')
     ap.add_argument('--polaritydom', action='store_true', help='with --bypass --parity: polarity dominator')
     ap.add_argument('--fast', action='store_true',
                     help='recommended set (benchmarked 2026-11-23): --symmetry --fanout --readonce --sens --units '
@@ -2015,7 +2097,8 @@ def main():
                                  lostreader=a.lostreader, activecolor=a.activecolor, colorzero=a.colorzero,
                                  isolatedcolor=a.isolatedcolor,
                                  orderedports=a.orderedports,
-                                 portcosts=port_costs(_anti(masks), mono=a.monoports) if a.portbounds else None))
+                                 portcosts=port_costs(_anti(masks), mono=a.monoports, formula=a.formulaports,
+                                                     polarity=not a.monoports) if a.portbounds else None))
                 for c in cubes]):
             done += 1; times.append(dt)
             say(f'[{done}/{len(cubes)}] cube {cube}: {status} in {dt:.0f}s '
