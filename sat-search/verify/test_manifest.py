@@ -26,7 +26,7 @@ class Manifests(unittest.TestCase):
         cls.paths = {}
         for G in (5, 6):
             path = os.path.join(cls.dir, f'c5_{G}.json')
-            code, out = cli(G, '--symmetry', '--fanout', '--readonce', '--manifest', path)
+            code, out = cli(G, '--fast', '--manifest', path)
             assert 'RESULT: ALL UNSAT' in out, out[-500:]
             cls.paths[G] = path
 

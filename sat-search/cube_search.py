@@ -2298,6 +2298,8 @@ def _write_manifest(path, a, n, edges, allc, auts, sym, cubes, done_before, reco
         head, dirty = None, None
     config = {k: v for k, v in sorted(vars(a).items())
               if k not in ('log', 'workers', 'manifest', 'skip_log', 'trust_log', 'minimal_evidence', 'dry_run')}
+    config['active_rules'] = _active_rules(a)
+    config['verified_combination'] = not config['active_rules'] or config['active_rules'] in _verified_combinations()
     m = dict(schema=MANIFEST_SCHEMA,
              target=dict(n=n, edges=[list(e) for e in sorted(edges)],
                          edge_key=','.join(f'{u}-{v}' for u, v in sorted(edges)),
@@ -2314,6 +2316,31 @@ def _write_manifest(path, a, n, edges, allc, auts, sym, cubes, done_before, reco
              cubes=records, result=result)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(m, f, indent=1)
+
+
+NON_RULE_OPTIONS = {'n', 'edges', 'size', 'workers', 'solver', 'log', 'skip_log', 'trust_log', 'dry_run', 'manifest',
+                    'minimal_evidence', 'allow_unverified', 'nonot', 'fast', 'recdepth'}
+
+
+def _active_rules(a):
+    """The rule switches in effect after every implication main() applies (--fast expansion, certificate
+    prerequisites): boolean options that are on, plus valued options as name=value."""
+    out = []
+    for k, v in sorted(vars(a).items()):
+        if k in NON_RULE_OPTIONS or v in (None, False, [], ''):
+            continue
+        out.append(k if v is True else f'{k}={v}')
+    return out
+
+
+def _verified_combinations():
+    """Rule sets with complete differential coverage (verified_combinations.json, generated from the
+    command line itself by verify/make_allowlist.py and filtered by verify/coverage_inventory.json)."""
+    import json
+    path = os.path.join(HERE, 'verified_combinations.json')
+    if not os.path.exists(path):
+        return []
+    return [sorted(c['rules']) for c in json.load(open(path, encoding='utf-8'))['combinations']]
 
 
 def _require_minimal_evidence(ap, a, n, edges):
@@ -2391,6 +2418,8 @@ def main():
     ap.add_argument('--minimal', action='store_true',
                     help='minimality rules: ONLY sound if sizes size-1 and size-2 are already UNSAT')
     ap.add_argument('--manifest', default=None, help='write an evidence manifest (JSON) for this run')
+    ap.add_argument('--allow-unverified', action='store_true',
+                    help='run a rule combination without complete differential coverage (marked in the manifest)')
     ap.add_argument('--minimal-evidence', action='append', default=[],
                     help='with --minimal: manifests (--manifest) of complete runs without --minimal showing '
                          'ALL UNSAT at sizes size-1 and size-2 for this exact graph and basis; required')
@@ -2463,6 +2492,13 @@ def main():
                   'elimclosure', 'signeddom', 'recursivebounds', 'notbypass', 'recclosure',
                   'identifybounds', 'fanoutelim', 'pairro', 'colorbounds', 'sharecolor', 'colorbudget'):
             setattr(a, k, k != 'units' or not a.reuse)
+    active = _active_rules(a)
+    print(f'active rules ({"monotone" if a.nonot else "general"}): {active}', flush=True)
+    if active and active not in _verified_combinations():
+        if not a.allow_unverified:
+            ap.error(f'rule combination {active} lacks complete differential coverage (verify/AUDIT.md, '
+                     f'verified_combinations.json); pass --allow-unverified to run it anyway')
+        print('WARNING: unverified rule combination (--allow-unverified)', flush=True)
     log = open(a.log, 'a', encoding='utf-8') if a.log else None
 
     def say(msg):

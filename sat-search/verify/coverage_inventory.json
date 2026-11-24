@@ -1,0 +1,2952 @@
+{
+ "files": [
+  "results\\differential\\cli-all-n4-20261124.jsonl",
+  "results\\differential\\cli-mainonly-n5-20261124.jsonl",
+  "results\\differential\\full-20261124.jsonl",
+  "results\\differential\\mono_shard_check.jsonl",
+  "results\\differential\\padded-20261124.jsonl",
+  "results\\differential\\padded-whole-20261124.jsonl",
+  "results\\differential\\shard_split_check.jsonl",
+  "results\\differential\\sym-recheck.jsonl"
+ ],
+ "run_versions": [
+  [
+   "full-20261124.jsonl",
+   {
+    "git": "ce75954",
+    "dirty": true,
+    "sources_sha256": "be68bebd097fad44"
+   }
+  ],
+  [
+   "full-20261124.jsonl",
+   {
+    "git": "ce75954",
+    "dirty": true,
+    "sources_sha256": "be68bebd097fad44"
+   }
+  ],
+  [
+   "mono_shard_check.jsonl",
+   {
+    "git": "ce75954",
+    "dirty": true,
+    "sources_sha256": "be68bebd097fad44"
+   }
+  ],
+  [
+   "sym-recheck.jsonl",
+   {
+    "git": "ce75954",
+    "dirty": true,
+    "sources_sha256": "67ab61e36d07cff3"
+   }
+  ],
+  [
+   "padded-whole-20261124.jsonl",
+   {
+    "git": "887772e",
+    "dirty": true,
+    "sources_sha256": "7eb3527104eff057"
+   }
+  ],
+  [
+   "cli-all-n4-20261124.jsonl",
+   {
+    "git": "58c14f5",
+    "dirty": true,
+    "sources_sha256": "7eb3527104eff057"
+   }
+  ],
+  [
+   "shard_split_check.jsonl",
+   {
+    "git": "58c14f5",
+    "dirty": true,
+    "sources_sha256": "7eb3527104eff057"
+   }
+  ],
+  [
+   "cli-mainonly-n5-20261124.jsonl",
+   {
+    "git": "58c14f5",
+    "dirty": true,
+    "sources_sha256": "7eb3527104eff057"
+   }
+  ],
+  [
+   "padded-20261124.jsonl",
+   {
+    "git": "887772e",
+    "dirty": true,
+    "sources_sha256": "67ab61e36d07cff3"
+   }
+  ],
+  [
+   "padded-20261124.jsonl",
+   {
+    "git": "58c14f5",
+    "dirty": true,
+    "sources_sha256": "7eb3527104eff057"
+   }
+  ],
+  [
+   "padded-20261124.jsonl",
+   {
+    "git": "58c14f5",
+    "dirty": true,
+    "sources_sha256": "7eb3527104eff057"
+   }
+  ]
+ ],
+ "configs": {
+  "activecolor": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     775,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "bottleneck": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     195,
+     0,
+     1
+    ],
+    "whole-exact": [
+     290,
+     0,
+     4
+    ],
+    "prefix-min": [
+     777,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "bypass": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     606,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "capacity_deficit": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "capacity_exact": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "capacity_packing": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "cert": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     514,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     320,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "certtyperank": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "closedcone": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     178,
+     0,
+     2
+    ],
+    "prefix-min": [
+     568,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "colorbounds": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     312,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "colorbudget": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     292,
+     0,
+     2
+    ],
+    "prefix-min": [
+     814,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     312,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "colorzero": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     292,
+     0,
+     2
+    ],
+    "prefix-min": [
+     775,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "coupledprojections": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     418,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     170,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "elim": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     606,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "elimbypass": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     568,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     275,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "elimclosure": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     606,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     312,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "elimlink": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     174,
+     0,
+     6
+    ],
+    "prefix-min": [
+     568,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fanout": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     606,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fanoutelim": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     119,
+     0,
+     1
+    ],
+    "whole-exact": [
+     174,
+     0,
+     6
+    ],
+    "prefix-min": [
+     605,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     311,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     798,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     608,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    168,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+activecolor": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+bottleneck": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+capacity_packing": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "fast+cert": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     412,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     317,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+certtyperank": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "fast+closedcone": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+colorzero": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+elimbypass": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+elimlink": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+frontier": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     316,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     169,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+isolatedcolor": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+lostreader": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+minimal": {
+   "status": "tested (whole-min only, by design)",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 8,
+   "contract_rejections": 76,
+   "missing": [
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "fast+orderedports": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     316,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     167,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+outdec": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+parity": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     280,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     134,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 18,
+   "contract_rejections": 202,
+   "missing": []
+  },
+  "fast+partialmultiplicity": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     316,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     168,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+partialordered": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     412,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     313,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+partialrepeat": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     316,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     168,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+portcert_rank": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     408,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     312,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "fast+readerbudget": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+readersens": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+strongbounds": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     180,
+     0,
+     0
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "fast+typed": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     90,
+     0,
+     0
+    ],
+    "prefix-min": [
+     286,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "formulaports": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     145,
+     0,
+     2
+    ],
+    "prefix-min": [
+     387,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     134,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 220,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "formulaports_mono": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "frontier": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     514,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     320,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "identifybounds": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     313,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "isolatedcolor": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     290,
+     0,
+     4
+    ],
+    "prefix-min": [
+     775,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "lostreader": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     118,
+     0,
+     2
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     566,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "matchinginterface": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     89,
+     0,
+     1
+    ],
+    "prefix-min": [
+     286,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 22,
+   "contract_rejections": 197,
+   "missing": []
+  },
+  "minimal": {
+   "status": "tested (whole-min only, by design)",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    56,
+    0,
+    0
+   ],
+   "nongraph": 84,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "monoports": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "notbypass": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     89,
+     0,
+     1
+    ],
+    "prefix-min": [
+     290,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     143,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 18,
+   "contract_rejections": 202,
+   "missing": []
+  },
+  "orderedports": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "outdec": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     568,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "pairro": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     292,
+     0,
+     2
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     311,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "parity": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     389,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     136,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 220,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "partialempty": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     418,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     170,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "partialmultiplicity": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     514,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     319,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "partialordered": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     514,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     320,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "partialrepeat": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     514,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     320,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "plain": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     1007,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     612,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "polaritydom": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     60,
+     0,
+     0
+    ],
+    "whole-exact": [
+     89,
+     0,
+     1
+    ],
+    "prefix-min": [
+     280,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     134,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    24,
+    0,
+    0
+   ],
+   "nongraph": 18,
+   "contract_rejections": 202,
+   "missing": []
+  },
+  "portbounds": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     775,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     274,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "portcert_clique": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "portcert_compatibility": {
+   "status": "tested (command line, whole function)",
+   "classes": {
+    "whole-min": [
+     0,
+     0,
+     0
+    ],
+    "whole-exact": [
+     0,
+     0,
+     0
+    ],
+    "prefix-min": [
+     0,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 0,
+   "contract_rejections": 0,
+   "missing": [
+    "whole-min",
+    "whole-exact",
+    "prefix-min",
+    "prefix-exact"
+   ]
+  },
+  "portcert_exact": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "portcert_output": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "portcert_rank": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "portproviders": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     388,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     140,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    84,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "readerbudget": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     177,
+     0,
+     3
+    ],
+    "prefix-min": [
+     568,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "readersens": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     292,
+     0,
+     2
+    ],
+    "prefix-min": [
+     777,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "readonce": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     292,
+     0,
+     2
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     313,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "recclosure": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "recursivebounds": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "reuse": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "sens": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     178,
+     0,
+     2
+    ],
+    "prefix-min": [
+     606,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "sharecolor": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     289,
+     0,
+     5
+    ],
+    "prefix-min": [
+     813,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     312,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "signeddom": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     178,
+     0,
+     2
+    ],
+    "prefix-min": [
+     606,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 40,
+   "contract_rejections": 399,
+   "missing": []
+  },
+  "strongbounds": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     291,
+     0,
+     3
+    ],
+    "prefix-min": [
+     777,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "symmetry": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     293,
+     0,
+     1
+    ],
+    "prefix-min": [
+     1029,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     276,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 521,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "typed": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     98,
+     0,
+     0
+    ],
+    "whole-exact": [
+     146,
+     0,
+     1
+    ],
+    "prefix-min": [
+     418,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     170,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    0,
+    0,
+    0
+   ],
+   "nongraph": 219,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "units": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     292,
+     0,
+     2
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  },
+  "usens": {
+   "status": "tested",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     289,
+     0,
+     5
+    ],
+    "prefix-min": [
+     815,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     314,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    48,
+    0,
+    0
+   ],
+   "nongraph": 439,
+   "contract_rejections": 0,
+   "missing": []
+  }
+ }
+}

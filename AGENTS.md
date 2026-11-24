@@ -59,6 +59,13 @@ independent reference available.
 
 ## Current direction and stopping rules
 
+Effort split (from 2026-11-24): about 80% mathematical and algorithmic improvements, 15% targeted
+verification, 5% documentation and maintenance. The verification infrastructure in `sat-search/verify`
+(independent reference, differential harnesses, evidence manifests, coverage inventory) checks the
+components a change touches. Do not re-audit unchanged rules or exhaustively test optional
+configurations. Keep rule combinations without coverage disabled (`verified_combinations.json`), and
+record remaining historical gaps in `sat-search/verify/AUDIT.md` without letting them block research.
+
 Prioritize complete-function FPT synthesis, counted-NOT and nonmonotone synthesis, affine
 certificate reconstruction, construction upper bounds, and hybrids with SAT. Audit proofs
 separately from the prototypes that motivated them. Confirm a candidate with small independent

@@ -6,10 +6,26 @@ The project uses exact synthesis and analytical lower bounds to study small Bool
 latest cross-family benchmark shows that frontier bounds transfer beyond graph functions, including
 to 3-uniform hypergraphs. The main open shard is L-meta-1343 at size 19.
 
+**Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
+to targeted verification of changed components, and 5% to documentation. The research targets are:
+
+- stronger general lower bounds;
+- exact synthesis algorithms that shrink the search space;
+- nonmonotone AND/OR/NOT circuits;
+- practical complete-function FPT synthesis;
+- shared-subexpression construction;
+- adaptive analytical branch-and-bound;
+- hybrids with SAT that show measurable gains.
+
+The [verification audit](sat-search/verify/AUDIT.md) supplies the reference, the differential harnesses and
+the evidence manifests. Rule combinations without coverage stay disabled. Historical verification gaps are
+recorded there and do not block new work.
+
 ## Results at a glance
 
 | Topic | Result |
 | --- | --- |
+| Verification audit | An independent reference solver shares no code with `cube_search` and agrees with brute force on 2,780 cases. Rules were differentially tested through `run_cube` and through the production command line, at M−1, M, M+1, M+2 and M+4 and on pinned and redundant prefixes. Analytical bounds had no violations in 48,130 evaluations. Five defects were found, minimized and fixed or disabled. None affects a recorded result. The rank-tight family closes the universal rank(H) ≤ 2e direction (tested for e ≤ 30). Historical exclusions remain rule-dependent until they have manifests. [Audit, statuses, and revalidation list](sat-search/verify/AUDIT.md) |
 | Cross-family benchmark | 100 functions, 2,085 solver jobs, and 583 verified witnesses in the full sweep. Certified minima for 55 monotone cases and 45 NOT-enabled cases. |
 | Endpoint follow-up | Retested all 45 open monotone intervals at their lower endpoints. Narrowed 39 intervals and certified 10 more minima, bringing the total to **65 of 100**. Four exclusions have independently checked DRUP certificates. |
 | Sharing parameter | Partial monotone synthesis is NP-hard already at zero sharing with every input mandatory and the exact hitting number supplied. The opt-in two-coloring shortcut applied to 121 of 20,439 output-formula query calls in 316 completed benchmark jobs. [Proof and reproduction](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md#hardness-at-zero-sharing) |

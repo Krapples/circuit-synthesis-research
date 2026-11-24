@@ -1,0 +1,2532 @@
+{
+ "generated_by": "verify/make_allowlist.py",
+ "inventory_files": [
+  "results\\differential\\cli-all-n4-20261124.jsonl",
+  "results\\differential\\cli-mainonly-n5-20261124.jsonl",
+  "results\\differential\\full-20261124.jsonl",
+  "results\\differential\\mono_shard_check.jsonl",
+  "results\\differential\\padded-20261124.jsonl",
+  "results\\differential\\padded-whole-20261124.jsonl",
+  "results\\differential\\shard_split_check.jsonl",
+  "results\\differential\\sym-recheck.jsonl"
+ ],
+ "scope": "whole-function command-line runs",
+ "combinations": [
+  {
+   "name": "activecolor",
+   "basis": "monotone",
+   "rules": [
+    "activecolor",
+    "readonce",
+    "sharecolor"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      775,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "bottleneck",
+   "basis": "monotone",
+   "rules": [
+    "bottleneck",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      195,
+      0,
+      1
+     ],
+     "whole-exact": [
+      290,
+      0,
+      4
+     ],
+     "prefix-min": [
+      777,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "bypass",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      606,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "capacity_deficit",
+   "basis": "monotone",
+   "rules": [
+    "capacityallocation=deficit",
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "capacity_exact",
+   "basis": "monotone",
+   "rules": [
+    "capacityallocation=exact",
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "capacity_packing",
+   "basis": "monotone",
+   "rules": [
+    "capacityallocation=packing",
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "cert",
+   "basis": "monotone",
+   "rules": [
+    "cert"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      514,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      320,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "certtyperank",
+   "basis": "monotone",
+   "rules": [
+    "certtyperank",
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "closedcone",
+   "basis": "monotone",
+   "rules": [
+    "closedcone",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      178,
+      0,
+      2
+     ],
+     "prefix-min": [
+      568,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "colorbounds",
+   "basis": "monotone",
+   "rules": [
+    "colorbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      312,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "colorbudget",
+   "basis": "monotone",
+   "rules": [
+    "colorbudget",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      292,
+      0,
+      2
+     ],
+     "prefix-min": [
+      814,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      312,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "colorzero",
+   "basis": "monotone",
+   "rules": [
+    "colorzero",
+    "readonce",
+    "sharecolor"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      292,
+      0,
+      2
+     ],
+     "prefix-min": [
+      775,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "elim",
+   "basis": "monotone",
+   "rules": [
+    "elim"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      606,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "elimbypass",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "elim",
+    "elimbypass",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      568,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      275,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "elimclosure",
+   "basis": "monotone",
+   "rules": [
+    "elim",
+    "elimclosure"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      606,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      312,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "elimlink",
+   "basis": "monotone",
+   "rules": [
+    "elim",
+    "elimlink"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      174,
+      0,
+      6
+     ],
+     "prefix-min": [
+      568,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fanout",
+   "basis": "monotone",
+   "rules": [
+    "fanout"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      606,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fanoutelim",
+   "basis": "monotone",
+   "rules": [
+    "elim",
+    "elimclosure",
+    "fanoutelim",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      119,
+      0,
+      1
+     ],
+     "whole-exact": [
+      174,
+      0,
+      6
+     ],
+     "prefix-min": [
+      605,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      311,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     168,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      180,
+      0,
+      0
+     ],
+     "prefix-min": [
+      798,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      608,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+capacity_packing",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "capacityallocation=packing",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "monoports",
+    "notbypass",
+    "orderedports",
+    "pairro",
+    "portbounds",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+cert",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "cert",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      60,
+      0,
+      0
+     ],
+     "whole-exact": [
+      90,
+      0,
+      0
+     ],
+     "prefix-min": [
+      412,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      317,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+certtyperank",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "certtyperank",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "monoports",
+    "notbypass",
+    "orderedports",
+    "pairro",
+    "portbounds",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+closedcone",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "closedcone",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      180,
+      0,
+      0
+     ],
+     "prefix-min": [
+      566,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+partialordered",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "partialordered",
+    "partialrepeat",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      60,
+      0,
+      0
+     ],
+     "whole-exact": [
+      90,
+      0,
+      0
+     ],
+     "prefix-min": [
+      412,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      313,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+portcert_rank",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "monoports",
+    "notbypass",
+    "orderedports",
+    "pairro",
+    "portbounds",
+    "portcertrank=rank",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      60,
+      0,
+      0
+     ],
+     "whole-exact": [
+      90,
+      0,
+      0
+     ],
+     "prefix-min": [
+      408,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      312,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+strongbounds",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "strongbounds",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      180,
+      0,
+      0
+     ],
+     "prefix-min": [
+      566,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "formulaports",
+   "basis": "general",
+   "rules": [
+    "formulaports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      145,
+      0,
+      2
+     ],
+     "prefix-min": [
+      387,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      134,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "frontier",
+   "basis": "monotone",
+   "rules": [
+    "frontier"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      514,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      320,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "identifybounds",
+   "basis": "monotone",
+   "rules": [
+    "identifybounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      313,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "isolatedcolor",
+   "basis": "monotone",
+   "rules": [
+    "isolatedcolor",
+    "readonce",
+    "sharecolor"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      290,
+      0,
+      4
+     ],
+     "prefix-min": [
+      775,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "lostreader",
+   "basis": "monotone",
+   "rules": [
+    "elim",
+    "elimclosure",
+    "fanoutelim",
+    "lostreader",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      118,
+      0,
+      2
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      566,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "matchinginterface",
+   "basis": "monotone",
+   "rules": [
+    "matchinginterface"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      60,
+      0,
+      0
+     ],
+     "whole-exact": [
+      89,
+      0,
+      1
+     ],
+     "prefix-min": [
+      286,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "minimal",
+   "basis": "monotone",
+   "rules": [
+    "minimal"
+   ],
+   "evidence": {
+    "cli": [
+     56,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "monoports",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "notbypass",
+   "basis": "general",
+   "rules": [
+    "bypass",
+    "notbypass",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      60,
+      0,
+      0
+     ],
+     "whole-exact": [
+      89,
+      0,
+      1
+     ],
+     "prefix-min": [
+      290,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      143,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "orderedports",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "outdec",
+   "basis": "monotone",
+   "rules": [
+    "outdec"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      568,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "pairro",
+   "basis": "monotone",
+   "rules": [
+    "pairro",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      292,
+      0,
+      2
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      311,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "parity",
+   "basis": "general",
+   "rules": [
+    "parity",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      389,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      136,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "partialmultiplicity",
+   "basis": "monotone",
+   "rules": [
+    "partialmultiplicity"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      514,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      319,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "partialordered",
+   "basis": "monotone",
+   "rules": [
+    "partialordered"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      514,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      320,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "partialrepeat",
+   "basis": "monotone",
+   "rules": [
+    "partialrepeat"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      514,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      320,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "polaritydom",
+   "basis": "general",
+   "rules": [
+    "bypass",
+    "parity",
+    "polaritydom",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     24,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      60,
+      0,
+      0
+     ],
+     "whole-exact": [
+      89,
+      0,
+      1
+     ],
+     "prefix-min": [
+      280,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      134,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portbounds",
+   "basis": "monotone",
+   "rules": [
+    "portbounds",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      775,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portcert_clique",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "portcertrank=clique",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portcert_compatibility",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "portcertrank=compatibility",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      0,
+      0,
+      0
+     ],
+     "whole-exact": [
+      0,
+      0,
+      0
+     ],
+     "prefix-min": [
+      0,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portcert_exact",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "portcertrank=exact",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portcert_output",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "portcertoutput",
+    "portcertrank=rank",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portcert_rank",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "portcertrank=rank",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "portproviders",
+   "basis": "monotone",
+   "rules": [
+    "monoports",
+    "orderedports",
+    "portbounds",
+    "portproviders",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     84,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      98,
+      0,
+      0
+     ],
+     "whole-exact": [
+      146,
+      0,
+      1
+     ],
+     "prefix-min": [
+      388,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      140,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "readerbudget",
+   "basis": "monotone",
+   "rules": [
+    "readerbudget",
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      177,
+      0,
+      3
+     ],
+     "prefix-min": [
+      568,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "readersens",
+   "basis": "monotone",
+   "rules": [
+    "readersens"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      292,
+      0,
+      2
+     ],
+     "prefix-min": [
+      777,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "readonce",
+   "basis": "monotone",
+   "rules": [
+    "readonce"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      292,
+      0,
+      2
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      313,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "recclosure",
+   "basis": "monotone",
+   "rules": [
+    "recclosure",
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "recursivebounds",
+   "basis": "monotone",
+   "rules": [
+    "recursivebounds"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "reuse",
+   "basis": "monotone",
+   "rules": [
+    "reuse"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "sens",
+   "basis": "monotone",
+   "rules": [
+    "sens"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      178,
+      0,
+      2
+     ],
+     "prefix-min": [
+      606,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "sharecolor",
+   "basis": "monotone",
+   "rules": [
+    "readonce",
+    "sharecolor"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      289,
+      0,
+      5
+     ],
+     "prefix-min": [
+      813,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      312,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "signeddom",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "readonce",
+    "signeddom"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      178,
+      0,
+      2
+     ],
+     "prefix-min": [
+      606,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "strongbounds",
+   "basis": "monotone",
+   "rules": [
+    "strongbounds"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      291,
+      0,
+      3
+     ],
+     "prefix-min": [
+      777,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "symmetry",
+   "basis": "monotone",
+   "rules": [
+    "symmetry"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      293,
+      0,
+      1
+     ],
+     "prefix-min": [
+      1029,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      276,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "units",
+   "basis": "monotone",
+   "rules": [
+    "units"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      292,
+      0,
+      2
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "usens",
+   "basis": "monotone",
+   "rules": [
+    "readonce",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     48,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      289,
+      0,
+      5
+     ],
+     "prefix-min": [
+      815,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      314,
+      0,
+      0
+     ]
+    }
+   }
+  }
+ ],
+ "rejected": []
+}
