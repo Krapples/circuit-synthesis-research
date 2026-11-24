@@ -1,0 +1,15 @@
+{
+  "case": "cycle-5",
+  "budget": 6,
+  "basis": "mono",
+  "variables": 750,
+  "clauses": 15752,
+  "checked_steps": 7681,
+  "solve_seconds": 0.14038740005344152,
+  "check_seconds": 5.317457899916917,
+  "target_manifest_sha256": "3abb4efc3342e94498c253ed9b4ff2afeb571b8de0a8bd8546f14aa66d01da98",
+  "files": {
+    "cycle-5-b6.cnf.gz": "5732209b079398a06fcdaec0f02e968a2a2ec4285f09c68a29d2398552850b78",
+    "cycle-5-b6.drup.gz": "959db606cff3986bf18985620e2da3b752f44fff9d3e92eaf7c484679b08dd18"
+  }
+}

@@ -14,16 +14,20 @@ from functools import lru_cache
 from math import comb
 for _v in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
     os.environ.setdefault(_v, '1')
-sys.path.insert(0, r"C:\Users\Carson\Documents\ChatGPT\P=NP\.scratch-sat")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.scratch-sat'))
 from multiprocessing import Pool
 from pysat.formula import IDPool
-from pysat.solvers import Solver
+from pysat.solvers import Solver, SolverNames
 from pysat.card import CardEnc
+from partial_ordered import projected_suffix_bounds, suffix_projections
+from monotone_interface import matching_cuts, pinned_interface_excess
 from port_certificates import (PORT_CERTIFICATE_LEVELS, incompatible_primary_pairs, incoming_port_bound,
                                minimal_zero_certificates)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STOP = os.path.join(HERE, 'STOP')
+KISSAT_NAMES = getattr(SolverNames, 'kissat404', ())
+MATCHING_INTERFACE_CNF_CUTS = 8
 
 
 def build(n, G, colex_from=0, *, require_used=True):
@@ -77,6 +81,38 @@ def truth_gate_clauses(x, values, pool, ops, select):
         f = values[j]
         yield from ([-a, -l, -r, f], [-a, l, -f], [-a, r, -f], [-o, l, r, -f], [-o, -l, f],
                     [-o, -r, f], [-no, -l, -f], [-no, l, f])
+
+
+def add_matching_interface(n, output, pool, ops, select, clauses, cuts):
+    """Require enough distinct pure wires with readers outside each selected cut."""
+    selected = [cut for cut in cuts if cut[1] >= 2][:MATCHING_INTERFACE_CNF_CUTS]
+    for side, width in selected:
+        pure = [pool.id(('interface_pure', side, i)) for i in range(output + 1)]
+        clauses.extend([pure[i] if side >> i & 1 else -pure[i]] for i in range(n))
+        clauses.append([-pure[output]])
+        for j in ops:
+            a, b = (pool.id(('interface_arg', side, j, k)) for k in range(2))
+            clauses.extend(([-pure[j], a], [-pure[j], b], [pure[j], -a, -b]))
+            for k, arg in enumerate((a, b)):
+                for i, sel in enumerate(select[j, k]):
+                    clauses.extend(([-sel, -arg, pure[i]], [-sel, arg, -pure[i]]))
+        exports = []
+        for i in range(output):
+            if i < n and not side >> i & 1:
+                continue
+            exported = pool.id(('interface_export', side, i))
+            exports.append(exported)
+            exits = []
+            for j in range(max(n, i + 1), output + 1):
+                for k in range(2):
+                    use = pool.id(('interface_exit', side, i, j, k))
+                    exits.append(use)
+                    clauses.extend(([-use, select[j, k][i]], [-use, -pure[j]]))
+            clauses.extend(([-exported, pure[i]], [-exported, *exits]))
+        if width > len(exports):
+            clauses.append([])
+        else:
+            clauses.extend(CardEnc.atleast(exports, bound=width, vpool=pool).clauses)
 
 
 def add_fanout_rules(n, masks, ops, select, clauses):
@@ -1070,12 +1106,10 @@ def separation_clique(ctx, limit=12):
 
 
 class PortCosts(dict):
-    """Port-cost table {S: p(S)} with metadata: mono = valid only for monotone (NOT-free) circuits;
-    pout = output-region costs (or None); fp = content fingerprint (safe cache key)."""
+    """Port-cost table with monotone-only and output-region metadata."""
     def __init__(self, d, mono=False, pout=None):
         super().__init__(d)
         self.mono, self.pout = mono, pout
-        self.fp = hash((tuple(sorted(d.items())), mono, tuple(sorted(pout.items())) if pout else None))
 
 
 def port_cost_key(costs):
@@ -1770,6 +1804,103 @@ def boundary_rows(n, masks):
                                and all(target(x | 1 << i) for i in range(n) if not x >> i & 1))
 
 
+PARTIAL_FEATURE_LIMIT = 16  # closure and partition search enumerate feature subsets
+PARTIAL_READER_FLAGS = ('partialmultiplicity', 'partialempty', 'coupledprojections')
+
+
+def prefix_boundary(n, masks, prefix):
+    """Return structural reads and the feature patterns of the target's boundary rows."""
+    mandatory = (1 << (n + len(prefix))) - 1
+    for _, left, right in prefix:
+        mandatory &= ~((1 << left) | (1 << right))
+
+    def signature(row):
+        for j, (op, left, right) in enumerate(prefix, n):
+            a, b = row >> left & 1, row >> right & 1
+            row |= ((a & b) if op == 0 else (a | b) if op == 1 else (1 - a)) << j
+        return row
+
+    ones, zeros = boundary_rows(n, masks)
+    return mandatory, tuple(map(signature, ones)), tuple(map(signature, zeros))
+
+
+@lru_cache(maxsize=256)
+def ordered_prefix_bound(n, masks, prefix):
+    """Binary lower bound from viable suffix-input projections of a monotone prefix."""
+    width = n + len(prefix)
+    if width > PARTIAL_FEATURE_LIMIT:
+        return 0
+    mandatory, positives, negatives = prefix_boundary(n, masks, prefix)
+    cases = projected_suffix_bounds(width, mandatory, positives, negatives)
+    return len(prefix) + min((bound for _, bound in cases), default=float('inf'))
+
+
+@lru_cache(maxsize=8)
+def repeat_prefix_projections(n, masks, prefix):
+    mandatory, positives, negatives = prefix_boundary(n, masks, prefix)
+    return tuple(suffix_projections(n + len(prefix), mandatory, positives, negatives))
+
+
+def partial_repeat_bound(n, masks, prefix, gate):
+    """Binary lower bound with a prescribed first suffix gate and optional suffix inputs."""
+    if n + len(prefix) > PARTIAL_FEATURE_LIMIT:
+        return 0
+    _, left, right = gate
+    operands = (1 << left) | (1 << right)
+    projections = repeat_prefix_projections(n, masks, prefix)
+    bounds = (projection.binary_bound(projection.forced_repeats(gate))
+              for projection in projections if projection.used & operands == operands)
+    return len(prefix) + min(bounds, default=float('inf'))
+
+
+def partial_multiplicity_bound(n, masks, prefix, gates, *, after=None, empty=False):
+    """Count forced readers, optionally coupling to projections after the pinned block."""
+    width = n + len(prefix)
+    if width > PARTIAL_FEATURE_LIMIT:
+        return 0
+    original = (1 << width) - 1
+    operands = 0
+    for _, left, right in gates:
+        operands |= (1 << left) | (1 << right)
+    operands &= original
+    projections = repeat_prefix_projections(n, masks, prefix)
+    if after is None:
+        bounds = (p.multiplicity_bound(width, gates, empty=empty)
+                  for p in projections if p.used & operands == operands)
+    else:
+        before = {p.used: p for p in projections}
+
+        def coupled_bounds():
+            for suffix in after:
+                # An original wire is used before the block exactly when a pinned gate or the suffix reads it.
+                used = operands | (suffix.used & original)
+                if used in before:
+                    prior = before[used].multiplicity_bound(width, gates, after=suffix.used, empty=empty)
+                    yield max(prior, len(gates) + suffix.binary_bound())
+
+        bounds = coupled_bounds()
+    return len(prefix) + min(bounds, default=float('inf'))
+
+
+def frontier_requirements(n, masks, prefix, monotone):
+    """Return a binary-gate lower bound and necessary suffix reads for a contiguous prefix."""
+    mandatory, positives, negatives = prefix_boundary(n, masks, prefix)
+    # A suffix must distinguish opposite outputs. A monotone suffix needs a wire
+    # that is 1 on the positive row and 0 on the negative row.
+    cuts = {a & ~b if monotone else a ^ b for a in positives for b in negatives}
+    cuts = sorted(_anti(cut for cut in cuts if not cut & mandatory), key=lambda c: (c.bit_count(), c))
+    reads = mandatory.bit_count()
+    covered = 0
+    for cut in cuts:
+        if not cut & covered:
+            covered |= cut
+            reads += 1   # each disjoint cut requires another distinct read
+    # Every suffix gate except its output is read in the suffix. With B binary
+    # gates it has at most B + 1 remaining operand slots for distinct prefix wires.
+    binary_prefix = sum(op != 2 for op, _, _ in prefix)
+    return binary_prefix + max(0, reads - 1), cuts
+
+
 def run_cube(args):
     n, masks, G, solver_name, cube, fanout, readonce = args[:7]
     flags = args[7] if len(args) > 7 else {}
@@ -1784,47 +1915,107 @@ def run_cube(args):
     ORDERED[0] = bool(flags.get('orderedports'))
     if (flags.get('monoports') or getattr(flags.get('portcosts'), 'mono', False)) and not flags.get('nonot'):
         raise ValueError('monotone port bounds require a monotone (NOT-free) search')
-    reuse = bool(flags.get('reuse')) and bool(flags.get('fixgates')) and not solver_name.startswith('kissat')
-    piece = flags['fixgates'][-1] if reuse else None
-    rkey = repr((n, tuple(masks), G, solver_name, cube, fanout, readonce,
-                 sorted((k, repr(v)) for k, v in flags.items() if k not in ('fixgates', 'portcosts')),
-                 tuple(flags['fixgates'][:-1]))) if reuse else None
+    partial_readers = any(flags.get(flag) for flag in PARTIAL_READER_FLAGS)
+    if (partial_readers or flags.get('partialordered') or flags.get('partialrepeat')) and not flags.get('nonot'):
+        raise ValueError('partial-function bounds require a monotone (NOT-free) search')
+    if flags.get('matchinginterface') and not flags.get('nonot'):
+        raise ValueError('matching interface bounds require a monotone (NOT-free) search')
+    fixed = tuple(flags.get('fixgates', ()))
+    interfaces = matching_cuts(n, tuple(masks)) if flags.get('matchinginterface') else ()
+    if interfaces:
+        pinned = {0: cube, **{off: (op, left, right) for off, op, left, right in fixed}}
+        excess, side = pinned_interface_excess(n, pinned, interfaces)
+        if excess and n - 1 + excess > G:
+            return cube, 'UNSAT', None, time.time() - t0, (f'analytical: matching interface on mask {side:#x} '
+                                                         f'requires {excess} excess reads > {G - n + 1}')
+    rebuild = solver_name.startswith('kissat')
+    reuse = bool(flags.get('reuse')) and not (rebuild or solver_name.lower() in KISSAT_NAMES)
+    piece = fixed[-1] if reuse and fixed else None
+    prefix = fixed[:-1] if piece is not None else fixed
+    unit_cube = bool(flags.get('units'))
+    rkey = (n, tuple(masks), G, solver_name, cube if unit_cube else None, fanout, readonce,
+                 tuple(sorted((k, repr(v)) for k, v in flags.items() if k not in ('fixgates', 'portcosts'))),
+                 prefix, port_cost_key(flags.get('portcosts'))) if reuse else None
     cached = _SCACHE.get(rkey) if reuse else None
+    Lc = n - 1
     if flags.get('recursivebounds'):
         Lc = cube_binary_lb(masks, cube, flags.get('recdepth', 2), identify=flags.get('identifybounds', False),
                             port=flags.get('portcosts'))
-        Lc_base = Lc
-        pinned = [cube] + [(fop, fl, fr) for off, fop, fl, fr in flags.get('fixgates', ()) if fl < n and fr < n]
+        pinned = [cube] + [(fop, fl, fr) for off, fop, fl, fr in fixed if fl < n and fr < n]
         if len(pinned) > 1:
             Lc = max(Lc, multi_gate_lb(masks, pinned, flags.get('recdepth', 2), port=flags.get('portcosts')))
-        if Lc > G:
-            return cube, 'UNSAT', None, time.time() - t0, f'analytical: binary-gate bound {Lc} > {G}'
-        if Lc > G:
-            return cube, 'UNSAT', None, time.time() - t0, f'analytical: binary-gate bound {Lc} > {G}'
+    frontier = []
+    if flags.get('frontier') or flags.get('partialordered') or flags.get('partialrepeat') or partial_readers:
+        pinned = {0: cube, **{off: (op, left, right) for off, op, left, right in fixed}}
+        for off in range(G):
+            if off not in pinned:
+                break
+            frontier.append(pinned[off])
+    after = None
+    monotone_prefix = not any(op == 2 for op, _, _ in frontier)
+    if partial_readers and frontier and monotone_prefix:
+        target_masks = tuple(masks)
+        if flags.get('coupledprojections') and len(frontier) < G and n + len(frontier) <= PARTIAL_FEATURE_LIMIT:
+            after = repeat_prefix_projections(n, target_masks, tuple(frontier))
+        for length in reversed(range(len(frontier))):
+            bound = partial_multiplicity_bound(n, target_masks, tuple(frontier[:length]), frontier[length:],
+                                               after=after, empty=flags.get('partialempty', False))
+            if bound > G:
+                rule = 'coupled projections' if after is not None else 'partial multiplicity'
+                reason = f'binary-gate bound {bound} > {G}' if bound != float('inf') else 'no viable suffix inputs'
+                return cube, 'UNSAT', None, time.time() - t0, f'analytical: {rule} {reason} (prefix {length})'
+            Lc = max(Lc, bound)
+    if flags.get('partialrepeat') and not partial_readers and monotone_prefix:
+        for length in reversed(range(len(frontier))):
+            bound = partial_repeat_bound(n, tuple(masks), tuple(frontier[:length]), frontier[length])
+            if bound > G:
+                reason = f'binary-gate bound {bound} > {G}' if bound != float('inf') else 'no viable suffix inputs'
+                return cube, 'UNSAT', None, time.time() - t0, f'analytical: partial repeat {reason} (prefix {length})'
+            Lc = max(Lc, bound)
+    frontier = frontier[:G - 1]
+    cuts = []
+    if frontier and flags.get('partialordered') and after is None and not any(op == 2 for op, _, _ in frontier):
+        # Reader bounds already cover the prefix before the last pinned gate.
+        first = len(frontier) if partial_readers or flags.get('partialrepeat') else max(1, len(frontier) - 1)
+        for length in range(first, len(frontier) + 1):
+            bound = ordered_prefix_bound(n, tuple(masks), tuple(frontier[:length]))
+            if bound > G:
+                reason = f'binary-gate bound {bound} > {G}' if bound != float('inf') else 'no viable suffix inputs'
+                return cube, 'UNSAT', None, time.time() - t0, f'analytical: partial ordered {reason} (prefix {length})'
+            Lc = max(Lc, bound)
+    if frontier and flags.get('frontier'):
+        bound, cuts = frontier_requirements(n, tuple(masks), frontier, flags.get('nonot'))
+        if bound > G:
+            return cube, 'UNSAT', None, time.time() - t0, f'analytical: frontier binary-gate bound {bound} > {G}'
+        Lc = max(Lc, bound)
+    if Lc > G:
+        return cube, 'UNSAT', None, time.time() - t0, f'analytical: binary-gate bound {Lc} > {G}'
+    not_cap = G - Lc if not flags.get('nonot') and Lc > n - 1 else None
     if cached:
         output, pool, ops, select = cached['output'], cached['pool'], cached['ops'], cached['select']
         clauses = None
     else:
         output, pool, clauses, ops, select = build(n, G, flags.get('colex_from', 0))
+        if interfaces:
+            add_matching_interface(n, output, pool, ops, select, clauses, interfaces)
         if flags.get('nonot'):                  # monotone search: no NOT gates
             clauses.extend([[-ops[j][2]] for j in ops])
             if flags.get('typed'):
                 # Zero certificates pick one false input per AND gate: #maximal independent sets <= 2^#AND;
                 # dually #edges (minimal true sets) <= 2^#OR.
-                tgt = lambda y: any(y & mm == mm for mm in masks)
-                nmis = sum(1 for y in range(1 << n) if not tgt(y)
-                           and all(tgt(y | 1 << i) for i in range(n) if not y >> i & 1))
+                _, zeros = boundary_rows(n, tuple(masks))
+                nmis = len(zeros)
                 for lits, need in (([ops[j][0] for j in ops], (nmis - 1).bit_length()),
                                    ([ops[j][1] for j in ops], (len(masks) - 1).bit_length())):
                     if need > len(lits):
                         clauses.append([])
                     elif need > 0:
                         clauses.extend(CardEnc.atleast(lits, bound=need, vpool=pool).clauses)
-        for off, fop, fl, fr in (flags.get('fixgates', ())[:-1] if reuse else flags.get('fixgates', ())):   # extra gates pinned by the caller (e.g. a shard seed)
+        for off, fop, fl, fr in prefix:   # extra gates pinned by the caller (e.g. a shard seed)
             j = n + off
             clauses.extend([[select[j, 0][fl]], [select[j, 1][fr]], [ops[j][fop]]])
-        if flags.get('recursivebounds') and G - (Lc_base if reuse else Lc) < G:
-            clauses.extend(CardEnc.atmost([ops[j][2] for j in ops], bound=max(0, G - (Lc_base if reuse else Lc)), vpool=pool).clauses)
+        if not_cap is not None and not reuse:
+            clauses.extend(CardEnc.atmost([ops[j][2] for j in ops], bound=not_cap, vpool=pool).clauses)
         if fanout:
             add_fanout_rules(n, masks, ops, select, clauses)
         if readonce:
@@ -1875,48 +2066,31 @@ def run_cube(args):
                     yield from ([-a, -l, -r, f], [-o, -l, f], [-o, -r, f])
             yield [val[-1] if t else -val[-1]]
             return
-        for j, (a, o, no) in ops.items():
-            l, r = [pool.id(('arg', x, j, k)) for k in range(2)]
-            for k, arg in enumerate((l, r)):
-                for i, sel in enumerate(select[j, k]):
-                    yield [-sel, -arg, val[i]]
-                    yield [-sel, arg, -val[i]]
-            f = val[j]
-            yield from ([-a, -l, -r, f], [-a, l, -f], [-a, r, -f], [-o, l, r, -f], [-o, -l, f],
-                        [-o, -r, f], [-no, -l, -f], [-no, l, f])
+        yield from truth_gate_clauses(x, val, pool, ops, select)
         yield [val[-1] if target(x) else -val[-1]]
 
     op, lo, hi = cube
     assume = [ops[n][op], select[n, 0][lo], select[n, 1][hi]]
     piece_assume = []
-    if reuse:
+    if piece is not None:
         poff, pop_, pl, pr = piece
         pj = n + poff
         piece_assume = [select[pj, 0][pl], select[pj, 1][pr], ops[pj][pop_]]
     if cached:
         ctx = _Keep(cached['s'])
-    elif reuse:
-        ctx = _Keep(Solver(name=solver_name, bootstrap_with=clauses))
+    elif rebuild:
+        ctx = RebuildSolver(solver_name, clauses)
     else:
-        ctx = (RebuildSolver(solver_name, clauses) if solver_name.startswith('kissat')
-               else Solver(name=solver_name, bootstrap_with=clauses))
+        solver = Solver(name=solver_name, bootstrap_with=clauses)
+        ctx = _Keep(solver) if reuse else solver
     with ctx as s:
-        done = threading.Event()
-
-        def watch():
-            while not done.wait(5):
-                if os.path.exists(STOP):
-                    s.interrupt()
-                    return
-        threading.Thread(target=watch, daemon=True).start()
         if cached:
             rows = cached['rows']
-            if flags.get('units'):
+            if unit_cube:
                 assume = []
         else:
             rows = {0, N - 1, *masks, *(1 << i for i in range(n))}
-            rows |= {x for x in range(N) if not target(x)
-                     and all(target(x | 1 << i) for i in range(n) if not x >> i & 1)}
+            rows.update(boundary_rows(n, tuple(masks))[1])
             for x in rows:
                 s.append_formula(list(row(x)))
             if flags.get('sens'):
@@ -1941,37 +2115,76 @@ def run_cube(args):
                 s.append_formula(usens_clauses(n, masks, rows, pool, ops, select))
             if flags.get('rowtyped') and flags.get('nonot'):
                 s.append_formula(rowtyped_clauses(n, masks, rows, pool, ops))
-            if flags.get('units'):          # fix the cube as unit clauses: top-level simplification
+            if unit_cube:                   # fix the cube as unit clauses: top-level simplification
                 for lit in assume:
                     s.add_clause([lit])
                 assume = []
             if reuse:
-                _SCACHE[rkey] = dict(s=s, rows=rows, output=output, pool=pool, ops=ops, select=select)
-        assume = assume + piece_assume
+                cached = _SCACHE[rkey] = dict(s=s, rows=rows, output=output, pool=pool, ops=ops, select=select,
+                                             cap_guards={}, frontier_guards=set())
+        assume.extend(piece_assume)
+        guard_key = tuple(assume)
+        if cuts and (not reuse or guard_key not in cached['frontier_guards']):
+            start = n + len(frontier)
+            guard = [-lit for lit in assume] if reuse else []
+            s.append_formula([guard + [select[j, k][i] for j in range(start, output + 1)
+                                        for k in range(2) for i in range(start) if cut >> i & 1]
+                              for cut in cuts])
+            if reuse:
+                cached['frontier_guards'].add(guard_key)
+        if reuse and not_cap is not None:
+            # A cube's NOT cap is valid only for that cube. Share the encoding by activating
+            # the requested cap under an assumption, leaving it optional for other cubes.
+            guards = cached['cap_guards']
+            if not_cap not in guards:
+                guard = guards[not_cap] = pool.id(('not_cap', not_cap))
+                cap = CardEnc.atmost([ops[j][2] for j in ops], bound=not_cap, vpool=pool)
+                s.append_formula([[-guard, *clause] for clause in cap.clauses])
+            assume.append(guards[not_cap])
         status = 'UNSAT'
         circ = None
         sat_time = 0.0; iters = 0
-        while True:
-            ts = time.perf_counter()
-            res = s.solve_limited(assumptions=assume, expect_interrupt=True)
-            sat_time += time.perf_counter() - ts; iters += 1
-            if res is None:
+        before = s.accum_stats() or {}
+        done = threading.Event()
+        interrupted = threading.Event()
+
+        def watch():
+            while not done.wait(5):
+                if os.path.exists(STOP):
+                    s.interrupt()
+                    interrupted.set()
+                    return
+
+        watcher = threading.Thread(target=watch, daemon=True)
+        watcher.start()
+        try:
+            while not os.path.exists(STOP):
+                ts = time.perf_counter()
+                res = s.solve_limited(assumptions=assume, expect_interrupt=True)
+                sat_time += time.perf_counter() - ts; iters += 1
+                if res is None:
+                    status = 'STOPPED'
+                    break
+                if not res:
+                    break
+                m = set(s.get_model())
+                c = [(next(k for k, v in enumerate(ops[j]) if v in m),
+                      *(next(i for i, v in enumerate(select[j, k]) if v in m) for k in range(2))) for j in ops]
+                bad = [x for x in range(N) if evaluate(n, c, x) != target(x)]
+                if not bad:
+                    status, circ = 'WITNESS', c
+                    break
+                for x in bad:
+                    s.append_formula(list(row(x)))
+                rows.update(bad)
+            else:
                 status = 'STOPPED'
-                break
-            if not res:
-                break
-            m = set(s.get_model())
-            c = [(next(k for k, v in enumerate(ops[j]) if v in m),
-                  *(next(i for i, v in enumerate(select[j, k]) if v in m) for k in range(2))) for j in ops]
-            bad = [x for x in range(N) if evaluate(n, c, x) != target(x)]
-            if not bad:
-                status, circ = 'WITNESS', c
-                break
-            for x in bad:
-                s.append_formula(list(row(x)))
-            rows.update(bad)
-        done.set()
-        st = s.accum_stats() or {}
+        finally:
+            done.set()
+            watcher.join()
+            if reuse and interrupted.is_set():
+                s.clear_interrupt()
+        st = {k: v - before.get(k, 0) for k, v in (s.accum_stats() or {}).items()}
         stats = (f"solve={sat_time:.1f}s iters={iters} vars={s.nof_vars()} clauses={s.nof_clauses()} "
                  f"rows={len(rows)} conflicts={st.get('conflicts', '?')} "
                  f"decisions={st.get('decisions', '?')} propagations={st.get('propagations', '?')}")
@@ -2033,6 +2246,17 @@ def main():
     ap.add_argument('--strongbounds', action='store_true',
                     help='analytical m+1 / m+2 binary-gate bounds (global NOT bound; strengthens --elim)')
     ap.add_argument('--units', action='store_true', help='fix the cube with unit clauses, not assumptions')
+    ap.add_argument('--reuse', action='store_true', help='reuse an incremental solver per worker across cubes')
+    ap.add_argument('--monotone', '--nonot', dest='nonot', action='store_true', help='search AND/OR circuits only')
+    ap.add_argument('--cert', action='store_true', help='use fewer clauses per truth row (requires --monotone)')
+    ap.add_argument('--frontier', action='store_true', help='require suffix reads that distinguish boundary rows')
+    ap.add_argument('--partialordered', action='store_true',
+                    help='bound monotone suffixes by ordered groups on projected partial truth tables')
+    ap.add_argument('--partialrepeat', action='store_true',
+                    help='use partial-domain repeats forced by each pinned gate (requires --monotone)')
+    ap.add_argument('--partialmultiplicity', action='store_true', help='count readers across pinned monotone gates')
+    ap.add_argument('--partialempty', action='store_true', help='include forced empty regions in the reader bound')
+    ap.add_argument('--coupledprojections', action='store_true', help='match suffix-input sets before and after pinned gates')
     ap.add_argument('--minimal', action='store_true',
                     help='minimality rules: ONLY sound if sizes size-1 and size-2 are already UNSAT')
     ap.add_argument('--trust-log', action='append', default=[],
@@ -2060,6 +2284,8 @@ def main():
     ap.add_argument('--isolatedcolor', action='store_true', help='with --sharecolor: repeated inputs get unique colours')
     ap.add_argument('--portbounds', action='store_true', help='with --recursivebounds: region connection bound')
     ap.add_argument('--monoports', action='store_true', help='with --portbounds, monotone circuits only: Sperner/chain ports')
+    ap.add_argument('--matchinginterface', action='store_true',
+                    help='bound pure-wire exports at independent C4-free cuts (requires --monotone)')
     ap.add_argument('--orderedports', action='store_true', help='with --portbounds: ordered terminal groups')
     ap.add_argument('--portcertrank', nargs='?', const='rank',
                     choices=('compatibility', *PORT_CERTIFICATE_LEVELS),
@@ -2080,11 +2306,26 @@ def main():
         if not a.nonot:
             ap.error('--portcertrank requires --monotone')
         a.portbounds = a.monoports = a.orderedports = a.recursivebounds = True
+    if a.cert and not a.nonot:
+        ap.error('--cert requires --monotone')
+    if a.monoports and not a.nonot:
+        ap.error('--monoports requires --monotone')
+    if a.matchinginterface and not a.nonot:
+        ap.error('--matchinginterface requires --monotone')
+    if a.partialordered and not a.nonot:
+        ap.error('--partialordered requires --monotone')
+    if a.partialrepeat and not a.nonot:
+        ap.error('--partialrepeat requires --monotone')
+    for flag in PARTIAL_READER_FLAGS:
+        if getattr(a, flag) and not a.nonot:
+            ap.error(f'--{flag} requires --monotone')
+    if a.reuse and (a.units or a.solver.startswith('kissat') or a.solver.lower() in KISSAT_NAMES):
+        ap.error('--reuse requires an incremental solver and cannot be combined with --units')
     if a.fast:
         for k in ('symmetry', 'fanout', 'readonce', 'sens', 'units', 'usens', 'bypass', 'elim',
                   'elimclosure', 'signeddom', 'recursivebounds', 'notbypass', 'recclosure',
                   'identifybounds', 'fanoutelim', 'pairro', 'colorbounds', 'sharecolor', 'colorbudget'):
-            setattr(a, k, True)
+            setattr(a, k, k != 'units' or not a.reuse)
     log = open(a.log, 'a', encoding='utf-8') if a.log else None
 
     def say(msg):
@@ -2098,7 +2339,9 @@ def main():
     n = a.n
     edges = [tuple(map(int, e.split('-'))) for e in a.edges.split(',')]
     masks = [(1 << u) | (1 << v) for u, v in edges]
-    allc = [(op, l, r) for op in (0, 1) for r in range(n) for l in range(r)] + [(2, i, i) for i in range(n)]
+    allc = [(op, l, r) for op in (0, 1) for r in range(n) for l in range(r)]
+    if not a.nonot:
+        allc.extend((2, i, i) for i in range(n))
     import re
     done_before = set()
     edge_key = ','.join(f'{min(e)}-{max(e)}' for e in sorted(tuple(sorted(e)) for e in edges))
@@ -2108,7 +2351,9 @@ def main():
             h = re.search(r'(?:search|resume|tail-filler): n=(\d+), (\d+) edges, exactly (\d+) gates', line)
             if h:
                 ek = re.search(r'edges=(\S+)', line)
-                ok = (int(h.group(1)), int(h.group(2)), int(h.group(3))) == (n, len(edges), a.size) and                     ((ek is not None and ek.group(1).rstrip('.;,') == edge_key) or (ek is None and trusted))
+                ok = (tuple(map(int, h.groups())) == (n, len(edges), a.size)
+                      and (a.nonot or 'mode=monotone' not in line)
+                      and ((ek is not None and ek.group(1).rstrip('.;,') == edge_key) or (ek is None and trusted)))
                 continue
             mm = re.search(r'cube \((\d+), (\d+), (\d+)\): UNSAT', line)
             if mm and ok:
@@ -2116,11 +2361,20 @@ def main():
     auts = automorphisms(n, edges) if a.symmetry else [tuple(range(n))]
     sym = [c for c in allc if orbit_min(c, auts)]
     cubes = sorted((c for c in sym if c not in done_before), key=lambda c: (c[2], c[1], c[0]))
-    say(f'search: n={n}, {len(edges)} edges, exactly {a.size} gates (at most {max(0, a.size - n + 1)} NOT); '
+    mode = 'mode=monotone' if a.nonot else f'at most {max(0, a.size - n + 1)} NOT'
+    say(f'search: n={n}, {len(edges)} edges, exactly {a.size} gates ({mode}); '
         f'{len(allc)} pieces, {len(allc) - len(sym)} skipped by symmetry ({len(auts)} automorphisms), '
         f'{len(sym) - len(cubes)} already UNSAT in logs, {len(cubes)} to run; {a.workers} workers, {a.solver}'
         f'{", fan-out rules" if a.fanout else ""}{", read-once rules" if a.readonce else ""}'
         f'{", sensitivity" if a.sens else ""}{", unit cubes" if a.units else ""}'
+        f'{", persistent solvers" if a.reuse else ""}{", certificate rows" if a.cert else ""}'
+        f'{", frontier reads" if a.frontier else ""}'
+        f'{", partial ordered bound" if a.partialordered else ""}'
+        f'{", partial repeat bound" if a.partialrepeat else ""}'
+        f'{", reader multiplicity" if a.partialmultiplicity else ""}'
+        f'{", empty regions" if a.partialempty else ""}'
+        f'{", coupled projections" if a.coupledprojections else ""}'
+        f'{", matching interfaces" if a.matchinginterface else ""}'
         f'{", parity" if a.parity else ""}{", unique-reader sensitivity" if a.usens else ""}'
         f'{", closed-cone" if a.closedcone else ""}{", bypass" if a.bypass else ""}'
         f'{", output decomposition" if a.outdec else ""}{", bottlenecks" if a.bottleneck else ""}'
@@ -2150,10 +2404,14 @@ def main():
                         certificate_level=a.portcertrank, certificate_output=a.portcertoutput)
              if a.portbounds else None)
     with Pool(a.workers) as p:
-
         for cube, status, circ, dt, stats in p.imap_unordered(
                 run_cube, [(n, masks, a.size, a.solver, c, a.fanout, a.readonce,
-                            dict(sens=a.sens, units=a.units, minimal=a.minimal, parity=a.parity, usens=a.usens,
+                            dict(sens=a.sens, units=a.units, reuse=a.reuse, nonot=a.nonot, cert=a.cert,
+                                 frontier=a.frontier, partialordered=a.partialordered, partialrepeat=a.partialrepeat,
+                                 partialmultiplicity=a.partialmultiplicity, partialempty=a.partialempty,
+                                 coupledprojections=a.coupledprojections,
+                                 matchinginterface=a.matchinginterface,
+                                 minimal=a.minimal, parity=a.parity, usens=a.usens,
                                  closedcone=a.closedcone, bypass=a.bypass, outdec=a.outdec,
                                  bottleneck=a.bottleneck, elim=a.elim, strongbounds=a.strongbounds,
                                  elimbypass=a.elimbypass, elimlink=a.elimlink, readersens=a.readersens,

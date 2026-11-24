@@ -36,6 +36,7 @@ STOP_FILLER = os.path.join(HERE, 'STOP_FILLER')
 CUBE = r'\((\d+), (\d+), (\d+)\)'
 LINE = re.compile(rf'cube {CUBE}(?:/{CUBE})?: UNSAT')
 HEADER = re.compile(r'(\d+) cubes, (\d+) workers')
+SEARCH_HEADER = re.compile(r'(?:search|resume|tail-filler): n=\d+, \d+ edges, exactly \d+ gates')
 OPS = {0: 'AND', 1: 'OR', 2: 'NOT'}
 
 
@@ -49,12 +50,17 @@ def hardness(c):
     return (r, l, op)          # low-numbered inputs were by far the slowest in the first run
 
 
-def read_log(path):
+def read_log(path, sharing=False):
     """-> dict(done1, done2, total, workers, witness, finished) from a cube_search/cube_resume log."""
     d = dict(done1=set(), done2=set(), total=None, workers=None, witness=False, finished=False)
+    monotone = False
     try:
         with open(path, encoding='utf-8') as f:
             for line in f:
+                if SEARCH_HEADER.search(line):
+                    monotone = 'mode=monotone' in line
+                if monotone:
+                    continue
                 m = LINE.search(line)
                 if m:
                     g = tuple(map(int, m.groups()[:3]))
@@ -70,6 +76,8 @@ def read_log(path):
                     d['finished'] = True
     except FileNotFoundError:
         pass
+    if sharing and monotone:
+        raise ValueError('monotone runs use cube_search.py --monotone --skip-log to resume')
     return d
 
 
@@ -182,7 +190,7 @@ def main():
         while True:
             if os.path.exists(STOP_FILLER) or os.path.exists(a.share_stop):
                 say('RESULT: STOPPED before starting'); return
-            d = read_log(share)
+            d = read_log(share, sharing=True)
             if d['witness'] or d['finished']:
                 say(f'RESULT: old run already ended ({"witness" if d["witness"] else "finished"}); nothing to do')
                 return
@@ -231,7 +239,7 @@ def main():
     with Pool(a.workers, initializer=init, initargs=(n, masks, a.size, a.solver, stops)) as p:
         while pending or inflight:
             if share and time.time() - checked > 30:
-                d = read_log(share); checked = time.time()
+                d = read_log(share, sharing=True); checked = time.time()
                 allowed = min(a.workers, a.extra + max(0, idle_old_workers(d)))
                 if d['witness']:
                     result = 'old run found a WITNESS'; break
@@ -269,7 +277,7 @@ def main():
                 say(f'cube {c1}: UNSAT (all parts)')
                 mine.add(c1)
             if share:
-                d = read_log(share); checked = time.time()
+                d = read_log(share, sharing=True); checked = time.time()
                 if len(done1 | d['done1'] | mine) == len(all1):
                     stop_old('every piece is UNSAT in one log or the other'); break
         else:

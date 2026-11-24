@@ -1,0 +1,15 @@
+{
+  "case": "hypergraph-07",
+  "budget": 6,
+  "basis": "mono",
+  "variables": 750,
+  "clauses": 15752,
+  "checked_steps": 7459,
+  "solve_seconds": 0.13325299997814,
+  "check_seconds": 4.475687799975276,
+  "target_manifest_sha256": "3abb4efc3342e94498c253ed9b4ff2afeb571b8de0a8bd8546f14aa66d01da98",
+  "files": {
+    "hypergraph-07-b6.cnf.gz": "f58db0f4c7180b5c8075b9e2bae748910ff5343320d49fec746e9f80b152f919",
+    "hypergraph-07-b6.drup.gz": "9f5d40e55f7a4a88ed9d8e92d5798f54500f009eb7d6a4c6002a8e1ec4842a15"
+  }
+}

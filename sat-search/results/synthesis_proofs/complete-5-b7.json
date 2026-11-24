@@ -1,0 +1,15 @@
+{
+  "case": "complete-5",
+  "budget": 7,
+  "basis": "mono",
+  "variables": 1042,
+  "clauses": 29572,
+  "checked_steps": 74100,
+  "solve_seconds": 2.652948100003414,
+  "check_seconds": 252.47626310004853,
+  "target_manifest_sha256": "3abb4efc3342e94498c253ed9b4ff2afeb571b8de0a8bd8546f14aa66d01da98",
+  "files": {
+    "complete-5-b7.cnf.gz": "58cf55a0344c1ae6f2ae482b6c620a1124549518413655d08f5752c1e51b2c96",
+    "complete-5-b7.drup.gz": "6fad893d05bbf00c9475345930e8fed33c6a8a29b07a6898abdddaee639953e9"
+  }
+}

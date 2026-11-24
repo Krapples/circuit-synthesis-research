@@ -1,0 +1,15 @@
+{
+  "case": "threshold-5-3",
+  "budget": 7,
+  "basis": "mono",
+  "variables": 1102,
+  "clauses": 36067,
+  "checked_steps": 64608,
+  "solve_seconds": 2.3050142000429332,
+  "check_seconds": 215.6084039999405,
+  "target_manifest_sha256": "3abb4efc3342e94498c253ed9b4ff2afeb571b8de0a8bd8546f14aa66d01da98",
+  "files": {
+    "threshold-5-3-b7.cnf.gz": "a0c60f7199ff379b1ff274a84ac18b1761f4ee3f559894329717e665817e0e5c",
+    "threshold-5-3-b7.drup.gz": "847d1a417fcd846ce3386da5712bcb475545595dd2bd98d7deaefd9052d3373f"
+  }
+}
