@@ -194,3 +194,114 @@ python sat-search/experiments/certify_synthesis.py --verify <cnf.gz> <drup.gz>
 The read-once intersection property is classical. The rank, fooling-set and biclique-partition
 tools also have established antecedents. [Karchmer et al.](https://www.math.ias.edu/~avi/PUBLICATIONS/MYPAPERS/KLNSW93/paper.pdf) ·
 [Schneider et al.](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.SEA.2025.18)
+
+## Provider-compatible certificate bounds
+
+Each residual cell retains its full minterm $A$ and minimal zero certificate $B$. A provider
+whose structural input support is $W$ can satisfy this pair only if $A\cap B\cap W$ is
+nonempty. Otherwise the restriction of the positive assignment to $W$ is below the
+restriction of the negative assignment, contradicting monotonicity. The same test on every
+cross pair of the combined positive and negative obligations is sufficient for an arbitrary
+monotone provider truth table. Take the upward closure of the projected positive assignments.
+It avoids each projected negative assignment by the cross-pair condition.
+
+Full certificate identities matter even when both projections onto the region coincide.
+For $(a\land c)\lor(b\land c)\lor d$, the minterms $ac$ and $bc$ both project to $c$
+on $S=\{c,d\}$. Against the zero certificate $abd$, a provider supported on $a$ can
+serve the first row and cannot serve the second.
+
+### Tests and integration
+
+- **Eligibility** rejects any residual one-cell with an empty provider list.
+- **Matching** takes cliques of cells that cannot use the same rectangle. Two cells conflict
+  when a cross-corner is zero or when the four corners have no provider in common. Every
+  clique needs distinct port occurrences, so capacitated bipartite matching must saturate
+  it. The implementation samples up to 80 cells and 16 cliques. It also checks all cross
+  pairs of obligations forced by singleton provider lists. [Hall's matching theorem](https://math.mit.edu/~goemans/18453S17/matching-notes.pdf)
+- **Exact partition** assigns disjoint all-one rectangles to provider occurrences within
+  the capacities. It retains the union of positive and negative obligations for each
+  provider and checks their cross pairs, including cross pairs at zero cells of the
+  residual matrix. It attempts active matrices up to seven rows by seven columns and
+  24 one-cells with up to eight providers and 12,000 search states. A capped query keeps
+  the cheaper results.
+
+The ordered DP exposes `--portproviders`. Its state knows the union of earlier primary
+groups. That union contains every possible upstream provider support, so a residual cell
+missed by the union rules out the transition. Per-provider capacities require a concrete
+layout and are checked in the lazy backend, where each port has a source and owner.
+
+Without local intersections, the lazy backend reconstructs the structural cone of each
+source from the model's owner assignments. It checks all visited positive-negative pairs
+for the source, across all its readers. A failed pair yields a guarded clause requiring
+one visit to change or the cone to gain a distinguishing atom. The permitted changes
+include a new primary owner inside the cone or a port entering it from outside. It can
+also rule out a fully fixed owner layout by an eligibility, matching, or exact-partition
+obstruction. Primary incompatibility stays with the existing local formula check.
+
+The local-intersection encoding already implies the provider tests once a model is
+complete. Starting from a jointly visited source, follow a common leaf in each successive
+provider region. Acyclicity guarantees this reaches a common primary in the source's
+cone. The selected common-port occurrences also witness a compatible local rectangle
+partition. This backend uses the option to add ancestry implications before SAT for
+propagation and avoids repeating the implied tests on complete models.
+
+### Verification and measurements
+
+An independent enumeration of monotone provider truth tables agreed on 240 small
+queries, including 45 feasible cases. The tests checked 139 concrete circuits,
+394 regions and 420 combined provider cross pairs. Regressions distinguish empty-list,
+matching, forced-consistency, and exact-partition exclusions. Both lazy encodings and
+all provider levels preserved the five-cycle minimum and its checked six-gate exclusion.
+The existing ordered, rank, and lazy-compatibility regression suites also passed.
+
+On 793 sampled nontrivial ancestor and capacity hypotheses from the 90 complete frozen
+targets, the successive tests had these effects. These samples measure local exclusion
+power on proposed layouts.
+
+| Level | Additional exclusions | Cumulative wall time |
+| --- | ---: | ---: |
+| Empty eligibility lists | 367 | 0.0024 s |
+| Capacitated matching | 79 | 0.041 s through matching and forced consistency |
+| Forced-provider consistency | 34 | Included above |
+| Exact partition | 11 | 0.291 s through all levels |
+
+The exact stage found 267 feasible local partitions and skipped or capped 35 further
+queries. Feasibility here concerns the rectangle relaxation under the sampled supports.
+
+The ordered ablation made 22,278 eligibility checks and rejected 359 transitions.
+The 90 target lower bounds all agreed. The profiles took 0.368 s and 0.397 s with
+peaks of 37.2 MiB and 37.8 MiB.
+
+The serial SAT ablation used ten budgets spanning graphs, thresholds, comparators,
+hypergraphs, and random monotone functions. Each had a 1.25-second wall cap and
+1,800 conflicts per shape. Without local intersections, eligibility learned 130
+shared-provider consistency cuts in completed jobs and verified the known seven-gate
+threshold witness where the reference reached its conflict limit. Timing including
+timeouts was 4.18 s for the reference, 4.22 s with eligibility, and 4.24 s with matching.
+Peak memory was 45.2–46.3 MiB. Matching yielded the same verdicts as eligibility.
+The initial replay also tried replacing primary-incompatibility checks with owner blocks.
+That changed the six-gate threshold job from UNSAT to UNKNOWN at the same conflict cap.
+The final replay preserved the existing primary-incompatibility check.
+
+With local intersections, both variants produced the same ten verdicts. The eight
+completed provider jobs recorded 3,466 added ancestry clauses. The two variants took
+about 2.59 s each and peaked at 46.6–46.9 MiB. The optional
+exact SAT run matched the matching-only verdicts on four selected budgets, with
+0.801 s versus 0.793 s total. This round established no new minima or target lower
+endpoints. The results support retaining the levels as opt-in. A next experiment is
+to obtain stronger provider support limits earlier in the search, where the matching
+exclusions seen on standalone layouts could affect whole budgets.
+
+```powershell
+python sat-search/experiments/provider_certificates_check.py -v
+python sat-search/experiments/provider_certificates_check.py --benchmark fresh-provider-ablation.jsonl --seconds 1.25 --conflicts 1800
+python sat-search/experiments/provider_certificates_check.py --benchmark fresh-provider-queries.jsonl --query-profile
+python sat-search/experiments/provider_certificates_check.py --benchmark fresh-provider-exact-queries.jsonl --query-profile --exact
+python sat-search/experiments/provider_certificates_check.py --benchmark fresh-provider-exact.jsonl --exact --seconds 1.25 --conflicts 1800 --job cycle-5 7 --job threshold-4-3 6 --job hypergraph-19 10 --job comparator-02 8
+```
+
+[Matched ablation](results/provider_certificate_ablation.jsonl) ·
+[Initial ablation](results/provider_certificate_ablation_initial.jsonl) ·
+[Standalone inexpensive checks](results/provider_certificate_queries.jsonl) ·
+[Standalone exact checks](results/provider_certificate_queries_exact_detail.jsonl) ·
+[Optional exact SAT replay](results/provider_certificate_exact.jsonl)
