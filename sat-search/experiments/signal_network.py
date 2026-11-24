@@ -103,10 +103,13 @@ def network_feasible(needs, demands):
     return dp(0, ())
 
 
-if __name__ == '__main__':
-    e = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+COSTS = cs.port_costs(T, mono=True, separation=True, profile=True, formula=True, output=True)
+
+
+def enumerate_partitions(e):
+    """Ordered partitions S_1..S_k (k = e + 1) passing the port-cost and eligibility tests."""
     k = e + 1
-    costs = cs.port_costs(T, mono=True, separation=True, profile=True, formula=True, output=True)
+    costs = COSTS
     pout = costs.pout or {}
     ctxs = {S: cs.port_contexts(T, S) for S in costs}
 
@@ -118,7 +121,7 @@ if __name__ == '__main__':
                 return False
             seen[kk] = sig
         return True
-    t0 = time.time(); found = []
+    found = []
 
     def dfs(P, groups, total):
         if total > e + k - 1:
@@ -140,6 +143,15 @@ if __name__ == '__main__':
                     dfs(P | S, groups + [S], total + costs[S])
             S = (S - 1) & rest
     dfs(0, [], 0)
+    return found
+
+
+if __name__ == '__main__':
+    e = int(sys.argv[1]) if len(sys.argv) > 1 else 7
+    k = e + 1
+    costs, pout = COSTS, COSTS.pout or {}
+    t0 = time.time()
+    found = enumerate_partitions(e)
     print(f'e={e}, k={k}: {len(found)} ordered partitions pass the port/eligibility test ({time.time() - t0:.0f}s)', flush=True)
     passing = 0
     for idx, groups in enumerate(found):
