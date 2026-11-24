@@ -305,3 +305,122 @@ python sat-search/experiments/provider_certificates_check.py --benchmark fresh-p
 [Standalone inexpensive checks](results/provider_certificate_queries.jsonl) ·
 [Standalone exact checks](results/provider_certificate_queries_exact_detail.jsonl) ·
 [Optional exact SAT replay](results/provider_certificate_exact.jsonl)
+
+## Global provider capacity prescreen
+
+### Proof and regression
+
+For each provider $j$, fix its primary group $S_j$ and an overestimate $W_j$ of
+its structural support. The ordered prefix of primary groups gives such an
+overestimate. Every full minterm $A_0$ meeting $S_j$ makes provider $j$ true,
+because its true certificate uses the input and visits the region. Every full
+minimal zero certificate $B_0$ meeting $S_j$ makes the provider false by the
+dual argument. These give mandatory positive and negative obligations.
+
+For a residual pair $(A,B)$, a candidate provider must distinguish the pair on
+$W_j$. It must also distinguish $A$ from every mandatory negative and every
+mandatory positive from $B$, all on the same support. The code evaluates these
+tests with full certificate identities. Exact duplicate full masks can share an
+identity. Equal projections onto a primary region can have different eligibility.
+
+For a subset $T$ of providers, in each receiving region take a clique of residual
+cells whose eligibility lists are contained in $T$. Every clique member needs a
+distinct occurrence, and an occurrence belongs to a single receiving region.
+The sum of the regional clique sizes therefore fits within the combined outgoing
+capacity of $T$. The clique checks retain the eligibility of all cross-corners,
+including corners whose lists extend outside $T$.
+
+For $f(a,b,c,d)=abc\lor bd\lor cd$, take the ordered primary groups
+$\{d\},\{a,b\},\{c\}$ with outgoing capacities 2 and 3. The middle region
+needs one occurrence of $d$ for $(bd,ad)$. The output pairs $(bd,cd)$ and
+$(cd,ad)$ can only use the $d$ provider once the mandatory obligations of the
+middle provider are included. They need separate occurrences because the cross
+cell $(cd,cd)$ is already covered by the output primary $c$. Each receiving
+region has a feasible exact partition under the full per-provider capacities
+considered separately. Together they require three occurrences from a provider
+with capacity two. The regression also checks that the solver recovers a
+five-gate circuit for the function using a different layout. An independent
+direct SAT encoding supplies a checked UNSAT proof for four gates.
+
+### Integration and scope
+
+`--providercapacity` enables the global prescreen in the lazy regional runner.
+`singletons` tests one provider at a time. The default `subsets` checks those
+first and then checks every subset through five providers. Above that it checks
+the full set and, up to eight providers, pairs. Each rejection records actual
+regional cliques, so sampling fewer cliques or subsets weakens pruning safely.
+
+Small full primary layouts can be screened exhaustively before SAT. For larger
+local-intersection shapes, the solver checks up to 96 candidate prefixes before
+SAT. A rejected prefix gives a clause guarded by the primary groups it fixes.
+No later group can supply a port to a region in that prefix. Local intersection
+already implies these conditions on complete models, so this path leaves the
+model loop free of repeated capacity checks. Without local intersections, larger
+shapes check and cache each primary layout when it first appears in a model.
+The prescreen uses the ordered support overestimate and leaves port owners and
+certificate memberships free to change under its guards.
+
+The optional `exact` level covers all residual cells with disjoint rectangles
+of their respective receiving regions. Capacity is shared across all regions, and
+each provider's combined obligations include its mandatory rows and every
+rectangle assigned to it. The allocator checks every positive–negative cross pair
+in that union. It attempts at most eight providers and 24 residual cells across
+regions, with at most seven active rows and columns per region and a 12,000-state
+cap. Successful allocations certify feasibility of this relaxation under the
+specified supports. The regional formula and circuit constraints still govern
+the synthesis verdict.
+
+### Verification and ablation
+
+Independent enumeration of monotone provider truth tables agreed on all 440
+small complete layouts, including 400 feasible ones. Concrete verification
+covered 130 circuits, 102 with repeated wires, and 228 fixed prefixes. The
+exact allocator accepted all 260 full-layout checks, which used both actual
+structural supports and their ordered overestimates. The five-cycle known
+minimum and its checked exclusion passed at every level in both lazy encodings.
+
+The frozen sample contained 1,800 layouts across 90 complete targets. Mandatory
+obligations rejected 1,297, primary conflicts rejected 115, and 388 survived.
+The capacity tests made zero additional exclusions in that sample. To check
+whether the specified regression generalizes, a second sweep used all 114
+essential four-input monotone functions, every ordered partition into three
+nonempty groups, and both capacities 2 and 3 for each provider.
+
+| Level | Layouts checked | Capacity exclusions beyond mandatory and primary checks | Wall time |
+| --- | ---: | ---: | ---: |
+| Singletons | 16,416 | 96 | 0.314 s |
+| Subsets | 16,416 | 96 | 0.361 s |
+| Joint exact allocation | 16,416 | 96 | 0.738 s |
+
+On ten frozen SAT budgets, the reference, singletons, and subsets each returned
+four UNSAT results, four verified SAT results, and two timeouts. Each job used a
+1.25-second wall cap and 1,800 conflicts per shape. Summed wall times were
+2.593, 2.614, and 2.620 seconds. Peak process memory ranged from 46.2 to 47.3 MiB.
+In the completed prescreen jobs, 728 checked prefixes yielded 206 mandatory
+obstruction clauses and zero capacity-overload clauses. The initial post-model
+check in the local-intersection backend yielded zero cuts, motivating the
+prefix integration.
+
+The weak encoding's five-job replay also had identical verdicts, with 167
+mandatory layout cuts and some added runtime. The optional exact SAT replay
+matched the subset variant on four budgets. The data establishes a layout
+separation and leaves the options experimental for synthesis performance.
+Tighter provider support overestimates are a more promising next variable
+than increasing the enumeration limits on this evidence.
+
+```powershell
+python sat-search/experiments/provider_capacity_check.py -v
+python sat-search/experiments/lazy_certificates_check.py --job cycle-5 6 lazy-local-intersection --providercapacity --proof
+python sat-search/experiments/provider_capacity_check.py --benchmark fresh-capacity.jsonl --seconds 1.25 --conflicts 1800
+python sat-search/experiments/provider_capacity_check.py --benchmark fresh-capacity-layouts.jsonl --layouts
+python sat-search/experiments/provider_capacity_check.py --benchmark fresh-capacity-four-inputs.jsonl --all-four-inputs
+python sat-search/experiments/provider_capacity_check.py --benchmark fresh-capacity-exact.jsonl --all-four-inputs --exact
+```
+
+[Frozen SAT ablation](results/provider_capacity_ablation.jsonl) ·
+[Initial post-model replay](results/provider_capacity_ablation_initial.jsonl) ·
+[Frozen layout sample](results/provider_capacity_layouts.jsonl) ·
+[Four-input sweep](results/provider_capacity_four_inputs.jsonl) ·
+[Four-input exact sweep](results/provider_capacity_four_inputs_exact.jsonl) ·
+[Weak SAT replay](results/provider_capacity_weak.jsonl) ·
+[Optional exact SAT replay](results/provider_capacity_exact.jsonl)
