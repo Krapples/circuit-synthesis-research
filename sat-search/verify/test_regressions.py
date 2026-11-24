@@ -49,6 +49,30 @@ class Regressions(unittest.TestCase):
             with self.assertRaises(ValueError):
                 cs.run_cube((3, [7], 2, 'maplechrono', (0, 0, 1), fanout, bool(flags.get('bypass')), flags))
 
+    def test_automorphisms_of_non_graph_families(self):
+        """R5: automorphisms() checked pair adjacency only, so for 3-element terms it accepted every
+        degree-preserving permutation. Orbit reduction then removed every cube holding a minimum circuit.
+        Minimal counterexample: 5 inputs, terms {0,1,3}, {0,2,4}, minimum 4. Expected: the true group (8) and
+        SAT at 4 over the orbit-reduced cubes. Also: groups equal brute force on graphs and small families."""
+        import itertools
+        n, terms = 5, (11, 21)
+        tt = ref.truth_table(n, terms)
+        self.assertEqual(ref.minimum(n, tt, 'monotone')[0], 4)
+        edges = [tuple(i for i in range(n) if t >> i & 1) for t in terms]
+        auts = cs.automorphisms(n, edges)
+        self.assertEqual(len(auts), 8)
+        cubes = [c for c in FIRST(n) if cs.orbit_min(c, auts)]
+        self.assertTrue(any(cs.run_cube((n, list(terms), 4, 'maplechrono', c, False, False, dict(nonot=True)))[1]
+                            == 'WITNESS' for c in cubes))
+        for n in (3, 4, 5):
+            fams = [f for f in itertools.combinations(range(1, 1 << n), 2) if all(t.bit_count() >= 2 for t in f)]
+            for fam in fams[:: max(1, len(fams) // 60)]:
+                es = [tuple(i for i in range(n) if t >> i & 1) for t in fam]
+                E = {frozenset(e) for e in es}
+                true = sorted(p for p in itertools.permutations(range(n))
+                              if {frozenset(p[v] for v in e) for e in E} == E)
+                self.assertEqual(sorted(cs.automorphisms(n, es)), true, fam)
+
     def test_malformed_terms_rejected(self):
         for bad in ([0, 3], [8, 3], [-1]):
             with self.assertRaises(ValueError):

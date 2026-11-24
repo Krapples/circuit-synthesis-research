@@ -2233,8 +2233,14 @@ def run_cube(args):
 
 
 def automorphisms(n, edges):
+    """Permutations of the inputs mapping the family of terms (edges, or terms of any size) onto itself.
+    The pair-adjacency test alone is exact only for graphs; for larger terms it accepted non-automorphisms
+    (5 inputs, terms {0,1,3}, {0,2,4}: 24 accepted, 8 true), and orbit reduction then dropped every cube
+    holding a minimum circuit (verify/AUDIT.md, R5). Every term whose largest vertex is k is now checked
+    when vertex k is mapped; a bijection mapping the family into itself maps it onto itself."""
     E = {frozenset(e) for e in edges}
     deg = [sum(v in e for e in E) for v in range(n)]
+    by_last = {k: [e for e in E if max(e) == k] for k in range(n)}
     out = []
 
     def bt(mp):
@@ -2244,7 +2250,9 @@ def automorphisms(n, edges):
         for c in range(n):
             if c not in mp and deg[c] == deg[k] and all(
                     (frozenset((mp[i], c)) in E) == (frozenset((i, k)) in E) for i in range(k)):
-                bt(mp + [c])
+                img = mp + [c]
+                if all(frozenset(img[v] for v in e) in E for e in by_last[k]):
+                    bt(img)
     bt([])
     return out
 
