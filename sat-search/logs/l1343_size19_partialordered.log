@@ -1,0 +1,20 @@
+   0.00s L-meta-1343 shard 2 | size 19 | 338 cubes | 16 workers | SAT disabled
+   0.00s First pass uses --partialordered as at size 17; second pass adds --partialrepeat on the survivors.
+  16.54s progress | 25/338 checked | 3 surviving both so far
+  28.01s progress | 50/338 checked | 5 surviving both so far
+  36.59s progress | 75/338 checked | 7 surviving both so far
+  47.84s progress | 100/338 checked | 10 surviving both so far
+  57.76s progress | 125/338 checked | 12 surviving both so far
+  67.83s progress | 150/338 checked | 12 surviving both so far
+  80.29s progress | 175/338 checked | 12 surviving both so far
+  83.80s progress | 200/338 checked | 15 surviving both so far
+  86.51s progress | 225/338 checked | 15 surviving both so far
+  88.51s progress | 250/338 checked | 19 surviving both so far
+  90.39s progress | 275/338 checked | 21 surviving both so far
+  92.90s progress | 300/338 checked | 23 surviving both so far
+  95.37s progress | 325/338 checked | 23 surviving both so far
+  96.71s case a | 182 checked | 167 partial ordered UNSAT | 0 other baseline analytical UNSAT | 0 additional UNSAT with forced repeats | 15 left
+  96.71s case b | 156 checked | 148 partial ordered UNSAT | 0 other baseline analytical UNSAT | 0 additional UNSAT with forced repeats | 8 left
+  96.71s ORDERED ONLY SURVIVORS | 23 | a:1-0-2; a:1-0-5; a:1-1-4; a:1-1-8; a:1-2-9; a:1-3-13; a:1-4-5; a:1-4-8; a:1-4-9; a:1-5-10; a:1-6-7; a:1-8-10; a:1-9-10; a:1-9-13; a:1-10-13; b:1-1-4; b:1-1-8; b:1-2-9; b:1-4-5; b:1-4-8; b:1-5-10; b:1-6-7; b:1-8-10
+  96.71s COMBINED SURVIVORS | 23 | a:1-0-2; a:1-0-5; a:1-1-4; a:1-1-8; a:1-2-9; a:1-3-13; a:1-4-5; a:1-4-8; a:1-4-9; a:1-5-10; a:1-6-7; a:1-8-10; a:1-9-10; a:1-9-13; a:1-10-13; b:1-1-4; b:1-1-8; b:1-2-9; b:1-4-5; b:1-4-8; b:1-5-10; b:1-6-7; b:1-8-10
+  96.71s RESULT | 315/338 excluded on first pass | 315/338 excluded with both | 23 open | 0 SAT solver calls

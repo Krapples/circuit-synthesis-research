@@ -135,3 +135,24 @@ above; the seed shows the bookkeeping balancing exactly in the smallest non-star
 analytical bounds, scan every C4-free graph up to ~9 vertices for a monotone circuit of size |E| + tau - 2
 (one below the star cost). A witness anywhere would refute the accounting lemma (and show exactly how);
 no witness supports it and gives test cases for the charging argument.
+
+## Two-minute size-19 probe (2026-11-24)
+
+A 120-second wall-clock attempt on shard 2 produced no new verdict. Recomputing the
+survivor list exhausted the window before the batch submitted any SAT jobs. A parallel
+CaDiCaL 1.9.5 probe tested the known case-A cube with x0 OR x2 first after the three seed
+gates, using the fast monotone settings with certificate rows and frontier constraints.
+The probe timed out after 71.6 seconds with no witness or UNSAT result. Case B received no
+SAT time in this run. Cache the survivor list before timing a repeat of this comparison.
+
+## Size-19 ordered-only replay (2026-11-24)
+
+The fixed-prefix ordered bound alone excludes 315 of 338 shard-2 cubes at size 19.
+It rejects 167 of 182 in case A and 148 of 156 in case B. The forced-repeat check
+excludes none of the 23 survivors. Thus the 315 exclusions in the earlier
+repeat-first audit are all obtainable from the ordered bound alone on this frontier.
+The repeat test can still serve as a prefilter before the more expensive ordered test.
+
+The two-pass replay took 96.71 seconds with 16 workers and made zero SAT solver
+calls. The exact surviving cube IDs are recorded in
+[the replay log](logs/l1343_size19_partialordered.log).
