@@ -14,9 +14,8 @@ EDGES = [(0, 9), (0, 10), (1, 4), (1, 8), (2, 5), (2, 10), (3, 6), (3, 7), (4, 8
          (6, 7), (6, 10), (7, 9), (8, 9)]
 n = 11
 MASKS = [(1 << u) | (1 << v) for u, v in EDGES]
-FAST = dict(sens=True, units=True, usens=True, bypass=True, elim=True, elimclosure=True, signeddom=True,
-            recursivebounds=True, recdepth=2, notbypass=True, recclosure=True, identifybounds=True,
-            fanoutelim=True, pairro=True, colorbounds=True, sharecolor=True, colorbudget=True, nonot=True)
+from rulesets import fast_flags  # canonical --fast rule set (verify/test_rulesets.py)
+FAST = fast_flags(monotone=True)
 
 
 def tasks_for(G):

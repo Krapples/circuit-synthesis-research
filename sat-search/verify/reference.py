@@ -19,7 +19,7 @@ reversed edges, self-loops, vertices out of range, empty terms, non-minimal term
 import os, sys
 from itertools import combinations
 # python-sat is vendored in <repo>/.scratch-sat (README setup)
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.scratch-sat'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.scratch-sat'))
 from pysat.formula import IDPool
 from pysat.solvers import Solver
 
@@ -140,7 +140,7 @@ def brute_exists(n, tt, G, basis='monotone', prefix=(), all_read=True):
 
 # ---------------------------------------------------------------- direct SAT encoding
 
-def sat_exists(n, tt, G, basis='monotone', prefix=(), all_read=True, solver='cadical195', proof=False,
+def sat_exists(n, tt, G, basis='monotone', prefix=(), all_read=True, solver='glucose4', proof=False,
                seconds=None):
     """Returns (witness or None, info). info has clause/variable counts and, with proof=True and a solver
     supporting it, the DRUP proof lines of an UNSAT answer together with the CNF."""

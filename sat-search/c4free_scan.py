@@ -16,9 +16,8 @@ import networkx as nx
 warnings.filterwarnings("ignore", category=UserWarning)
 import cube_search as cs
 
-FAST = dict(sens=True, units=True, usens=True, bypass=True, elim=True, elimclosure=True, signeddom=True,
-            recursivebounds=True, recdepth=2, notbypass=True, recclosure=True, identifybounds=True,
-            fanoutelim=True, pairro=True, colorbounds=True, sharecolor=True, colorbudget=True, nonot=True)
+from rulesets import fast_flags  # canonical --fast rule set (verify/test_rulesets.py)
+FAST = fast_flags(monotone=True)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results', 'c4free_scan.jsonl')
 
 

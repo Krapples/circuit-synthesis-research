@@ -33,9 +33,10 @@ while changed:
         if (g1[2], g1[1]) > (g2[2], g2[1]): circ = swap(circ, k); changed = True
 masks = [(1 << u) | (1 << v) for u, v in EDGES]
 ok = all(cs.evaluate(n, circ, x) == any(x & m == m for m in masks) for x in range(1 << n))
-FAST = dict(sens=True, units=True, usens=True, bypass=True, elim=True, elimclosure=True, signeddom=True,
-            recursivebounds=True, recdepth=2, notbypass=True, recclosure=True, identifybounds=True,
-            fanoutelim=True, pairro=True, colorbounds=True, sharecolor=True, colorbudget=True, nonot=True)
+import os as _rs_os, sys as _rs_sys
+_rs_sys.path.insert(0, _rs_os.path.dirname(_rs_os.path.dirname(_rs_os.path.abspath(__file__))))
+from rulesets import fast_flags  # canonical --fast rule set (verify/test_rulesets.py)
+FAST = fast_flags(monotone=True)
 fix = [(k, *circ[k]) for k in range(1, G)]
 r = cs.run_cube((n, masks, G, 'maplechrono', circ[0], True, True, {**FAST, 'colex_from': 3, 'fixgates': fix}))
 print(f'known circuit: {G} gates, correct on all inputs = {ok}; encoding result with every gate pinned: {r[1]}  {r[4][:50]}')

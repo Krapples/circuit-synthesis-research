@@ -14,7 +14,9 @@ from functools import lru_cache
 from math import comb
 for _v in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
     os.environ.setdefault(_v, '1')
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.scratch-sat'))
+# Vendored python-sat lives in <repo>/.scratch-sat beside scratch scripts. Append (never prepend) so a
+# repository module always wins over a same-named scratch file (verify/AUDIT.md: module shadowing).
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.scratch-sat'))
 from multiprocessing import Pool
 from pysat.formula import IDPool
 from pysat.solvers import Solver, SolverNames
@@ -2270,31 +2272,84 @@ def orbit_min(cube, auts):
     return True
 
 
+MANIFEST_SCHEMA = 'cube_search-manifest/1'
+MANIFEST_SOURCES = ('cube_search.py', 'partial_ordered.py', 'monotone_interface.py', 'port_certificates.py',
+                    'provider_certificates.py', 'provider_capacity.py', 'rulesets.py')
+
+
+def _source_hashes():
+    import hashlib
+    out = {}
+    for f in MANIFEST_SOURCES:
+        path = os.path.join(HERE, f)
+        if os.path.exists(path):
+            out[f] = hashlib.sha256(open(path, 'rb').read()).hexdigest()
+    return out
+
+
+def _write_manifest(path, a, n, edges, allc, auts, sym, cubes, done_before, records, result):
+    """Evidence manifest for one production run (verify/manifest.py re-checks it independently)."""
+    import json, subprocess
+    try:
+        head = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=HERE, capture_output=True, text=True).stdout.strip()
+        dirty = bool(subprocess.run(['git', 'status', '--porcelain', '--', *MANIFEST_SOURCES], cwd=HERE,
+                                    capture_output=True, text=True).stdout.strip())
+    except OSError:
+        head, dirty = None, None
+    config = {k: v for k, v in sorted(vars(a).items())
+              if k not in ('log', 'workers', 'manifest', 'skip_log', 'trust_log', 'minimal_evidence', 'dry_run')}
+    m = dict(schema=MANIFEST_SCHEMA,
+             target=dict(n=n, edges=[list(e) for e in sorted(edges)],
+                         edge_key=','.join(f'{u}-{v}' for u, v in sorted(edges)),
+                         terms=sorted((1 << u) | (1 << v) for u, v in edges)),
+             model=dict(kind='exact-G', every_wire_read=True, output='last gate', binary_operands='l < r',
+                        basis='monotone' if a.nonot else 'general', size=a.size, pinned_prefix=[]),
+             sources=dict(git_head=head, dirty=dirty, sha256=_source_hashes()),
+             configuration=config,
+             coverage=dict(enumeration='first gate (op, l, r), l < r < n' + ('' if a.nonot else ', NOT cubes'),
+                           all_cubes=[list(c) for c in allc], symmetry=bool(a.symmetry),
+                           automorphisms=[list(x) for x in auts], selected=[list(c) for c in sym],
+                           skipped_by_logs=[list(c) for c in sorted(set(sym) & done_before)],
+                           complete=len(records) == len(cubes) and not (set(sym) & done_before)),
+             cubes=records, result=result)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(m, f, indent=1)
+
+
 def _require_minimal_evidence(ap, a, n, edges):
-    """--minimal is sound only if exact sizes size-1 and size-2 are UNSAT for the whole function (then no
-    circuit has fewer than size gates: padding by two gates preserves the every-wire-read model, and dead
-    gates can be removed when all inputs are essential). Sizes below n - 1 are UNSAT by counting reads.
-    Accept only complete, non-minimal runs whose header names this graph (edges=...) and basis."""
-    import re
+    """--minimal is sound only if exact sizes size-1 and size-2 are UNSAT for the whole function: then no
+    circuit has fewer than size gates (padding by two gates, AND(x0, out) and OR(out, g), keeps every wire
+    read and needs a wire other than the output, which holds for n >= 2; dead gates can be removed when all
+    inputs are essential). Sizes below n - 1 are UNSAT by counting reads. Evidence must be manifests
+    (--manifest) of complete runs without --minimal for this graph and basis, with every selected cube UNSAT
+    and the selected set equal to the recomputed enumeration; log lines are not accepted."""
+    import json
     key = ','.join(f'{u}-{v}' for u, v in sorted(edges))
     need = {s for s in (a.size - 1, a.size - 2) if s >= n - 1}
+    allc = [(op, l, r) for op in (0, 1) for r in range(n) for l in range(r)]
+    if not a.nonot:
+        allc.extend((2, i, i) for i in range(n))
     for path in a.minimal_evidence:
-        ok_header, size = False, None
-        for line in open(path, encoding='utf-8'):
-            h = re.search(r'search: n=(\d+), (\d+) edges, exactly (\d+) gates', line)
-            if h:
-                ek = re.search(r'edges=(\S+)', line)
-                size = int(h.group(3))
-                ok_header = (int(h.group(1)) == n and ek is not None and ek.group(1).rstrip('.;,') == key
-                             and ('mode=monotone' in line) == bool(a.nonot) and 'MINIMALITY' not in line
-                             and 'already UNSAT in logs' in line and ', 0 already UNSAT in logs' in line)
-                continue
-            r = re.search(r'RESULT: ALL UNSAT \(exactly (\d+) gates\)', line)
-            if r and ok_header and int(r.group(1)) == size:
-                need.discard(size)
+        try:
+            m = json.load(open(path, encoding='utf-8'))
+        except (OSError, ValueError):
+            ap.error(f'--minimal-evidence {path}: not a readable manifest (log files are no longer accepted)')
+        if m.get('schema') != MANIFEST_SCHEMA:
+            continue
+        cov, model = m['coverage'], m['model']
+        auts = automorphisms(n, edges) if cov['symmetry'] else [tuple(range(n))]
+        selected = [c for c in allc if orbit_min(c, auts)]
+        cube_status = {tuple(r['cube']): r['status'] for r in m['cubes']}
+        if (m['target']['edge_key'] == key and model['basis'] == ('monotone' if a.nonot else 'general')
+                and model['kind'] == 'exact-G' and not model['pinned_prefix']
+                and not m['configuration'].get('minimal') and m['result'] == 'ALL UNSAT'
+                and cov['complete'] and not cov['skipped_by_logs']
+                and sorted(map(tuple, cov['selected'])) == sorted(selected)
+                and all(cube_status.get(c) == 'UNSAT' for c in selected)):
+            need.discard(model['size'])
     if need:
-        ap.error(f'--minimal requires --minimal-evidence logs with ALL UNSAT at sizes {sorted(need)} '
-                 f'(complete runs without --minimal or skipped pieces, header edges={key})')
+        ap.error(f'--minimal requires --minimal-evidence manifests of complete ALL UNSAT runs at sizes '
+                 f'{sorted(need)} (without --minimal, no skipped pieces, edges={key})')
 
 
 def main():
@@ -2335,9 +2390,10 @@ def main():
     ap.add_argument('--coupledprojections', action='store_true', help='match suffix-input sets before and after pinned gates')
     ap.add_argument('--minimal', action='store_true',
                     help='minimality rules: ONLY sound if sizes size-1 and size-2 are already UNSAT')
+    ap.add_argument('--manifest', default=None, help='write an evidence manifest (JSON) for this run')
     ap.add_argument('--minimal-evidence', action='append', default=[],
-                    help='with --minimal: logs of complete runs (without --minimal) showing ALL UNSAT at sizes '
-                         'size-1 and size-2 for this exact graph and basis; required')
+                    help='with --minimal: manifests (--manifest) of complete runs without --minimal showing '
+                         'ALL UNSAT at sizes size-1 and size-2 for this exact graph and basis; required')
     ap.add_argument('--trust-log', action='append', default=[],
                     help='like --skip-log, for an older log without an edge list that you vouch is this exact graph')
     ap.add_argument('--elimbypass', action='store_true', help='with --elim --bypass: constant gates force bypass paths')
@@ -2496,6 +2552,7 @@ def main():
                         certificate_level=a.portcertrank, certificate_output=a.portcertoutput,
                         provider_eligibility=a.portproviders)
              if a.portbounds else None)
+    records = []
     with Pool(a.workers) as p:
         for cube, status, circ, dt, stats in p.imap_unordered(
                 run_cube, [(n, masks, a.size, a.solver, c, a.fanout, a.readonce,
@@ -2520,6 +2577,10 @@ def main():
                                  portcosts=costs))
                 for c in cubes]):
             done += 1; times.append(dt)
+            kind = ('analytical' if str(stats).startswith('analytical') else 'unchecked_unsat') \
+                if status == 'UNSAT' else 'witness' if status == 'WITNESS' else 'open'
+            records.append(dict(cube=list(cube), status=status, evidence=kind, seconds=round(dt, 3),
+                                detail=str(stats)[:300], circuit=[list(g) for g in circ] if circ else None))
             say(f'[{done}/{len(cubes)}] cube {cube}: {status} in {dt:.0f}s '
                 f'(elapsed {time.time() - t0:.0f}s, median cube {sorted(times)[len(times) // 2]:.0f}s) {stats}')
             if status == 'WITNESS':
@@ -2531,6 +2592,9 @@ def main():
             if status == 'STOPPED':
                 result = 'STOPPED'
     say(f'RESULT: {result} (exactly {a.size} gates) after {time.time() - t0:.0f}s')
+    if a.manifest:
+        _write_manifest(a.manifest, a, n, edges, allc, auts, sym, cubes, done_before, records, result)
+        say(f'manifest written: {a.manifest}')
 
 
 if __name__ == '__main__':

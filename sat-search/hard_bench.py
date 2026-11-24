@@ -9,9 +9,8 @@ CONFIGS = [('--fast (v15)', 'cube_search', {}),
            ('+activecolor +colorzero +isolatedcolor', 'cube_search', dict(activecolor=True, colorzero=True, isolatedcolor=True)),
            ('+portbounds', 'cube_search', dict(portbounds=True)),
            ('all v16', 'cube_search', dict(activecolor=True, colorzero=True, isolatedcolor=True, portbounds=True))]
-FAST = dict(sens=True, units=True, usens=True, bypass=True, elim=True, elimclosure=True, signeddom=True,
-            recursivebounds=True, recdepth=2, notbypass=True, recclosure=True, identifybounds=True, fanoutelim=True,
-            pairro=True, colorbounds=True, sharecolor=True, colorbudget=True)
+from rulesets import fast_flags  # canonical --fast rule set (verify/test_rulesets.py)
+FAST = fast_flags(monotone=False)
 FACTOR = 1.5   # stop a configuration at FACTOR x the best complete wall time so far (pool killed)
 
 
