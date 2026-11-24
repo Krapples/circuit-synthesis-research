@@ -18,6 +18,8 @@ from multiprocessing import Pool
 from pysat.formula import IDPool
 from pysat.solvers import Solver
 from pysat.card import CardEnc
+from port_certificates import (PORT_CERTIFICATE_LEVELS, incompatible_primary_pairs, incoming_port_bound,
+                               minimal_zero_certificates)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STOP = os.path.join(HERE, 'STOP')
@@ -1059,6 +1061,14 @@ class PortCosts(dict):
         self.fp = hash((tuple(sorted(d.items())), mono, tuple(sorted(pout.items())) if pout else None))
 
 
+def port_cost_key(costs):
+    if costs is None:
+        return None
+    pout = getattr(costs, 'pout', None)
+    return (tuple(sorted(costs.items())), bool(getattr(costs, 'mono', False)),
+            tuple(sorted(pout.items())) if pout is not None else None)
+
+
 _FZERO, _FONE, _FINF = (), (0,), 10 ** 6
 _fdp_cache = {}
 
@@ -1219,16 +1229,27 @@ def profile_ports(terms, Smask, ctx):
     return len(profiles - {allz})
 
 
-def port_costs(terms, mono=False, separation=False, profile=False, formula=False, output=False, polarity=False):
+def port_costs(terms, mono=False, separation=False, profile=False, formula=False, output=False, polarity=False,
+               certificate_level=None, certificate_output=False):
     """For every set S of inputs that is independent in the incompatibility graph J: p(S) = ceil(log2 q*(S)),
     q*(S) = number of distinct non-constant functions of S obtained by fixing all other inputs. Only outside
     neighbours of S matter (other outside inputs either make f constant 1 or do nothing)."""
+    if certificate_level is not None and not mono:
+        raise ValueError('certificate port costs require a complete monotone target')
+    if certificate_output and certificate_level not in PORT_CERTIFICATE_LEVELS:
+        raise ValueError('output certificate costs require a rank, clique, or exact level')
+    terms = tuple(terms)
+    zero_certificates = minimal_zero_certificates(terms) if certificate_level is not None else ()
     sup = rterms_support(terms)
     J = [(1 << x) | (1 << y) for x, y in incompatible_pairs(terms)]
+    if certificate_level is not None:
+        J.extend(incompatible_primary_pairs(terms, zero_certificates))
     costs = {}
     Smask = sup
     while Smask:
         if not any(Smask & e == e for e in J):
+            certificate_cost = (incoming_port_bound(terms, zero_certificates, Smask, certificate_level)
+                                if certificate_level not in (None, 'compatibility') else 0)
             nbS = 0
             for t in terms:
                 if t & Smask:
@@ -1261,7 +1282,7 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
                 cost = max(cost, _sperner_min(w), chain_distinct(ctx) - 1)
                 if separation:
                     cost = max(cost, separation_clique(ctx))
-            costs[Smask] = cost
+            costs[Smask] = max(cost, certificate_cost)
         Smask = (Smask - 1) & sup
     pout = None
     if output and formula and not polarity:     # output-region costs: monotone only
@@ -1269,6 +1290,12 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
         for Sm, c in costs.items():
             fc = formula_dp(Sm, tuple(output_family(terms, Sm)))
             pout[Sm] = max(c, fc) if fc < _FINF else c
+    if certificate_output:
+        if pout is None:
+            pout = {}
+        for Sm, cost in costs.items():
+            lower = incoming_port_bound(terms, zero_certificates, Sm, certificate_level, output=True)
+            pout[Sm] = max(pout.get(Sm, cost), lower)
     return PortCosts(costs, mono=bool(mono or (formula and not polarity)), pout=pout)
 
 
@@ -1277,7 +1304,7 @@ _ord_cache = {}
 
 def port_binary_lb(terms, costs, H=0):
     if ORDERED[0]:
-        key = (terms, H, getattr(costs, 'fp', None) or hash(tuple(sorted(costs.items()))))
+        key = (terms, H, port_cost_key(costs))
         if key not in _ord_cache:
             _ord_cache[key] = max(_port_binary_lb_unordered(terms, costs, H), ordered_port_lb(terms, costs, H))
         return _ord_cache[key]
@@ -2009,6 +2036,10 @@ def main():
     ap.add_argument('--portbounds', action='store_true', help='with --recursivebounds: region connection bound')
     ap.add_argument('--monoports', action='store_true', help='with --portbounds, monotone circuits only: Sperner/chain ports')
     ap.add_argument('--orderedports', action='store_true', help='with --portbounds: ordered terminal groups')
+    ap.add_argument('--portcertrank', nargs='?', const='rank', choices=PORT_CERTIFICATE_LEVELS,
+                    help='monotone ordered port bounds at rank, clique, or exact level (default: rank)')
+    ap.add_argument('--portcertoutput', action='store_true',
+                    help='with --portcertrank: include all certificates in the output-region bound')
     ap.add_argument('--formulaports', action='store_true',
                     help='with --portbounds: regional formula costs (polarity version, valid with NOT gates)')
     ap.add_argument('--polaritydom', action='store_true', help='with --bypass --parity: polarity dominator')
@@ -2017,6 +2048,12 @@ def main():
                          '--usens --bypass --elim --elimclosure --signeddom --recursivebounds --notbypass '
                          '--recclosure --identifybounds --fanoutelim --pairro --colorbounds --sharecolor --colorbudget')
     a = ap.parse_args()
+    if a.portcertoutput and a.portcertrank is None:
+        ap.error('--portcertoutput requires --portcertrank')
+    if a.portcertrank is not None:
+        if not a.nonot:
+            ap.error('--portcertrank requires --monotone')
+        a.portbounds = a.monoports = a.orderedports = a.recursivebounds = True
     if a.fast:
         for k in ('symmetry', 'fanout', 'readonce', 'sens', 'units', 'usens', 'bypass', 'elim',
                   'elimclosure', 'signeddom', 'recursivebounds', 'notbypass', 'recclosure',
@@ -2073,6 +2110,8 @@ def main():
         f'{", share-color" if a.sharecolor else ""}{", lost-reader" if a.lostreader else ""}'
         f'{", active-color" if a.activecolor else ""}{", color-zero" if a.colorzero else ""}'
         f'{", isolated-color" if a.isolatedcolor else ""}{", port-bounds" if a.portbounds else ""}'
+        f'{", certificate port bounds=" + a.portcertrank if a.portcertrank is not None else ""}'
+        f'{", output certificate ports" if a.portcertoutput else ""}'
         f'{", MINIMALITY RULES (requires sizes " + str(a.size - 1) + " and " + str(a.size - 2) + " UNSAT)" if a.minimal else ""}'
         f'; edges={edge_key}. '
         f'Stop with: create file {STOP}')
@@ -2081,7 +2120,11 @@ def main():
         say('RESULT: ' + ('dry run' if cubes else 'ALL UNSAT (nothing left)')); return
     t0 = time.time()
     done = 0; times = []; result = 'ALL UNSAT'
+    costs = (port_costs(_anti(masks), mono=a.monoports, formula=a.formulaports, polarity=not a.monoports,
+                        certificate_level=a.portcertrank, certificate_output=a.portcertoutput)
+             if a.portbounds else None)
     with Pool(a.workers) as p:
+
         for cube, status, circ, dt, stats in p.imap_unordered(
                 run_cube, [(n, masks, a.size, a.solver, c, a.fanout, a.readonce,
                             dict(sens=a.sens, units=a.units, minimal=a.minimal, parity=a.parity, usens=a.usens,
@@ -2097,8 +2140,7 @@ def main():
                                  lostreader=a.lostreader, activecolor=a.activecolor, colorzero=a.colorzero,
                                  isolatedcolor=a.isolatedcolor,
                                  orderedports=a.orderedports,
-                                 portcosts=port_costs(_anti(masks), mono=a.monoports, formula=a.formulaports,
-                                                     polarity=not a.monoports) if a.portbounds else None))
+                                 portcosts=costs))
                 for c in cubes]):
             done += 1; times.append(dt)
             say(f'[{done}/{len(cubes)}] cube {cube}: {status} in {dt:.0f}s '
