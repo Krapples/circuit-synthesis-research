@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Separate repository (fork of brilliant-hq/pequalnp-proofs); has its own git history
+pequalnp-proofs/
+
+# Vendored python-sat build used by the search scripts (recreate with: pip install python-sat --target .scratch-sat)
+.scratch-sat/*
+!.scratch-sat/search_524.py
+!.scratch-sat/L_meta_524_upper.lean
+
+# Working logs; finished results live in sat-search/results/
+*.log
+*.jsonl
+!sat-search/results/*.log
+sat-search/STOP
+sat-search/STOP_FILLER

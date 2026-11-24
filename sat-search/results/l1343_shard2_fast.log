@@ -1,0 +1,34 @@
+22:40:40 L-meta-1343 shard 2, sizes 14..21, monotone, cube_search --fast; case (a) seed used, case (b) seed AND unused (size G-1); edges [(0, 9), (0, 10), (1, 4), (1, 8), (2, 5), (2, 10), (3, 6), (3, 7), (4, 8), (4, 10), (5, 8), (5, 9), (6, 7), (6, 10), (7, 9), (8, 9)]
+22:40:41 size 14: 50/338 pieces done (elapsed 1s)
+22:40:42 size 14: 100/338 pieces done (elapsed 2s)
+22:40:42 size 14: 150/338 pieces done (elapsed 2s)
+22:40:42 size 14: 200/338 pieces done (elapsed 2s)
+22:40:42 size 14: 250/338 pieces done (elapsed 2s)
+22:40:42 size 14: 300/338 pieces done (elapsed 2s)
+22:40:43 size 14: ALL 338 pieces UNSAT (case a: 182, case b: 156) in 3s, slowest piece 1s
+22:40:44 size 15: 50/338 pieces done (elapsed 1s)
+22:40:45 size 15: 100/338 pieces done (elapsed 2s)
+22:40:46 size 15: 150/338 pieces done (elapsed 3s)
+22:40:46 size 15: 200/338 pieces done (elapsed 3s)
+22:40:47 size 15: 250/338 pieces done (elapsed 4s)
+22:40:47 size 15: 300/338 pieces done (elapsed 4s)
+22:40:48 size 15: ALL 338 pieces UNSAT (case a: 182, case b: 156) in 5s, slowest piece 1s
+22:40:50 size 16: 50/338 pieces done (elapsed 2s)
+22:41:03 size 16: 100/338 pieces done (elapsed 15s)
+22:41:25 size 16: 150/338 pieces done (elapsed 37s)
+22:41:31 size 16: 200/338 pieces done (elapsed 44s)
+22:41:32 size 16: 250/338 pieces done (elapsed 45s)
+22:41:34 size 16: 300/338 pieces done (elapsed 46s)
+22:41:41 size 16: ALL 338 pieces UNSAT (case a: 182, case b: 156) in 54s, slowest piece 51s
+22:44:32 size 17: 50/338 pieces done (elapsed 171s)
+22:46:09 size 17: STOPPED at 268s with 69/338 pieces done (69 UNSAT); not finished
+22:46:09 done
+22:47:15 L-meta-1343 shard 2, sizes 17..17, monotone, cube_search --fast; case (a) seed used, case (b) seed AND unused (size G-1); edges [(0, 9), (0, 10), (1, 4), (1, 8), (2, 5), (2, 10), (3, 6), (3, 7), (4, 8), (4, 10), (5, 8), (5, 9), (6, 7), (6, 10), (7, 9), (8, 9)]
+22:50:12 size 17: 50/338 pieces done (elapsed 176s)
+22:56:04 size 17: 100/338 pieces done (elapsed 529s)
+22:59:30 size 17: 150/338 pieces done (elapsed 734s)
+23:02:09 size 17: 200/338 pieces done (elapsed 894s)
+23:03:29 size 17: 250/338 pieces done (elapsed 974s)
+23:05:14 size 17: 300/338 pieces done (elapsed 1078s)
+23:16:52 size 17: ALL 338 pieces UNSAT (case a: 182, case b: 156) in 1776s, slowest piece 1701s
+23:16:52 done

@@ -1,0 +1,10 @@
+17:11:54 13 gates: portfolio of 11 (cadical300/AND, kissat404/OR, cadical195/AND, glucose42/OR, maplechrono/AND, lingeling/OR, cadical153/AND, mergesat3/OR, maplecm/AND, minisat22/OR, glucose4/AND)
+17:14:26 maplechrono first gate AND(0,1): UNSAT in 151s
+17:14:57 maplecm first gate AND(0,1): UNSAT in 183s
+17:16:16 glucose4 first gate AND(0,1): UNSAT in 262s
+17:20:22 glucose42 first gate OR(0,1): UNSAT in 507s
+17:23:55 cadical195 first gate AND(0,1): UNSAT in 720s
+17:24:46 mergesat3 first gate OR(0,1): UNSAT in 771s
+17:28:33 cadical153 first gate AND(0,1): UNSAT in 999s
+17:33:42 lingeling first gate OR(0,1): UNSAT in 1307s
+17:34:53 cadical300 first gate AND(0,1): UNSAT in 1379s
