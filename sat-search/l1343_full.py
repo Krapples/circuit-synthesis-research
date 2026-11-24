@@ -115,6 +115,9 @@ if __name__ == '__main__':
         if pending:
             say(f'size {G}: STOPPED at {limit:.0f}s with {done}/{len(tasks)} pieces done ({unsat} UNSAT); not finished')
             break
+        if unsat != len(tasks):
+            say(f'size {G}: finished but only {unsat}/{len(tasks)} pieces UNSAT (others stopped or errored); not a proof')
+            break
         say(f'size {G}: ALL {len(tasks)} pieces UNSAT (case a: {sum(1 for t in tasks if t[0] == "a")}, case b: '
             f'{sum(1 for t in tasks if t[0] == "b")}) in {wall:.0f}s, slowest piece {slow:.0f}s')
         prev = wall
