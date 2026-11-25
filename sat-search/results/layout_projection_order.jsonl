@@ -1,0 +1,6 @@
+{"case": "hypergraph-12", "contraction": 0, "excess": 4, "mode": "combined", "n": 5, "peak_bytes": 56770560, "seconds": 4.0, "status": "TIMEOUT", "target": "0xf880e880"}
+{"case": "hypergraph-12", "contraction": 0, "excess": 4, "mode": "internal-first", "n": 5, "peak_bytes": 73588736, "seconds": 4.0, "status": "TIMEOUT", "target": "0xf880e880"}
+{"case": "hypergraph-21", "contraction": 0, "excess": 4, "mode": "combined", "n": 5, "peak_bytes": 67260416, "seconds": 4.0, "status": "TIMEOUT", "target": "0xfae0a800"}
+{"case": "hypergraph-21", "contraction": 0, "excess": 4, "mode": "internal-first", "n": 5, "peak_bytes": 65400832, "seconds": 4.0, "status": "TIMEOUT", "target": "0xfae0a800"}
+{"case": "comparator-02", "contraction": 0, "excess": 5, "mode": "combined", "n": 5, "peak_bytes": 47566848, "seconds": 4.0, "status": "TIMEOUT", "target": "0xe8a0a080"}
+{"case": "comparator-02", "contraction": 0, "excess": 5, "mode": "internal-first", "n": 5, "peak_bytes": 48037888, "seconds": 4.0, "status": "TIMEOUT", "target": "0xe8a0a080"}
