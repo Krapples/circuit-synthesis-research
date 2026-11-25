@@ -557,3 +557,69 @@ The repeat test can still serve as a prefilter before the more expensive ordered
 The two-pass replay took 96.71 seconds with 16 workers and made zero SAT solver
 calls. The exact surviving cube IDs are recorded in
 [the replay log](logs/l1343_size19_partialordered.log).
+
+## One more pinned gate after x0 OR x2 (2026-11-25)
+
+This screen covers only shard 2, case A, at exactly 19 gates with the seed
+AND and `x0 OR x2` already pinned. On the 15 available wires, the next gate
+has 105 distinct operand pairs before ordering. Colex excludes the one pair
+strictly below `(0, 2)`, leaving 104 pairs and 208 typed AND/OR branches.
+The result leaves the other 22 saved case-A and case-B prefixes untouched.
+
+### Budget decision for the ordered bound
+
+For a prefix of length `p` and a viable projection with `w` suffix inputs,
+the binary suffix bound is `max(0, w-1, w+K-2)`, where `K` is the minimum
+number of ordered terminal groups. At total budget `B` skip any projection
+with `w > B-p+1` and test only whether `K <= B-p+2-w`. For one group the
+conflict graph must be edgeless. For two, enumerate the orientations of the
+connected components of a bipartite conflict graph. Each orientation
+gives two independent groups. The first group may have no terminal demand
+on earlier inputs. The second can meet every nonlocal demand from the first
+because the two groups partition the projection and its cuts are nonempty.
+For a larger group allowance, the existing exact ordered-group DP applies.
+The threshold decision can stop as soon as one projection passes.
+
+The decision test matched 3,838 small budget/projection comparisons against
+the original ordered bound and all 47 real branches completed by the bounded
+reference pass. The original pass reached its 115 s wall cap with 161
+branches unevaluated. The threshold pass completed all 208 in 8.72 s,
+excluding 204, including all 104 AND branches. This count differs from the
+earlier exploratory 166-of-208 observation above. The current result has a
+complete branch list and a partial comparison to the full ordered bound,
+and supersedes that observation for this exact experiment. The two screens
+overlapped briefly, so these wall times describe the bounded attempts.
+
+The four open gates were `OR(0,5)`, `OR(2,9)`, `OR(3,13)`, and `OR(6,7)`.
+The full ordered bound independently returned 19 on all four in a 32.27 s
+recheck.
+The 20k-conflict CaDiCaL 1.9.5 probe submitted all four plus the unsplit
+control under the same monotone fast, certificate-row and frontier options.
+All five were unknown. They reached their first solver call after 0.92–1.00 s
+of setup, and the first SAT call spent a further 2.1–2.5 s at the conflict
+limit. The jobs ran concurrently. The conflict cap is per call and per
+branch, so the split and unsplit searches have different aggregate work
+allowances.
+
+At 500k conflicts per call each of the five jobs again returned unknown
+in one call. The split calls spent 39.8–45.4 s in SAT after 0.74–0.77 s
+of setup. The unsplit call took 48.2 s after 0.73 s of setup. This measured
+probe was search-limited and supplied no witness or SAT exclusion for the
+four branches. No estimate of time to a decisive answer follows.
+
+[Full threshold screen](results/l1343_deeper_prefix_threshold.jsonl) ·
+[Bounded reference pass](results/l1343_deeper_prefix_screen.jsonl) ·
+[Full-bound survivor recheck](results/l1343_deeper_prefix_recheck.jsonl) ·
+[20k probe](results/l1343_deeper_prefix_sat.jsonl) ·
+[500k probe](results/l1343_deeper_prefix_sat_500k.jsonl)
+
+```powershell
+python sat-search/experiments/l1343_deeper_prefix.py --check
+$script = 'sat-search/experiments/l1343_deeper_prefix.py'
+$screen = 'sat-search/logs/l1343_deeper_threshold_replay.jsonl'
+python $script sat-search/logs/l1343_deeper_reference_replay.jsonl --workers 8 --seconds 115
+python $script $screen --threshold --workers 8 --seconds 70
+python $script sat-search/logs/l1343_deeper_recheck.jsonl --recheck $screen --workers 4 --seconds 40
+python $script sat-search/logs/l1343_deeper_20k_replay.jsonl --screen $screen --workers 8 --seconds 65 --conflicts 20000
+python $script sat-search/logs/l1343_deeper_500k_replay.jsonl --screen $screen --workers 5 --seconds 65 --conflicts 500000
+```

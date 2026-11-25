@@ -1,0 +1,6 @@
+{"event": "start", "prefix": [[1, 6, 9], [1, 7, 10], [0, 11, 12], [1, 0, 2]], "budget": 19, "jobs": 4, "workers": 4, "seconds_limit": 40.0, "solver": null, "conflicts_per_call": null, "threshold": false, "elapsed": 0.000506600015796721}
+{"event": "screen", "gate": [1, 0, 5], "bound": 19, "status": "OPEN", "seconds": 17.946447500027716, "elapsed": 18.25249789992813}
+{"event": "screen", "gate": [1, 2, 9], "bound": 19, "status": "OPEN", "seconds": 18.10881920007523, "elapsed": 18.422649099957198}
+{"event": "screen", "gate": [1, 3, 13], "bound": 19, "status": "OPEN", "seconds": 31.583417300018482, "elapsed": 31.901491899974644}
+{"event": "screen", "gate": [1, 6, 7], "bound": 19, "status": "OPEN", "seconds": 31.953102199942805, "elapsed": 32.26270979992114}
+{"event": "end", "finished": 4, "remaining": 0, "elapsed": 32.27131360000931}
