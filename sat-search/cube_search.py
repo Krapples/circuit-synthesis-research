@@ -1862,6 +1862,48 @@ def evaluate(n, circ, x):
     return v[-1]
 
 
+def cover_circuit(n, edges):
+    """Monotone star-cover circuit for the graph function (pequalnp-proofs L-meta-154).
+
+    OR over cover vertices v of x_v AND (OR of v's still-uncovered neighbours), so a minimum
+    vertex cover gives |E| + tau - 1 gates (fewer when a late star has nothing left).  Valid
+    in the monotone and counted-NOT bases.  Returns gates in run_cube format (output = last
+    wire), checked on every row, or None for the edgeless graph."""
+    edges = sorted({tuple(sorted(e)) for e in edges})
+    if not edges:
+        return None
+    best = None
+    for k in range(1, n + 1):
+        for cover in itertools.combinations(range(n), k):
+            if not all(a in cover or b in cover for a, b in edges):
+                continue
+            left, gates, terms = set(edges), [], []
+            todo = list(cover)
+            while left:
+                v = max(todo, key=lambda u: (sum(u in e for e in left), -u))
+                todo.remove(v)
+                nb = sorted(a + b - v for a, b in left if v in (a, b))
+                left = {e for e in left if v not in e}
+                acc = nb[0]
+                for u in nb[1:]:
+                    gates.append((1, min(acc, u), max(acc, u)))
+                    acc = n + len(gates) - 1
+                gates.append((0, min(acc, v), max(acc, v)))
+                terms.append(n + len(gates) - 1)
+            acc = terms[0]
+            for t in terms[1:]:
+                gates.append((1, min(acc, t), max(acc, t)))
+                acc = n + len(gates) - 1
+            if best is None or len(gates) < len(best):
+                best = gates
+        if best is not None:
+            break
+    masks = [(1 << a) | (1 << b) for a, b in edges]
+    if not all(evaluate(n, best, x) == any(x & m == m for m in masks) for x in range(1 << n)):
+        raise RuntimeError('cover circuit failed verification')
+    return best
+
+
 @lru_cache(maxsize=32)
 def boundary_rows(n, masks):
     """Minimal true and maximal false rows of the graph function."""
@@ -2454,7 +2496,7 @@ def _write_manifest(path, a, n, edges, allc, auts, sym, cubes, done_before, reco
 
 
 NON_RULE_OPTIONS = {'n', 'edges', 'size', 'workers', 'solver', 'log', 'skip_log', 'trust_log', 'dry_run', 'manifest',
-                    'minimal_evidence', 'allow_unverified', 'nonot', 'fast', 'recdepth'}
+                    'minimal_evidence', 'allow_unverified', 'nonot', 'fast', 'recdepth', 'no_cover_skip'}
 
 
 def _active_rules(a):
@@ -2605,6 +2647,9 @@ def main():
     ap.add_argument('--formulaports', action='store_true',
                     help='with --portbounds: regional formula costs (polarity version, valid with NOT gates)')
     ap.add_argument('--polaritydom', action='store_true', help='with --bypass --parity: polarity dominator')
+    ap.add_argument('--no-cover-skip', action='store_true',
+                    help='search even when --size is at or above the verified star-cover upper bound '
+                         '(runs with --manifest always search)')
     ap.add_argument('--fast', action='store_true',
                     help='recommended set (benchmarked 2026-11-23): --symmetry --fanout --readonce --sens --units '
                          '--usens --bypass --elim --elimclosure --signeddom --recursivebounds --notbypass '
@@ -2723,6 +2768,17 @@ def main():
         f'{", MINIMALITY RULES (requires sizes " + str(a.size - 1) + " and " + str(a.size - 2) + " UNSAT)" if a.minimal else ""}'
         f'; edges={edge_key}. '
         f'Stop with: create file {STOP}')
+    cover = cover_circuit(n, edges)
+    if cover is not None:
+        say(f'star-cover upper bound (L-meta-154, verified): {len(cover)} gates')
+        if a.size >= len(cover) and not a.no_cover_skip and not a.manifest:
+            if a.size == len(cover):
+                say(f'WITNESS verified=True: {cover}')
+                say(f'RESULT: WITNESS (exactly {a.size} gates; star-cover construction, no search)')
+            else:
+                say(f'RESULT: SKIPPED (size {a.size} exceeds the verified upper bound {len(cover)}; '
+                    f'pass --no-cover-skip to search anyway)')
+            return
     say('pieces to run: ' + ' '.join(f'{"AND OR NOT".split()[c[0]]}{c[1:] if c[0] < 2 else (c[1],)}' for c in cubes))
     if a.dry_run or not cubes:
         say('RESULT: ' + ('dry run' if cubes else 'ALL UNSAT (nothing left)')); return

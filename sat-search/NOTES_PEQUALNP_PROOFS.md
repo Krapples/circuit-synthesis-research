@@ -211,8 +211,43 @@ has no connection to our CNF synthesis encodings.
 3. **`NoFunnel` as a pre-filter for first-gate enumeration.** For funnel-free targets, L107's case
    split certifies that the first binary gate is not a pair funnel. That is a sound restriction
    on first gates in counted-NOT. It is not valid for free-NOT search.
-4. **L154 as a default upper-bound seed** for graph targets in `synthesis_bench` (it costs
-   nothing). The recorded corpus uppers are stale for three graph cases.
+4. **L154 as a default upper-bound seed**: done 2026-11-25, see §7.
+
+## 7. L154 seed integration (2026-11-25)
+
+`cube_search.cover_circuit(n, edges)` builds the star-cover circuit from a minimum vertex cover.
+Each star is processed greedily by remaining degree and the smallest result over all minimum
+covers is kept. The circuit is checked on every row and gives at most `|E|+τ−1` gates. It is
+monotone, so it is a valid upper bound in the mono, counted-NOT and free-NOT bases.
+
+- **`synthesis_bench.run_case`** (default; `--no-cover-seed` reproduces earlier runs). For a
+  complete graph edge function, the initial upper bound is the smaller of the corpus witness
+  and the cover circuit, and a `kind='seed'` record carries the cover witness. The cover circuit
+  is checked again against the case with `synthesis_cases.truth_table`. Over the 19 graph cases,
+  the seed is below the corpus witness for 11: graph-01 11→8, graph-02 13→9, graph-03 15→11,
+  path-4 5→4, cycle-5 9→7, petersen-10 29→20, random-monotone-06 7→5, generated-06 15→4,
+  comparator-01 11→3, comparator-08 29→14. Complete and bipartite graphs keep their corpus
+  witnesses, which are smaller. End-to-end, path-4 and cycle-5 start from 4 and 7 and finish
+  as exactly 4 and 7 in both bases (1 s caps).
+- **`cube_search` CLI.** It logs the verified cover bound U.
+  - **Size = U:** prints the cover circuit as the WITNESS without searching.
+  - **Size > U:** prints `RESULT: SKIPPED` with no search.
+  - `--no-cover-skip` turns this off and is not a pruning rule (`NON_RULE_OPTIONS`).
+  - Runs with `--manifest` always search.
+  - `verify/cli_differential.py` and `verify/test_manifest.py` pass `--no-cover-skip`, so they
+    still exercise the SAT side.
+  - `test_manifest`, `test_rulesets` and `test_imports` pass.
+- **Native C++ (`native/src`): no change, deliberately.**
+  - Every native entry point is a fixed-budget decision procedure. `solve_blocks` and
+    `solve_completion` take one region with given provider counts. `tight_residual`,
+    `slack_one_extensions`, `directed_completion` and `slack_two_boundary` take one prefix
+    with a given slack. None takes a starting upper bound.
+  - A bound on the whole function cannot prune inside one fixed-budget decision. It only
+    decides which budgets a driver asks about, and the drivers (ascending excess ladders,
+    cube sizes) are Python.
+  - Ascending ladders stop at the first SAT anyway, so the bound saves work only at sizes ≥ U
+    (now skipped in `cube_search`), or by capping an open-ended ascent such as the hybrid
+    driver's `run_ours_sat` loop up to `kmax`.
 
 Reproduce:
 

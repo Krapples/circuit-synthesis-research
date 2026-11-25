@@ -15,7 +15,7 @@ EDGES = '0-1,1-2,2-3,3-4,0-4'        # five-cycle, monotone minimum 7
 
 def cli(size, *extra):
     p = subprocess.run([sys.executable, CLI, '--n', '5', '--edges', EDGES, '--size', str(size), '--monotone',
-                        '--workers', '2', *extra], capture_output=True, text=True, cwd=ROOT)
+                        '--workers', '2', '--no-cover-skip', *extra], capture_output=True, text=True, cwd=ROOT)
     return p.returncode, p.stdout + p.stderr
 
 

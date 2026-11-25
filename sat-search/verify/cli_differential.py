@@ -77,7 +77,7 @@ def run_cli(n, terms, G, basis, flags, seconds, log=None, extra=''):
     edges = ','.join(f'{u}-{v}' for u, v in (tuple(i for i in range(n) if t >> i & 1) for t in terms))
     # --allow-unverified: this harness is what establishes coverage, so it must reach untested combinations
     cmd = [sys.executable, CLI, '--n', str(n), '--edges', edges, '--size', str(G), '--workers', '1',
-           '--allow-unverified']
+           '--allow-unverified', '--no-cover-skip']  # exercise the SAT side, not the cover shortcut
     cmd += (flags + ' ' + extra).split() + ([MONO] if basis == 'monotone' else [])
     if log:
         cmd += ['--log', log]
