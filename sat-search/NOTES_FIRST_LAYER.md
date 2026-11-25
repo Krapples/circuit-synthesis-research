@@ -387,3 +387,150 @@ python sat-search/experiments/residual_filter_check.py $ref --capture sat-search
 python sat-search/baselines/first_layer_check.py check sat-search/logs/residual_filter_oracle_replay.jsonl --exe $percy --workers 4 --modes slack-one slack-one-root slack-one-parity slack-one-direct
 python sat-search/baselines/first_layer_check.py screen sat-search/logs/residual_filter_screen_replay.jsonl --exe $percy --workers 1 --limit 43 --seconds 8 --conflicts 20000 --modes slack-one slack-one-root slack-one-parity slack-one-direct
 ```
+
+## Target-directed partial obligations
+
+The optional native `directed` backend replaces the full-column witness decision
+for a fixed occurrence tree. An AND root with obligations `(P,N)` needs both
+children to contain `P`. It enumerates attainable columns `a` for the child
+with fewer occurrences. A column `a` that contains `P` reduces the other
+child's obligations to `(P,N & a)`. This equivalence is exact for a fixed
+split and output orientation. Both output orientations are tried.
+
+Projection closes each obligation over the fibers of the child's input columns.
+A fiber receiving both labels is impossible. If the larger child is forced to
+one on a negative row, the enumerated child must be zero on that row. After
+this test, columns that induce the same closed negative obligations on the
+larger child are interchangeable. The memo key consists of the occurrence
+subset and closed positive and negative masks, canonically ordered up to output
+complementation. Since each call uses a strictly smaller subset, recursive
+failure establishes infeasibility. Caps and deadlines yield unknown without
+installing a failure in the memo. Optional dominance skips a negative obligation
+set containing one already found infeasible in the same split and phase.
+
+The Percy flag `--residual-backend directed` selects this tree solver and
+`--residual-backend dominance` adds obligation dominance. The default
+`columns` backend remains executable. The existing provider allocation
+search and provider parity filter still apply. In direct-filter mode, parity
+candidates get exact target-directed provider checks. Other allocations still
+enumerate attainable provider columns, then use target-directed decoders.
+Slack-zero boundaries and extensions share the same backend. A slack-one
+call gives each subquery the remaining work and the original absolute
+deadline. Slack-zero calls retain the 4,096-unit allowance. Slack-one calls
+retain the 100,000-unit allowance and 25 ms deadline in Percy. The two
+backends charge different operations.
+
+The adapter gives each occurrence its own leaf index and aliases only the
+two occurrences of the repeated underlying wire. A raw-primary pair or two
+occurrences of the same wire cannot be siblings. Witnesses carry the phases
+and occurrence indices, plus the provider subset and column when present.
+A Python caller can use `directed_completion` to reconstruct these witnesses.
+If a fallback provider column was enumerated without a witness, a requested
+witness is reconstructed within the remaining limits. A blocked reconstruction
+reports unknown. Percy still extracts its own SAT witnesses, which the
+benchmark harness evaluates independently.
+
+### Verification
+
+The supplied Python check passed 1,980 independent DAG queries. The supplied
+MSVC C++20 check passed 2,400 merge-oracle comparisons and all 995 generated
+fixtures in stream mode, with 318 feasible and zero unknown fixtures. The
+integrated directed backend matched 990 slack-zero and 990 slack-one DAG
+queries with dominance disabled and enabled. All **2,452** native witnesses
+were independently evaluated, including 14 internal-provider witnesses.
+Checks exercised deadlines, exhausted work, empty care, and conservative
+extension masks. All 57 fixed-budget Percy runs matched the independent
+circuit enumerator.
+[Native oracle summary](results/baselines/residual_directed_native_oracle.jsonl) and
+[Percy fixed-budget replay](results/baselines/residual_directed_percy_oracle.jsonl)
+
+The supplied Python benchmark repeated the speedup on each synthetic workload.
+Full-column direct-filter times were 0.366 s, 0.539 s and 4.597 s. Directed
+times without dominance were 0.078 s, 0.153 s and 0.181 s. On the 30 wide
+queries, directed pair joins fell from 3,027,192 to 8,560. Those are Python
+reference figures.
+
+### Fixed Percy boundary replay
+
+All modes used the current direct provider filters, the same 25 ms query
+deadline, the same 512 MiB Windows Job Object commit cap, and the same 4,096-unit
+extension allowance. Five interleaved samples per mode and boundary gave
+stable statuses. Time is the sum of the 34 per-boundary medians and includes
+extension checks. Work counts describe different charged operations. The
+full-column path counts signed pairs, while the directed child tables count
+pairs of complement classes before trying their phases.
+
+| Backend | Exclusions at 100,000 units | Pure cuts justified | Sum of median times | Work | Joins |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Full columns | 22 | 21 | 73.4 ms | 2,192,851 | 1,526,342 |
+| Directed | 34 | 34 | 14.5 ms | 459,328 | 6,466 |
+| Directed + dominance | 34 | 34 | 14.1 ms | 455,508 | 6,466 |
+
+At 2,000,000 units and the same deadline, full columns still left four
+boundaries open and took 173.0 ms. Both directed modes again excluded all
+34 in about 14 ms. This includes the 12 queries unresolved in the prior
+production replay, eleven of which previously exhausted the allowance
+before reaching provider synthesis.
+[Captured boundary replay](results/baselines/residual_directed_captured.jsonl)
+
+### End-to-end Percy comparison
+
+All three modes used all-pair distinctions, the boundary budget, tight set cuts,
+slack-one cuts, and direct provider filtering. The 43-target screen used Satoko,
+one worker, the same 512 MiB Windows process-family commit cap, an 8 s process
+deadline and 20,000 conflicts per solve. Every job hit a solver limit without
+establishing a minimum. The 187 jointly excluded budgets agreed, and there were
+no independent proof packets for these hard-set exclusions.
+
+| Metric | Full columns | Directed | Directed + dominance |
+| --- | ---: | ---: | ---: |
+| Size-seven budgets excluded | 18 | 19 | 19 |
+| Conflicts on 187 jointly excluded budgets | 461,807 | 454,425 | 454,425 |
+| Elapsed seconds on jointly excluded budgets | 8.832 | 7.078 | 7.087 |
+| Tight cuts | 2,553 | 3,208 | 3,208 |
+| Slack-one pure / conditional cuts | 644 / 39 | 1,075 / 0 | 1,075 / 0 |
+| Slack-one queries / unknown | 845 / 162 | 1,075 / 0 | 1,075 / 0 |
+| Slack-one joins across all jobs | 30,137,834 | 56,495 | 56,495 |
+| All residual check seconds | 2.302 | 0.412 | 0.408 |
+| Largest solver peak working set | 22.9 MiB | 26.6 MiB | 25.5 MiB |
+| Total end-to-end seconds | 41.144 | 40.181 | 39.723 |
+
+Directed visited more slack-one boundaries and excluded every visited one.
+Dominance reduced directed states from 28,642 to 28,425 and produced the same
+cut totals and CDCL counters in this screen. One sequential run is insufficient
+to establish a reliable elapsed-time difference between the two directed modes.
+Dominance and the directed backend remain opt-in.
+[Matched Percy records](results/baselines/residual_directed_percy_screen.jsonl)
+
+### Follow-up on repeated occurrences
+
+When a tree state of width `w >= 3` contains both occurrences of a repeated
+wire, swapping them preserves truth columns, raw status, and all node rules.
+An unordered split that keeps them together is fixed by the swap. The
+`2^(w-2)` splits separating the occurrences form pairs, since there is at
+least one other leaf. Keeping one representative of each pair removes
+`2^(w-3)` root splits before structural filtering. A witness at the kept
+split still uses both occurrence indices. Subset memoization could also
+identify states that differ only by one of the two occurrence indices, with
+the stored witness relabeled on lookup. The split counts and preservation of
+the raw-leaf root rule were checked exhaustively for widths three through
+seven, including all compatible raw-leaf masks. This reduction has not been
+implemented in the benchmarked backend.
+
+### Replay commands
+
+```powershell
+$directedRef = 'C:\Users\Carson\Downloads'
+$percy = 'external/percy-first-layer-release/percy_run.exe'
+python 'C:\Users\Carson\Downloads\residual_target_recursion.py' --check --bench
+New-Item -ItemType Directory -Path external/residual-directed-check -Force | Out-Null
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cl /nologo /std:c++20 /O2 /EHsc "C:\Users\Carson\Downloads\residual_directed_check.cpp" /Foexternal\residual-directed-check\directed_check.obj /Feexternal\residual-directed-check\directed_check.exe && external\residual-directed-check\directed_check.exe'
+python 'C:\Users\Carson\Downloads\residual_directed_fixtures.py' | & 'external/residual-directed-check/directed_check.exe' fixtures
+& 'sat-search/native/build_native.bat'
+$env:PERCY_BUILD_DIR = 'percy-first-layer-release'
+& 'sat-search/baselines/build/build_percy.bat'
+python sat-search/experiments/residual_directed_check.py $directedRef
+python sat-search/experiments/residual_directed_check.py $directedRef --capture sat-search/results/baselines/slack_one_percy_captured.jsonl --output sat-search/logs/residual_directed_captured_replay.jsonl
+python sat-search/baselines/first_layer_check.py check sat-search/logs/residual_directed_oracle_replay.jsonl --exe $percy --workers 1 --memory-mib 512 --modes slack-one-direct slack-one-directed slack-one-dominance
+python sat-search/baselines/first_layer_check.py screen sat-search/logs/residual_directed_screen_replay.jsonl --exe $percy --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes slack-one-direct slack-one-directed slack-one-dominance
+```

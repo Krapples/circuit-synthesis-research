@@ -14,6 +14,7 @@
 //   --slack-one-residual : check slack-one boundaries and learn extension clauses (requires --first-layer)
 //   --trace-slack-one : emit the boundaries and their verdicts as JSON events
 //   --residual-filter off|root|parity|direct : choose the residual completion ablation
+//   --residual-backend columns|directed|dominance : choose the exact tree completion backend
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
@@ -60,6 +61,7 @@ struct Extra {
     bool residual_set_cuts = false;
     bool slack_one = false, trace_slack_one = false;
     synthesis::ResidualFilterMode residual_filter = synthesis::ResidualFilterMode::off;
+    synthesis::ResidualBackend residual_backend = synthesis::ResidualBackend::columns;
 };
 
 struct ClauseSink {
@@ -251,6 +253,7 @@ struct TightResidual {
     int extension_feasible = 0, extension_unknown = 0, extension_excluded = 0, slack_position_cuts = 0;
     unsigned slack_joins = 0, root_splits = 0, root_rejected = 0;
     unsigned allocations = 0, parity_rejected = 0, direct_queries = 0;
+    unsigned directed_states = 0;
     double slack_seconds = 0;
 
     explicit TightResidual(const kitty::dynamic_truth_table& tt) {
@@ -334,7 +337,8 @@ struct TightResidual {
         unsigned allowed_extensions = 0;
         if (is_tight) {
             ++queries;
-            const auto result = synthesis::residual_zero(columns, h, target, care, 4096, ex.residual_filter);
+            const auto result = synthesis::residual_zero(
+                columns, h, target, care, 4096, ex.residual_filter, clk::time_point::max(), ex.residual_backend);
             if (result == synthesis::ResidualStatus::unknown) ++unknown;
             if (result != synthesis::ResidualStatus::infeasible) return {};
             ++cuts;
@@ -345,7 +349,8 @@ struct TightResidual {
             const auto started = clk::now();
             const auto result = synthesis::slack_one_extensions(
                 std::move(columns), h, std::span(primaries).first(n), mixed_mask, target, care,
-                100000, 4096, stats, started + std::chrono::milliseconds(25), ex.residual_filter);
+                100000, 4096, stats, started + std::chrono::milliseconds(25),
+                ex.residual_filter, ex.residual_backend);
             const double elapsed = since(started);
             slack_seconds += elapsed;
             slack_joins += stats.joins;
@@ -354,6 +359,7 @@ struct TightResidual {
             allocations += stats.allocations;
             parity_rejected += stats.parity_rejected;
             direct_queries += stats.direct_queries;
+            directed_states += stats.directed_states;
             if (ex.trace_slack_one) {
                 printf("{\"event\":\"slack_one\",\"k\":%d,\"mixed\":%u,\"types\":[", k, mixed_mask);
                 for (size_t i = 0; i < observed_types.size(); ++i)
@@ -361,11 +367,11 @@ struct TightResidual {
                 printf("],\"exact\":%d,\"feasible_extensions\":%u,\"unknown_extensions\":%u,"
                        "\"work\":%u,\"providers\":%u,\"filtered\":%u,\"decoders\":%u,"
                        "\"joins\":%u,\"root_splits\":%u,\"root_rejected\":%u,\"allocations\":%u,"
-                       "\"parity_rejected\":%u,\"direct_queries\":%u,\"seconds\":%.6f}\n",
+                       "\"parity_rejected\":%u,\"direct_queries\":%u,\"directed_states\":%u,\"seconds\":%.6f}\n",
                        int(result.exact), result.feasible, result.unknown,
                        stats.work, stats.providers, stats.filtered, stats.decoders,
                        stats.joins, stats.root_splits, stats.root_rejected, stats.allocations,
-                       stats.parity_rejected, stats.direct_queries, elapsed);
+                       stats.parity_rejected, stats.direct_queries, stats.directed_states, elapsed);
             }
             if (result.exact == synthesis::ResidualStatus::unknown) ++slack_unknown;
             if (result.exact == synthesis::ResidualStatus::feasible) ++slack_feasible;
@@ -426,6 +432,14 @@ int main(int argc, char** argv) {
             else if (mode == "direct") ex.residual_filter = Mode::direct;
             else { fprintf(stderr, "expected --residual-filter off, root, parity or direct\n"); return 2; }
         }
+        else if (a == "--residual-backend") {
+            const auto backend = next();
+            using Backend = synthesis::ResidualBackend;
+            if (backend == "columns") ex.residual_backend = Backend::columns;
+            else if (backend == "directed") ex.residual_backend = Backend::directed;
+            else if (backend == "dominance") ex.residual_backend = Backend::dominance;
+            else { fprintf(stderr, "expected --residual-backend columns, directed or dominance\n"); return 2; }
+        }
         else if (a == "--first-layer") {
             const auto scope = next();
             if (scope == "edges") ex.pairs = synthesis::PairScope::edges;
@@ -455,8 +469,9 @@ int main(int argc, char** argv) {
         fprintf(stderr, "slack-one exclusions need --first-layer edges or all; tracing needs --slack-one-residual\n");
         return 2;
     }
-    if (ex.residual_filter != synthesis::ResidualFilterMode::off && !ex.tight_residual && !ex.slack_one) {
-        fprintf(stderr, "residual filters need --tight-residual or --slack-one-residual\n");
+    if ((ex.residual_filter != synthesis::ResidualFilterMode::off ||
+         ex.residual_backend != synthesis::ResidualBackend::columns) && !ex.tight_residual && !ex.slack_one) {
+        fprintf(stderr, "residual options need --tight-residual or --slack-one-residual\n");
         return 2;
     }
     if (ex.residual_set_cuts && (!ex.tight_residual || ex.pairs == synthesis::PairScope::none)) {
@@ -589,12 +604,13 @@ int main(int argc, char** argv) {
                        "\"slack_conditional\":%d,\"extension_feasible\":%d,\"extension_unknown\":%d,"
                        "\"extension_excluded\":%d,\"slack_position_cuts\":%d,\"slack_seconds\":%.6f,"
                        "\"slack_joins\":%u,\"root_splits\":%u,\"root_rejected\":%u,\"provider_allocations\":%u,"
-                       "\"parity_rejected\":%u,\"direct_queries\":%u",
+                       "\"parity_rejected\":%u,\"direct_queries\":%u,\"directed_states\":%u",
                        residual->slack_queries, residual->slack_feasible, residual->slack_unknown,
                        residual->slack_pure, residual->slack_conditional, residual->extension_feasible,
                        residual->extension_unknown, residual->extension_excluded, residual->slack_position_cuts,
                        residual->slack_seconds, residual->slack_joins, residual->root_splits, residual->root_rejected,
-                       residual->allocations, residual->parity_rejected, residual->direct_queries);
+                       residual->allocations, residual->parity_rejected, residual->direct_queries,
+                       residual->directed_states);
 #ifdef USE_SATOKO
             if (satoko_backend) {
                 const long propagations = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;

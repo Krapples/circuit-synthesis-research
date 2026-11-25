@@ -9,11 +9,19 @@
 #include <vector>
 
 #include "residual_parity_filter.hpp"
+#include "residual_directed.hpp"
 
 namespace synthesis {
 
 enum class ResidualStatus { infeasible, feasible, unknown };
 enum class ResidualFilterMode { off, root, parity, direct };
+enum class ResidualBackend { columns, directed, dominance };
+
+struct ResidualWitness {
+    unsigned repeated = 0, provider_leaves = 0;
+    uint64_t provider_column = 0;
+    residual_directed::Witness provider, decoder;
+};
 
 // Columns are packed on the original cared rows. The first h columns are
 // first-layer occurrences, and the rest are directly read primaries.
@@ -63,6 +71,7 @@ struct SlackOneStats {
     unsigned completion_case = 0;  // 1: boundary repeated, 2: provider repeated
     unsigned joins = 0, root_splits = 0, root_rejected = 0;
     unsigned allocations = 0, parity_rejected = 0, direct_queries = 0;
+    unsigned directed_states = 0;
 };
 
 namespace residual_detail {
@@ -76,6 +85,7 @@ struct Search {
     Clock::time_point deadline;
     SlackOneStats& stats;
     ResidualFilterMode mode;
+    ResidualBackend backend;
 
     bool charge() {
         if (stats.work == work_limit) return false;
@@ -97,6 +107,28 @@ class TreeTables {
 
     bool valid(unsigned mask) const {
         return std::has_single_bit(mask) || ((mask & ~raw) && mask != twins);
+    }
+
+    ResidualStatus directed(unsigned mask, uint64_t target, residual_directed::Witness* witness) {
+        std::vector<residual_directed::Leaf> leaves;
+        for (; mask; mask &= mask - 1) {
+            const unsigned i = std::countr_zero(mask);
+            const unsigned bit = 1u << i;
+            const unsigned wire = (twins & bit) ? std::countr_zero(twins) : i;
+            leaves.push_back({wire, signals[i] & search.care, bool(raw & bit)});
+        }
+        // A dummy zero row leaves only the structural question when care is empty.
+        const uint64_t care = search.care ? search.care : 1;
+        auto result = residual_directed::Solver(
+            std::move(leaves), care, search.work_limit - search.stats.work, search.deadline,
+            search.backend == ResidualBackend::dominance).run(target, care ^ target);
+        search.stats.work += unsigned(result.work);
+        search.stats.joins += unsigned(result.joins);
+        search.stats.directed_states += unsigned(result.states);
+        if (result.status == residual_directed::Status::unknown) return ResidualStatus::unknown;
+        if (result.status == residual_directed::Status::unsat) return ResidualStatus::infeasible;
+        if (witness) *witness = std::move(result.witness);
+        return ResidualStatus::feasible;
     }
 
 public:
@@ -142,9 +174,10 @@ public:
         return &out;
     }
 
-    ResidualStatus find(unsigned mask, uint64_t target) {
+    ResidualStatus find(unsigned mask, uint64_t target, residual_directed::Witness* witness = nullptr) {
         if (!search.charge()) return ResidualStatus::unknown;
         if (!valid(mask)) return ResidualStatus::infeasible;
+        if (search.backend != ResidualBackend::columns) return directed(mask, target, witness);
         if (std::has_single_bit(mask))
             return columns[mask].contains(target) ? ResidualStatus::feasible : ResidualStatus::infeasible;
         const unsigned anchor = mask & (0u - mask);
@@ -210,28 +243,31 @@ inline std::vector<std::pair<uint64_t, uint64_t>> mixed_label_groups(
 inline ResidualStatus residual_zero(
     std::span<const uint64_t> columns, unsigned h, uint64_t target, uint64_t care,
     unsigned work_limit, ResidualFilterMode mode,
-    residual_detail::Clock::time_point deadline = residual_detail::Clock::time_point::max()) {
+    residual_detail::Clock::time_point deadline = residual_detail::Clock::time_point::max(),
+    ResidualBackend backend = ResidualBackend::columns, ResidualWitness* witness = nullptr) {
     using namespace residual_detail;
-    if (mode == ResidualFilterMode::off) return tight_residual(columns, h, target, care, work_limit);
+    if (mode == ResidualFilterMode::off && backend == ResidualBackend::columns)
+        return tight_residual(columns, h, target, care, work_limit);
     if (columns.empty() || columns.size() > max_boundary || h == 0 || h > columns.size())
         return ResidualStatus::unknown;
     SlackOneStats stats;
-    Search search{target & care, care, work_limit, deadline, stats, mode};
+    Search search{target & care, care, work_limit, deadline, stats, mode, backend};
     const unsigned all = (1u << columns.size()) - 1;
     TreeTables trees(search, columns, all ^ ((1u << h) - 1));
-    return trees.find(all, search.target);
+    return trees.find(all, search.target, witness ? &witness->decoder : nullptr);
 }
 
 inline ResidualStatus slack_one_residual(
     std::span<const uint64_t> boundary, unsigned h, uint64_t target, uint64_t care,
     unsigned work_limit, SlackOneStats& stats,
     residual_detail::Clock::time_point deadline = residual_detail::Clock::time_point::max(),
-    ResidualFilterMode mode = ResidualFilterMode::off) {
+    ResidualFilterMode mode = ResidualFilterMode::off,
+    ResidualBackend backend = ResidualBackend::columns, ResidualWitness* witness = nullptr) {
     using namespace residual_detail;
     stats = {};
     if (boundary.empty() || boundary.size() > max_boundary || h == 0 || h > boundary.size())
         return ResidualStatus::unknown;
-    Search search{target & care, care, work_limit, deadline, stats, mode};
+    Search search{target & care, care, work_limit, deadline, stats, mode, backend};
     const unsigned next_leaf = 1u << boundary.size();
     const unsigned all = next_leaf - 1;
     const unsigned raw = all ^ ((1u << h) - 1);
@@ -242,8 +278,11 @@ inline ResidualStatus slack_one_residual(
         const unsigned leaf = 1u << i;
         signals.back() = boundary[i];
         TreeTables trees(search, signals, raw | ((raw & leaf) ? next_leaf : 0), leaf | next_leaf);
-        const auto status = trees.find(all | next_leaf, search.target);
-        if (status == ResidualStatus::feasible) stats.completion_case = 1;
+        const auto status = trees.find(all | next_leaf, search.target, witness ? &witness->decoder : nullptr);
+        if (status == ResidualStatus::feasible) {
+            stats.completion_case = 1;
+            if (witness) witness->repeated = i;
+        }
         if (status != ResidualStatus::infeasible) return status;
     }
 
@@ -273,12 +312,23 @@ inline ResidualStatus slack_one_residual(
         const auto groups = mixed_label_groups(signals, search.target, care);
         signals.resize(signals.size() + 2);
         const unsigned twins = provider_bit | (provider_bit << 1);
-        const auto try_decoder = [&](uint64_t provider) {
+        const auto try_decoder = [&](uint64_t provider, residual_directed::Witness provider_tree = {}) {
             ++stats.decoders;
             signals[signals.size() - 2] = signals.back() = provider;
             TreeTables decoder(search, signals, decoder_raw, twins);
-            const auto status = decoder.find((1u << signals.size()) - 1, search.target);
-            if (status == ResidualStatus::feasible) stats.completion_case = 2;
+            const auto status = decoder.find((1u << signals.size()) - 1, search.target,
+                                             witness ? &witness->decoder : nullptr);
+            if (status != ResidualStatus::feasible) return status;
+            if (witness) {
+                if (!provider_tree) {
+                    const auto found = providers.find(inside, provider, &provider_tree);
+                    if (found != ResidualStatus::feasible) return ResidualStatus::unknown;
+                }
+                witness->provider = std::move(provider_tree);
+                witness->provider_leaves = inside;
+                witness->provider_column = provider;
+            }
+            stats.completion_case = 2;
             return status;
         };
         // Anchor one component to quotient by global complement. Only use
@@ -290,11 +340,12 @@ inline ResidualStatus slack_one_residual(
                 uint64_t provider = components.sides[0][0];
                 for (unsigned i = 1; i < count; ++i)
                     provider |= components.sides[i][(flip >> (i - 1)) & 1];
-                const auto status = providers.find(inside, provider);
+                residual_directed::Witness provider_tree;
+                const auto status = providers.find(inside, provider, witness ? &provider_tree : nullptr);
                 if (status == ResidualStatus::unknown) return status;
                 if (status == ResidualStatus::infeasible) continue;
                 ++stats.providers;
-                const auto decoded = try_decoder(provider);
+                const auto decoded = try_decoder(provider, std::move(provider_tree));
                 if (decoded != ResidualStatus::infeasible) return decoded;
             }
             continue;
@@ -336,8 +387,10 @@ inline SlackOneExtension slack_one_extensions(
     std::vector<uint64_t> boundary, unsigned h, std::span<const uint64_t> primaries, unsigned mixed,
     uint64_t target, uint64_t care, unsigned work_limit, unsigned tight_work_limit, SlackOneStats& stats,
     residual_detail::Clock::time_point deadline = residual_detail::Clock::time_point::max(),
-    ResidualFilterMode mode = ResidualFilterMode::off) {
-    SlackOneExtension result{slack_one_residual(boundary, h, target, care, work_limit, stats, deadline, mode)};
+    ResidualFilterMode mode = ResidualFilterMode::off,
+    ResidualBackend backend = ResidualBackend::columns, ResidualWitness* witness = nullptr) {
+    SlackOneExtension result{
+        slack_one_residual(boundary, h, target, care, work_limit, stats, deadline, mode, backend, witness)};
     if (result.exact != ResidualStatus::infeasible) return result;
     boundary.push_back(0);
     for (unsigned i = 0; i < primaries.size(); ++i) {
@@ -345,7 +398,7 @@ inline SlackOneExtension slack_one_extensions(
         if (mixed & bit) continue;
         boundary.back() = primaries[i];
         const auto status = residual_detail::Clock::now() >= deadline ? ResidualStatus::unknown
-            : residual_zero(boundary, h, target, care, tight_work_limit, mode, deadline);
+            : residual_zero(boundary, h, target, care, tight_work_limit, mode, deadline, backend);
         if (status == ResidualStatus::feasible) result.feasible |= bit;
         if (status == ResidualStatus::unknown) result.unknown |= bit;
     }

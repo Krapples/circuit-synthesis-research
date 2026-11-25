@@ -21,6 +21,21 @@ synthesis::ResidualFilterMode residual_filter_mode(int mode) {
     return static_cast<synthesis::ResidualFilterMode>(mode);
 }
 
+synthesis::ResidualBackend residual_backend(int backend) {
+    if (backend < 0 || backend > 2) throw py::value_error("residual backend must be 0 through 2");
+    return static_cast<synthesis::ResidualBackend>(backend);
+}
+
+py::tuple directed_tree(const residual_directed::Tree& tree) {
+    if (tree->occurrence >= 0) return py::make_tuple("x", tree->occurrence);
+    return py::make_tuple("&", tree->pa, tree->pb, tree->po, directed_tree(tree->a), directed_tree(tree->b));
+}
+
+py::object directed_witness(const residual_directed::Witness& witness) {
+    if (!witness) return py::none();
+    return py::make_tuple(directed_tree(witness.tree), witness.phase);
+}
+
 // The search holds the GIL (it owns no Python objects while running, so releasing it briefly is safe).  Yield it at
 // every poll so other Python threads run -- in particular the regional_deadline.timed alarm thread, which must take
 // the GIL to call interrupt_main(); PyErr_CheckSignals() then raises the resulting KeyboardInterrupt here.
@@ -187,18 +202,22 @@ PYBIND11_MODULE(_regional_native, mod) {
     mod.def("pack_obligation_rows", &pack_obligation_rows);
     mod.def("tight_residual",
             [](const std::vector<uint64_t>& columns, unsigned first_layer, uint64_t target,
-               uint64_t care, unsigned work_limit, int filter_mode) {
+               uint64_t care, unsigned work_limit, int filter_mode, int backend) {
                 return int(synthesis::residual_zero(columns, first_layer, target, care, work_limit,
-                                                    residual_filter_mode(filter_mode)));
+                                                    residual_filter_mode(filter_mode),
+                                                    synthesis::residual_detail::Clock::time_point::max(),
+                                                    residual_backend(backend)));
             }, py::arg("columns"), py::arg("first_layer"), py::arg("target"), py::arg("care"),
-            py::arg("work_limit") = 4096, py::arg("filter_mode") = 0,
+            py::arg("work_limit") = 4096, py::arg("filter_mode") = 0, py::arg("backend") = 0,
             "Exact fixed-boundary free-NOT completion: 0 infeasible, 1 feasible, 2 unknown.");
     mod.def("slack_one_extensions",
             [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
                unsigned mixed, uint64_t target, uint64_t care, unsigned work_limit,
-               unsigned tight_work_limit, double deadline_seconds, int filter_mode, bool include_metrics) -> py::tuple {
+               unsigned tight_work_limit, double deadline_seconds, int filter_mode, bool include_metrics,
+               int backend) -> py::tuple {
                 if (primaries.size() > 6) throw py::value_error("at most six candidate primaries");
                 const auto mode = residual_filter_mode(filter_mode);
+                const auto engine = residual_backend(backend);
                 using Clock = synthesis::residual_detail::Clock;
                 const auto deadline = deadline_seconds > 0
                     ? Clock::now() + std::chrono::duration_cast<Clock::duration>(
@@ -209,7 +228,7 @@ PYBIND11_MODULE(_regional_native, mod) {
                 {
                     const py::gil_scoped_release release;
                     result = synthesis::slack_one_extensions(columns, h, primaries, mixed, target, care,
-                                                             work_limit, tight_work_limit, stats, deadline, mode);
+                                                             work_limit, tight_work_limit, stats, deadline, mode, engine);
                 }
                 if (!include_metrics)
                     return py::make_tuple(int(result.exact), result.feasible, result.unknown, stats.completion_case,
@@ -221,11 +240,37 @@ PYBIND11_MODULE(_regional_native, mod) {
                 metrics["allocations"] = stats.allocations;
                 metrics["parity_rejected"] = stats.parity_rejected;
                 metrics["direct_queries"] = stats.direct_queries;
+                metrics["directed_states"] = stats.directed_states;
                 return py::make_tuple(int(result.exact), result.feasible, result.unknown, stats.completion_case,
                                       stats.work, stats.providers, stats.filtered, stats.decoders, metrics);
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
             py::arg("tight_work_limit") = 4096, py::arg("deadline_seconds") = 0.0, py::arg("filter_mode") = 0,
-            py::arg("include_metrics") = false,
+            py::arg("include_metrics") = false, py::arg("backend") = 0,
             "Return status, extension masks, completion case, work, provider counts, and optional filter counters.");
+    mod.def("directed_completion",
+            [](const std::vector<uint64_t>& columns, unsigned h, uint64_t target, uint64_t care,
+               unsigned slack, unsigned work_limit, bool dominance) -> py::tuple {
+                if (slack > 1) throw py::value_error("slack must be 0 or 1");
+                synthesis::ResidualWitness witness;
+                synthesis::SlackOneStats stats;
+                const auto backend = dominance ? synthesis::ResidualBackend::dominance
+                                               : synthesis::ResidualBackend::directed;
+                const auto deadline = synthesis::residual_detail::Clock::time_point::max();
+                const auto mode = synthesis::ResidualFilterMode::direct;
+                const auto result = slack
+                    ? synthesis::slack_one_residual(columns, h, target, care, work_limit, stats, deadline,
+                                                    mode, backend, &witness)
+                    : synthesis::residual_zero(columns, h, target, care, work_limit, mode, deadline,
+                                               backend, &witness);
+                if (result != synthesis::ResidualStatus::feasible)
+                    return py::make_tuple(int(result), py::none());
+                return py::make_tuple(int(result),
+                    py::make_tuple(stats.completion_case, witness.repeated, witness.provider_leaves,
+                                   witness.provider_column, directed_witness(witness.provider),
+                                   directed_witness(witness.decoder)));
+            }, py::arg("columns"), py::arg("first_layer"), py::arg("target"), py::arg("care"),
+            py::arg("slack"), py::arg("work_limit") = 100000, py::arg("dominance") = false,
+            "Return status and optional normalized occurrence witness (case, repeated index, provider mask,"
+            " provider column, provider tree with phase, decoder tree with phase).");
 }

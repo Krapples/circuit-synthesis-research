@@ -9,6 +9,7 @@ import subprocess
 from time import perf_counter
 
 from run_baselines import PERCY, hexstr, parse_percy_chain, peak_of, verify
+from benchmark_memory import limit_commit_mib
 
 
 MODES = {
@@ -29,6 +30,9 @@ RESIDUAL_MODES['slack-one-trace'] = (*RESIDUAL_MODES['slack-one'], '--trace-slac
 for residual_filter in ('root', 'parity', 'direct'):
     RESIDUAL_MODES[f'slack-one-{residual_filter}'] = (
         *RESIDUAL_MODES['slack-one'], '--residual-filter', residual_filter)
+for residual_backend in ('directed', 'dominance'):
+    RESIDUAL_MODES[f'slack-one-{residual_backend}'] = (
+        *RESIDUAL_MODES['slack-one-direct'], '--residual-backend', residual_backend)
 
 
 def exact_tables(n, steps):
@@ -132,13 +136,20 @@ def main():
     parser.add_argument('--seconds', type=float, default=6)
     parser.add_argument('--conflicts', type=int, default=20_000)
     parser.add_argument('--modes', nargs='+', choices=tuple(MODES | RESIDUAL_MODES), default=tuple(MODES))
+    parser.add_argument('--memory-mib', type=int, help='commit cap for the single-worker process family')
     args = parser.parse_args()
+    if args.memory_mib is not None:
+        if args.workers != 1:
+            parser.error('--memory-mib needs a single worker')
+        limit_commit_mib(args.memory_mib)
     jobs = check_jobs(args.exe, args.modes) if args.kind == 'check' else screen_jobs(
         args.exe, args.workload, args.limit, args.seconds, args.conflicts, args.modes)
 
     def execute(job):
         command, expected = job
         row = run(*command)
+        if args.memory_mib is not None:
+            row['memory_limit_mib'] = args.memory_mib
         if expected:
             assert row['status'] == expected, (command, expected, row)
             row['expected'] = expected
