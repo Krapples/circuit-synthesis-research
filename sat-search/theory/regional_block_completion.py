@@ -14,11 +14,13 @@ def indices(mask):
         mask ^= bit
 
 
-def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True):
+def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True, *,
+                 row_filter=True, endpoint_branches=True, dominance_branches=True):
     """Return a tree using every private leaf and allocated port occurrence."""
     if stats is not None:
         stats['local'] += 1
     one = (1 << (1 << m)) - 1
+    last = (one + 1) >> 1
     full = (1 << m) - 1
     columns = vars(m)
     counts = Counter(ports)
@@ -121,6 +123,47 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
             return None
         return sum((found >> i & 1) << (a | fixed) for i, a in enumerate(owned) for fixed in outside)
 
+    @lru_cache(maxsize=256)
+    def row_order(mask):
+        rows = tuple(pattern & mask for pattern in pats)
+        zero = tuple(i for i, value in enumerate(rows) if value == 0)
+        high = tuple(i for i, value in enumerate(rows) if value == mask)
+        order = tuple((i, j) for i, a in enumerate(rows) for j, b in enumerate(rows) if i != j and a & b == a)
+        return zero, high, order
+
+    @lru_cache(maxsize=256)
+    def ordered_rows(mask, is_and):
+        comparable = [0] * len(pats)
+        for lo, hi in row_order(mask)[2]:
+            if is_and:
+                comparable[hi] |= 1 << lo
+            else:
+                comparable[lo] |= 1 << hi
+        return tuple(comparable)
+
+    def prune_constant_branches(options, left_ports, right_ports, is_and):
+        related = ordered_rows(left_ports, is_and), ordered_rows(right_ports, is_and)
+        opposing = [0, 0]
+        absorbing = 0 if is_and else one
+        for row, pairs in enumerate(options):
+            if len(pairs) == 1:
+                for child, target in enumerate(pairs[0]):
+                    if target not in (ANY, absorbing):
+                        opposing[child] |= 1 << row
+        for row, pairs in enumerate(options):
+            if len(pairs) > 1:
+                # All ambiguous branches require the same absorbing constant.
+                # Only fixed, opposing obligations can conflict with this choice.
+                options[row] = tuple(pair for pair in pairs if all(
+                    target == ANY or not related[child][row] & opposing[child]
+                    for child, target in enumerate(pair)))
+                if not options[row]:
+                    return False
+        return True
+
+    def port_mask(available):
+        return sum(1 << i for i, count in zip(providers, available) if count)
+
     @lru_cache(maxsize=8192)
     def complete(primary, available, obligations):
         if stats is not None:
@@ -128,6 +171,17 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
         size = primary.bit_count() + sum(available)
         if not size or any(t != ANY and support(t) & ~primary for t in obligations):
             return None
+        if row_filter and not signed:
+            zero, high, order = row_order(port_mask(available))
+            # Every live leaf agrees at the all-zero/all-one endpoints.
+            # At fixed primary values, a larger port pattern can only increase the output.
+            if (any((t := obligations[i]) != ANY and t & 1 for i in zero)
+                    or any((t := obligations[i]) != ANY and not t & last for i in high)
+                    or any((a := obligations[i]) != ANY and (b := obligations[j]) != ANY and a & ~b
+                           for i, j in order)):
+                if stats is not None:
+                    stats['row_reject'] += 1
+                return None
         if module_filter and any(t not in (0, one, ANY) and exposed(j, primary) != t
                                  for j, t in enumerate(obligations)):
             if stats is not None:
@@ -156,8 +210,11 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                     stats['partition_checks'] += 1
                 right = primary ^ left
                 remaining = tuple(a - b for a, b in zip(available, taking))
+                endpoint_test = row_filter and endpoint_branches and not signed
+                if endpoint_test:
+                    left_ports, right_ports = port_mask(taking), port_mask(remaining)
                 options = []
-                for target in obligations:
+                for row, target in enumerate(obligations):
                     if target == ANY:
                         pairs = ((ANY, ANY),)
                     elif target == absorbing:
@@ -169,8 +226,21 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                         if (a & b if is_and else a | b) != target:
                             break
                         pairs = ((a, b),)
+                    if endpoint_test and target != ANY:
+                        pairs = tuple((a, b) for a, b in pairs
+                                      if endpoint_allows(a, pats[row], left_ports)
+                                      and endpoint_allows(b, pats[row], right_ports))
+                        if not pairs:
+                            if stats is not None:
+                                stats['endpoint_split_reject'] += 1
+                            break
                     options.append(pairs)
                 else:
+                    if (endpoint_test and dominance_branches and any(len(pairs) > 1 for pairs in options)
+                            and not prune_constant_branches(options, left_ports, right_ports, is_and)):
+                        if stats is not None:
+                            stats['dominance_split_reject'] += 1
+                        continue
                     for selected in product(*options):
                         a_targets, b_targets = map(tuple, zip(*selected))
                         a = complete(left, taking, a_targets)
@@ -180,10 +250,16 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                                 return op, a, b
         return None
 
+    def endpoint_allows(target, pattern, mask):
+        if target == ANY:
+            return True
+        pattern &= mask
+        return (pattern != 0 or not target & 1) and (pattern != mask or bool(target & last))
+
     try:
         return complete(full, tuple(counts[i] for i in providers), tuple(targets))
     finally:
-        for cached in (components, support, project, exposed, complete):
+        for cached in (components, support, project, exposed, row_order, ordered_rows, complete):
             cached.cache_clear()
 
 

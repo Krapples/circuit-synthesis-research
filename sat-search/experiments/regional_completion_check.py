@@ -1,11 +1,13 @@
 """Independent completion checks and bounded matched quotient benchmarks."""
 
 import argparse
+from _thread import interrupt_main
 from collections import Counter
 import json
 from pathlib import Path
 from random import Random
 import sys
+from threading import Event, Thread, get_ident
 from time import perf_counter
 import unittest
 
@@ -113,7 +115,7 @@ class RegionalCompletionChecks(unittest.TestCase):
     def test_quotient_backends_reconstruct_the_same_budget(self):
         targets = (0xffecf080, 0xeea0e000, 0xfcc8e0c0)
         for target, expected in zip(targets, (True, True, False)):
-            for name in ('reference', 'cached', 'blocks'):
+            for name in ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches'):
                 completion = make_completion(name)
                 result = solve3(5, target, completion=completion)
                 self.assertEqual(result is not None, expected)
@@ -121,10 +123,19 @@ class RegionalCompletionChecks(unittest.TestCase):
                     gates, _ = materialize3(5, target, result)
                     self.assertLessEqual(len(gates), 7)
 
+    def test_known_excess_four_corpus_witnesses(self):
+        for n, target in ((5, 0xf880e880), (5, 0xfae0a800), (6, 0xeeeaecc0a880a880)):
+            with self.subTest(truth=hex(target)):
+                result = search_exact(n, target, 4)
+                self.assertIsNotNone(result)
+                gates, _ = reconstruct(n, target, *result, 4)
+                self.assertEqual(len(gates), n + 3)
 
-def record_call(work, mode, completion):
+
+def record_call(work, mode, completion, stats=None):
     name, n, target, excess, signed, engine = work
-    stats = Counter()
+    if stats is None:
+        stats = Counter()
     before = completion.metrics() if hasattr(completion, 'metrics') else {}
     start = perf_counter()
     if engine == 'quotient':
@@ -159,6 +170,50 @@ def single(work, mode):
     return record_call(work, mode, make_completion(mode))
 
 
+def profile(work, mode, seconds):
+    """Sample a timed worker's Python stack without instrumenting the solver."""
+    done, samples, stats = Event(), Counter(), Counter()
+    completion = make_completion(mode)
+    caller = get_ident()
+    deadline = perf_counter() + seconds
+    started = perf_counter()
+
+    def sample():
+        while not done.wait(.005):
+            if perf_counter() >= deadline:
+                interrupt_main()
+                return
+            frame = sys._current_frames().get(caller)
+            while frame is not None and frame.f_code is not search_exact.__code__:
+                code = frame.f_code
+                if code.co_filename.endswith('regional_obligation_cache.py'):
+                    samples['completion'] += 1
+                    break
+                if code.co_name == 'fixed' and code.co_filename.endswith('ordered_quotient_core.py'):
+                    samples['fixed_layout'] += 1
+                    break
+                if code.co_filename.endswith('restriction_excess.py'):
+                    samples['restriction'] += 1
+                    break
+                if code.co_name in ('_cut', '_step') and code.co_filename.endswith('layout_projection.py'):
+                    samples['projection'] += 1
+                    break
+                frame = frame.f_back
+            else:
+                samples['other'] += 1
+
+    sampler = Thread(target=sample, daemon=True)
+    try:
+        sampler.start()
+        result = record_call(work, mode, completion, stats)
+    except KeyboardInterrupt:
+        result = dict(status='TIMEOUT', stats=stats, cache=completion.metrics())
+    finally:
+        done.set()
+        sampler.join()
+    return {**result, 'profile_seconds': perf_counter() - started, 'samples': samples}
+
+
 def benchmark(args):
     if args.higher:
         corpus = {name: (n, target) for name, _, n, target in cases()}
@@ -170,6 +225,9 @@ def benchmark(args):
             n, target, _ = restrict_essential(n, target)
             n, target, _ = simplify(n, target, False)
             worklist.append((name, n, target, excess, False, 'layout'))
+        if args.profile and not (args.row_bounds or args.endpoint_branches or args.dominance_branches or args.mode):
+            worklist = [work for work in worklist if work[0] in ('hypergraph-12', 'comparator-09',
+                                                                'random-monotone-10')]
     else:
         targets = matched_three()
         worklist = [(hex(target), 5, target, 3, False, 'layout') for target in targets]
@@ -181,10 +239,21 @@ def benchmark(args):
     results = []
     expected = {}
     modes = ('cached', 'blocks') if args.higher else ('reference', 'cached', 'blocks')
+    if args.row_bounds:
+        modes = ('blocks', 'row-bounds')
+    if args.endpoint_branches:
+        modes = ('row-bounds', 'endpoint-branches')
+    if args.dominance_branches:
+        modes = ('endpoint-branches', 'dominance-branches')
+    if args.mode:
+        modes = (args.mode,)
     for mode in modes:
         if args.higher:
             for work in worklist:
-                result = bounded(single, (work, mode), args.seconds)
+                if args.profile:
+                    result = bounded(profile, (work, mode, args.seconds), args.seconds + 2)
+                else:
+                    result = bounded(single, (work, mode), args.seconds)
                 result = dict(case=work[0], n=work[1], truth=hex(work[2]), excess=work[3], basis='monotone',
                               engine=work[5], completion=mode, **{k: v for k, v in result.items()
                                                                if k not in ('case', 'n', 'truth', 'excess',
@@ -216,9 +285,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bench', action='store_true')
     parser.add_argument('--higher', action='store_true')
+    parser.add_argument('--profile', action='store_true', help='sample higher-excess workers until the cap')
+    variants = parser.add_mutually_exclusive_group()
+    variants.add_argument('--row-bounds', action='store_true', help='compare block completion with monotone row bounds')
+    variants.add_argument('--endpoint-branches', action='store_true', help='compare prefiltering constant row branches')
+    variants.add_argument('--dominance-branches', action='store_true', help='compare prefiltering by row dominance')
+    variants.add_argument('--mode', choices=('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches',
+                                             'dominance-branches'), help='run one named completion mode')
     parser.add_argument('--seconds', type=float)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.profile and not args.higher:
+        parser.error('--profile requires --higher')
     if args.seconds is None:
         args.seconds = 4 if args.higher else 25
     if args.seconds <= 0:

@@ -4,7 +4,7 @@ fully reduced monotone / free-NOT cores. Not a counted-NOT algorithm.
 Dependencies: conditional_provider, two_sharing_core, module_contraction.
 """
 from collections import Counter
-from functools import lru_cache
+from functools import lru_cache, partial
 from itertools import product
 from time import perf_counter
 from random import Random
@@ -17,12 +17,18 @@ from regional_obligation_cache import ObligationCache
 ANY=-1
 
 
-def make_completion(mode='blocks', *, cache_size=4096):
+def make_completion(mode='dominance-branches', *, cache_size=4096):
     if mode == 'reference':
         return local
     if mode == 'cached':
         return ObligationCache(maxsize=cache_size)
     if mode == 'blocks':
+        return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, row_filter=False))
+    if mode == 'row-bounds':
+        return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, endpoint_branches=False))
+    if mode == 'endpoint-branches':
+        return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, dominance_branches=False))
+    if mode == 'dominance-branches':
         return ObligationCache(maxsize=cache_size, solver=local_blocks)
     raise ValueError(f'unknown completion mode {mode!r}')
 
