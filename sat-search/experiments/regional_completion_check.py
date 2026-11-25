@@ -28,7 +28,7 @@ from two_sharing_core import ANY, local
 COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches',
                     'port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient',
                     'root-relaxation', 'root-portfolio', 'certificate-cnf', 'certificate-lazy', 'certificate-rows', 'certificate-anchored',
-                    'certificate-absorption', 'certificate-fallback', 'padding-first', 'phase-first', 'bounded-multiplicity', 'phase-certificate')
+                    'certificate-absorption', 'certificate-fallback', 'padding-first', 'phase-first', 'bounded-multiplicity', 'phase-certificate', 'phase-certificate-fastkey')
 
 
 def check_tree(tree, m, ports, pats, targets, signed):
@@ -62,7 +62,7 @@ class RegionalCompletionChecks(unittest.TestCase):
         cache = ObligationCache(solver=local_blocks, maxsize=512)
         variants = tuple(make_completion(mode, cache_size=512) for mode in
                          ('port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient',
-                          'root-relaxation', 'phase-first', 'bounded-multiplicity', 'phase-certificate'))
+                          'root-relaxation', 'phase-first', 'bounded-multiplicity', 'phase-certificate', 'phase-certificate-fastkey'))
         verdicts = Counter()
         for _ in range(500):
             m = rng.randrange(3)

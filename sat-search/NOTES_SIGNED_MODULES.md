@@ -560,6 +560,23 @@ The remaining bottleneck at excess 5 is cache canonicalization and layout count,
 AND/OR relations into the partition generator would not address it. Next: a cheaper cache key (e.g. hash before
 canonicalizing, or memoize by raw query first) or fewer layouts.
 
+**Cheaper cache keys (`phase-certificate-fastkey`, opt-in).** `ObligationCache(symmetry_limit=1, maxsize=2^17)`: the exact
+compact key without the symmetric tie-break search (the cache documents that a capped key can only miss isomorphic hits,
+never change a verdict) and a larger cache. Completion tests pass.
+- 30 s throughput probe (`experiments/cache_key_probe.py`, `results/cache_key_probe.jsonl`): completion queries
+  answered in 30 s rise 51% (comparator-04), 78% (complete-5), 27% (hypergraph-09); cache size alone barely matters
+  over 30 s. Layout counts are enumerated up front, so they are not a progress measure.
+- Matched excess-5 run on an idle machine (`experiments/fastkey_e5.py`, `results/fastkey_e5.jsonl`; each mode runs all
+  12 searches at once, 300 s cap): both modes finish the same two searches, threshold-5-3 (plain 207 s, fast key
+  98 s) and hypergraph-20 (112 s vs 102 s), both with no excess-5 layout (provisional). The other 10 time out in both.
+  An earlier unmatched run that seemed to show two new completions overlapped another benchmark and compared a 300 s cap
+  with 120 s; the completions came from the longer cap.
+- Over 300 s the plain mode's 4,096-entry cache thrashes: it makes 2-20x more solver calls (complete-5 555k vs 93k).
+- petersen-10 makes no completion calls at all: its time is layout enumeration.
+- Conclusion: keys and cache size give up to ~2x; they do not close the excess-5 gap. The external baselines
+  (bb018a6) point the same way: the remaining weakness is the decision stage at excess >= 4, where a stronger SAT stage
+  is needed, not faster layout bookkeeping.
+
 ## Second-chance screening (2026-11-24, stopped early for runtime)
 
 - Normalized phase encoding vs direct counted-NOT encoding (`experiments/second_chance_encoding.py`,

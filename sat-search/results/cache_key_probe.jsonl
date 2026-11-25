@@ -1,0 +1,15 @@
+{"case": "comparator-04", "maxsize": 4096, "symmetry_limit": 32, "status": "TIMEOUT", "seconds": 30.07, "layouts": 888, "queries": 90960, "solves": 1303, "norm_entries": 4096, "norm_hits": 38228}
+{"case": "comparator-04", "maxsize": 4096, "symmetry_limit": 1, "status": "TIMEOUT", "seconds": 30.05, "layouts": 889, "queries": 137425, "solves": 10161, "norm_entries": 4096, "norm_hits": 38228}
+{"case": "comparator-04", "maxsize": 131072, "symmetry_limit": 32, "status": "TIMEOUT", "seconds": 30.11, "layouts": 888, "queries": 71917, "solves": 1156, "norm_entries": 33526, "norm_hits": 38390}
+{"case": "comparator-04", "maxsize": 131072, "symmetry_limit": 4, "status": "TIMEOUT", "seconds": 30.06, "layouts": 889, "queries": 129446, "solves": 6762, "norm_entries": 91056, "norm_hits": 38390}
+{"case": "comparator-04", "maxsize": 131072, "symmetry_limit": 1, "status": "TIMEOUT", "seconds": 30.13, "layouts": 889, "queries": 114781, "solves": 4294, "norm_entries": 76390, "norm_hits": 38390}
+{"case": "complete-5", "maxsize": 4096, "symmetry_limit": 32, "status": "TIMEOUT", "seconds": 30.07, "layouts": 888, "queries": 64180, "solves": 1035, "norm_entries": 4096, "norm_hits": 38228}
+{"case": "complete-5", "maxsize": 4096, "symmetry_limit": 1, "status": "TIMEOUT", "seconds": 30.11, "layouts": 889, "queries": 112550, "solves": 3413, "norm_entries": 4096, "norm_hits": 38228}
+{"case": "complete-5", "maxsize": 131072, "symmetry_limit": 32, "status": "TIMEOUT", "seconds": 30.07, "layouts": 888, "queries": 72930, "solves": 1195, "norm_entries": 34539, "norm_hits": 38390}
+{"case": "complete-5", "maxsize": 131072, "symmetry_limit": 4, "status": "TIMEOUT", "seconds": 30.05, "layouts": 888, "queries": 103561, "solves": 2574, "norm_entries": 65170, "norm_hits": 38390}
+{"case": "complete-5", "maxsize": 131072, "symmetry_limit": 1, "status": "TIMEOUT", "seconds": 30.08, "layouts": 889, "queries": 114254, "solves": 3830, "norm_entries": 75864, "norm_hits": 38390}
+{"case": "hypergraph-09", "maxsize": 4096, "symmetry_limit": 32, "status": "TIMEOUT", "seconds": 30.07, "layouts": 247, "queries": 17909, "solves": 15171, "norm_entries": 4096, "norm_hits": 734}
+{"case": "hypergraph-09", "maxsize": 4096, "symmetry_limit": 1, "status": "TIMEOUT", "seconds": 30.06, "layouts": 247, "queries": 21099, "solves": 17992, "norm_entries": 4096, "norm_hits": 734}
+{"case": "hypergraph-09", "maxsize": 131072, "symmetry_limit": 32, "status": "TIMEOUT", "seconds": 30.08, "layouts": 247, "queries": 18269, "solves": 15303, "norm_entries": 17470, "norm_hits": 798}
+{"case": "hypergraph-09", "maxsize": 131072, "symmetry_limit": 4, "status": "TIMEOUT", "seconds": 30.06, "layouts": 247, "queries": 18021, "solves": 15127, "norm_entries": 17223, "norm_hits": 798}
+{"case": "hypergraph-09", "maxsize": 131072, "symmetry_limit": 1, "status": "TIMEOUT", "seconds": 30.04, "layouts": 247, "queries": 22760, "solves": 18043, "norm_entries": 21962, "norm_hits": 798}

@@ -51,9 +51,11 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
         from regional_bounded_multiplicity import completion   # opt-in: optional leaves, graft padding, exact fallback
 
         return ObligationCache(maxsize=cache_size, solver=completion)
-    if mode == 'phase-certificate':
+    if mode in ('phase-certificate', 'phase-certificate-fastkey'):
         from regional_certificate_propagation import certificate_completion   # opt-in: phase-first + certificate prescreen
 
+        if mode == 'phase-certificate-fastkey':   # exact compact cache key, no symmetric tie-break search
+            return ObligationCache(maxsize=max(cache_size, 1 << 17), solver=certificate_completion, symmetry_limit=1)
         return ObligationCache(maxsize=cache_size, solver=certificate_completion)
     if mode == 'phase-first':
         from regional_phase_first import adaptive_completion   # opt-in: signed polarity classes, then monotone
