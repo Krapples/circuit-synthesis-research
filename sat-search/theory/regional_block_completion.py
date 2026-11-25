@@ -15,7 +15,8 @@ def indices(mask):
 
 
 def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True, *,
-                 row_filter=True, endpoint_branches=True, dominance_branches=True):
+                 row_filter=True, endpoint_branches=True, dominance_branches=True,
+                 port_first=False, witness_cover=False):
     """Return a tree using every private leaf and allocated port occurrence."""
     if stats is not None:
         stats['local'] += 1
@@ -25,6 +26,7 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
     columns = vars(m)
     counts = Counter(ports)
     providers = tuple(sorted(counts))
+    all_rows = (1 << len(pats)) - 1
     phase = {}
     forced = {'&': [0] * m, '|': [0] * m}
 
@@ -88,6 +90,57 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
             taking = selected[len(groups):]
             if left != primary or taking != available:
                 yield left, taking
+
+    @lru_cache(maxsize=2048)
+    def support_demands(mask, exact, is_and):
+        first = {}
+        forbidden = 0
+        hits = set()
+        for row, required in exact:
+            pattern = pats[row] & mask
+            forbidden |= required ^ first.setdefault(pattern, required)
+            if not signed and pattern == (0 if is_and else mask):
+                hits.add(required)
+        return forbidden, tuple(sorted(hits))
+
+    def port_partitions(primary, available, op, obligations):
+        blocks = components(primary, op)
+        is_and = op == '&'
+        absorbing = 0 if is_and else one
+        exact = tuple((row, support(t)) for row, t in enumerate(obligations) if t not in (ANY, absorbing))
+        port_anchor = next((i for i, count in enumerate(available) if count), -1) if not blocks else -1
+        offered = tuple(range(int(i == port_anchor), count + 1) for i, count in enumerate(available))
+        for taking in product(*offered):
+            if stats is not None:
+                stats['port_allocations'] += 1
+            remaining = tuple(a - b for a, b in zip(available, taking))
+            forbid_left, hits_left = support_demands(port_mask(taking), exact, is_and)
+            forbid_right, hits_right = support_demands(port_mask(remaining), exact, is_and)
+            # Fix child order using the first primary component, or a port occurrence.
+            force_left = forbid_right | (blocks[0] if blocks else 0)
+            free = []
+            left = right = 0
+            for block in blocks:
+                if block & force_left:
+                    if block & forbid_left:
+                        break
+                    left |= block
+                elif block & forbid_left:
+                    right |= block
+                else:
+                    free.append((0, block))
+            else:
+                if (all(hit & (primary ^ right) for hit in hits_left)
+                        and all(hit & (primary ^ left) for hit in hits_right)):
+                    for chosen in product(*free):
+                        inside = left | sum(chosen)
+                        outside = primary ^ inside
+                        if (any(taking) or inside) and (any(remaining) or outside) and (
+                                all(hit & inside for hit in hits_left) and all(hit & outside for hit in hits_right)):
+                            yield inside, taking
+                    continue
+            if stats is not None:
+                stats['port_allocation_reject'] += 1
 
     @lru_cache(maxsize=4096)
     def support(table):
@@ -164,6 +217,53 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
     def port_mask(available):
         return sum(1 << i for i, count in zip(providers, available) if count)
 
+    @lru_cache(maxsize=4096)
+    def endpoints(node):
+        """Bitsets of row minima and maxima over the private variables."""
+        op, a, b = node
+        if op == 'x':
+            if a < m:
+                return 0, all_rows
+            values = sum(((pattern >> (a - m) & 1) ^ b) << row for row, pattern in enumerate(pats))
+            return values, values
+        lo_a, hi_a = endpoints(a)
+        lo_b, hi_b = endpoints(b)
+        return (lo_a & lo_b, hi_a & hi_b) if op == '&' else (lo_a | lo_b, hi_a | hi_b)
+
+    def cover(left, taking, right, remaining, options, absorbing):
+        fixed = tuple(pairs[0] if len(pairs) == 1 else (ANY, ANY) for pairs in options)
+        a_fixed, b_fixed = zip(*fixed)
+        ambiguous = sum(1 << row for row, pairs in enumerate(options) if len(pairs) > 1)
+
+        def require(fixed_rows, rows):
+            return tuple(absorbing if rows >> row & 1 else value for row, value in enumerate(fixed_rows))
+
+        visited = set()
+
+        def branch(required):
+            if required in visited:
+                return None
+            if len(visited) < 4096:
+                visited.add(required)
+            if stats is not None:
+                stats['cover_nodes'] += 1
+            a = complete(left, taking, require(a_fixed, required))
+            if a is None:
+                return None
+            lo, hi = endpoints(a)
+            uncovered = ambiguous & (hi if absorbing == 0 else ~lo)
+            b = complete(right, remaining, require(b_fixed, uncovered))
+            if b is not None:
+                return a, b
+            # Any successful extension must take at least one of the right child's failed rows.
+            for row in indices(uncovered):
+                result = branch(required | (1 << row))
+                if result is not None:
+                    return result
+            return None
+
+        return branch(0)
+
     @lru_cache(maxsize=8192)
     def complete(primary, available, obligations):
         if stats is not None:
@@ -205,7 +305,8 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
             is_and = op == '&'
             absorbing = 0 if is_and else one
             neutral = one ^ absorbing
-            for left, taking in partitions(primary, available, op):
+            splits = port_partitions(primary, available, op, obligations) if port_first else partitions(primary, available, op)
+            for left, taking in splits:
                 if stats is not None:
                     stats['partition_checks'] += 1
                 right = primary ^ left
@@ -241,6 +342,13 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                         if stats is not None:
                             stats['dominance_split_reject'] += 1
                         continue
+                    if stats is not None:
+                        stats['obligation_partitions'] += 1
+                    if witness_cover and any(len(pairs) > 1 for pairs in options):
+                        result = cover(left, taking, right, remaining, options, absorbing)
+                        if result is not None:
+                            return op, *result
+                        continue
                     for selected in product(*options):
                         a_targets, b_targets = map(tuple, zip(*selected))
                         a = complete(left, taking, a_targets)
@@ -259,7 +367,7 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
     try:
         return complete(full, tuple(counts[i] for i in providers), tuple(targets))
     finally:
-        for cached in (components, support, project, exposed, row_order, ordered_rows, complete):
+        for cached in (components, support_demands, support, project, exposed, row_order, ordered_rows, endpoints, complete):
             cached.cache_clear()
 
 

@@ -30,6 +30,9 @@ def make_completion(mode='dominance-branches', *, cache_size=4096):
         return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, dominance_branches=False))
     if mode == 'dominance-branches':
         return ObligationCache(maxsize=cache_size, solver=local_blocks)
+    if mode in ('port-first', 'witness-cover', 'port-first-witness'):
+        return ObligationCache(maxsize=cache_size, solver=partial(
+            local_blocks, port_first=mode != 'witness-cover', witness_cover=mode != 'port-first'))
     raise ValueError(f'unknown completion mode {mode!r}')
 
 

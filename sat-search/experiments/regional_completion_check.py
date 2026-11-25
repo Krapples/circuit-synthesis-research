@@ -25,6 +25,9 @@ from regional_obligation_cache import ObligationCache
 from signed_bound_compare import cases, restrict_essential
 from two_sharing_core import ANY, local
 
+COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches',
+                    'port-first', 'witness-cover', 'port-first-witness')
+
 
 def check_tree(tree, m, ports, pats, targets, signed):
     counts = Counter()
@@ -55,6 +58,7 @@ class RegionalCompletionChecks(unittest.TestCase):
     def test_independent_multislice_oracle(self):
         rng = Random(74228)
         cache = ObligationCache(solver=local_blocks, maxsize=512)
+        variants = tuple(make_completion(mode, cache_size=512) for mode in COMPLETION_MODES[-3:])
         verdicts = Counter()
         for _ in range(500):
             m = rng.randrange(3)
@@ -88,6 +92,11 @@ class RegionalCompletionChecks(unittest.TestCase):
                     self.assertEqual(witness is not None, expected)
                     if witness is not None:
                         check_tree(witness, m, port_ids, ps, ts, signed)
+                    for variant in variants:
+                        candidate = variant(m, port_ids, ps, ts, signed)
+                        self.assertEqual(candidate is not None, expected)
+                        if candidate is not None:
+                            check_tree(candidate, m, port_ids, ps, ts, signed)
                     verdicts['queries'] += 1
                     verdicts['feasible'] += expected
         self.assertEqual(verdicts['queries'], 2000)
@@ -115,7 +124,7 @@ class RegionalCompletionChecks(unittest.TestCase):
     def test_quotient_backends_reconstruct_the_same_budget(self):
         targets = (0xffecf080, 0xeea0e000, 0xfcc8e0c0)
         for target, expected in zip(targets, (True, True, False)):
-            for name in ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches'):
+            for name in COMPLETION_MODES:
                 completion = make_completion(name)
                 result = solve3(5, target, completion=completion)
                 self.assertEqual(result is not None, expected)
@@ -290,8 +299,7 @@ def main():
     variants.add_argument('--row-bounds', action='store_true', help='compare block completion with monotone row bounds')
     variants.add_argument('--endpoint-branches', action='store_true', help='compare prefiltering constant row branches')
     variants.add_argument('--dominance-branches', action='store_true', help='compare prefiltering by row dominance')
-    variants.add_argument('--mode', choices=('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches',
-                                             'dominance-branches'), help='run one named completion mode')
+    variants.add_argument('--mode', choices=COMPLETION_MODES, help='run one named completion mode')
     parser.add_argument('--seconds', type=float)
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
