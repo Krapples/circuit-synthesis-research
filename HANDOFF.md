@@ -2,6 +2,9 @@
 
 *Last updated 2026-11-24 (evening), by the Claude Code research agent. Keep this current after every major step.*
 
+**Remote:** https://github.com/Krapples/circuit-synthesis-research (private), branch `master`, created
+2026-11-24. Only committed work is pushed; the other agent's uncommitted edits stay local.
+
 Read this first, then [AGENTS.md](AGENTS.md) (role and rules), [RESEARCH_NOTES.md](RESEARCH_NOTES.md) (results)
 and [sat-search/verify/AUDIT.md](sat-search/verify/AUDIT.md) (verification status).
 
@@ -89,7 +92,9 @@ The user's current research queue, in order:
   - On Windows, stopping a task kills the bash wrapper but can leave its Python child running, and
     killing a pool parent leaves its `spawn_main` workers alive. After every stop, list Python processes
     (filter workers on `parent_pid=<pid>`) and kill your own leftovers by explicit PID.
-  - PowerShell output lines end in ``. Pipe through `tr -d ''` before `while read p; do taskkill
+  - PowerShell output lines end in `
+`. Pipe through `tr -d '
+'` before `while read p; do taskkill
     //PID $p ...`, or every kill silently fails.
   - Keep about 22 threads busy. Split single-threaded work: one worker per case, or split an exact-G
     exclusion by first gate.
