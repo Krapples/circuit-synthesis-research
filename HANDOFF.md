@@ -30,8 +30,8 @@ The user's current research queue, in order:
    - `theory/archive/activity_port_bound.py` is archived. Stop adding purely structural compatibility
      constraints: `theory/signed_control_completion.py` shows the signed compatibility test is exact.
 4. **Lean 4 pilot** (`sat-search/lean`).
-   - Scope: circuit model, connectivity bound, excess identity, then the module-contraction proof
-     (restriction and substitution) and the cotree NOT-cost recurrence.
+   - Scope: circuit model, connectivity bound, excess identity, and the module-contraction proof
+     (restriction and substitution; done, `Module.lean`). Next: the cotree NOT-cost recurrence.
    - Completed proofs only (no `sorry`); inspect axioms (`#print axioms`).
    - Keep formal mathematical proofs separate from verified implementation correctness.
 5. **Adaptive analytical branch-and-bound** (parked).
@@ -80,6 +80,10 @@ The user's current research queue, in order:
   - `lake env` hangs; do not use it. Call `lean` directly, from `sat-search/lean`:
     `LEAN_PATH="$(cat .leanpath)" ~/.elan/toolchains/leanprover--lean4---v4.36.0/bin/lean.exe CircuitLemmas/Basic.lean`
   - `.leanpath` lists the built package library folders. Expect about 30 s per file.
+  - `Module.lean` imports `Basic`. Compile it first:
+    `lean CircuitLemmas/Basic.lean -o .lake/build/lib/lean/CircuitLemmas/Basic.olean`. Then append
+    `;.lake/build/lib/lean` to `LEAN_PATH`. Do the same for `Module.lean` and `CircuitLemmas.lean`
+    before running `AxiomsCheck.lean`.
 - **Jobs.**
   - Launch every job as a tracked background task (Bash `run_in_background`) that logs to
     `sat-search/logs/` and prints per-item progress; its exit then notifies you. The user wants fast
@@ -122,8 +126,8 @@ The user's current research queue, in order:
   | random-monotone-08 | [8, 13] | 9 |
 
   Monotone minima are the same. Upper bounds are verified by witnesses lifted from the core. Lower
-  bounds rest on the module theorem, which is provisional. Next: certify with checked exclusions where n
-  is small.
+  bounds rest on the module theorem (now proved in Lean) and the uncertified core minimum. Next: certify
+  the core exclusions; a full-size exclusion is no longer needed.
 
 ## Jobs running at last update
 
@@ -167,19 +171,18 @@ The user's current research queue, in order:
 - **`theory/prefix_restriction_bound.py`:** kept for branch-and-bound. Depth 1 gains on 53 of 1,160
   cases; depth 2 adds nothing.
 
-## Lean: module-contraction proof plan (deferred)
+## Lean: module contraction (done 2026-11-24)
 
-- **Substitution:** a circuit for the contracted function plus one AND/OR gate is a circuit for f. Short.
-- **Restriction:** fix x_j to the neutral value of the module; at least one reader of x_j becomes a copy
-  and is removed under constant propagation; rename x_i as the module input. This needs a formal
-  constant-simplification on `Circuit n m` with semantics preservation and a gate count. Estimate:
-  several hundred lines.
-- Needs evaluation semantics added to `CircuitLemmas/Basic.lean`.
+- **`CircuitLemmas/Module.lean` proves `module_contraction` and `peel_contraction`:** min(f) = min(g) + 1
+  in the counted-NOT and monotone bases. No `sorry`; standard axioms only (`AxiomsCheck.lean`).
+  - Covers every raw `pair`/`peel` step used by `module_core_minima`.
+  - About 1.5 h of effort, 807 lines, 30–45 s to check.
+  - Scope, hypotheses and what is not formalized: NOTES_SIGNED_MODULES.md, "Formal proof".
 
 ## Next steps
 
-1. Finish the Lean basics, then formalize the module-contraction theorem and the cotree NOT-cost
-   recurrence.
+1. Lean: the module-contraction theorem is done. Next: the cotree NOT-cost recurrence, and optionally
+   counted-basis completeness and dead-gate removal (output-convention equivalence).
 2. Report the module core minima. Certify new minima with checked proofs where n is small: `evidence.py`
    or `verify/reference.py` with `proof=True`, plus the RUP checker.
 3. Integrate module preprocessing into the whole-function pipeline (FPT, then SAT). Report reduced inputs,
