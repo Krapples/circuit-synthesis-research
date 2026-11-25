@@ -23,14 +23,19 @@
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <mutex>
+#include <new>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 #include "first_layer.hpp"
 #include "tight_residual.hpp"
@@ -45,6 +50,16 @@
 
 using namespace percy;
 using clk = std::chrono::steady_clock;
+
+// Why an inner residual query returned unknown: 0 deadline, 1 work allowance, 2 capacity (the
+// boundary shape is outside the recognizer's range, so no work was done). Classified after the
+// call: the Engine throws before a tick would exceed the allowance, and nested solvers receive the
+// remaining allowance, so a work exit can report less than the full allowance. A query that ran
+// out of work just as the deadline passed counts as a deadline.
+static int unknown_cause(clk::time_point deadline, uint64_t work) {
+    if (clk::now() >= deadline) return 0;
+    return work ? 1 : 2;
+}
 
 static double since(clk::time_point t0) {
     return std::chrono::duration<double>(clk::now() - t0).count();
@@ -74,8 +89,13 @@ struct Extra {
     bool slack_three_set_cuts = false;
     bool slack_three_symmetric = false; // occurrence-symmetric tree solver inside the Engine
     bool trace_slack_three = false;
+    int slack_two_ms = 25;              // slack-two boundary query: deadline and Engine work allowance
+    unsigned slack_two_work = 100000;
     int slack_three_ms = 25;
     unsigned slack_three_work = 2000000;
+    // Last-provider decoder phase screen inside the slack-two and slack-three Engines (0 off,
+    // 1 forced-equality phases + candidate columns, 2 also per-phase parity systems).
+    unsigned decoder_phase = 0;
     // Lazy weighted slack-three cuts (slack_three_boundary.hpp). Non-full policies replace the
     // boundary's one-way counter by a reified one and add its threshold literal to the clause.
     synthesis::SlackThreePolicy slack_three_policy = synthesis::SlackThreePolicy::full;
@@ -287,12 +307,15 @@ struct TightResidual {
     unsigned directed_states = 0;
     double slack_seconds = 0;
     int slack_two_seen = 0, slack_two_unknown = 0, slack_two_feasible = 0;
+    std::array<unsigned, 3> two_unknown_cause{}, three_unknown_cause{};  // deadline, work, capacity
     int slack_two_pure = 0, slack_two_conditional = 0;
     unsigned two_set_cuts = 0;
     unsigned two_extension_feasible = 0, two_extension_unknown = 0, two_extension_excluded = 0;
     uint64_t two_work = 0, two_allocations = 0, two_memo_hits = 0, two_unate_rejects = 0, two_unate_merges = 0;
     uint64_t two_tree_calls = 0;
     residual_slack_two::PhaseStats two_phase;
+    residual_slack_two::DecoderStats two_decoder, three_decoder;
+    double three_exact_seconds = 0;
     double slack_two_seconds = 0;
     int slack_three_seen = 0, slack_three_unknown = 0, slack_three_feasible = 0;
     int slack_three_pure = 0, slack_three_conditional = 0;
@@ -347,10 +370,11 @@ struct TightResidual {
             }
         const bool seed = memo && ex.slack_three_policy == synthesis::SlackThreePolicy::adaptive;
         const std::vector<uint64_t> seed_columns = seed ? columns : std::vector<uint64_t>{};
+        const auto two_deadline = start + std::chrono::milliseconds(ex.slack_two_ms);
         const auto result = synthesis::slack_two_boundary(
             std::move(columns), unsigned(first.size()), std::span(primaries).first(n), mixed,
-            gate_columns, target, care, 100000, start + std::chrono::milliseconds(25),
-            unsigned(ex.slack_two_mode));
+            gate_columns, target, care, ex.slack_two_work, two_deadline, unsigned(ex.slack_two_mode),
+            ex.decoder_phase);
         slack_two_seconds += since(start);
         two_work += result.exact.work;
         two_allocations += result.exact.allocations;
@@ -363,6 +387,11 @@ struct TightResidual {
         two_phase.work += result.exact.phase.work;
         two_phase.cache_hits += result.exact.phase.cache_hits;
         two_phase.dominance_hits += result.exact.phase.dominance_hits;
+        two_decoder.screens += result.exact.decoder.screens;
+        two_decoder.rejects += result.exact.decoder.rejects;
+        two_decoder.column_rejects += result.exact.decoder.column_rejects;
+        two_decoder.skipped += result.exact.decoder.skipped;
+        two_decoder.work += result.exact.decoder.work;
         using Status = residual_directed::Status;
         if (seed && result.exact.status != Status::unknown) {
             // The same leaves at exact slack two are a cost-one extension of a slack-three query.
@@ -370,7 +399,10 @@ struct TightResidual {
             three_seed_inserts += memo->insert(seed_columns, unsigned(first.size()), 2,
                                                result.exact.status == Status::sat);
         }
-        if (result.exact.status == Status::unknown) ++slack_two_unknown;
+        if (result.exact.status == Status::unknown) {
+            ++slack_two_unknown;
+            ++two_unknown_cause[unknown_cause(two_deadline, result.exact.work)];
+        }
         if (result.exact.status == Status::sat) ++slack_two_feasible;
         if (result.exact.status != Status::unsat) return {};
         two_extension_feasible += result.feasible;
@@ -435,11 +467,11 @@ struct TightResidual {
                 const uint64_t x = primaries[a], y = primaries[b];
                 gate_columns.insert(gate_columns.end(), {x & ~y, ~x & y, x & y, x | y});
             }
+        const auto three_deadline = start + std::chrono::milliseconds(ex.slack_three_ms);
         const auto result = synthesis::slack_three_boundary(
             std::move(columns), unsigned(first.size()), std::span(primaries).first(n), mixed,
-            gate_columns, target, care, ex.slack_three_work,
-            start + std::chrono::milliseconds(ex.slack_three_ms), unsigned(ex.slack_three_mode),
-            ex.slack_three_symmetric, ex.slack_three_policy, memo);
+            gate_columns, target, care, ex.slack_three_work, three_deadline, unsigned(ex.slack_three_mode),
+            ex.slack_three_symmetric, ex.slack_three_policy, memo, ex.decoder_phase);
         slack_three_seconds += since(start);
         three_work += result.exact.work;
         three_tree_calls += result.exact.tree_calls;
@@ -448,8 +480,17 @@ struct TightResidual {
         three_phase.work += result.exact.phase.work;
         three_phase.cache_hits += result.exact.phase.cache_hits;
         three_phase.dominance_hits += result.exact.phase.dominance_hits;
+        three_decoder.screens += result.exact.decoder.screens;
+        three_decoder.rejects += result.exact.decoder.rejects;
+        three_decoder.column_rejects += result.exact.decoder.column_rejects;
+        three_decoder.skipped += result.exact.decoder.skipped;
+        three_decoder.work += result.exact.decoder.work;
+        three_exact_seconds += result.exact_seconds;
         using Status = residual_directed::Status;
-        if (result.exact.status == Status::unknown) ++slack_three_unknown;
+        if (result.exact.status == Status::unknown) {
+            ++slack_three_unknown;
+            ++three_unknown_cause[unknown_cause(three_deadline, result.exact.work)];
+        }
         if (result.exact.status == Status::sat) ++slack_three_feasible;
         if (result.exact.status != Status::unsat) return {};
         ++three_cuts;
@@ -699,8 +740,14 @@ struct TightResidual {
     }
 };
 
-int main(int argc, char** argv) {
+// Last budget entered and the run start, for the out-of-memory record.
+static int g_current_k = -1;
+static clk::time_point g_run_start = clk::now();
+
+static int run_main(int argc, char** argv) {
     int n = 0, start = 1, budget = -1, maxk = 64, conflicts = 0;
+    double wall_seconds = 0;          // 0 = no driver deadline (the harness may still kill the run)
+    bool budget_conflicts = false;    // false: --conflicts limits each SAT call (Percy's own meaning)
     std::string tt_hex, dc_hex, solver_name = "bsat", method = "std";
     bool nosym = false;
     Extra ex;
@@ -716,6 +763,13 @@ int main(int argc, char** argv) {
         else if (a == "--budget") budget = std::stoi(next());
         else if (a == "--max") maxk = std::stoi(next());
         else if (a == "--conflicts") conflicts = std::stoi(next());
+        else if (a == "--seconds") wall_seconds = std::stod(next());
+        else if (a == "--conflict-scope") {
+            const auto scope = next();
+            if (scope == "call") budget_conflicts = false;
+            else if (scope == "budget") budget_conflicts = true;
+            else { fprintf(stderr, "expected --conflict-scope call or budget\n"); return 2; }
+        }
         else if (a == "--nosym") nosym = true;
         else if (a == "--noreapply-full") ex.noreapply_full = true;
         else if (a == "--first-layer-budget") ex.first_layer_budget = true;
@@ -728,7 +782,14 @@ int main(int argc, char** argv) {
         else if (a == "--trace-slack-three") ex.trace_slack_three = true;
         else if (a == "--slack-three-set-cuts") ex.slack_three_set_cuts = true;
         else if (a == "--slack-three-symmetric") ex.slack_three_symmetric = true;
+        else if (a == "--decoder-phase") {
+            const std::string v = next();
+            if (v != "0" && v != "1" && v != "2") { fprintf(stderr, "expected --decoder-phase 0, 1 or 2\n"); return 2; }
+            ex.decoder_phase = unsigned(v[0] - '0');
+        }
         else if (a == "--slack-three-ms") ex.slack_three_ms = std::stoi(next());
+        else if (a == "--slack-two-ms") ex.slack_two_ms = std::stoi(next());
+        else if (a == "--slack-two-work") ex.slack_two_work = unsigned(std::stoul(next()));
         else if (a == "--slack-three-work") ex.slack_three_work = unsigned(std::stoul(next()));
         else if (a == "--slack-three-policy") {
             const auto policy = next();
@@ -825,6 +886,14 @@ int main(int argc, char** argv) {
         fprintf(stderr, "--slack-three-policy needs --slack-three-residual and --first-layer-budget\n");
         return 2;
     }
+    if (ex.decoder_phase && ex.slack_two_mode < 1 && ex.slack_three_mode < 1) {
+        fprintf(stderr, "--decoder-phase needs --slack-two-residual or --slack-three-residual with mode >= 1\n");
+        return 2;
+    }
+    if (ex.slack_two_ms <= 0 || ex.slack_two_work == 0) {
+        fprintf(stderr, "--slack-two-ms and --slack-two-work must be positive\n");
+        return 2;
+    }
     if (ex.slack_three_ms <= 0 || ex.slack_three_work == 0) {
         fprintf(stderr, "--slack-three-ms and --slack-three-work must be positive\n");
         return 2;
@@ -863,6 +932,43 @@ int main(int argc, char** argv) {
 #endif
     else if (solver_name == "bmcg") solver.reset(new bmcg_wrapper);
     else { fprintf(stderr, "unknown solver %s\n", solver_name.c_str()); return 2; }
+    // Wall-clock deadline for the whole run (all budgets): a watcher thread raises Satoko's stop
+    // flag, so the running SAT call returns unknown and the budget is reported as wall_deadline.
+    int stop_flag = 0;
+    std::mutex stop_mutex;
+    std::condition_variable stop_cv;
+    bool run_done = false;
+    std::thread watcher;
+    const auto wall_deadline = wall_seconds > 0
+        ? g_run_start + std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(wall_seconds))
+        : clk::time_point::max();
+    if (wall_seconds > 0) {
+#ifdef USE_SATOKO
+        const auto backend = dynamic_cast<satoko_wrapper*>(solver.get());
+        if (!backend) { fprintf(stderr, "--seconds needs --solver satoko\n"); return 2; }
+        satoko::satoko_set_stop(backend->solver, &stop_flag);
+        watcher = std::thread([&] {
+            std::unique_lock lock(stop_mutex);
+            if (!stop_cv.wait_until(lock, wall_deadline, [&] { return run_done; }))
+                std::atomic_ref<int>(stop_flag).store(1);
+        });
+#else
+        fprintf(stderr, "--seconds needs Satoko\n");
+        return 2;
+#endif
+    }
+    struct StopWatcher {
+        std::mutex& m; std::condition_variable& cv; bool& done; std::thread& t;
+        ~StopWatcher() {
+            { std::lock_guard lock(m); done = true; }
+            cv.notify_all();
+            if (t.joinable()) t.join();
+        }
+    } stop_guard{stop_mutex, stop_cv, run_done, watcher};
+    const auto out_of_time = [&] {
+        return std::atomic_ref<int>(stop_flag).load() != 0 || clk::now() >= wall_deadline;
+    };
+    std::string final_reason = "unsat";
     ssv_encoder enc(*solver);
     chain c;
     const bool cegar = method == "cegar";
@@ -882,6 +988,7 @@ int main(int argc, char** argv) {
         int lo = budget >= 0 ? budget : start, hi = budget >= 0 ? budget : maxk;
         synthesis::ResidualMemo three_memo;  // decided residual answers are budget independent
         for (int k = lo; k <= hi; k++) {
+            g_current_k = k;
             auto tk = clk::now();
             sp.nr_steps = k;
             solver->restart();
@@ -892,8 +999,19 @@ int main(int argc, char** argv) {
             if (satoko_backend)
                 propagations_before = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;
 #endif
+            int sat_calls = 0;
+            std::string reason;   // why this budget ended: sat, unsat, conflict_limit, wall_deadline
             const auto solve = [&] {
-                const auto result = solver->solve(sp.conflict_limit);
+                if (out_of_time()) { reason = "wall_deadline"; return timeout; }
+                int limit = sp.conflict_limit;
+                if (budget_conflicts && limit > 0) {
+                    limit -= solver->nr_conflicts() - conflicts_before;
+                    if (limit <= 0) { reason = "conflict_limit"; return timeout; }
+                }
+                ++sat_calls;
+                const auto result = solver->solve(limit);
+                if (result != success && result != failure)
+                    reason = out_of_time() ? "wall_deadline" : "conflict_limit";
 #ifdef USE_SATOKO
                 if (satoko_backend) decisions += satoko::satoko_stats(satoko_backend->solver)->n_decisions;
 #endif
@@ -941,6 +1059,7 @@ int main(int argc, char** argv) {
                         auto r = solve();
                         if (r == failure) { st = "UNSAT"; break; }
                         if (r != success) { st = "TIMEOUT"; break; }
+                        if (out_of_time()) { st = "TIMEOUT"; reason = "wall_deadline"; break; }
                         if (residual) {
                             const auto check_start = clk::now();
                             auto cut = residual->exclusion(enc, sp, *solver, layer_features, typed_steps, ex);
@@ -957,14 +1076,26 @@ int main(int argc, char** argv) {
                     }
                 }
             }
-            printf("{\"k\":%d,\"status\":\"%s\",\"seconds\":%.6f,\"extra_clauses\":%d,"
+            if (st == "SAT") reason = "sat";
+            else if (st == "UNSAT") reason = "unsat";
+            else if (reason.empty()) reason = "unknown";
+            printf("{\"k\":%d,\"status\":\"%s\",\"reason\":\"%s\",\"elapsed\":%.6f,\"sat_calls\":%d,"
+                   "\"conflict_limit\":%d,\"conflict_scope\":\"%s\",\"wall_limit\":%.3f,",
+                   k, st.c_str(), reason.c_str(), since(g_run_start), sat_calls, sp.conflict_limit,
+                   budget_conflicts ? "budget" : "call", wall_seconds);
+            printf("\"seconds\":%.6f,\"extra_clauses\":%d,"
                    "\"encoding_seconds\":%.6f,\"cegar_rows\":%d,\"conflicts\":%d,\"vars\":%d,\"clauses\":%d",
-                   k, st.c_str(), since(tk), extra_clauses, encoding_seconds, cegar_rows,
+                   since(tk), extra_clauses, encoding_seconds, cegar_rows,
                    solver->nr_conflicts() - conflicts_before, solver->nr_vars(), solver->nr_clauses());
             if (residual)
                 printf(",\"residual_queries\":%d,\"residual_cuts\":%d,\"residual_set_cuts\":%d,"
                        "\"residual_unknown\":%d,\"residual_seconds\":%.6f",
                        residual->queries, residual->cuts, residual->set_cuts, residual->unknown, residual_seconds);
+            if (residual && (slack_two || slack_three))
+                printf(",\"two_unknown_cause\":[%u,%u,%u],\"three_unknown_cause\":[%u,%u,%u]",
+                       residual->two_unknown_cause[0], residual->two_unknown_cause[1],
+                       residual->two_unknown_cause[2], residual->three_unknown_cause[0],
+                       residual->three_unknown_cause[1], residual->three_unknown_cause[2]);
             if (ex.slack_one)
                 printf(",\"slack_queries\":%d,\"slack_feasible\":%d,\"slack_unknown\":%d,\"slack_pure\":%d,"
                        "\"slack_conditional\":%d,\"extension_feasible\":%d,\"extension_unknown\":%d,"
@@ -1000,6 +1131,13 @@ int main(int argc, char** argv) {
                        static_cast<unsigned long long>(residual->two_phase.work),
                        static_cast<unsigned long long>(residual->two_phase.cache_hits),
                        static_cast<unsigned long long>(residual->two_phase.dominance_hits));
+            if (slack_two && ex.decoder_phase)
+                printf(",\"two_decoder\":[%llu,%llu,%llu,%llu,%llu]",
+                       static_cast<unsigned long long>(residual->two_decoder.screens),
+                       static_cast<unsigned long long>(residual->two_decoder.rejects),
+                       static_cast<unsigned long long>(residual->two_decoder.column_rejects),
+                       static_cast<unsigned long long>(residual->two_decoder.skipped),
+                       static_cast<unsigned long long>(residual->two_decoder.work));
             if (slack_three)
                 printf(",\"slack_three_seen\":%d,\"slack_three_unknown\":%d,\"slack_three_feasible\":%d,"
                        "\"slack_three_pure\":%d,\"slack_three_conditional\":%d,\"slack_three_seconds\":%.6f,"
@@ -1007,7 +1145,8 @@ int main(int argc, char** argv) {
                        "\"three_extension_excluded\":%u,\"three_subsumed\":%u,\"three_set_cuts\":%u,"
                        "\"three_tight_calls\":%u,\"three_slack_one_calls\":%u,\"three_slack_two_calls\":%u,"
                        "\"three_work\":%llu,\"three_slack_two_work\":%llu,\"three_tree_calls\":%llu,"
-                       "\"three_phase_checks\":%llu,\"three_phase_rejects\":%llu,\"three_phase_work\":%llu",
+                       "\"three_phase_checks\":%llu,\"three_phase_rejects\":%llu,\"three_phase_work\":%llu,"
+                       "\"three_exact_seconds\":%.6f",
                        residual->slack_three_seen, residual->slack_three_unknown, residual->slack_three_feasible,
                        residual->slack_three_pure, residual->slack_three_conditional,
                        residual->slack_three_seconds, residual->three_extension_feasible,
@@ -1019,7 +1158,14 @@ int main(int argc, char** argv) {
                        static_cast<unsigned long long>(residual->three_tree_calls),
                        static_cast<unsigned long long>(residual->three_phase.checks),
                        static_cast<unsigned long long>(residual->three_phase.rejects),
-                       static_cast<unsigned long long>(residual->three_phase.work));
+                       static_cast<unsigned long long>(residual->three_phase.work), residual->three_exact_seconds);
+            if (slack_three && ex.decoder_phase)
+                printf(",\"three_decoder\":[%llu,%llu,%llu,%llu,%llu]",
+                       static_cast<unsigned long long>(residual->three_decoder.screens),
+                       static_cast<unsigned long long>(residual->three_decoder.rejects),
+                       static_cast<unsigned long long>(residual->three_decoder.column_rejects),
+                       static_cast<unsigned long long>(residual->three_decoder.skipped),
+                       static_cast<unsigned long long>(residual->three_decoder.work));
             if (slack_three && ex.slack_three_policy != synthesis::SlackThreePolicy::full)
                 printf(",\"three_policy\":%u,\"three_cuts\":%u,\"three_lift\":[%u,%u,%u,%u],"
                        "\"three_threshold_cuts\":%u,\"three_clause_literals\":%llu,\"three_covered\":%u,"
@@ -1045,13 +1191,15 @@ int main(int argc, char** argv) {
 #endif
             printf("}\n");
             fflush(stdout);
-            if (st == "SAT") { final_status = "SAT"; found = k; break; }
-            if (st == "TIMEOUT") { final_status = "TIMEOUT"; break; }
+            if (st == "SAT") { final_status = "SAT"; final_reason = "sat"; found = k; break; }
+            if (st == "TIMEOUT") { final_status = "TIMEOUT"; final_reason = reason; break; }
         }
     }
     double total = since(t0);
-    printf("{\"final\":\"%s\",\"steps\":%d,\"seconds\":%.6f,\"target_constraints_seconds\":%.6f,"
-           "\"distinction_clauses\":%zu", final_status.c_str(), found, total, target_constraints_seconds, layer.clauses.size());
+    if (found == 0) final_reason = "sat";
+    printf("{\"final\":\"%s\",\"reason\":\"%s\",\"last_k\":%d,\"steps\":%d,\"seconds\":%.6f,"
+           "\"target_constraints_seconds\":%.6f,\"distinction_clauses\":%zu", final_status.c_str(),
+           final_reason.c_str(), g_current_k, found, total, target_constraints_seconds, layer.clauses.size());
     if (found >= 0) {
         auto sim = c.simulate()[0];
         bool ok = dc_hex.empty() ? sim == tt : ((sim ^ tt) & ~dc) == kitty::create<kitty::dynamic_truth_table>(n);
@@ -1068,4 +1216,17 @@ int main(int argc, char** argv) {
     }
     printf("}\n");
     return 0;
+}
+
+int main(int argc, char** argv) {
+    g_run_start = clk::now();
+    try {
+        return run_main(argc, argv);
+    } catch (const std::bad_alloc&) {
+        // Memory is never a verdict: the open budget stays unknown.
+        printf("\n{\"final\":\"UNKNOWN\",\"reason\":\"memory\",\"last_k\":%d,\"steps\":-1,\"seconds\":%.6f}\n",
+               g_current_k, since(g_run_start));
+        fflush(stdout);
+        return 3;
+    }
 }

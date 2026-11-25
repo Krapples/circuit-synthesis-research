@@ -15,7 +15,8 @@ struct SlackTwoBoundary {
 inline SlackTwoBoundary slack_two_boundary(
     std::vector<uint64_t> columns, unsigned h, std::span<const uint64_t> primaries,
     unsigned mixed, std::span<const uint64_t> gate_columns, uint64_t target, uint64_t care,
-    unsigned work_limit, residual_detail::Clock::time_point deadline, unsigned mode) {
+    unsigned work_limit, residual_detail::Clock::time_point deadline, unsigned mode,
+    unsigned decoder = 0) {
     using Status = residual_directed::Status;
     SlackTwoBoundary result;
     result.exact.status = Status::unknown;
@@ -26,7 +27,7 @@ inline SlackTwoBoundary slack_two_boundary(
     for (unsigned i = 0; i < columns.size(); ++i) leaves.push_back({i, columns[i], i >= h});
     result.exact = residual_slack_two::Engine(
         care, target, work_limit, deadline, mode >= 1, mode >= 1, mode >= 2, mode >= 3,
-        mode >= 4, mode >= 5)
+        mode >= 4, mode >= 5, false, decoder)
         .run(std::move(leaves), 2);
     if (result.exact.status != Status::unsat) return result;
 

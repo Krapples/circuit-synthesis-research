@@ -95,6 +95,9 @@ def direct_tables(columns, h, care):
     return tables
 
 
+DECODER_SETTINGS = [(mode, 0) for mode in (0, 2, 3, 4, 5)] + [(mode, d) for mode in (0, 2, 4, 5) for d in (1, 2)]
+
+
 def check():
     checks = 0
     for k in (2, 3):
@@ -106,10 +109,11 @@ def check():
                 for value in range(full + 1):
                     if value & ~care:
                         continue
-                    for mode in (0, 2, 3, 4, 5):
+                    # Decoder phase screen (1, 2) needs the parity filter (mode >= 1).
+                    for mode, decoder in DECODER_SETTINGS:
                         metrics, regions = _native.slack_two_boundary(
-                            columns, h, [], 0, [], value, care, 2_000_000, 0, mode)
-                        assert metrics['status'] == (value in expected), (columns, h, care, value, mode)
+                            columns, h, [], 0, [], value, care, 2_000_000, 0, mode, decoder)
+                        assert metrics['status'] == (value in expected), (columns, h, care, value, mode, decoder)
                         assert bool(regions) == (metrics['status'] == 1)
                         if regions:
                             verify(columns, h, value, care, regions)
@@ -148,11 +152,13 @@ def check():
         # (x & z) XOR y can be binate in x and z even when each feeds only
         # the shared provider. Screening the whole DAG as one tree would be unsound.
         target = (x & z) ^ y
-        metrics, regions = _native.slack_two_boundary(columns, 3, [], 0, [], target, care, mode=mode)
-        assert metrics['status'] == 1
-        verify(columns, 3, target, care, regions)
+        for decoder in (0, 1, 2):
+            metrics, regions = _native.slack_two_boundary(columns, 3, [], 0, [], target, care, mode=mode,
+                                                          decoder=decoder)
+            assert metrics['status'] == 1
+            verify(columns, 3, target, care, regions)
     print(json.dumps({'oracle_comparisons': checks, 'duplicated_wire_checks': 16,
-                      'extension_and_limit_checks': 14, 'shared_provider_checks': 2}))
+                      'extension_and_limit_checks': 14, 'shared_provider_checks': 6}))
 
 
 def replay(path, output, work_limit, deadline, limit, modes, repetitions):

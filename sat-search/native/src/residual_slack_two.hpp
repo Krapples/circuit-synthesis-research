@@ -7,6 +7,7 @@
 #include "residual_parity_filter.hpp"
 #include "residual_phase_screen.hpp"
 #include "residual_provider_unate.hpp"
+#include "residual_decoder_phase.hpp"
 #include <functional>
 #include <map>
 #include <set>
@@ -18,7 +19,13 @@ struct Region { std::vector<Leaf> inputs; unsigned output; U column; Witness wit
 struct PhaseStats {
     U checks = 0, rejects = 0, work = 0, cache_hits = 0, dominance_hits = 0;
 };
-struct Answer { Status status; std::vector<Region> regions; U work,allocations,parity_rejects,provider_trials,tree_calls,memo_hits,unate_rejects,unate_merges; PhaseStats phase; };
+// Last-provider decoder phase screen (use_decoder >= 1): screens built, allocations rejected
+// before any candidate, candidate columns rejected before exact recognition, screens skipped
+// (more than six singleton wires), and charged work.
+struct DecoderStats {
+    U screens = 0, rejects = 0, column_rejects = 0, skipped = 0, work = 0;
+};
+struct Answer { Status status; std::vector<Region> regions; U work,allocations,parity_rejects,provider_trials,tree_calls,memo_hits,unate_rejects,unate_merges; PhaseStats phase; DecoderStats decoder; };
 struct Entry { Leaf leaf; unsigned count; };
 class Engine {
     struct Limit{};
@@ -28,6 +35,8 @@ class Engine {
     bool parity, direct, memoize, unate;
     bool phase_screen, cache_phases, symmetric;
     PhaseStats phase_stats;
+    unsigned decoder;
+    DecoderStats decoder_stats;
     struct PhaseMasks { std::vector<unsigned> feasible, infeasible; };
     std::map<std::pair<U, std::vector<U>>, PhaseMasks> phase_cache;
     U unate_rejects=0,unate_merges=0;
@@ -170,6 +179,21 @@ class Engine {
                 auto ref=residual_provider_unate::refine(inside,in_f,std::move(pc));pc=std::move(ref.components);unate_merges+=ref.merges;
                 if(!pc.consistent){++unate_rejects;return false;}
             }
+            // Decoder phase screen: only at the last provider, whose remaining region is the
+            // final decoder (earlier singletons may feed later providers).
+            residual_decoder_phase::Screen dec;
+            if(decoder&&parity&&next+1==ds.size()){
+                dec=residual_decoder_phase::build(expand(rest),pc,target,care^target,decoder>=2,
+                    [&](U units){tick(units);decoder_stats.work+=units;});
+                if(!dec.enabled)++decoder_stats.skipped;else ++decoder_stats.screens;
+                if(dec.enabled&&!dec.allowed){++decoder_stats.rejects;return false;}
+            }
+            auto screened=[&](U c){
+                if(!dec.enabled)return true;
+                tick(dec.edges.size()+1);decoder_stats.work+=dec.edges.size()+1;
+                if(dec.accepts(c))return true;
+                ++decoder_stats.column_rejects;return false;
+            };
             auto try_provider=[&](U c,Witness w){
                 tick();++trials;
                 std::vector<Entry> newa=rest;newa.push_back({Leaf{k+next,c,false},ds[next]});
@@ -183,7 +207,7 @@ class Engine {
                 U first=pc.sides[0][0];std::set<U> seen;
                 for(unsigned bits=0;bits<(1u<<(pc.sides.size()-1));++bits){
                     tick();U c=first;for(unsigned j=1;j<pc.sides.size();++j)c|=pc.sides[j][(bits>>(j-1))&1];c=norm(c);
-                    if(!seen.insert(c).second)continue;
+                    if(!seen.insert(c).second||!screened(c))continue;
                     auto w=ask(inside,c);if(w&&try_provider(c,w))return true;
                 }
             }else{
@@ -191,7 +215,7 @@ class Engine {
                 for(auto&[c,t]:dp.get((Sub(1)<<inside.size())-1)){
                     tick(); // Test distinction before recursing, even if parity disabled.
                     bool good=true;for(unsigned j=0;j<out_f.size;++j){U p=out_f.mask[j]&target,z=out_f.mask[j]&(care^target);if(p&&z&&!(((c&p)==p&&!(c&z))||((c&z)==z&&!(c&p)))){good=false;break;}}
-                    if(good&&try_provider(c,Witness{t,false}))return true;
+                    if(good&&screened(c)&&try_provider(c,Witness{t,false}))return true;
                 }
             }
             return false;
@@ -199,8 +223,8 @@ class Engine {
         return split(0,0);
     }
 public:
-    Engine(U mask,U f,U cap=1000000,Clock::time_point deadline=Clock::time_point::max(),bool use_parity=true,bool use_direct=true,bool use_memo=true,bool use_unate=false,bool use_phase_screen=false,bool use_phase_cache=false,bool use_symmetric=false)
-      :care(mask),anchor(mask&-mask),target(f&mask),limit(cap),end(deadline),parity(use_parity),direct(use_direct),memoize(use_memo),unate(use_unate),phase_screen(use_phase_screen),cache_phases(use_phase_cache),symmetric(use_symmetric){if(!care)throw std::invalid_argument("empty care");}
+    Engine(U mask,U f,U cap=1000000,Clock::time_point deadline=Clock::time_point::max(),bool use_parity=true,bool use_direct=true,bool use_memo=true,bool use_unate=false,bool use_phase_screen=false,bool use_phase_cache=false,bool use_symmetric=false,unsigned use_decoder=0)
+      :care(mask),anchor(mask&-mask),target(f&mask),limit(cap),end(deadline),parity(use_parity),direct(use_direct),memoize(use_memo),unate(use_unate),phase_screen(use_phase_screen),cache_phases(use_phase_cache),symmetric(use_symmetric),decoder(use_decoder){if(use_decoder>2)throw std::invalid_argument("use_decoder is 0, 1 or 2");if(!care)throw std::invalid_argument("empty care");}
     Answer run(std::vector<Leaf> a,unsigned s){
         if(used)throw std::invalid_argument("Engine is single-use");used=true;
         k=a.size();if(k<2||k>8||s>3)throw std::invalid_argument("reference supports k=2..8, s=0..3");
@@ -218,11 +242,11 @@ public:
                     }
                     for(unsigned c=0;c<=left;++c){extra[i]=c;if(dist(i+1,left-c))return true;}return false;
                 };
-                if(dist(0,s-q)){if(Clock::now()>=end)throw Limit{};return {Status::sat,path,work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats};}
+                if(dist(0,s-q)){if(Clock::now()>=end)throw Limit{};return {Status::sat,path,work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats,decoder_stats};}
             }
             if(Clock::now()>=end)throw Limit{};
-            return {Status::unsat,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats};
-        }catch(const Limit&){return {Status::unknown,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats};}
+            return {Status::unsat,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats,decoder_stats};
+        }catch(const Limit&){return {Status::unknown,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats,decoder_stats};}
     }
 };
 }

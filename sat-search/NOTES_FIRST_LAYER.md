@@ -1394,3 +1394,243 @@ python sat-search/experiments/slack_three_native_check.py --capture sat-search/r
 foreach ($m in 'slack-two-phase-set','slack-three-phase-set','slack-three-phase-set-exact','slack-three-phase-set-lift1','slack-three-phase-set-adaptive','slack-three-phase-set-100ms','slack-three-phase-set-exact-100ms','slack-three-phase-set-adaptive-100ms') { Start-Process python -NoNewWindow -ArgumentList "sat-search/baselines/first_layer_check.py screen sat-search/logs/lazy_screen/$m.jsonl --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes $m" }
 python sat-search/baselines/slack_three_policy_summary.py sat-search/results/baselines/slack_three_policy_screen.jsonl
 ```
+
+## Termination reasons and benchmark tiers
+
+### Audit
+
+The table below lists every limit that can end a Percy run or an inner residual query without a
+verdict, as found in `percy_run.cpp`, `first_layer_check.py` and `native/src`.
+
+| Limit | Where | Scope before this change | Reported now |
+| --- | --- | --- | --- |
+| SAT conflicts (`--conflicts`) | `satoko_solve_assumptions_limit` | **Each CEGAR SAT call**, counted from that call's start. A budget with r CEGAR rows may use about r times the limit. | Budget `reason` `conflict_limit`; `conflict_limit`, `conflict_scope`, `sat_calls` and `conflicts` per budget. `--conflict-scope budget` makes the limit cover the whole budget. |
+| Wall clock (`--seconds`) | harness `communicate(timeout)` | **Whole run** (every budget from `n - 1` up), enforced only by killing the process. The open budget printed no record, so its conflicts, elapsed time and number were lost. | `percy_run --seconds`: a watcher thread raises Satoko's stop flag. The open budget prints `reason` `wall_deadline` with `elapsed` (since run start) and its conflicts. The harness kill stays as a backstop at `seconds + 10` (`reason` `harness_kill`, `open_budget` = last record + 1). |
+| Memory (`--memory-mib`) | Windows commit cap | An allocation failure crashed the driver and aborted the whole screen with `RuntimeError`. | `std::bad_alloc` gives exit 3 with `final` `UNKNOWN` and `reason` `memory`. Any other crash under a cap is `MEMORY` with `crash_<code>`. Neither is ever a verdict. |
+| Slack-two boundary recognizer | `slack_two_cut` | Hard-coded 25 ms and 100,000 work units per boundary. | `two_unknown_cause` = [deadline, work, capacity] per budget. New flags `--slack-two-ms` and `--slack-two-work` (defaults unchanged). |
+| Slack-three boundary recognizer | `slack_three_cut` | `--slack-three-ms` (25) and `--slack-three-work` (2M) per boundary. The exact query and all its extension checks share the one deadline; each recognizer call gets its own work allowance. | `three_unknown_cause` per budget. |
+| Tight and slack-one recognizers | `residual_zero` (4,096), `slack_one_residual` (100,000, 25 ms) | Per call. | Counted as unknown, as before (no cause split). |
+
+An inner recognizer's unknown only withholds a clause; it never becomes a verdict. The budget
+status is decided by the SAT solver alone, and `TIMEOUT` (with its `reason`) is never read as
+UNSAT. The harness's cross-mode verdict check still ignores `TIMEOUT` budgets.
+
+Classification of an inner unknown: `deadline` if the clock has passed the query's deadline
+when it returns. Otherwise `capacity` if no work was done (the boundary shape is outside the
+recognizer's range: more than eight wires, more than six primaries), and `work` otherwise. The
+Engine throws before a tick would exceed its allowance, so a work exit can report slightly less
+than the allowance.
+
+Premature-unknown findings:
+
+- **The 20,000-conflict limit is per CEGAR call, and it, not the 8 s wall, ends the rapid
+  screen.** At the rapid tier, 37 of 40 runs ended with `conflict_limit`, after a median of 1.3 s
+  (maximum 3.7 s), well inside 8 s. Plain Percy proves size 8 for `0116` in 1.9 s and 111,207 conflicts
+  when unlimited. With 20,000 per call it stops after 10 calls at about 1 s.
+- The wall limit is shared by every budget from `n - 1` up, so the time left for the open budget
+  depends on the earlier ones. Records now carry `elapsed` from the run start.
+- The slack-two recognizer limits do not bind in the slack-two configuration: the rapid tier had
+  0 slack-two unknowns, and 10x work with a 4x deadline gave identical conflicts (`slack-two-phase-set-wide` in `results/baselines/tier_rapid_wide.jsonl`). Inside the
+  slack-three configurations, 7-8 slack-two queries per tier hit the work limit.
+- The rapid-tier timings overlapped the 122-job check suite on the same machine, so its run
+  times are not reported; its verdicts and reasons are unaffected.
+- Memory never binds: peak 16-50 MiB under a 512-1,024 MiB cap.
+- Fixed-budget checks: `first_layer_check.py check` (122 jobs: base, slack-two-phase-set,
+  slack-three lift1) all match their expected verdicts with the driver deadline on.
+
+### Matched tiers
+
+Setup:
+- Ten hard four-input targets: `016a`, `1699`, `0116`, `6996`, `0196`, `16a9`, `1668`, `1686`, `1669`, `166b`.
+- Each run searches upward from budget `n - 1` until the first SAT or the first budget left open.
+- One process per (mode, target), 11 at once, with a 1 GiB commit cap.
+- Per-call conflict scope unless stated.
+- Columns: "Size-8 excl" counts targets whose size 8 was proved UNSAT. "Excl k>=7" counts excluded budgets of size 7 or more, summed over the targets.
+- Every record agrees with the 36 known optima in `caps_hard_npn4.jsonl` (`tier_summary.py`).
+
+| Tier | Mode | Minima | Size-8 excl | Excl k>=7 | Max / median run s | Reasons |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| rapid 8 s / 20k | base | 0 | 0 | 6 | - | conflict_limit 10 |
+| | slack-two-phase-set | 1 | 0 | 10 | - | conflict_limit 9, sat 1 |
+| | slack-three-phase-set | 1 | 3 | 13 | - | conflict_limit 8, sat 1, wall_deadline 1 |
+| | slack-three-phase-set-lift1 | 0 | 3 | 13 | - | conflict_limit 10 |
+| long 60 s / 200k | base | 4 | 4 | 14 | 47.2 / 17.5 | conflict_limit 6, sat 4 |
+| | slack-two-phase-set | 6 | 7 | 17 | 55.3 / 19.7 | conflict_limit 4, sat 6 |
+| | slack-three-phase-set | 6 | 8 | 18 | 47.2 / 14.5 | conflict_limit 4, sat 6 |
+| | slack-three-phase-set-lift1 | 6 | 8 | 18 | 51.7 / 19.6 | conflict_limit 4, sat 6 |
+| extended 300 s / 2M | base | 8 | 8 | 19 | 173.3 / 37.5 | conflict_limit 2, sat 8 |
+| | slack-two-phase-set | 9 | 8 | 19 | 162.8 / 21.2 | conflict_limit 1, sat 9 |
+| | slack-three-phase-set | 9 | 8 | 19 | 279.8 / 62.1 | conflict_limit 1, sat 9 |
+| | slack-three-phase-set-lift1 | **10** | 8 | **20** | 252.0 / 60.1 | sat 10 |
+
+Observations:
+- Only slack-three lift1 established all ten minima at the extended tier, including `166b` = 10, where every other mode ended with `conflict_limit` at budget 9.
+- No run ended on the wall deadline at the long or extended tier.
+- Peak commit stayed at or below 225 MiB.
+- Inner unknowns at the extended tier: slack-two work exits 17, 26 and 24 across the three residual modes, and four slack-three deadline exits under lift1.
+
+### Which limit binds (60 s)
+
+| Limits | Mode | Minima | Size-8 excl | Excl k>=7 | Reasons |
+| --- | --- | ---: | ---: | ---: | --- |
+| 60 s, 200k per call | base / two / three / lift1 | 4 / 6 / 6 / 6 | 4 / 7 / 8 / 8 | 14 / 17 / 18 / 18 | all incomplete: conflict_limit |
+| 60 s, no conflict limit | base / two / three / lift1 | 6 / 7 / 7 / 6 | 8 / 8 / 8 / 8 | 18 / 18 / 19 / 19 | all incomplete: wall_deadline |
+| 60 s, 200k per budget | base / two / three / lift1 | 3 / 2 / 3 / 2 | 3 / 6 / 6 / 7 | 13 / 16 / 16 / 17 | all incomplete: conflict_limit |
+
+Findings:
+- With 200k conflicts per call, the conflict limit ends every incomplete long-tier run. The wall limit never binds, and removing the conflict limit gains 1-2 minima per mode within the same 60 s. For example, slack-three finds `1669` = 10.
+- Scoping the same 200k conflicts to the whole budget is about 5-20x tighter, because Percy's CEGAR makes many calls per budget.
+- Comparisons between modes at a fixed limit are therefore comparisons at matched conflicts per call, not at matched time.
+- The wall-only rows are the time-matched comparison. There slack-two and slack-three each reach 7 minima, and slack-three and lift1 exclude the most budgets (19).
+- `unknown` is never read as UNSAT: every incomplete budget carries its `reason` and stays open.
+
+Commands (from `sat-search`):
+
+```
+python baselines/tier_bench.py results/baselines/tier_rapid.jsonl --logs logs/tiers/rapid --tier rapid
+python baselines/tier_bench.py results/baselines/tier_long.jsonl --logs logs/tiers/long --tier long
+python baselines/tier_bench.py results/baselines/tier_extended.jsonl --logs logs/tiers/extended --tier extended
+python baselines/tier_bench.py results/baselines/tier_wall_only_60.jsonl --logs logs/tiers/wall_only_60 --seconds 60 --conflicts 0
+python baselines/tier_bench.py results/baselines/tier_budget_scope_60.jsonl --logs logs/tiers/budget_scope_60 --seconds 60 --conflicts 200000 --conflict-scope budget
+python baselines/tier_summary.py results/baselines/tier_long.jsonl results/baselines/tier_wall_only_60.jsonl results/baselines/tier_budget_scope_60.jsonl
+```
+
+## Last-provider decoder phase screen (opt-in)
+
+Source: the supplied `residual_decoder_phase_native` reference (an ablation of the standalone
+occurrence-symmetric engine). It was ported as a small screen inside the production
+`residual_slack_two::Engine` ([residual_decoder_phase.hpp](native/src/residual_decoder_phase.hpp)).
+The standalone engine was not copied.
+
+### Statement and proof
+
+Take the last shared-provider allocation (`next + 1 == ds.size()`). Its remaining region is the
+final decoder: a free-NOT AND tree over the remaining wire occurrences `rest` plus at least two
+occurrences of the new provider `p`. Let S be the wires that `rest` reads once and R those it
+reads more than once.
+
+1. A tree reads each wire of S exactly once, so the decoder is unate in each wire of S. Fix its
+   phase vector t (t_i = 1: x_i appears complemented).
+2. Take a positive cared row a and a negative cared row b that agree on every wire of R. If they
+   also agree on p, then some literal of S must be 1 at a and 0 at b. That is, some i in
+   D = {i in S : a_i != b_i} has a_i != t_i. Otherwise a cannot reach 1 while b stays 0.
+3. The provider is a function of its inside wires, so it is constant on inside fibers. The base
+   distinction test, together with the singleton unate merges, writes every surviving provider as
+   p(row) = o(component(row)) XOR side(row). A pair with t|_D = a|_D therefore forces:
+   - same component, same side: impossible, so that phase subcube is removed;
+   - same component, opposite sides: always satisfied;
+   - different components: o(c_a) XOR o(c_b) = 1 XOR side(a) XOR side(b).
+4. A candidate provider column fixes every o. It survives iff some remaining t satisfies every
+   active edge.
+
+The screen is a relaxation, because the decoder is only required to be unate in S. Exact tree
+recognition still runs on every candidate that survives. A complemented decoder output swaps
+the roles of a and b and complements t, so the condition is unchanged. The theorem is applied
+only at the last provider: an earlier singleton may feed a later shared provider and need not
+have a consistent polarity in the final target. The `(x & z) XOR y` shared-provider regression
+covers this. The screen is skipped, with no rejection, when |S| > 6.
+
+Modes:
+- **Mode 1** removes phases using same-component equalities, then screens each candidate column
+  (both the direct-orientation and ProviderDP branches) before exact provider recognition.
+- **Mode 2** also checks each surviving phase's edge system for parity consistency (DSU) before
+  any candidate.
+
+Production adaptation:
+- Work is charged while the screen is built, through the Engine's `tick`, which also polls the
+  deadline. The reference charged after building.
+- Each candidate check charges `edges + 1`.
+- Counters per Engine answer: `decoder_screens`, `decoder_rejects` (allocation rejected before
+  any candidate), `decoder_column_rejects`, `decoder_skipped` and `decoder_work`.
+- `slack_three_boundary` now reports `exact_seconds`, the time in the exact `Engine(., 3)` query,
+  so extension cost is the remainder.
+- Interfaces: `Engine(..., use_decoder)`, `slack_two_boundary(..., decoder)`,
+  `slack_three_boundary(..., memo, decoder)`, the Python `decoder=` argument, and Percy
+  `--decoder-phase 0|1|2`. Percy applies it to both the slack-two and slack-three Engines and
+  records `two_decoder` / `three_decoder` = [screens, rejects, column rejects, skipped, work] and
+  `three_exact_seconds`.
+- Harness modes: `<mode>-dec1` and `<mode>-dec2` for slack-two-phase-set,
+  slack-three-phase-set and its exact and lift1 variants.
+- Default 0 (off).
+
+### Verification
+
+- Bundle reference (MSVC `cl /std:c++20 /O2 /EHsc`, built outside the extracted directory):
+  `decoder systems=2651 columns=32078 impossible=66`, `phase systems=5000 rejected=3084`,
+  `DAG queries=5520 sat=3831`. The README states 3,838 SAT; every query matched its own oracle
+  and verified its witnesses.
+- `slack_three_native_check.py`: 28,160 decoder-mode oracle comparisons (k = 2, 3, all cares and
+  first-layer counts, Engine modes 0/2/3/4/5, directed and symmetric, decoder 1 and 2). It also
+  covers duplicated-wire and extension checks with the decoder on, and rejects `decoder=3`.
+- `slack_two_native_check.py`: decoder modes added to its 18,304 oracle comparisons, plus the
+  shared-provider regression with decoder 0/1/2.
+- The 168 captured boundaries with no deadline: identical verdicts (166 UNSAT, 2 SAT) and
+  identical fully decided retained sets under full, lift1 and exact. SAT witnesses verified.
+
+### Captured slack-three boundaries (168, directed Engine mode 4)
+
+No deadline, 2M work units, exact policy:
+
+| Decoder | Exact tree calls | Exact work | Allocation rejects | Column rejects | Decoder work |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 0 | 143,680 | 32.0M | - | - | - |
+| 1 | 13,104 | 12.6M | 73,693 | 2,144 | 7.7M |
+| 2 | 13,104 | 12.6M | 73,858 | 1,017 | 7.7M |
+
+25 ms deadline, idle machine, median of 3 rotated repetitions; all 168 boundaries decided in every
+configuration (`results/baselines/decoder_captured_25ms_{exact,lift1,full}.{jsonl,out}`):
+
+| Policy | Decoder 0 | Decoder 1 | Decoder 2 | Exact part (0 -> 1) |
+| --- | ---: | ---: | ---: | --- |
+| exact | 1,087.8 ms | 519.1 ms | 520.9 ms | ~ whole call |
+| lift1 | 1,132.5 ms | 549.5 ms | 547.2 ms | 1,073 -> 514 ms |
+| full | 3,811.7 ms | 3,755.5 ms | 3,756.4 ms | 1,060 -> 515 ms |
+
+The exact query cost halves; extension cost is unchanged per call. Under `full` the saved time
+lets more slack-two extensions finish before the deadline (extension calls 4,683 -> 5,088), so
+total wall time barely moves. Mode 2 does no better than mode 1, which matches the bundle's
+recommendation; mode 1 is the one to use.
+
+### Long matched tier (60 s / 200,000 conflicts per call, 10 hard targets)
+
+`results/baselines/tier_long_decoder.jsonl` against the controls `tier_long.jsonl` and
+`tier_long_exact.jsonl` (same targets, caps and harness; see the termination audit above).
+
+| Mode | Minima | Size-8 excl | Excl k>=7 | Wall s | Reasons | Residual s (slack-three / slack-two) |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| slack-two-phase-set | 6 | 7 | 17 | 214.9 | conflict_limit 4, sat 6 | - / 0.6 |
+| slack-two-phase-set-dec1 | 6 | 7 | 17 | 201.1 | conflict_limit 3, sat 6, wall_deadline 1 | - / 0.5 |
+| slack-three-phase-set | 6 | 8 | 18 | 153.3 | conflict_limit 4, sat 6 | 2.5 / 1.3 |
+| slack-three-phase-set-dec1 | 5 | 8 | 18 | 267.4 | conflict_limit 5, sat 5 | 2.5 / 1.2 |
+| slack-three-phase-set-lift1 | 6 | 8 | 18 | 226.9 | conflict_limit 4, sat 6 | 1.2 / 1.3 |
+| slack-three-phase-set-lift1-dec1 | 7 | 8 | 18 | 144.9 | conflict_limit 3, sat 7 | 0.5 / 1.2 |
+| slack-three-phase-set-exact | 7 | 8 | 18 | 162.2 | conflict_limit 3, sat 7 | 1.1 / 1.3 |
+| slack-three-phase-set-exact-dec1 | 6 | 8 | 18 | 177.6 | conflict_limit 4, sat 6 | 0.5 / 1.2 |
+
+- Every reported minimum agrees with the 36 known optima; no unknown was read as UNSAT.
+- Inside Percy the screen halves slack-three exact time (1.1-1.2 s -> 0.5 s over the whole tier)
+  and cuts inner work-limit unknowns (slack-two 11 -> 5 in slack-two mode, 16 -> 1 in lift1).
+  Decoder totals for lift1-dec1: 58,321 slack-three screens, 58,141 allocations rejected,
+  667 column rejects, no skips.
+- The residual engines spend 1-4 s of 300-530 s SAT time per mode. The outer per-call conflict
+  limit binds, and minima move by +-1 between runs because different cuts change the SAT
+  trajectory. That variation is not a decoder effect. An extended (300 s / 2M) tier cannot
+  measure the screen either, so it was not rerun for the decoder modes.
+- Verdict: keep `--decoder-phase` opt-in (default 0). It is a clean exact-query speedup
+  (about 2x on captured boundaries) with no soundness cost. End-to-end gains need the outer
+  SAT search to stop dominating.
+
+### Decoder commands
+
+```powershell
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\residual_decoder_phase_native.zip" -DestinationPath external/residual-decoder-phase
+# Build the bundle's check and benches from a separate directory (see the bundle README), then:
+& sat-search/native/build_native.bat
+& sat-search/baselines/build/build_percy.bat
+python sat-search/experiments/slack_three_native_check.py
+python sat-search/experiments/slack_two_native_check.py
+foreach ($p in 'exact','lift1','full') { python sat-search/experiments/slack_three_native_check.py --capture sat-search/results/baselines/slack_three_percy_captured.jsonl --output sat-search/results/baselines/decoder_captured_25ms_$p.jsonl --limit 200 --modes 4 --directed --decoder $p --deadline 0.025 --repetitions 3 }
+python sat-search/baselines/first_layer_check.py check sat-search/results/baselines/decoder_percy_check.jsonl --workers 8 --modes slack-two-phase-set-dec1 slack-three-phase-set-lift1-dec1 slack-three-phase-set-dec2 slack-three-phase-set-exact-dec1
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_long_decoder.jsonl --logs sat-search/logs/tiers/long_decoder --tier long --modes slack-two-phase-set-dec1 slack-three-phase-set-dec1 slack-three-phase-set-lift1-dec1 slack-three-phase-set-exact-dec1
+python sat-search/baselines/tier_summary.py sat-search/results/baselines/tier_long.jsonl sat-search/results/baselines/tier_long_exact.jsonl sat-search/results/baselines/tier_long_decoder.jsonl
+```

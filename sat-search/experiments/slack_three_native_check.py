@@ -273,10 +273,12 @@ def check_policies():
 
 
 SETTINGS = [(mode, symmetric) for mode in (0, 2, 3, 4, 5) for symmetric in (False, True)]
+# The decoder phase screen needs the parity filter (mode >= 1); mode 0 checks it stays inert.
+DECODER_SETTINGS = [(mode, symmetric, decoder) for mode, symmetric in SETTINGS for decoder in (1, 2)]
 
 
 def check():
-    checks = 0
+    checks = decoder_checks = 0
     for k in (2, 3):
         full = (1 << (1 << k)) - 1
         for care in (full, full ^ 1, full ^ 17 if k == 3 else full ^ 2):
@@ -286,23 +288,26 @@ def check():
                 for value in range(full + 1):
                     if value & ~care:
                         continue
-                    for mode, symmetric in SETTINGS:
+                    for mode, symmetric, decoder in [(*s, 0) for s in SETTINGS] + DECODER_SETTINGS:
                         metrics, regions = _native.slack_three_boundary(
-                            columns, h, [], 0, [], value, care, 2_000_000, 0, mode, symmetric)
-                        assert metrics['status'] == (value in expected), (columns, h, care, value, mode, symmetric)
+                            columns, h, [], 0, [], value, care, 2_000_000, 0, mode, symmetric, decoder=decoder)
+                        assert metrics['status'] == (value in expected), (
+                            columns, h, care, value, mode, symmetric, decoder)
                         assert bool(regions) == (metrics['status'] == 1)
                         if regions:
                             verify(columns, h, value, care, regions)
                         checks += 1
+                        decoder_checks += bool(decoder)
 
     # Identical columns still describe distinct first-layer wires.
     duplicated = 0
     columns, care = [0x88, 0x88, 0xf0], 0xff
     expected = dag_tables(columns, 2, care, 5)
     for target in (0, 0x80, 0xf0, 0x7f, 0x88, 0x78):
-        for mode, symmetric in SETTINGS:
+        for mode, symmetric, decoder in [(*s, 0) for s in SETTINGS] + DECODER_SETTINGS:
             metrics, regions = _native.slack_three_boundary(
-                columns, 2, [], 0, [], target, care, mode=mode, symmetric=symmetric, deadline_seconds=0)
+                columns, 2, [], 0, [], target, care, mode=mode, symmetric=symmetric, deadline_seconds=0,
+                decoder=decoder)
             assert metrics['status'] == (target in expected), (target, mode, symmetric)
             if regions:
                 verify(columns, 2, target, care, regions)
@@ -317,10 +322,11 @@ def check():
     for target in (a & b & c & d & e, (a & b & c) ^ d, (a & b) | (c & d & e), (a & b & c) ^ (d & e)):
         assert not feasible(columns, 1, target, care, 3)
         kept_mixed, kept_gates, counts = expected_extensions(columns, 1, primaries, 4, gate_columns, target, care)
-        for mode, symmetric in [(2, False), (5, False), (5, True)]:
+        for mode, symmetric, decoder in [(2, False, 0), (5, False, 0), (5, True, 0), (4, False, 1), (4, False, 2),
+                                         (5, True, 1)]:
             metrics, regions = _native.slack_three_boundary(
                 columns, 1, primaries, 4, gate_columns, target, care, deadline_seconds=0, mode=mode,
-                symmetric=symmetric)
+                symmetric=symmetric, decoder=decoder)
             assert not regions and metrics['status'] == 0, metrics
             assert metrics['extension_unknown'] == 0, metrics
             assert (metrics['mixed_extensions'], metrics['gate_extensions']) == (kept_mixed, kept_gates), (
@@ -340,14 +346,15 @@ def check():
     for args in ((list(primaries[:2]), 0), ([a] * 9, 1)):
         metrics, regions = _native.slack_three_boundary(args[0], args[1], [], 0, [], a, care)
         assert metrics['status'] == 2 and not regions
-    with_mode = None
-    try:
-        _native.slack_three_boundary([a, b], 1, [], 0, [], a, care, mode=6)
-    except ValueError:
-        with_mode = True
-    assert with_mode
-    print(json.dumps({'oracle_comparisons': checks, 'duplicated_wire_checks': duplicated,
-                      'extension_and_limit_checks': extension_checks, 'argument_checks': 3,
+    for bad in (dict(mode=6), dict(decoder=3)):
+        try:
+            _native.slack_three_boundary([a, b], 1, [], 0, [], a, care, **bad)
+        except ValueError:
+            continue
+        raise AssertionError(bad)
+    print(json.dumps({'oracle_comparisons': checks, 'decoder_oracle_comparisons': decoder_checks,
+                      'duplicated_wire_checks': duplicated,
+                      'extension_and_limit_checks': extension_checks, 'argument_checks': 4,
                       'policy_checks': check_policies()}))
 
 
@@ -388,6 +395,67 @@ def replay(path, output, work_limit, deadline, limit, modes, repetitions):
 
 
 POLICY_NAMES = ('full', 'exact', 'lift1', 'adaptive')
+
+
+def replay_decoder(path, output, work_limit, deadline, limit, mode, symmetric, policy, repetitions):
+    """Replay captured boundaries with decoder phase screens 0, 1 and 2 under one policy.
+
+    The exact Engine(., 3) query is timed separately (exact_seconds) from the whole call; the
+    remainder is extension cost. Decided verdicts and fully decided retained sets must agree.
+    """
+    reference = SimpleNamespace(independent_columns=independent_columns)
+    totals = {decoder: Counter() for decoder in (0, 1, 2)}
+    with output.open('x', encoding='utf-8') as out:
+        for name, record, first, mixed_ids, primaries, _, target, care in captured_boundaries(
+                reference, path, limit, event='slack_three'):
+            columns = [*first, *(primaries[i] for i in mixed_ids)]
+            gate_columns = types(primaries)
+            results = {}
+            for repetition in range(repetitions):
+                order = (0, 1, 2)[repetition % 3:] + (0, 1, 2)[:repetition % 3]
+                for decoder in order:
+                    start = perf_counter()
+                    metrics, regions = _native.slack_three_boundary(
+                        columns, len(first), primaries, record['mixed'], gate_columns, target, care,
+                        work_limit, deadline, mode, symmetric, policy, None, decoder)
+                    elapsed = perf_counter() - start
+                    if metrics['status'] == 1:
+                        verify(columns, len(first), target, care, regions)
+                    results.setdefault(decoder, []).append((metrics, elapsed))
+                    out.write(json.dumps(dict(record, **metrics, name=name, decoder=decoder, mode=mode,
+                                              symmetric=symmetric, policy=POLICY_NAMES[policy],
+                                              repetition=repetition, wall_seconds=elapsed,
+                                              deadline_seconds=deadline, work_limit=work_limit)) + '\n')
+            decided, retained = set(), set()
+            for decoder, runs in results.items():
+                # Median repetition by wall time; its counters are reported.
+                runs.sort(key=lambda run: run[1])
+                metrics, elapsed = runs[len(runs) // 2]
+                for m, _ in runs:
+                    if m['status'] != 2:
+                        decided.add(m['status'])
+                    if m['status'] == 0 and m['extension_unknown'] == 0 and policy == 0:
+                        retained.add((m['mixed_extensions'], m['gate_extensions']))
+                total = totals[decoder]
+                total['boundaries'] += 1
+                total[f'status{metrics["status"]}'] += 1
+                total['wall_ms'] += 1000 * elapsed
+                total['exact_ms'] += 1000 * metrics['exact_seconds']
+                total['extension_ms'] += 1000 * (elapsed - metrics['exact_seconds'])
+                total['exact_work'] += metrics['work']
+                total['tree_calls'] += metrics['tree_calls']
+                total['extension_calls'] += (metrics['tight_calls'] + metrics['slack_one_calls']
+                                             + metrics['slack_two_calls'])
+                total['slack_two_work'] += metrics['slack_two_work']
+                if metrics['status'] == 0:
+                    total[f'lift{metrics["lift"]}'] += 1
+                for key in ('decoder_screens', 'decoder_rejects', 'decoder_column_rejects', 'decoder_skipped',
+                            'decoder_work'):
+                    total[key] += metrics[key]
+            assert len(decided) <= 1, (name, record, {d: [m['status'] for m, _ in r] for d, r in results.items()})
+            assert len(retained) <= 1, (name, record, retained)
+    print(json.dumps({decoder: {key: round(value, 1) if isinstance(value, float) else value
+                                for key, value in sorted(total.items())} for decoder, total in totals.items()}))
 
 
 def replay_policies(path, output, work_limit, deadline, limit, mode, symmetric):
@@ -457,6 +525,8 @@ if __name__ == '__main__':
     parser.add_argument('--policies', action='store_true',
                         help='replay full/exact/lift1/adaptive policies with the first --modes entry')
     parser.add_argument('--directed', action='store_true', help='with --policies, use directed trees')
+    parser.add_argument('--decoder', choices=POLICY_NAMES,
+                        help='replay decoder phase screens 0/1/2 under this policy with the first --modes entry')
     args = parser.parse_args()
     if args.repetitions < 1:
         parser.error('--repetitions must be positive')
@@ -464,7 +534,10 @@ if __name__ == '__main__':
     if args.capture:
         if not args.output:
             parser.error('--capture requires --output')
-        if args.policies:
+        if args.decoder:
+            replay_decoder(args.capture, args.output, args.work_limit, args.deadline, args.limit, args.modes[0],
+                           not args.directed, POLICY_NAMES.index(args.decoder), args.repetitions)
+        elif args.policies:
             replay_policies(args.capture, args.output, args.work_limit, args.deadline, args.limit,
                             args.modes[0], not args.directed)
         else:

@@ -1,0 +1,37 @@
+check 0
+check-016a cegar slack-three-phase-set-dec2 8 SAT sat open=None 1.0s
+check-016a cegar slack-three-phase-set-exact-dec1 8 SAT sat open=None 1.5s
+tier 0
+| Wall s | Conflicts | Scope | Mode | Minima | Size-8 excl | Excl budgets k>=7 | Wall s total | Conflicts | Reasons | Peak MiB |
+| ---: | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: |
+| 60 | 200,000 | call | base | 4 | 4 | 14 | 192.4 | 4,397,759 | conflict_limit 6, sat 4 | 82.3 |
+| 60 | 200,000 | call | slack-two-phase-set | 6 | 7 | 17 | 214.9 | 3,963,715 | conflict_limit 4, sat 6 | 87.5 |
+| 60 | 200,000 | call | slack-three-phase-set | 6 | 8 | 18 | 153.3 | 3,026,576 | conflict_limit 4, sat 6 | 120.8 |
+| 60 | 200,000 | call | slack-three-phase-set-lift1 | 6 | 8 | 18 | 226.9 | 3,885,233 | conflict_limit 4, sat 6 | 119.5 |
+| 60 | 200,000 | call | slack-three-phase-set-exact | 7 | 8 | 18 | 162.2 | 3,217,003 | conflict_limit 3, sat 7 | 90.1 |
+| 60 | 200,000 | call | slack-two-phase-set-dec1 | 6 | 7 | 17 | 201.1 | 3,899,324 | conflict_limit 3, sat 6, wall_deadline 1 | 96.4 |
+| 60 | 200,000 | call | slack-three-phase-set-dec1 | 5 | 8 | 18 | 267.4 | 4,223,162 | conflict_limit 5, sat 5 | 122.7 |
+| 60 | 200,000 | call | slack-three-phase-set-lift1-dec1 | 7 | 8 | 18 | 144.9 | 3,046,927 | conflict_limit 3, sat 7 | 81.4 |
+| 60 | 200,000 | call | slack-three-phase-set-exact-dec1 | 6 | 8 | 18 | 177.6 | 3,117,200 | conflict_limit 4, sat 6 | 117.9 |
+
+Highest excluded budget per target (S = minimum found):
+| Limits | Mode | 0116 | 016a | 0196 | 1668 | 1669 | 166b | 1686 | 1699 | 16a9 | 6996 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 60/200,000/call | base | S9 | S8 | 8 | 7 | 8 | 7 | 7 | S8 | 7 | S9 |
+| 60/200,000/call | slack-two-phase-set | S9 | S8 | S9 | S9 | 8 | 8 | 7 | S8 | S9 | 8 |
+| 60/200,000/call | slack-three-phase-set | S9 | S8 | S9 | 8 | 8 | 8 | 8 | S8 | S9 | S9 |
+| 60/200,000/call | slack-three-phase-set-lift1 | S9 | S8 | S9 | 8 | 8 | 8 | 8 | S8 | S9 | S9 |
+| 60/200,000/call | slack-three-phase-set-exact | S9 | S8 | S9 | S9 | 8 | 8 | S9 | S8 | 8 | S9 |
+| 60/200,000/call | slack-two-phase-set-dec1 | S9 | S8 | S9 | S9 | 8 | 8 | 7 | S8 | S9 | 8 |
+| 60/200,000/call | slack-three-phase-set-dec1 | S9 | S8 | S9 | 8 | 8 | 8 | 8 | S8 | 8 | S9 |
+| 60/200,000/call | slack-three-phase-set-lift1-dec1 | S9 | S8 | S9 | S9 | 8 | 8 | S9 | S8 | 8 | S9 |
+| 60/200,000/call | slack-three-phase-set-exact-dec1 | S9 | S8 | 8 | 8 | 8 | 8 | S9 | S8 | S9 | S9 |
+
+Inner residual unknowns (deadline / work / capacity):
+  (60, 200000, 'call', 'slack-two-phase-set'): slack-two 0/11/0, slack-three 0/0/0
+  (60, 200000, 'call', 'slack-three-phase-set'): slack-two 0/24/0, slack-three 1/0/0
+  (60, 200000, 'call', 'slack-three-phase-set-lift1'): slack-two 0/16/0, slack-three 0/0/0
+  (60, 200000, 'call', 'slack-three-phase-set-exact'): slack-two 0/17/0, slack-three 1/0/0
+  (60, 200000, 'call', 'slack-two-phase-set-dec1'): slack-two 0/5/0, slack-three 0/0/0
+  (60, 200000, 'call', 'slack-three-phase-set-lift1-dec1'): slack-two 0/1/0, slack-three 0/0/0
+Caps cross-check passed against 36 known optima.

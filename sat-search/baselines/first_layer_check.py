@@ -40,6 +40,9 @@ for slack_two_filter in ('memo', 'unate', 'phase', 'phase-cache'):
 for slack_two_filter in ('unate', 'phase'):
     RESIDUAL_MODES[f'slack-two-{slack_two_filter}-set'] = (
         *RESIDUAL_MODES[f'slack-two-{slack_two_filter}'], '--slack-two-set-cuts')
+# Wider slack-two recognizer allowance (10x work, 4x deadline), to test whether its limits bind.
+RESIDUAL_MODES['slack-two-phase-set-wide'] = (
+    *RESIDUAL_MODES['slack-two-phase-set'], '--slack-two-work', '1000000', '--slack-two-ms', '100')
 RESIDUAL_MODES['slack-three-trace'] = (*RESIDUAL_MODES['slack-two-phase-set'], '--trace-slack-three')
 for slack_three_filter in ('memo', 'unate', 'phase', 'phase-cache'):
     RESIDUAL_MODES[f'slack-three-{slack_three_filter}'] = (
@@ -57,6 +60,11 @@ for slack_three_filter in ('phase', 'phase-sym'):
             *RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set'], '--slack-three-policy', policy)
         RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-{policy}-100ms'] = (
             *RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-{policy}'], '--slack-three-ms', '100')
+# Last-provider decoder phase screen inside the slack-two and slack-three Engines.
+for name in ('slack-two-phase-set', 'slack-three-phase-set', 'slack-three-phase-set-exact',
+             'slack-three-phase-set-lift1'):
+    for decoder in ('1', '2'):
+        RESIDUAL_MODES[f'{name}-dec{decoder}'] = (*RESIDUAL_MODES[name], '--decoder-phase', decoder)
 
 
 def exact_tables(n, steps):
@@ -82,10 +90,26 @@ def exact_tables(n, steps):
     return tables
 
 
-def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, start=None):
+# Benchmark tiers: (wall seconds, SAT conflicts). Rapid is the development screen; the longer
+# tiers evaluate the strongest configurations. Unknown is never a verdict at any tier.
+TIERS = {'rapid': (8, 20_000), 'long': (60, 200_000), 'extended': (300, 2_000_000)}
+KILL_GRACE = 10  # the harness kill is only a backstop behind the driver's own --seconds deadline
+MEMORY_EXIT = 3  # percy_run's exit code after std::bad_alloc
+USAGE_EXIT = 2  # percy_run's exit code for invalid arguments
+
+
+def incomplete_record(rows):
+    """The budget record that ended the run without a verdict, if any."""
+    return next((row for row in reversed(rows) if row.get('status') == 'TIMEOUT'), None)
+
+
+def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, start=None,
+        conflict_scope='call', driver_deadline=True, memory_capped=False):
     full = (1 << (1 << n)) - 1
     cmd = [exe, '--n', str(n), '--tt', hexstr(n, tt), '--method', method, '--solver', 'satoko',
-           '--conflicts', str(conflicts), *(MODES | RESIDUAL_MODES)[mode]]
+           '--conflicts', str(conflicts), '--conflict-scope', conflict_scope, *(MODES | RESIDUAL_MODES)[mode]]
+    if driver_deadline:
+        cmd += ['--seconds', str(seconds)]
     if care != full:
         cmd += ['--dc', hexstr(n, full ^ care)]
     cmd += ['--budget', str(budget)] if budget is not None else ['--start', str(start), '--max', '12']
@@ -93,23 +117,38 @@ def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, s
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as child:
         timed_out = False
         try:
-            stdout, stderr = child.communicate(timeout=seconds)
+            stdout, stderr = child.communicate(timeout=seconds + KILL_GRACE if driver_deadline else seconds)
         except subprocess.TimeoutExpired:
             timed_out = True
             child.kill()
             stdout, stderr = child.communicate()
         elapsed, peak = perf_counter() - started, peak_of(child)
-        if not timed_out and child.returncode:
+        crashed = not timed_out and child.returncode not in (0, MEMORY_EXIT)
+        # Exit 2 is percy_run's usage error: never an allocation failure.
+        if crashed and (not memory_capped or child.returncode == USAGE_EXIT):
             raise RuntimeError((cmd, child.returncode, stderr, stdout))
     rows = [json.loads(line) for line in stdout.splitlines() if line.startswith('{') and line.endswith('}')]
     final = next((row for row in rows if 'final' in row), {})
-    status = 'TIMEOUT' if timed_out else final['final']
+    budgets = [row['k'] for row in rows if 'k' in row]
+    if timed_out:
+        # Killed mid-budget: the open budget is the one after the last reported record.
+        status, reason = 'TIMEOUT', 'harness_kill'
+        open_budget = (budgets[-1] + 1) if budgets else (budget if budget is not None else start)
+    elif child.returncode == MEMORY_EXIT or crashed:
+        # A crash under a commit cap is almost always an allocation failure outside C++ new.
+        status, reason = 'MEMORY', 'memory' if child.returncode == MEMORY_EXIT else f'crash_{child.returncode}'
+        open_budget = final.get('last_k', (budgets[-1] + 1) if budgets else None)
+    else:
+        status, reason = final['final'], final.get('reason', '')
+        pending = incomplete_record(rows)
+        open_budget = pending['k'] if pending else None
     if status == 'SAT':
         gates, output = parse_percy_chain(n, final)
         assert final['aig'] and len(gates) == final['steps'] and verify(n, tt, care, gates, output), (cmd, final)
     return dict(name=name, n=n, tt=hexstr(n, tt), care=hexstr(n, care), mode=mode, budget=budget, start=start,
-                method=method, status=status, wall_seconds=elapsed, peak_bytes=peak, conflicts_limit=conflicts,
-                wall_limit=seconds, records=rows)
+                method=method, status=status, reason=reason, open_budget=open_budget, wall_seconds=elapsed,
+                peak_bytes=peak, conflicts_limit=conflicts, conflict_scope=conflict_scope, wall_limit=seconds,
+                driver_deadline=driver_deadline, records=rows)
 
 
 def check_jobs(exe, modes):
@@ -160,15 +199,20 @@ def check_jobs(exe, modes):
                 yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 60, 0, 8), expected
 
 
-def screen_jobs(exe, workload, limit, seconds, conflicts, modes):
+def screen_jobs(exe, workload, limit, seconds, conflicts, modes, names=None, extra=None):
     with workload.open(encoding='utf-8') as source:
         targets = [json.loads(line) for line in source if line.strip()]
     eligible = [target for target in targets if 2 <= target['n'] <= 5]
+    if names:
+        chosen = [target for target in eligible if target['name'] in names or target['tt'] in names]
+        assert len(chosen) == len(names), (names, [target['name'] for target in chosen])
+        eligible = chosen
     for target in eligible[:limit]:
         n, tt = target['n'], int(target['tt'], 16)
         care = (1 << (1 << n)) - 1
         for mode in modes:
-            yield (exe, mode, target['name'], n, tt, care, 'cegar', seconds, conflicts, None, n - 1), None
+            yield (exe, mode, target['name'], n, tt, care, 'cegar', seconds, conflicts, None, n - 1,
+                   *(extra or ())), None
 
 
 def main():
@@ -182,6 +226,12 @@ def main():
     parser.add_argument('--limit', type=int, default=8)
     parser.add_argument('--seconds', type=float, default=6)
     parser.add_argument('--conflicts', type=int, default=20_000)
+    parser.add_argument('--tier', choices=tuple(TIERS), help='set --seconds and --conflicts from a benchmark tier')
+    parser.add_argument('--conflict-scope', choices=('call', 'budget'), default='call',
+                        help='call: --conflicts limits each CEGAR SAT call (Percy); budget: the whole budget')
+    parser.add_argument('--no-driver-deadline', action='store_true',
+                        help='legacy: only the harness kill enforces --seconds (no per-budget record on timeout)')
+    parser.add_argument('--targets', nargs='+', help='screen only these workload names or truth tables')
     parser.add_argument('--modes', nargs='+', choices=tuple(MODES | RESIDUAL_MODES), default=tuple(MODES))
     parser.add_argument('--memory-mib', type=int, help='commit cap for the single-worker process family')
     args = parser.parse_args()
@@ -189,8 +239,11 @@ def main():
         if args.workers != 1:
             parser.error('--memory-mib needs a single worker')
         limit_commit_mib(args.memory_mib)
+    if args.tier:
+        args.seconds, args.conflicts = TIERS[args.tier]
+    extra = (args.conflict_scope, not args.no_driver_deadline, args.memory_mib is not None)
     jobs = check_jobs(args.exe, args.modes) if args.kind == 'check' else screen_jobs(
-        args.exe, args.workload, args.limit, args.seconds, args.conflicts, args.modes)
+        args.exe, args.workload, args.limit, args.seconds, args.conflicts, args.modes, args.targets, extra)
 
     def execute(job):
         command, expected = job
@@ -215,7 +268,8 @@ def main():
                 if record.get('final') == 'SAT' and args.kind == 'screen':
                     minimum = minima.setdefault(key, record['steps'])
                     assert minimum == record['steps'], (row, minimum)
-            print(f"{row['name']} {row['method']} {row['mode']} {row['budget']} {row['status']}", flush=True)
+            print(f"{row['name']} {row['method']} {row['mode']} {row['budget']} {row['status']} {row['reason']}"
+                  f" open={row['open_budget']} {row['wall_seconds']:.1f}s", flush=True)
 
 
 if __name__ == '__main__':

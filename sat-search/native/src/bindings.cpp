@@ -278,8 +278,9 @@ PYBIND11_MODULE(_regional_native, mod) {
     mod.def("slack_two_boundary",
             [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
                unsigned mixed, const std::vector<uint64_t>& gate_columns, uint64_t target, uint64_t care,
-               unsigned work_limit, double seconds, unsigned mode) {
+               unsigned work_limit, double seconds, unsigned mode, unsigned decoder) {
                 if (mode > 5) throw py::value_error("slack-two mode must be 0 through 5");
+                if (decoder > 2) throw py::value_error("decoder must be 0, 1 or 2");
                 using Clock = synthesis::residual_detail::Clock;
                 const auto deadline = seconds > 0
                     ? Clock::now() + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(seconds))
@@ -288,7 +289,7 @@ PYBIND11_MODULE(_regional_native, mod) {
                 {
                     const py::gil_scoped_release release;
                     result = synthesis::slack_two_boundary(columns, h, primaries, mixed, gate_columns,
-                                                           target, care, work_limit, deadline, mode);
+                                                           target, care, work_limit, deadline, mode, decoder);
                 }
                 const auto& exact = result.exact;
                 using Status = residual_directed::Status;
@@ -307,6 +308,11 @@ PYBIND11_MODULE(_regional_native, mod) {
                 metrics["phase_work"] = exact.phase.work;
                 metrics["phase_cache_hits"] = exact.phase.cache_hits;
                 metrics["phase_dominance_hits"] = exact.phase.dominance_hits;
+                metrics["decoder_screens"] = exact.decoder.screens;
+                metrics["decoder_rejects"] = exact.decoder.rejects;
+                metrics["decoder_column_rejects"] = exact.decoder.column_rejects;
+                metrics["decoder_skipped"] = exact.decoder.skipped;
+                metrics["decoder_work"] = exact.decoder.work;
                 metrics["gate_extensions"] = result.gate_extensions;
                 metrics["mixed_extensions"] = result.mixed_extensions;
                 metrics["extension_feasible"] = result.feasible;
@@ -323,7 +329,7 @@ PYBIND11_MODULE(_regional_native, mod) {
                 return py::make_tuple(metrics, regions);
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
-            py::arg("deadline_seconds") = 0.025, py::arg("mode") = 2);
+            py::arg("deadline_seconds") = 0.025, py::arg("mode") = 2, py::arg("decoder") = 0);
     py::class_<synthesis::ResidualMemo>(mod, "ResidualMemo",
                                         "Decided residual answers keyed by leaves, first-layer count and slack"
                                         " (adaptive slack-three policy).")
@@ -340,7 +346,8 @@ PYBIND11_MODULE(_regional_native, mod) {
             [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
                unsigned mixed, const std::vector<uint64_t>& gate_columns, uint64_t target, uint64_t care,
                unsigned work_limit, double seconds, unsigned mode, bool symmetric, unsigned policy,
-               synthesis::ResidualMemo* memo) {
+               synthesis::ResidualMemo* memo, unsigned decoder) {
+                if (decoder > 2) throw py::value_error("decoder must be 0, 1 or 2");
                 if (mode > 5) throw py::value_error("slack-three mode must be 0 through 5");
                 if (policy > 3) throw py::value_error("slack-three policy must be 0 (full) through 3 (adaptive)");
                 using Clock = synthesis::residual_detail::Clock;
@@ -352,7 +359,7 @@ PYBIND11_MODULE(_regional_native, mod) {
                     const py::gil_scoped_release release;
                     result = synthesis::slack_three_boundary(columns, h, primaries, mixed, gate_columns, target,
                                                              care, work_limit, deadline, mode, symmetric,
-                                                             synthesis::SlackThreePolicy(policy), memo);
+                                                             synthesis::SlackThreePolicy(policy), memo, decoder);
                 }
                 const auto& exact = result.exact;
                 using Status = residual_directed::Status;
@@ -363,6 +370,12 @@ PYBIND11_MODULE(_regional_native, mod) {
                 metrics["phase_checks"] = exact.phase.checks;
                 metrics["phase_rejects"] = exact.phase.rejects;
                 metrics["phase_work"] = exact.phase.work;
+                metrics["decoder_screens"] = exact.decoder.screens;
+                metrics["decoder_rejects"] = exact.decoder.rejects;
+                metrics["decoder_column_rejects"] = exact.decoder.column_rejects;
+                metrics["decoder_skipped"] = exact.decoder.skipped;
+                metrics["decoder_work"] = exact.decoder.work;
+                metrics["exact_seconds"] = result.exact_seconds;
                 metrics["gate_extensions"] = result.gate_extensions;
                 metrics["mixed_extensions"] = result.mixed_extensions;
                 metrics["extension_feasible"] = result.feasible;
@@ -391,7 +404,7 @@ PYBIND11_MODULE(_regional_native, mod) {
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 2000000,
             py::arg("deadline_seconds") = 0.025, py::arg("mode") = 5, py::arg("symmetric") = false,
-            py::arg("policy") = 0, py::arg("memo") = py::none(),
+            py::arg("policy") = 0, py::arg("memo") = py::none(), py::arg("decoder") = 0,
             "Slack-three boundary: exact Engine(.,3) answer plus retained extensions of cost <= 3"
             " (opt-in occurrence-symmetric tree solver).");
 }

@@ -89,6 +89,7 @@ struct SlackThreeBoundary {
     unsigned covered = 0;          // adaptive: skipped because an element is already retained
     unsigned memo_hits = 0, memo_inserts = 0;
     bool exact_cached = false;
+    double exact_seconds = 0;  // time in the exact Engine(., 3) query (extensions excluded)
 };
 
 inline SlackThreeBoundary slack_three_boundary(
@@ -96,7 +97,7 @@ inline SlackThreeBoundary slack_three_boundary(
     unsigned mixed, std::span<const uint64_t> gate_columns, uint64_t target, uint64_t care,
     unsigned work_limit, residual_detail::Clock::time_point deadline, unsigned mode,
     bool symmetric, SlackThreePolicy policy = SlackThreePolicy::full,
-    ResidualMemo* memo = nullptr) {
+    ResidualMemo* memo = nullptr, unsigned decoder = 0) {
     using Status = residual_directed::Status;
     using Clock = residual_detail::Clock;
     SlackThreeBoundary result;
@@ -109,7 +110,7 @@ inline SlackThreeBoundary slack_three_boundary(
         for (unsigned i = 0; i < wires.size(); ++i) leaves.push_back({i, wires[i], i >= first});
         return residual_slack_two::Engine(
             care, target, work_limit, deadline, mode >= 1, mode >= 1, mode >= 2, mode >= 3,
-            mode >= 4, mode >= 5, symmetric)
+            mode >= 4, mode >= 5, symmetric, decoder)
             .run(std::move(leaves), slack);
     };
     const bool adaptive = policy == SlackThreePolicy::adaptive;
@@ -129,7 +130,9 @@ inline SlackThreeBoundary slack_three_boundary(
         result.exact_cached = true;
         result.exact.status = cached ? Status::sat : Status::unsat;
     } else {
+        const auto exact_start = Clock::now();
         result.exact = engine(columns, h, 3);
+        result.exact_seconds = std::chrono::duration<double>(Clock::now() - exact_start).count();
         if (result.exact.status != Status::unknown)
             memo_insert(columns, h, 3, result.exact.status == Status::sat);
     }
