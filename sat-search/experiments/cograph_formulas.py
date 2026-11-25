@@ -11,16 +11,25 @@ _PAIRS_ON_FOUR = tuple(combinations(range(4), 2))
 class CographFormula:
     """One formula on fixed leaf positions, possibly with symbolic row values."""
 
-    def __init__(self, width, pool, key, clauses):
+    def __init__(self, width, pool, key, clauses, *, eager=True):
         self.leaves = tuple(range(width))
         self.pool = pool
         self.key = key
         self.clauses = clauses
         self.edges = {(a, b): pool.id((key, 'edge', a, b)) for a, b in combinations(self.leaves, 2)}
+        if eager:
+            for four in combinations(self.leaves, 4):
+                edges = [self.edges[four[a], four[b]] for a, b in _PAIRS_ON_FOUR]
+                for path in _PATHS_ON_FOUR:
+                    clauses.append([-edge if pair in path else edge for pair, edge in zip(_PAIRS_ON_FOUR, edges)])
+
+    def induced_path_clauses(self, model):
+        """Separate every induced P4 in this assignment of the edge variables."""
         for four in combinations(self.leaves, 4):
             edges = [self.edges[four[a], four[b]] for a, b in _PAIRS_ON_FOUR]
-            for path in _PATHS_ON_FOUR:
-                clauses.append([-edge if pair in path else edge for pair, edge in zip(_PAIRS_ON_FOUR, edges)])
+            present = frozenset(pair for pair, edge in zip(_PAIRS_ON_FOUR, edges) if edge in model)
+            if present in _PATHS_ON_FOUR:
+                yield [-edge if edge in model else edge for edge in edges]
 
     def edge(self, a, b):
         return self.edges[min(a, b), max(a, b)]

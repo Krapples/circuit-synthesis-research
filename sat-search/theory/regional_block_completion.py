@@ -17,10 +17,14 @@ def indices(mask):
         mask ^= bit
 
 
+class CompletionWorkLimit(Exception):
+    """A portfolio stage stopped before it could decide the query."""
+
+
 def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True, *,
                  row_filter=True, endpoint_branches=True, dominance_branches=True,
                  port_first=False, witness_cover=False, block_order=False, row_quotient=False,
-                 table_factory=PackedTables):
+                 table_factory=PackedTables, root_relaxation=False, work_limit=None):
     """Return a tree using every private leaf and allocated port occurrence."""
     if stats is not None:
         stats['local'] += 1
@@ -33,6 +37,16 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
     all_rows = (1 << len(pats)) - 1
     phase = {}
     forced = {'&': [0] * m, '|': [0] * m}
+    work = 0
+
+    def charge():
+        nonlocal work
+        work += 1
+        if work > work_limit:
+            raise CompletionWorkLimit
+
+    if root_relaxation:
+        from regional_root_relaxation import children
 
     def learn(node):
         if node[0] == 'x':
@@ -125,6 +139,8 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
         port_anchor = next((i for i, count in enumerate(available) if count), -1) if not blocks else -1
         offered = tuple(range(int(i == port_anchor), count + 1) for i, count in enumerate(available))
         for taking in product(*offered):
+            if work_limit is not None:
+                charge()
             if stats is not None:
                 stats['port_allocations'] += 1
             remaining = tuple(a - b for a, b in zip(available, taking))
@@ -241,6 +257,8 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                 return None
             if len(visited) < 4096:
                 visited.add(required)
+            if work_limit is not None:
+                charge()
             if stats is not None:
                 stats['cover_nodes'] += 1
             a = solve(left, taking, require(a_fixed, required))
@@ -262,6 +280,8 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
 
     @lru_cache(maxsize=8192)
     def complete(primary, available, obligations):
+        if work_limit is not None:
+            charge()
         if stats is not None:
             stats['rec'] += 1
         size = primary.bit_count() + sum(available)
@@ -301,7 +321,11 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
             is_and = op == '&'
             absorbing = 0 if is_and else one
             neutral = one ^ absorbing
-            splits = port_partitions(primary, available, op, obligations) if port_first else partitions(primary, available, op)
+            if root_relaxation and primary.bit_count() <= 2:
+                splits = children(m, primary, components(primary, op), providers, available, pats, obligations,
+                                  signed, is_and, stats, charge if work_limit is not None else None)
+            else:
+                splits = port_partitions(primary, available, op, obligations) if port_first else partitions(primary, available, op)
             for left, taking in splits:
                 if stats is not None:
                     stats['partition_checks'] += 1

@@ -12,7 +12,7 @@ from module_contraction import vars, essential, raw_monotone, simplify, brute, c
 from conditional_provider import options, signs, consistent_monotone, compositions, solve as one_internal, reconstruct as reconstruct_one, formula_columns
 from two_sharing_core import assignments, slices, local, solve as two, reconstruct as reconstruct_two
 from restriction_excess import first_gate_candidates, lower
-from regional_block_completion import local_blocks
+from regional_block_completion import CompletionWorkLimit, local_blocks
 from regional_obligation_cache import ObligationCache
 ANY=-1
 
@@ -22,6 +22,19 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
         return local
     if mode == 'cached':
         return ObligationCache(maxsize=cache_size)
+    if mode in ('certificate-cnf', 'certificate-lazy', 'certificate-rows', 'certificate-anchored',
+                'certificate-absorption', 'certificate-fallback'):
+        from regional_certificate_cnf import local_cnf
+
+        anchored = mode in ('certificate-anchored', 'certificate-absorption')
+        cnf = partial(local_cnf, eager=mode == 'certificate-cnf', lazy_rows=mode == 'certificate-rows' or anchored,
+                      anchored=anchored, absorb=mode == 'certificate-absorption')
+        if mode == 'certificate-fallback':
+            cnf = completion_portfolio(partial(local_cnf, eager=False, lazy_rows=True), 'certificate')
+        return ObligationCache(maxsize=cache_size, solver=cnf)
+    if mode == 'root-portfolio':
+        root = partial(local_blocks, port_first=True, witness_cover=True, row_quotient=True, root_relaxation=True)
+        return ObligationCache(maxsize=cache_size, solver=completion_portfolio(root, 'root'))
     modes = {
         'blocks': dict(row_filter=False),
         'row-bounds': dict(endpoint_branches=False),
@@ -32,6 +45,7 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
         'port-first-witness': dict(port_first=True, witness_cover=True),
         'ordered-block': dict(port_first=True, witness_cover=True, block_order=True),
         'row-quotient': dict(port_first=True, witness_cover=True, row_quotient=True),
+        'root-relaxation': dict(port_first=True, witness_cover=True, row_quotient=True, root_relaxation=True),
     }
     if mode not in modes:
         raise ValueError(f'unknown completion mode {mode!r}')
@@ -39,6 +53,24 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
     if table_factory is not None:
         options['table_factory'] = table_factory
     return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, **options))
+
+
+def completion_portfolio(fallback, stage):
+    def solve(m, ports, patterns, targets, signed, stats=None, module_filter=True):
+        args = (m, ports, patterns, targets, signed, stats, module_filter)
+        port_heavy = m <= 2 and len(patterns) >= 16
+        wide_signed = stage == 'certificate' and signed and m <= 8 and len(patterns) >= 8
+        options = dict(port_first=True, witness_cover=True, row_quotient=True)
+        if not (port_heavy or wide_signed):
+            return local_blocks(*args, **options)
+        try:
+            return local_blocks(*args, **options, work_limit=256)
+        except CompletionWorkLimit:
+            if stats is not None:
+                stats[f'{stage}_fallbacks'] += 1
+            return fallback(*args)
+
+    return solve
 
 
 @lru_cache(None)

@@ -26,7 +26,9 @@ from signed_bound_compare import cases, restrict_essential
 from two_sharing_core import ANY, local
 
 COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches',
-                    'port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient')
+                    'port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient',
+                    'root-relaxation', 'root-portfolio', 'certificate-cnf', 'certificate-lazy', 'certificate-rows', 'certificate-anchored',
+                    'certificate-absorption', 'certificate-fallback')
 
 
 def check_tree(tree, m, ports, pats, targets, signed):
@@ -58,7 +60,9 @@ class RegionalCompletionChecks(unittest.TestCase):
     def test_independent_multislice_oracle(self):
         rng = Random(74228)
         cache = ObligationCache(solver=local_blocks, maxsize=512)
-        variants = tuple(make_completion(mode, cache_size=512) for mode in COMPLETION_MODES[-5:])
+        variants = tuple(make_completion(mode, cache_size=512) for mode in
+                         ('port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient',
+                          'root-relaxation'))
         verdicts = Counter()
         for _ in range(500):
             m = rng.randrange(3)
@@ -124,7 +128,7 @@ class RegionalCompletionChecks(unittest.TestCase):
     def test_quotient_backends_reconstruct_the_same_budget(self):
         targets = (0xffecf080, 0xeea0e000, 0xfcc8e0c0)
         for target, expected in zip(targets, (True, True, False)):
-            for name in COMPLETION_MODES:
+            for name in COMPLETION_MODES[:COMPLETION_MODES.index('root-relaxation')]:
                 completion = make_completion(name)
                 result = solve3(5, target, completion=completion)
                 self.assertEqual(result is not None, expected)

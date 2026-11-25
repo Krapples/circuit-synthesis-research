@@ -1,18 +1,17 @@
 """Capture and replay bounded regional queries and matched layout searches."""
 
 import argparse
-from _thread import interrupt_main
 from collections import Counter
 from functools import partial
 import json
 from pathlib import Path
 from random import Random
-from threading import Event, Thread
 from time import perf_counter
 
 from regional_completion_check import check_tree, make_completion, record_call
 from module_contraction import simplify, vars as truth_variables
 from port_certificates_check import bounded
+from regional_deadline import timed
 from signed_bound_compare import cases, restrict_essential
 
 
@@ -27,25 +26,6 @@ def corpus_work():
         n, target, _ = restrict_essential(*frozen[name])
         n, target, _ = simplify(n, target, False)
         yield name, n, target, excess, False, 'layout'
-
-
-def timed(seconds, job, on_timeout):
-    """Return partial metrics on Windows and let the parent enforce a hard cap."""
-    done = Event()
-
-    def alarm():
-        if not done.wait(seconds):
-            interrupt_main()
-
-    timer = Thread(target=alarm, daemon=True)
-    try:
-        timer.start()
-        return job()
-    except KeyboardInterrupt:
-        return {'status': 'TIMEOUT', **on_timeout()}
-    finally:
-        done.set()
-        timer.join()
 
 
 class Capture:
