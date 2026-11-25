@@ -16,6 +16,11 @@ namespace py = pybind11;
 
 namespace {
 
+synthesis::ResidualFilterMode residual_filter_mode(int mode) {
+    if (mode < 0 || mode > 3) throw py::value_error("residual filter must be 0 (off) through 3 (direct)");
+    return static_cast<synthesis::ResidualFilterMode>(mode);
+}
+
 // The search holds the GIL (it owns no Python objects while running, so releasing it briefly is safe).  Yield it at
 // every poll so other Python threads run -- in particular the regional_deadline.timed alarm thread, which must take
 // the GIL to call interrupt_main(); PyErr_CheckSignals() then raises the resulting KeyboardInterrupt here.
@@ -182,16 +187,18 @@ PYBIND11_MODULE(_regional_native, mod) {
     mod.def("pack_obligation_rows", &pack_obligation_rows);
     mod.def("tight_residual",
             [](const std::vector<uint64_t>& columns, unsigned first_layer, uint64_t target,
-               uint64_t care, unsigned work_limit) {
-                return int(synthesis::tight_residual(columns, first_layer, target, care, work_limit));
+               uint64_t care, unsigned work_limit, int filter_mode) {
+                return int(synthesis::residual_zero(columns, first_layer, target, care, work_limit,
+                                                    residual_filter_mode(filter_mode)));
             }, py::arg("columns"), py::arg("first_layer"), py::arg("target"), py::arg("care"),
-            py::arg("work_limit") = 4096,
+            py::arg("work_limit") = 4096, py::arg("filter_mode") = 0,
             "Exact fixed-boundary free-NOT completion: 0 infeasible, 1 feasible, 2 unknown.");
     mod.def("slack_one_extensions",
             [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
                unsigned mixed, uint64_t target, uint64_t care, unsigned work_limit,
-               unsigned tight_work_limit, double deadline_seconds) {
+               unsigned tight_work_limit, double deadline_seconds, int filter_mode, bool include_metrics) -> py::tuple {
                 if (primaries.size() > 6) throw py::value_error("at most six candidate primaries");
+                const auto mode = residual_filter_mode(filter_mode);
                 using Clock = synthesis::residual_detail::Clock;
                 const auto deadline = deadline_seconds > 0
                     ? Clock::now() + std::chrono::duration_cast<Clock::duration>(
@@ -202,12 +209,23 @@ PYBIND11_MODULE(_regional_native, mod) {
                 {
                     const py::gil_scoped_release release;
                     result = synthesis::slack_one_extensions(columns, h, primaries, mixed, target, care,
-                                                             work_limit, tight_work_limit, stats, deadline);
+                                                             work_limit, tight_work_limit, stats, deadline, mode);
                 }
+                if (!include_metrics)
+                    return py::make_tuple(int(result.exact), result.feasible, result.unknown, stats.completion_case,
+                                          stats.work, stats.providers, stats.filtered, stats.decoders);
+                py::dict metrics;
+                metrics["joins"] = stats.joins;
+                metrics["root_splits"] = stats.root_splits;
+                metrics["root_rejected"] = stats.root_rejected;
+                metrics["allocations"] = stats.allocations;
+                metrics["parity_rejected"] = stats.parity_rejected;
+                metrics["direct_queries"] = stats.direct_queries;
                 return py::make_tuple(int(result.exact), result.feasible, result.unknown, stats.completion_case,
-                                      stats.work, stats.providers, stats.filtered, stats.decoders);
+                                      stats.work, stats.providers, stats.filtered, stats.decoders, metrics);
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
-            py::arg("tight_work_limit") = 4096, py::arg("deadline_seconds") = 0.0,
-            "Return (status, feasible extensions, unknown extensions, case, work, providers, filtered, decoders).");
+            py::arg("tight_work_limit") = 4096, py::arg("deadline_seconds") = 0.0, py::arg("filter_mode") = 0,
+            py::arg("include_metrics") = false,
+            "Return status, extension masks, completion case, work, provider counts, and optional filter counters.");
 }

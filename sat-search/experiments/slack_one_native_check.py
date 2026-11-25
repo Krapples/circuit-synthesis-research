@@ -81,11 +81,10 @@ def check_generated(reference):
     print(json.dumps(dict(kind='generated', **counts)), flush=True)
 
 
-def check_captured(reference, path, limit):
+def captured_boundaries(reference, path, limit):
     with path.open(encoding='utf-8') as source:
         jobs = [json.loads(line) for line in source]
     seen = set()
-    counts = Counter()
     for job in jobs:
         n, target = job['n'], int(job['tt'], 16)
         primaries = reference.independent_columns(n)
@@ -105,33 +104,38 @@ def check_captured(reference, path, limit):
                 a, b = (primaries[i] for i in pairs[index // 4])
                 first.append((a & ~b, ~a & b, a & b, a | b)[index % 4])
             mixed_ids = [i for i in range(n) if mixed >> i & 1]
-            status = record['exact']
-            boundary = [*first, *(primaries[i] for i in mixed_ids)]
-            replay, feasible, unknown, *_ = _native.slack_one_extensions(
-                boundary, len(first), primaries, mixed, target, care,
-                work_limit=2_000_000, tight_work_limit=2_000_000)
-            if status == 2:
-                counts[f'offline from unknown to {replay}'] += 1
-            else:
-                assert replay == status, (job['name'], record, replay)
-            if len(boundary) <= 5:
-                expected = reference.extension_cut(first, mixed_ids, primaries, rows, target)
-                counts['Python reference'] += 1
-                assert replay == (expected is None), (job['name'], record, expected, replay)
-                if expected is not None:
-                    possible = sum(1 << i for i in expected)
-                    assert possible & ~unknown == feasible
-                    if status == 0:
-                        possible &= ~record['unknown_extensions']
-                        assert possible == record['feasible_extensions'], (job['name'], record, expected)
-            counts['case ' + str(status)] += 1
-            counts['conditional'] += status == 0 and bool(record['feasible_extensions'] | record['unknown_extensions'])
+            yield job['name'], record, first, mixed_ids, primaries, rows, target, care
             if len(seen) == limit:
-                break
-        if len(seen) == limit:
-            break
-    print(json.dumps(dict(kind='captured', checked=len(seen), **counts)), flush=True)
-    assert seen
+                return
+
+
+def check_captured(reference, path, limit):
+    counts = Counter()
+    for name, record, first, mixed_ids, primaries, rows, target, care in captured_boundaries(reference, path, limit):
+        status = record['exact']
+        boundary = [*first, *(primaries[i] for i in mixed_ids)]
+        replay, feasible, unknown, *_ = _native.slack_one_extensions(
+            boundary, len(first), primaries, record['mixed'], target, care,
+            work_limit=2_000_000, tight_work_limit=2_000_000)
+        if status == 2:
+            counts[f'offline from unknown to {replay}'] += 1
+        else:
+            assert replay == status, (name, record, replay)
+        if len(boundary) <= 5:
+            expected = reference.extension_cut(first, mixed_ids, primaries, rows, target)
+            counts['Python reference'] += 1
+            assert replay == (expected is None), (name, record, expected, replay)
+            if expected is not None:
+                possible = sum(1 << i for i in expected)
+                assert possible & ~unknown == feasible
+                if status == 0:
+                    possible &= ~record['unknown_extensions']
+                    assert possible == record['feasible_extensions'], (name, record, expected)
+        counts['case ' + str(status)] += 1
+        counts['conditional'] += status == 0 and bool(record['feasible_extensions'] | record['unknown_extensions'])
+        counts['checked'] += 1
+    print(json.dumps(dict(kind='captured', **counts)), flush=True)
+    assert counts['checked']
 
 
 def main():

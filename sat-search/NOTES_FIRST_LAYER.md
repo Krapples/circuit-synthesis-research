@@ -265,3 +265,125 @@ python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_on
 python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_one_trace_replay.jsonl --exe $percy --workers 1 --limit 8 --seconds 8 --conflicts 20000 --modes slack-one-trace
 python sat-search/experiments/slack_one_native_check.py $ref --captured sat-search/logs/slack_one_trace_replay.jsonl
 ```
+
+## Projected roots and provider parity
+
+For one target phase let `P` be its positive cared rows. Each child of an AND root
+must be constant on the fibers of its projected inputs. To contain `P`, it must
+contain every fiber touching `P`. The intersection of these two minimal forced
+sets must equal `P`. The native kernel checks both output phases before building
+either child table. A passing phase still needs an exact structural completion.
+
+For a proposed provider allocation, each projected provider-input fiber represents
+one unknown bit. Within a mixed-label fiber of the remaining inputs, every
+positive-label provider fiber must have opposite parity to every negative-label
+provider fiber. The resulting bipartite constraint system describes arbitrary
+Boolean provider columns on the observed rows. A contradiction excludes the
+allocation before provider formula generation. In direct mode, when there are
+one to three components, the kernel fixes one component phase to quotient by
+global complement and tries the at most four remaining columns. Each column
+must pass exact provider recognition and exact decoder completion. Other allocations
+fall back to the provider table and the existing per-column distinction test.
+
+The opt-in `--residual-filter root|parity|direct` selects cumulative ablations.
+All three activate projected roots in slack-zero queries, including boundary
+extensions. The slack-one paths use the same structural subset rules for repeated
+boundary wires, provider recognition, and decoder search. The original mode is
+`off`. Projection work and provider allocation tests are charged against the
+existing counters. The production limits still allow 4,096 units per slack-zero
+query and 100,000 units and a 25 ms deadline per slack-one query. Unknown exact
+results yield no clause, and unknown extensions retain their positive literals.
+
+### Verification
+
+The supplied native check built under MSVC C++20 with assertions enabled. It matched
+3,000 independent provider systems and 6,000 root phases. The supplied Python
+reference matched 1,810 full DAG cases. Its root-plus-parity times on the three
+synthetic workloads were 0.346 s, 0.530 s, and 4.400 s, against 0.845 s, 1.246 s,
+and 13.783 s for its optimized baseline. The production integration matched all
+1,810 DAG cases in all four modes, including 905 at slack zero and 905 at slack
+one. The native checks scattered cared labels across a 64-bit mask. Percy matched
+76 fixed-budget oracle runs and every SAT chain was independently simulated.
+[Native oracle record](results/baselines/residual_filter_native_oracle.jsonl) and
+[Percy oracle replay](results/baselines/residual_filter_percy_oracle.jsonl)
+
+### Frozen Percy boundary replay
+
+All 34 distinct boundaries from the previous capture were replayed with the
+production 100,000-unit work cap and an offline 2,000,000-unit cap. Replay used no
+wall deadline, the same per-extension 4,096-unit limit, and the same boundaries
+and order in every mode. A recorded status of infeasible refers to the exact
+boundary. Its extensions are assessed separately. All decisive results agreed
+with the attached Python filter implementation, including the four six-wire
+boundaries.
+
+| Mode | Excluded at 100,000 | Seconds | Candidate joins | Provider allocations examined | Allocations rejected by parity | Provider candidates | Pure cuts justified |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Off | 18 | 0.093 | 2,055,162 | 244 | 0 | 7,732 | 14 |
+| Root | 22 | 0.079 | 1,547,258 | 298 | 0 | 10,022 | 21 |
+| Parity | 22 | 0.078 | 1,527,054 | 298 | 218 | 531 | 21 |
+| Direct | 22 | 0.076 | 1,526,342 | 298 | 218 | 44 | 21 |
+
+At 2,000,000 units the baseline excluded 30 boundaries and left four six-wire
+boundaries unresolved. Each projected-root mode excluded all 34, including those
+four and all 12 five-wire boundaries that had required the higher baseline
+cap. The parity mode used 5,343,576 joins in 0.251 s versus 8,624,969 joins in
+0.346 s for the baseline. Direct enumeration made 393 exact provider queries and
+reduced the provider candidates passed on by the enumerator from 9,937 to 1,294,
+with comparable elapsed time. Eleven of the twelve remaining production-cap
+failures were exhausted in repeated-boundary completion before a provider allocation
+was tested.
+[Boundary-by-boundary replay](results/baselines/residual_filter_captured_replay.jsonl)
+
+### End-to-end Percy ablation
+
+All four modes used slack-one cuts, tight set cuts, all-pair distinctions, and
+the boundary bound on the 43 hard four-input targets. Runs used Satoko CEGAR,
+one worker, an 8 s process limit, and 20,000 conflicts per solve. Each of the
+172 jobs hit the solver limit, so no mode established a minimum. The 183
+jointly excluded budgets had agreeing verdicts. These are solver results
+without independent proof packets.
+
+| Mode | Size-seven exclusions | Conflicts on jointly excluded budgets | Tight cuts | Slack-one pure / conditional cuts | Slack-one joins across all jobs | Provider allocations / parity rejections | End-to-end seconds |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Off | 17 | 473,093 | 661 | 70 / 28 | 14,389,589 | 1,445 / 0 | 35.072 |
+| Root | 18 | 293,888 | 2,541 | 643 / 22 | 30,367,024 | 9,488 / 0 | 41.122 |
+| Parity | 18 | 294,728 | 2,553 | 644 / 39 | 30,208,757 | 9,603 / 6,817 | 41.005 |
+| Direct | 18 | 294,728 | 2,553 | 644 / 39 | 30,137,834 | 9,609 / 6,822 | 40.858 |
+
+The filters changed the CEGAR path and the sample of boundaries examined. Root
+alone reduced conflicts by 37.9% and simulation rows from 540 to 288 on the joint
+exclusions. It increased the number of slack-one queries from 246 to 836 over
+the full workload. The gap between fixed-boundary joins and total joins reflects
+this change in search work. Parity and direct gave comparable end-to-end
+results. All filter modes remain opt-in.
+[Matched Percy runs](results/baselines/residual_filter_percy_screen.jsonl)
+
+### Follow-up root condition
+
+For any phase that passes the projection test, let `A` and `B` be the forced
+positive row sets of the left and right children. Every realizable left child
+must contain `A` and be zero on `B \ P`, because the right child is forced
+one there. The symmetric condition holds on `A \ P` for the right child.
+Closing these required zeros over the corresponding child fibers gives
+partial child obligations that could be propagated before generating full
+child tables. Matching the obligations alone does not finish the root,
+because the two children can still introduce a shared positive row outside
+`P`. This refinement was derived here and has not been implemented or benchmarked.
+
+### Replay commands
+
+```powershell
+$ref = 'C:\Users\Carson\Downloads'
+$percy = 'external/percy-first-layer-release/percy_run.exe'
+New-Item -ItemType Directory -Path external/residual-parity-check -Force | Out-Null
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cl /nologo /std:c++20 /O2 /EHsc "C:\Users\Carson\Downloads\residual_parity_native_check.cpp" /Foexternal\residual-parity-check\parity_check.obj /Feexternal\residual-parity-check\parity_check.exe && external\residual-parity-check\parity_check.exe'
+python "$ref/residual_parity_filter.py"
+& 'sat-search/native/build_native.bat'
+$env:PERCY_BUILD_DIR = 'percy-first-layer-release'
+& 'sat-search/baselines/build/build_percy.bat'
+python sat-search/experiments/residual_filter_check.py $ref
+python sat-search/experiments/residual_filter_check.py $ref --capture sat-search/results/baselines/slack_one_percy_captured.jsonl --output sat-search/logs/residual_filter_captured_replay.jsonl
+python sat-search/baselines/first_layer_check.py check sat-search/logs/residual_filter_oracle_replay.jsonl --exe $percy --workers 4 --modes slack-one slack-one-root slack-one-parity slack-one-direct
+python sat-search/baselines/first_layer_check.py screen sat-search/logs/residual_filter_screen_replay.jsonl --exe $percy --workers 1 --limit 43 --seconds 8 --conflicts 20000 --modes slack-one slack-one-root slack-one-parity slack-one-direct
+```

@@ -26,6 +26,9 @@ RESIDUAL_MODES = {
 }
 RESIDUAL_MODES['slack-one'] = (*RESIDUAL_MODES['all+budget+set-cuts'], '--slack-one-residual')
 RESIDUAL_MODES['slack-one-trace'] = (*RESIDUAL_MODES['slack-one'], '--trace-slack-one')
+for residual_filter in ('root', 'parity', 'direct'):
+    RESIDUAL_MODES[f'slack-one-{residual_filter}'] = (
+        *RESIDUAL_MODES['slack-one'], '--residual-filter', residual_filter)
 
 
 def exact_tables(n, steps):
