@@ -318,6 +318,8 @@ analytically with no SAT call (rule-dependent: partial ordered and forced-repeat
 | b:1-2-9 | 106 analytical nodes |
 | b:1-4-8, b:1-5-10, b:1-6-7, b:1-8-10 | analytical (no SAT call) |
 | b:1-4-5 | all closed except one depth-5 node, open after an 1800 s SAT call |
+| a:1-3-13 | 48 analytical nodes (no SAT call) |
+| 14 other case-a survivors | 32-194 analytical nodes each; 1-10 nodes per survivor (42 total) open after 300 s SAT calls (`logs/l1343_bnb_2.log`) |
 
 Trees are in `results/bnb_l1343/`. A resume defect (resumed runs skipped every `expanded` node, so open
 leaves below them were never revisited) was fixed on 2026-11-24; open nodes are now retried on resume.
