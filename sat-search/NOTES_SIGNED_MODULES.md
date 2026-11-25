@@ -951,3 +951,150 @@ python sat-search/experiments/regional_order_check.py --bench --dataset captured
 python sat-search/experiments/regional_order_check.py --bench --dataset layout --methods quotient --seconds 4 --output fresh-row-layout.jsonl
 python sat-search/experiments/regional_order_check.py --bench --dataset wide --methods quotient --seconds 1 --output fresh-row-wide.jsonl
 ```
+
+## Regional CDCL and root-split portfolios
+
+The optional [regional certificate backend](experiments/regional_certificate_cnf.py)
+uses the production `maplechrono` CDCL solver through PySAT. It reuses the
+[cograph clause and cotree implementation](experiments/cograph_formulas.py).
+Each allocated leaf occurrence has its own vertex. In free-NOT mode each
+has an independent phase literal, even when two occurrences read one port.
+All allocated occurrences survive reconstruction. The scope is exact regional
+queries in the monotone and free-NOT bases, with unspecified slices allowed.
+
+### Exact certificate constraints and separation
+
+For a fixed phase assignment and labeled input row, a selected positive
+certificate is an all-correct clique. Every incorrectly valued vertex must
+have a selected nonneighbor, so it cannot extend the clique. Extending to a
+maximal clique therefore adds only correctly valued vertices. The negative
+case uses independent sets and selected neighbors. In a cograph, maximal
+cliques and independent sets are the respective read-once certificates.
+Conversely, a true structural certificate supplies all blockers and picks.
+This establishes the incorrectly-valued-only maximality relaxation. It also
+handles rows with all leaf values correct, where the empty selected set can
+be extended.
+
+`certificate-cnf` encodes all induced-path exclusions and rows initially.
+`certificate-lazy` adds the induced P4s of each candidate graph and reuses
+the CDCL instance. `certificate-rows` also defers rows and adds counterexamples
+to the decoded cotree. Every added clause is necessary and each iteration
+eliminates its invalid candidate. A reported witness matches every represented
+label, including rows that were never added. `certificate-anchored` also
+uses monotone boundary rows and learns phase and LCA units from exact slices
+with at most one singly read provider left free. Fixing all other providers
+removes leaves from the tree and preserves the surviving LCA operations.
+The `certificate-fallback` experiment first gives the packed row-quotient
+engine 256 search events on structurally eligible queries before using lazy
+CDCL. The cutoff has no truth value. All these modes are optional.
+
+Each of the five direct CDCL variants, including the absorption variant below,
+matched independent formula enumeration on 360 local queries. All 64
+four-vertex graphs agreed between lazy separation and eager P4 clauses. A
+targeted regression requires opposite phases on the two occurrences of one
+provider. Native solver cancellation uses the same `interrupt` and
+`solve_limited(expect_interrupt=True)` interface as production search. The
+initial timing pilot used Python-only interruption and overshot during native
+search. The measured results below use cooperative native interruption plus
+the hard worker-process fallback.
+
+### Matched port-heavy and whole-layout runs
+
+The one-second local replay uses 12 deduplicated frozen captures plus
+`wide-8-1-1`, the unresolved known-satisfiable signed stress query. The
+capture set includes 32–64 provider rows and up to 13 port occurrences.
+Times are summed across jobs, including capped time. Encoding includes
+initial and incremental Python clause construction. Native loading and
+separation time are available separately in the records.
+
+| Local mode | Decided / 13 | Total time | Encoding | CDCL search | Peak working set |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Packed row quotient | 12 | 1.994 s | — | — | 44.5 MiB |
+| Eager certificate CNF | 0 | 13.144 s | 0.519 s | 12.221 s | 274.3 MiB |
+| Lazy P4 only | 0 | 13.166 s | 0.423 s | 12.276 s | 272.7 MiB |
+| Lazy P4 and rows | 0 | 13.121 s | 0.072 s | 12.680 s | 58.9 MiB |
+| Anchored lazy P4 and rows | 1 | 12.368 s | 0.044 s | 12.049 s | 49.0 MiB |
+| Bounded packed-to-CDCL fallback | 5 | 8.132 s | 0.054 s | 7.688 s | 54.5 MiB |
+
+The single anchored exclusion was already decided by the packed baseline.
+In the signed outlier, eager search encoded all 2,048 labeled assignments.
+Lazy rows encoded 162 by the deadline and saved memory. Its solver time
+still reached the cap. Encoding accounts for a small fraction of the
+port-heavy failure cost. Increasing the CDCL share of the portfolio did
+not help these queries. [Matched local records](results/regional_cnf_queries_matched.jsonl)
+
+| Four-second whole-layout mode | Decided / 5 | Total time | Peak working set |
+| --- | ---: | ---: | ---: |
+| Packed row quotient | 3 | 10.903 s | 54.0 MiB |
+| Eager certificate CNF | 0 | 20.045 s | 56.6 MiB |
+| Bounded packed-to-CDCL fallback | 1 | 17.167 s | 52.0 MiB |
+| Bounded packed-to-root portfolio | 4 | 10.410 s | 54.5 MiB |
+
+The extra completion for the root portfolio was the previously established
+`random-monotone-10` core layout exclusion, near the runtime cap. All four
+modes reached the cap on the open 13-gate `comparator-09` budget. No original
+function interval changed. [Whole-layout records](results/regional_cnf_layouts.jsonl)
+
+### Root relaxation and supplied prototype replay
+
+At an AND root both children must accept every positive row. For each
+negative row at least one child must have a projected distinction from
+every positive row. The OR case is dual. Monotone distinctions are directional.
+Free-NOT distinctions use differing raw values. Connected private blocks are
+indivisible, and a repeated provider is available to a child if it receives
+at least one occurrence. The root CSP propagates these necessary hitting
+conditions through the possible left, right, and both domains. A candidate
+split still goes through exact regional completion. The split generator
+agreed with exhaustive testing of 2,400 small allocation instances. Its
+integration also passed the 2,000-query independent completion suite.
+
+At 0.30 s per job in the supplied Windows-adapted reference replay,
+port-first completed 22 of 30 signed queries, root-CSP completed 21, and
+the time-sliced portfolio completed 23. Root-CSP completed signed trials
+12 and 13 that port-first timed out on, one SAT and one UNSAT. The portfolio
+gave port-first 80 ms and root-CSP the remainder, recovering trial 12. In
+the integrated work-sliced replay, the packed baseline completed 12 and
+the standalone and portfolio root variants each completed 10. Both root
+variants found a verified SAT witness at signed trial 2, which the integrated
+baseline missed. All three integrated modes completed all 30 monotone queries.
+The variation between the supplied and integrated solvers makes root
+propagation an optional second search order. [Supplied replay](results/regional_cnf_root_prototype.jsonl) ·
+[Integrated replay](results/regional_cnf_root_portfolio.jsonl)
+
+The [Pareto prototype](theory/archive/regional_pareto_completion.py) is archived.
+The supplied stress results found no additional resolved queries from Pareto
+completion. A replay would be justified by a workload with distinct useful
+intermediate column frontiers and evidence that their pruning offsets the
+cost of maintaining them.
+
+### A smaller exact core for the signed outlier
+
+`wide-8-1-1` uses only three of its eight private coordinates across all
+specified slices. Only two providers are needed to retain the labels in
+this query, and one has a spare allocated read. The optional
+`certificate-absorption` mode identifies a consistent supported core,
+solves it with CDCL, and restores all allocations. If the core contains
+the literal `a` of a provider with a spare read, replacing that occurrence
+with `a OR (a AND H)` preserves its function. `H` can be a read-once AND
+of all the remaining unused leaves. The extra `a` uses the spare port
+occurrence with the same phase. This gives an exact fixed-occurrence
+construction in either basis. Failed core attempts leave the original
+query to the exact backend.
+
+For the signed outlier the core had five leaves instead of twelve and 32
+labeled assignments instead of 2,048. MapleChrono solved the core in under
+0.1 ms. The complete query took 4.2 ms at 36.6 MiB peak working set and
+the independent evaluator checked all original slices and occurrences.
+The packed, eager, lazy, and anchored full-query searches reached one second.
+The construction is a witness prepass and the result is local to this
+query. [Witness and measured phases](results/regional_cnf_absorption.jsonl)
+
+```powershell
+python sat-search/experiments/regional_certificate_check.py -v
+python sat-search/experiments/regional_completion_check.py -v
+python sat-search/experiments/cograph_formulas_check.py -v
+python sat-search/experiments/regional_certificate_check.py --bench --dataset queries --seconds 1 --output fresh-cnf-queries.jsonl
+python sat-search/experiments/regional_certificate_check.py --bench --dataset roots --seconds .30 --output fresh-root-portfolio.jsonl
+python sat-search/experiments/regional_certificate_check.py --bench --dataset layouts --seconds 4 --modes row-quotient certificate-cnf certificate-fallback root-portfolio --output fresh-cnf-layouts.jsonl
+python sat-search/experiments/regional_certificate_check.py --bench --dataset queries --case wide-8-1-1 --seconds 1 --modes certificate-absorption --output fresh-absorption.jsonl
+```
