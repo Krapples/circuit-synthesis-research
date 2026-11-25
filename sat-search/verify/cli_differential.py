@@ -66,12 +66,16 @@ FLAGSETS = {
     'fast+strongbounds': (f'{FAST} --strongbounds', 'both'),
     'fast+closedcone': (f'{FAST} --closedcone', 'both'),
     'minimal': ('--minimal', 'both'),
+    'signedregions': ('--signedregions', 'both'),
+    'fast+signedregions': (f'{FAST} --signedregions', 'both'),
 }
 
 
 def run_cli(n, terms, G, basis, flags, seconds, log=None, extra=''):
     edges = ','.join(f'{u}-{v}' for u, v in (tuple(i for i in range(n) if t >> i & 1) for t in terms))
-    cmd = [sys.executable, CLI, '--n', str(n), '--edges', edges, '--size', str(G), '--workers', '1']
+    # --allow-unverified: this harness is what establishes coverage, so it must reach untested combinations
+    cmd = [sys.executable, CLI, '--n', str(n), '--edges', edges, '--size', str(G), '--workers', '1',
+           '--allow-unverified']
     cmd += (flags + ' ' + extra).split() + ([MONO] if basis == 'monotone' else [])
     if log:
         cmd += ['--log', log]

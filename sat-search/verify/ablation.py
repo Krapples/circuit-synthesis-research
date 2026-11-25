@@ -92,11 +92,14 @@ if __name__ == '__main__':
     ap.add_argument('--workers', type=int, default=11)
     ap.add_argument('--kinds', default='graph')
     ap.add_argument('--run', default=time.strftime('ablation-%Y%m%d-%H%M%S'))
+    ap.add_argument('--only', default='', help='comma-separated configuration names')
     a = ap.parse_args()
     t0 = time.time()
     C = dif.configs()
     singles = {k: v for k, v in C.items() if not k.startswith('fast') and k not in ('minimal', 'reuse', 'units')}
     configs = {**singles, 'fast': C['fast'], **leave_one_out(C['fast'])}
+    if a.only:
+        configs = {k: C[k] for k in a.only.split(',')}
     cache = dif.load_ref_cache()
     kinds = set(a.kinds.split(','))
     jobs = []

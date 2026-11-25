@@ -3,11 +3,13 @@
  "inventory_files": [
   "results\\differential\\cli-all-n4-20261124.jsonl",
   "results\\differential\\cli-mainonly-n5-20261124.jsonl",
+  "results\\differential\\cli-signed-20261124.jsonl",
   "results\\differential\\full-20261124.jsonl",
   "results\\differential\\mono_shard_check.jsonl",
   "results\\differential\\padded-20261124.jsonl",
   "results\\differential\\padded-whole-20261124.jsonl",
   "results\\differential\\shard_split_check.jsonl",
+  "results\\differential\\signed-base-20261124.jsonl",
   "results\\differential\\sym-recheck.jsonl"
  ],
  "scope": "whole-function command-line runs",
@@ -268,12 +270,12 @@
       1
      ],
      "prefix-min": [
-      514,
+      840,
       0,
       0
      ],
      "prefix-exact": [
-      320,
+      840,
       0,
       0
      ]
@@ -735,12 +737,12 @@
       0
      ],
      "prefix-min": [
-      798,
+      1120,
       0,
       0
      ],
      "prefix-exact": [
-      608,
+      1119,
       0,
       0
      ]
@@ -848,12 +850,12 @@
       0
      ],
      "prefix-min": [
-      412,
+      568,
       0,
       0
      ],
      "prefix-exact": [
-      317,
+      568,
       0,
       0
      ]
@@ -1017,12 +1019,12 @@
       0
      ],
      "prefix-min": [
-      412,
+      568,
       0,
       0
      ],
      "prefix-exact": [
-      313,
+      566,
       0,
       0
      ]
@@ -1075,12 +1077,67 @@
       0
      ],
      "prefix-min": [
-      408,
+      566,
       0,
       0
      ],
      "prefix-exact": [
-      312,
+      565,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "fast+signedregions",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "signedregions",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     168,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      60,
+      0,
+      0
+     ],
+     "prefix-min": [
+      400,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
       0,
       0
      ]
@@ -1204,12 +1261,12 @@
       1
      ],
      "prefix-min": [
-      514,
+      840,
       0,
       0
      ],
      "prefix-exact": [
-      320,
+      840,
       0,
       0
      ]
@@ -1652,12 +1709,12 @@
       1
      ],
      "prefix-min": [
-      514,
+      840,
       0,
       0
      ],
      "prefix-exact": [
-      319,
+      840,
       0,
       0
      ]
@@ -1688,12 +1745,12 @@
       1
      ],
      "prefix-min": [
-      514,
+      840,
       0,
       0
      ],
      "prefix-exact": [
-      320,
+      840,
       0,
       0
      ]
@@ -1724,12 +1781,12 @@
       1
      ],
      "prefix-min": [
-      514,
+      840,
       0,
       0
      ],
      "prefix-exact": [
-      320,
+      840,
       0,
       0
      ]
@@ -2376,6 +2433,42 @@
      ],
      "prefix-exact": [
       314,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "signedregions",
+   "basis": "monotone",
+   "rules": [
+    "signedregions"
+   ],
+   "evidence": {
+    "cli": [
+     168,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      97,
+      0,
+      1
+     ],
+     "prefix-min": [
+      609,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
       0,
       0
      ]

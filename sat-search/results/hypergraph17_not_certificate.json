@@ -1,0 +1,68 @@
+{
+ "case": "hypergraph-17",
+ "n": 5,
+ "terms": [
+  7,
+  25,
+  26,
+  28
+ ],
+ "basis": "general",
+ "witness_7": [
+  [
+   0,
+   0,
+   2
+  ],
+  [
+   0,
+   1,
+   5
+  ],
+  [
+   1,
+   0,
+   1
+  ],
+  [
+   1,
+   2,
+   7
+  ],
+  [
+   0,
+   4,
+   8
+  ],
+  [
+   0,
+   3,
+   9
+  ],
+  [
+   1,
+   6,
+   10
+  ]
+ ],
+ "exclusion_6": {
+  "kind": "checked_unsat",
+  "cnf_sha": "9e758b3f33a9c8d5",
+  "proof_sha": "806c3b979d5634d1",
+  "proof_steps": 17485,
+  "cnf_clauses": 45160,
+  "solver": "glucose4",
+  "checker": "certify_synthesis.check_proof (RUP)",
+  "seconds": 25.69
+ },
+ "exclusion_5": {
+  "kind": "checked_unsat",
+  "cnf_sha": "7b21cf521670ac58",
+  "proof_sha": "b626554d0653a874",
+  "proof_steps": 2742,
+  "cnf_clauses": 30928,
+  "solver": "glucose4",
+  "checker": "certify_synthesis.check_proof (RUP)",
+  "seconds": 2.09
+ }
+}

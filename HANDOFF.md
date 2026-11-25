@@ -98,10 +98,25 @@ The user's current research queue, in order:
   - Needed: regenerate the inventory and allowlist, then commit.
 - **New theory prototypes in `theory/`.** Copied with self-checks passing; commit together with the
   experiments and results above.
-- **Lean `CircuitLemmas/Basic.lean`.** Two errors left: the lemma name
-  `filter_card_add_filter_neg_card_eq_card` (find its current Mathlib name) and an `omega` step in
-  `connectivity`.
-- **`experiments/module_core_minima.py`.** Running; record the results in RESEARCH_NOTES and in this file.
+- **Lean `CircuitLemmas/Basic.lean`: compiles, no `sorry`, only standard axioms.** Proved for the model:
+  - the read-count identity;
+  - the connectivity bound (B ≥ n − 1 when every wire is read);
+  - the excess fan-out identity.
+
+  About 45 minutes of effort; 24 s to check. Not yet committed.
+- **`experiments/module_core_minima.py`.** Running. Exact NOT-enabled minima so far:
+
+  | Case | Old interval | Exact minimum |
+  | --- | --- | --- |
+  | hypergraph-18 | [7, 12] | 8 |
+  | hypergraph-24 | [8, 10] | 8 |
+  | random-monotone-03 | [7, 12] | 7 |
+  | random-monotone-04 | [8, 11] | 9 |
+  | random-monotone-08 | [8, 13] | 9 |
+
+  Monotone minima are the same. Upper bounds are verified by witnesses lifted from the core. Lower
+  bounds rest on the module theorem, which is provisional. Next: certify with checked exclusions where n
+  is small.
 
 ## Next steps
 

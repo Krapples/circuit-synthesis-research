@@ -2,11 +2,13 @@
  "files": [
   "results\\differential\\cli-all-n4-20261124.jsonl",
   "results\\differential\\cli-mainonly-n5-20261124.jsonl",
+  "results\\differential\\cli-signed-20261124.jsonl",
   "results\\differential\\full-20261124.jsonl",
   "results\\differential\\mono_shard_check.jsonl",
   "results\\differential\\padded-20261124.jsonl",
   "results\\differential\\padded-whole-20261124.jsonl",
   "results\\differential\\shard_split_check.jsonl",
+  "results\\differential\\signed-base-20261124.jsonl",
   "results\\differential\\sym-recheck.jsonl"
  ],
  "run_versions": [
@@ -96,6 +98,22 @@
     "git": "58c14f5",
     "dirty": true,
     "sources_sha256": "7eb3527104eff057"
+   }
+  ],
+  [
+   "signed-base-20261124.jsonl",
+   {
+    "git": "61bdcf0",
+    "dirty": true,
+    "sources_sha256": "b3394c23ec3ddb42"
+   }
+  ],
+  [
+   "cli-signed-20261124.jsonl",
+   {
+    "git": "61bdcf0",
+    "dirty": true,
+    "sources_sha256": "b3394c23ec3ddb42"
    }
   ]
  ],
@@ -327,12 +345,12 @@
      1
     ],
     "prefix-min": [
-     514,
+     840,
      0,
      0
     ],
     "prefix-exact": [
-     320,
+     840,
      0,
      0
     ]
@@ -342,7 +360,7 @@
     0,
     0
    ],
-   "nongraph": 219,
+   "nongraph": 697,
    "contract_rejections": 0,
    "missing": []
   },
@@ -761,12 +779,12 @@
      0
     ],
     "prefix-min": [
-     798,
+     1120,
      0,
      0
     ],
     "prefix-exact": [
-     608,
+     1119,
      0,
      0
     ]
@@ -776,8 +794,8 @@
     0,
     0
    ],
-   "nongraph": 40,
-   "contract_rejections": 399,
+   "nongraph": 108,
+   "contract_rejections": 1329,
    "missing": []
   },
   "fast+activecolor": {
@@ -898,12 +916,12 @@
      0
     ],
     "prefix-min": [
-     412,
+     568,
      0,
      0
     ],
     "prefix-exact": [
-     317,
+     568,
      0,
      0
     ]
@@ -913,8 +931,8 @@
     0,
     0
    ],
-   "nongraph": 22,
-   "contract_rejections": 197,
+   "nongraph": 58,
+   "contract_rejections": 639,
    "missing": []
   },
   "fast+certtyperank": {
@@ -1369,12 +1387,12 @@
      0
     ],
     "prefix-min": [
-     412,
+     568,
      0,
      0
     ],
     "prefix-exact": [
-     313,
+     566,
      0,
      0
     ]
@@ -1384,8 +1402,8 @@
     0,
     0
    ],
-   "nongraph": 22,
-   "contract_rejections": 197,
+   "nongraph": 58,
+   "contract_rejections": 639,
    "missing": []
   },
   "fast+partialrepeat": {
@@ -1435,12 +1453,12 @@
      0
     ],
     "prefix-min": [
-     408,
+     566,
      0,
      0
     ],
     "prefix-exact": [
-     312,
+     565,
      0,
      0
     ]
@@ -1450,8 +1468,8 @@
     0,
     0
    ],
-   "nongraph": 22,
-   "contract_rejections": 197,
+   "nongraph": 58,
+   "contract_rejections": 639,
    "missing": []
   },
   "fast+readerbudget": {
@@ -1519,6 +1537,41 @@
    "nongraph": 40,
    "contract_rejections": 399,
    "missing": []
+  },
+  "fast+signedregions": {
+   "status": "unresolved",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     60,
+     0,
+     0
+    ],
+    "prefix-min": [
+     400,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    168,
+    0,
+    0
+   ],
+   "nongraph": 32,
+   "contract_rejections": 323,
+   "missing": [
+    "prefix-exact"
+   ]
   },
   "fast+strongbounds": {
    "status": "tested",
@@ -1666,12 +1719,12 @@
      1
     ],
     "prefix-min": [
-     514,
+     840,
      0,
      0
     ],
     "prefix-exact": [
-     320,
+     840,
      0,
      0
     ]
@@ -1681,7 +1734,7 @@
     0,
     0
    ],
-   "nongraph": 219,
+   "nongraph": 697,
    "contract_rejections": 0,
    "missing": []
   },
@@ -2099,12 +2152,12 @@
      1
     ],
     "prefix-min": [
-     514,
+     840,
      0,
      0
     ],
     "prefix-exact": [
-     319,
+     840,
      0,
      0
     ]
@@ -2114,7 +2167,7 @@
     0,
     0
    ],
-   "nongraph": 219,
+   "nongraph": 697,
    "contract_rejections": 0,
    "missing": []
   },
@@ -2132,12 +2185,12 @@
      1
     ],
     "prefix-min": [
-     514,
+     840,
      0,
      0
     ],
     "prefix-exact": [
-     320,
+     840,
      0,
      0
     ]
@@ -2147,7 +2200,7 @@
     0,
     0
    ],
-   "nongraph": 219,
+   "nongraph": 697,
    "contract_rejections": 0,
    "missing": []
   },
@@ -2165,12 +2218,12 @@
      1
     ],
     "prefix-min": [
-     514,
+     840,
      0,
      0
     ],
     "prefix-exact": [
-     320,
+     840,
      0,
      0
     ]
@@ -2180,7 +2233,7 @@
     0,
     0
    ],
-   "nongraph": 219,
+   "nongraph": 697,
    "contract_rejections": 0,
    "missing": []
   },
@@ -2198,14 +2251,14 @@
      3
     ],
     "prefix-min": [
-     1007,
+     1689,
      0,
      0
     ],
     "prefix-exact": [
-     612,
+     1688,
      0,
-     0
+     2
     ]
    },
    "cli": [
@@ -2213,7 +2266,7 @@
     0,
     0
    ],
-   "nongraph": 439,
+   "nongraph": 1437,
    "contract_rejections": 0,
    "missing": []
   },
@@ -2782,6 +2835,41 @@
    "nongraph": 40,
    "contract_rejections": 399,
    "missing": []
+  },
+  "signedregions": {
+   "status": "unresolved",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     97,
+     0,
+     1
+    ],
+    "prefix-min": [
+     609,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    168,
+    0,
+    0
+   ],
+   "nongraph": 355,
+   "contract_rejections": 0,
+   "missing": [
+    "prefix-exact"
+   ]
   },
   "strongbounds": {
    "status": "tested",

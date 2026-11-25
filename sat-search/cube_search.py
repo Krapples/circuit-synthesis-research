@@ -1939,6 +1939,27 @@ def checked_masks(n, masks, flags, fanout):
     return out
 
 
+@lru_cache(maxsize=64)
+def signed_region_lb(n, masks):
+    """Signed regional lower bound (theory/signed_region_bounds.py) on the target restricted to its
+    essential inputs: returns (binary-gate bound n_e - 1 + lower, NOT-gate bound). Valid for AND/OR/NOT
+    circuits with exceptional-pattern incompatibility, output-region unateness and ordered cofactor
+    diversity; the binary part also bounds monotone circuits. Status: provisional (verify/AUDIT.md)."""
+    theory = os.path.join(HERE, 'theory')
+    if theory not in sys.path:
+        sys.path.append(theory)
+    from signed_region_bounds import Bound
+    f = sum(1 << x for x in range(1 << n) if any(x & m == m for m in masks))
+    ess = [i for i in range(n) if any((f >> a & 1) != (f >> (a ^ (1 << i)) & 1) for a in range(1 << n))]
+    if len(ess) < 2:
+        return max(0, len(ess) - 1), 0
+    g = 0
+    for b in range(1 << len(ess)):
+        g |= (f >> sum(1 << ess[k] for k in range(len(ess)) if b >> k & 1) & 1) << b
+    bound = Bound(len(ess), g)
+    return len(ess) - 1 + bound.lower(), bound.not_lower()
+
+
 def run_cube(args):
     n, masks, G, solver_name, cube, fanout, readonce = args[:7]
     flags = args[7] if len(args) > 7 else {}
@@ -2031,6 +2052,12 @@ def run_cube(args):
         if bound > G:
             return cube, 'UNSAT', None, time.time() - t0, f'analytical: frontier binary-gate bound {bound} > {G}'
         Lc = max(Lc, bound)
+    if flags.get('signedregions'):
+        sb, sn = signed_region_lb(n, tuple(sorted(masks)))
+        need = sb + (0 if flags.get('nonot') else sn)
+        if need > G:
+            return cube, 'UNSAT', None, time.time() - t0, f'analytical: signed regional bound {need} > {G}'
+        Lc = max(Lc, sb)
     if Lc > G:
         return cube, 'UNSAT', None, time.time() - t0, f'analytical: binary-gate bound {Lc} > {G}'
     not_cap = G - Lc if not flags.get('nonot') and Lc > n - 1 else None
@@ -2458,6 +2485,8 @@ def main():
                     help='with --portcertrank: include all certificates in the output-region bound')
     ap.add_argument('--portproviders', action='store_true',
                     help='require residual pairs to have an eligible earlier provider (monotone)')
+    ap.add_argument('--signedregions', action='store_true',
+                    help='signed regional lower bound (pattern incompatibility, output unateness, cofactor diversity)')
     ap.add_argument('--formulaports', action='store_true',
                     help='with --portbounds: regional formula costs (polarity version, valid with NOT gates)')
     ap.add_argument('--polaritydom', action='store_true', help='with --bypass --parity: polarity dominator')
@@ -2609,7 +2638,7 @@ def main():
                                  colorbounds=a.colorbounds, colorbudget=a.colorbudget, sharecolor=a.sharecolor,
                                  lostreader=a.lostreader, activecolor=a.activecolor, colorzero=a.colorzero,
                                  isolatedcolor=a.isolatedcolor,
-                                 orderedports=a.orderedports,
+                                 orderedports=a.orderedports, signedregions=a.signedregions,
                                  portcosts=costs))
                 for c in cubes]):
             done += 1; times.append(dt)

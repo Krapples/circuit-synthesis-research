@@ -142,13 +142,14 @@ def configs(terms_example=None):
     add('coupledprojections', mono, ('partialmultiplicity', 'coupledprojections'))
     add('matchinginterface', mono, ('matchinginterface',), graph=True)
     add('minimal', both, ('minimal',))
+    add('signedregions', both, ('signedregions',))
     fast = ('sens', 'units', 'usens', 'bypass', 'elim', 'elimclosure', 'signeddom', 'recursivebounds', 'notbypass',
             'recclosure', 'identifybounds', 'fanoutelim', 'pairro', 'colorbounds', 'sharecolor', 'colorbudget')
     add('fast', both, fast, fanout=True, readonce=True, symmetry=True, graph=True)
     for name in ('cert', 'typed', 'frontier', 'partialordered', 'partialrepeat', 'partialmultiplicity', 'minimal',
                  'parity', 'closedcone', 'outdec', 'bottleneck', 'strongbounds', 'readersens', 'readerbudget',
                  'activecolor', 'colorzero', 'isolatedcolor', 'lostreader', 'elimlink', 'elimbypass', 'orderedports',
-                 'portcert_rank'):
+                 'portcert_rank', 'signedregions'):
         base = C[name]
         bases = tuple(b for b in base['bases'] if b in C['fast']['bases'])
         add(f'fast+{name}', bases, tuple(set(fast) | set(base['flags'])), fanout=True, readonce=True,
