@@ -1,0 +1,106 @@
+{"case": "hypergraph-01", "family": "hypergraph", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.001, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "hypergraph-02", "family": "hypergraph", "n": 5, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.002, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "hypergraph-03", "family": "hypergraph", "n": 6, "seconds": 0.019, "not_interval": [9, 15], "mono_interval": [8, 15]}
+{"case": "hypergraph-04", "family": "hypergraph", "n": 7, "seconds": 0.017, "not_interval": [11, 21], "mono_interval": [9, 21]}
+{"case": "hypergraph-05", "family": "hypergraph", "n": 8, "seconds": 0.033, "not_interval": [11, 19], "mono_interval": [10, 19]}
+{"case": "hypergraph-06", "family": "hypergraph", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "hypergraph-07", "family": "hypergraph", "n": 5, "seconds": 0.001, "not_interval": [6, 7], "mono_interval": [7, 7]}
+{"case": "hypergraph-08", "family": "hypergraph", "n": 6, "seconds": 0.005, "not_interval": [8, 13], "mono_interval": [8, 13]}
+{"case": "hypergraph-09", "family": "hypergraph", "n": 7, "seconds": 0.012, "not_interval": [10, 21], "mono_interval": [9, 21]}
+{"case": "hypergraph-10", "family": "hypergraph", "n": 8, "seconds": 0.025, "not_interval": [11, 21], "mono_interval": [10, 21]}
+{"case": "hypergraph-11", "family": "hypergraph", "n": 4, "seconds": 0.0, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "hypergraph-12", "family": "hypergraph", "n": 5, "seconds": 0.001, "not_interval": [7, 11], "mono_interval": [7, 11]}
+{"case": "hypergraph-13", "family": "hypergraph", "n": 6, "mono_exact": 6, "free_binary_exact": 6, "seconds": 0.003, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "hypergraph-14", "family": "hypergraph", "n": 7, "seconds": 0.009, "not_interval": [8, 13], "mono_interval": [9, 13]}
+{"case": "hypergraph-15", "family": "hypergraph", "n": 8, "seconds": 0.025, "not_interval": [11, 23], "mono_interval": [10, 23]}
+{"case": "hypergraph-16", "family": "hypergraph", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "hypergraph-17", "family": "hypergraph", "n": 5, "seconds": 0.001, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "hypergraph-18", "family": "hypergraph", "n": 6, "seconds": 0.004, "not_interval": [7, 12], "mono_interval": [8, 12]}
+{"case": "hypergraph-19", "family": "hypergraph", "n": 7, "seconds": 0.01, "not_interval": [10, 18], "mono_interval": [9, 18]}
+{"case": "hypergraph-20", "family": "hypergraph", "n": 8, "seconds": 0.034, "not_interval": [12, 25], "mono_interval": [10, 25]}
+{"case": "hypergraph-21", "family": "hypergraph", "n": 5, "seconds": 0.002, "not_interval": [8, 12], "mono_interval": [7, 12]}
+{"case": "hypergraph-22", "family": "hypergraph", "n": 6, "seconds": 0.003, "not_interval": [7, 8], "mono_interval": [7, 7]}
+{"case": "hypergraph-23", "family": "hypergraph", "n": 7, "seconds": 0.01, "not_interval": [9, 13], "mono_interval": [9, 13]}
+{"case": "hypergraph-24", "family": "hypergraph", "n": 8, "mono_exact": 8, "free_binary_exact": 8, "star_upper_binary": 8, "seconds": 0.019, "not_interval": [8, 10], "mono_interval": [8, 8]}
+{"case": "threshold-4-3", "family": "threshold", "n": 4, "seconds": 0.0, "not_interval": [6, 7], "mono_interval": [7, 7]}
+{"case": "threshold-4-4", "family": "threshold", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "threshold-5-3", "family": "threshold", "n": 5, "seconds": 0.001, "not_interval": [8, 12], "mono_interval": [8, 12]}
+{"case": "threshold-5-5", "family": "threshold", "n": 5, "mono_exact": 4, "free_binary_exact": 4, "seconds": 0.0, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "threshold-6-4", "family": "threshold", "n": 6, "seconds": 0.002, "not_interval": [10, 17], "mono_interval": [8, 17]}
+{"case": "threshold-6-6", "family": "threshold", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.001, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "threshold-7-4", "family": "threshold", "n": 7, "seconds": 0.005, "not_interval": [12, 24], "mono_interval": [9, 24]}
+{"case": "threshold-7-7", "family": "threshold", "n": 7, "mono_exact": 6, "free_binary_exact": 6, "seconds": 0.002, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "threshold-8-5", "family": "threshold", "n": 8, "seconds": 0.009, "not_interval": [14, 31], "mono_interval": [10, 31]}
+{"case": "threshold-8-8", "family": "threshold", "n": 8, "mono_exact": 7, "free_binary_exact": 7, "seconds": 0.004, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "complete-4", "family": "graph", "n": 4, "seconds": 0.0, "not_interval": [6, 7], "mono_interval": [7, 7]}
+{"case": "complete-5", "family": "graph", "n": 5, "seconds": 0.001, "not_interval": [8, 10], "mono_interval": [8, 10]}
+{"case": "complete-6", "family": "graph", "n": 6, "seconds": 0.001, "not_interval": [10, 13], "mono_interval": [10, 13]}
+{"case": "complete-7", "family": "graph", "n": 7, "seconds": 0.004, "not_interval": [12, 16], "mono_interval": [12, 16]}
+{"case": "bipartite-2-2", "family": "graph", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "bipartite-2-3", "family": "graph", "n": 5, "mono_exact": 4, "free_binary_exact": 4, "seconds": 0.001, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "bipartite-3-3", "family": "graph", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.001, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "bipartite-4-4", "family": "graph", "n": 8, "mono_exact": 7, "free_binary_exact": 7, "seconds": 0.006, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "graph-01", "family": "graph", "n": 5, "seconds": 0.001, "not_interval": [7, 9], "mono_interval": [8, 8]}
+{"case": "graph-02", "family": "graph", "n": 6, "seconds": 0.005, "not_interval": [8, 12], "mono_interval": [8, 8]}
+{"case": "graph-03", "family": "graph", "n": 7, "seconds": 0.011, "not_interval": [10, 15], "mono_interval": [10, 15]}
+{"case": "path-4", "family": "graph", "n": 4, "mono_exact": 4, "free_binary_exact": 4, "counted_exact": 4, "star_upper_binary": 4, "seconds": 0.002, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "cycle-5", "family": "graph", "n": 5, "seconds": 0.001, "not_interval": [7, 9], "mono_interval": [7, 7]}
+{"case": "petersen-10", "family": "graph", "n": 10, "seconds": 0.23, "not_interval": [15, 29], "mono_interval": [11, 29]}
+{"case": "random-monotone-01", "family": "random-monotone", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "random-monotone-02", "family": "random-monotone", "n": 5, "seconds": 0.002, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "random-monotone-03", "family": "random-monotone", "n": 6, "seconds": 0.003, "not_interval": [7, 12], "mono_interval": [7, 7]}
+{"case": "random-monotone-04", "family": "random-monotone", "n": 7, "seconds": 0.013, "not_interval": [8, 11], "mono_interval": [9, 11]}
+{"case": "random-monotone-05", "family": "random-monotone", "n": 8, "seconds": 0.039, "not_interval": [12, 23], "mono_interval": [10, 23]}
+{"case": "random-monotone-06", "family": "random-monotone", "n": 4, "seconds": 0.0, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "random-monotone-07", "family": "random-monotone", "n": 5, "seconds": 0.001, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "random-monotone-08", "family": "random-monotone", "n": 6, "seconds": 0.002, "not_interval": [8, 13], "mono_interval": [8, 13]}
+{"case": "random-monotone-09", "family": "random-monotone", "n": 7, "seconds": 0.011, "not_interval": [7, 12], "mono_interval": [8, 8]}
+{"case": "random-monotone-10", "family": "random-monotone", "n": 8, "seconds": 0.028, "not_interval": [10, 17], "mono_interval": [10, 17]}
+{"case": "read-once-01", "family": "read-once", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "read-once-02", "family": "read-once", "n": 5, "mono_exact": 4, "free_binary_exact": 4, "seconds": 0.002, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "read-once-03", "family": "read-once", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.012, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "read-once-04", "family": "read-once", "n": 7, "mono_exact": 6, "free_binary_exact": 6, "seconds": 0.006, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "read-once-05", "family": "read-once", "n": 8, "mono_exact": 7, "free_binary_exact": 7, "seconds": 0.034, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "read-once-06", "family": "read-once", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "read-once-07", "family": "read-once", "n": 5, "mono_exact": 4, "free_binary_exact": 4, "seconds": 0.001, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "read-once-08", "family": "read-once", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.001, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "read-once-09", "family": "read-once", "n": 7, "mono_exact": 6, "free_binary_exact": 6, "seconds": 0.002, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "read-once-10", "family": "read-once", "n": 8, "mono_exact": 7, "free_binary_exact": 7, "seconds": 0.009, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "generated-01", "family": "generated", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "generated-02", "family": "generated", "n": 5, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.001, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "generated-03", "family": "generated", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.002, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "generated-04", "family": "generated", "n": 7, "mono_exact": 6, "free_binary_exact": 6, "seconds": 0.003, "not_interval": [6, 6], "mono_interval": [6, 6]}
+{"case": "generated-05", "family": "generated", "n": 8, "mono_exact": 7, "free_binary_exact": 7, "seconds": 0.013, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "generated-06", "family": "generated", "n": 4, "mono_exact": 4, "free_binary_exact": 4, "counted_exact": 4, "star_upper_binary": 4, "seconds": 0.001, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "generated-07", "family": "generated", "n": 5, "mono_exact": 4, "free_binary_exact": 4, "seconds": 0.0, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "generated-08", "family": "generated", "n": 6, "mono_exact": 6, "free_binary_exact": 6, "star_upper_binary": 6, "seconds": 0.003, "not_interval": [6, 10], "mono_interval": [6, 6]}
+{"case": "generated-09", "family": "generated", "n": 7, "seconds": 0.01, "not_interval": [7, 13], "mono_interval": [8, 8]}
+{"case": "generated-10", "family": "generated", "n": 8, "mono_exact": 7, "free_binary_exact": 7, "seconds": 0.015, "not_interval": [7, 7], "mono_interval": [7, 7]}
+{"case": "generated-11", "family": "generated", "n": 5, "mono_exact": 4, "free_binary_exact": 4, "seconds": 0.0, "not_interval": [4, 4], "mono_interval": [4, 4]}
+{"case": "generated-12", "family": "generated", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.001, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "comparator-01", "family": "comparator", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "comparator-02", "family": "comparator", "n": 5, "seconds": 0.001, "not_interval": [8, 17], "mono_interval": [7, 17]}
+{"case": "comparator-03", "family": "comparator", "n": 6, "mono_exact": 5, "free_binary_exact": 5, "seconds": 0.0, "not_interval": [5, 5], "mono_interval": [5, 5]}
+{"case": "comparator-04", "family": "comparator", "n": 7, "seconds": 0.009, "not_interval": [10, 28], "mono_interval": [9, 28]}
+{"case": "comparator-05", "family": "comparator", "n": 8, "seconds": 0.045, "not_interval": [14, 31], "mono_interval": [10, 31]}
+{"case": "comparator-06", "family": "comparator", "n": 4, "mono_exact": 3, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [3, 3], "mono_interval": [3, 3]}
+{"case": "comparator-07", "family": "comparator", "n": 5, "seconds": 0.001, "not_interval": [7, 14], "mono_interval": [7, 14]}
+{"case": "comparator-08", "family": "comparator", "n": 6, "seconds": 0.003, "not_interval": [9, 22], "mono_interval": [9, 22]}
+{"case": "comparator-09", "family": "comparator", "n": 7, "seconds": 0.015, "not_interval": [11, 28], "mono_interval": [9, 28]}
+{"case": "comparator-10", "family": "comparator", "n": 8, "seconds": 0.015, "not_interval": [9, 12], "mono_interval": [9, 9]}
+{"case": "parity-2", "family": "parity", "n": 2, "seconds": 0.0, "not_interval": [4, 4], "mono_interval": [null, null]}
+{"case": "parity-3", "family": "parity", "n": 3, "seconds": 0.0, "not_interval": [7, null], "mono_interval": [null, null]}
+{"case": "parity-4", "family": "parity", "n": 4, "seconds": 0.0, "not_interval": [9, null], "mono_interval": [null, null]}
+{"case": "parity-5", "family": "parity", "n": 5, "seconds": 0.0, "not_interval": [11, null], "mono_interval": [null, null]}
+{"case": "mux-2-to-1", "family": "mux", "n": 3, "free_binary_exact": 3, "counted_exact": 4, "seconds": 0.001, "not_interval": [4, 4], "mono_interval": [null, null]}
+{"case": "mux-or", "family": "mux", "n": 4, "free_binary_exact": 4, "seconds": 0.0, "not_interval": [5, 5], "mono_interval": [null, null]}
+{"case": "mux-and-or", "family": "mux", "n": 5, "free_binary_exact": 5, "seconds": 0.0, "not_interval": [6, 6], "mono_interval": [null, null]}
+{"case": "mux-4-to-1", "family": "mux", "n": 6, "seconds": 0.001, "not_interval": [9, null], "mono_interval": [null, null]}
+{"case": "exactly-1-of-3", "family": "exactly", "n": 3, "seconds": 0.0, "not_interval": [7, null], "mono_interval": [null, null]}
+{"case": "exactly-2-of-4", "family": "exactly", "n": 4, "seconds": 0.0, "not_interval": [8, null], "mono_interval": [null, null]}
+{"case": "exactly-2-of-5", "family": "exactly", "n": 5, "seconds": 0.0, "not_interval": [10, null], "mono_interval": [null, null]}
+{"case": "exactly-3-of-6", "family": "exactly", "n": 6, "seconds": 0.0, "not_interval": [12, null], "mono_interval": [null, null]}
+{"case": "nand-2", "family": "negative-control", "n": 2, "free_binary_exact": 1, "seconds": 0.0, "not_interval": [2, 2], "mono_interval": [null, null]}
+{"case": "inhibit-2", "family": "negative-control", "n": 2, "free_binary_exact": 1, "seconds": 0.0, "not_interval": [2, 2], "mono_interval": [null, null]}
+{"case": "mixed-conjunction-4", "family": "negative-control", "n": 4, "free_binary_exact": 3, "seconds": 0.0, "not_interval": [4, 4], "mono_interval": [null, null]}
+{"case": "signed-branches-5", "family": "negative-control", "n": 5, "free_binary_exact": 4, "seconds": 0.0, "not_interval": [6, 6], "mono_interval": [null, null]}

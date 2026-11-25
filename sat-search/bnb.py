@@ -122,6 +122,11 @@ def main():
     stats = dict(analytical=0, sat_unsat=0, open=0, expanded=0, witness=0)
     with Pool(a.workers) as p:
         while frontier:
+            # resume: walk through previously expanded nodes to their children; skip other closed nodes
+            while any(closed.get(P) == 'expanded' for P in frontier):
+                frontier = [Q for P in frontier for Q in
+                            ([tuple(list(P) + [c]) for c in children(n, list(P), colex_from)]
+                             if closed.get(P) == 'expanded' else [P])]
             todo = [P for P in frontier if P not in closed]
             frontier = []
             res = p.map(analytical, [(n, masks, list(P), a.size) for P in todo])

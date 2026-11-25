@@ -270,8 +270,49 @@ analytically with no SAT call (rule-dependent: partial ordered and forced-repeat
 | b:1-1-4 | 323 analytical nodes; one child expanded one level deeper, all of its children closed |
 | b:1-1-8 | 124 analytical nodes |
 | b:1-2-9 | 106 analytical nodes |
+| b:1-4-8, b:1-5-10, b:1-6-7, b:1-8-10 | analytical (no SAT call) |
+| b:1-4-5 | all closed except one depth-5 node, open after an 1800 s SAT call |
 
-Trees are in `results/bnb_l1343/`.
+Trees are in `results/bnb_l1343/`. A resume defect (resumed runs skipped every `expanded` node, so open
+leaves below them were never revisited) was fixed on 2026-11-24; open nodes are now retried on resume.
+
+## Low-excess exact ladder: modules -> one-sharing -> two-sharing (`experiments/sharing_ladder_corpus.py`)
+
+Pipeline per complete target: module reduction (raw for monotone, signed for free-NOT), then
+`theory/one_sharing_core.solve_core` (excess <= 1), then `theory/two_sharing_core.solve` (excess = 2), with
+witnesses rebuilt by `two_sharing_core.reconstruct` (truth table and cost asserted on every row).
+Free-NOT results are binary-gate minima with free NOTs, **not** counted-NOT totals.
+Prototype self-checks pass (`two_sharing_core.py --signed-four`: 383 primary / 117 one / 500 none;
+two-sharing is 10.6x faster than regional FPT on 28 matched cores).
+
+Verified computational result (106 corpus targets, `results/sharing_ladder_corpus.jsonl`, 0 timeouts):
+
+| Basis | excess 0 | 1 | 2 | > 2 (undecided) |
+| --- | --- | --- | --- | --- |
+| monotone (total) | 34 | 7 | 9 | 40 |
+| free-NOT (binary) | 38 | 10 | 10 | 48 |
+
+- 50 monotone and 58 free-NOT exact minima established without SAT; 0 conflicts with recorded intervals.
+- Every ladder-decided monotone minimum was already closed in the recorded intervals: **0 new closures**.
+- Production SAT (`cube_search.run_cube`, monotone, whole core) agrees on all 16 cores it was run on:
+  ladder 0.095 s total versus SAT 37.4 s (e.g. random-monotone-09: 0.033 s vs 32.8 s).
+  Regional FPT agrees on 13/13 small cores.
+- Conclusion: the ladder is a fast exact front end for low-excess targets (a SAT replacement there), but
+  the corpus's open targets all have excess > 2.
+
+`theory/restriction_excess.py` (conditional filter, binary excess only): self-checks pass; the first-gate
+stage gains often over unary restrictions, but on the samples it never beats max(regional, first-gate).
+Kept as a filter for branch-and-bound candidates, not a whole-function bound.
+
+## Second-chance screening (2026-11-24, stopped early for runtime)
+
+- Normalized phase encoding vs direct counted-NOT encoding (`experiments/second_chance_encoding.py`,
+  `results/second_chance_encoding.jsonl`, 66 of 98 matched pairs, challenger capped at max(10 s, 1.5x
+  baseline)): phase faster on 9 (hypergraph-24 G=8 106 s -> 38 s; hypergraph-03 G=9 584 s -> 444 s;
+  comparator-03 2.6 s -> 0.2 s), stopped-worse on 27, open 15; solved 1 of 16 baseline-open pairs. Not a
+  default; a candidate for portfolio use on hard 6-8 input budgets. Peak-memory column is unreliable (0).
+- Prefix restriction bound as a branch-and-bound filter (`experiments/prefix_restriction_probe.py`,
+  partial): 196 children, 192 already rejected by production bounds, **0 new rejections**. Closed.
 
 ## Archived and closed directions
 
