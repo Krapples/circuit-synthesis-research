@@ -350,6 +350,60 @@ Verified computational result (106 corpus targets, `results/sharing_ladder_corpu
 stage gains often over unary restrictions, but on the samples it never beats max(regional, first-gate).
 Kept as a filter for branch-and-bound candidates, not a whole-function bound.
 
+## Excess-three stage: ordered quotient reconstruction (`theory/ordered_quotient_core.py`, `experiments/excess3_ladder.py`)
+
+Backends (experimental, not wired into `cube_search`): `theory/conditional_provider.py` (exact for circuits with at
+most one shared internal wire plus repeated primaries) and `theory/ordered_quotient_core.py` (`solve3`: excess <= 3
+on complete, fully reduced monotone / free-NOT cores; adds the two-shared-internal-wire class).
+- **Fixed-layout feasibility vs unrestricted feasibility.** `fixed(...)` is exact for one specified layout only;
+  `conditional_provider.solve` returning None excludes only its class. Only `solve3` claims an exhaustive decision,
+  and only at excess <= 3 (the class enumeration is a prototype claim, checked on small oracles).
+- Self-checks pass (`logs/ordered_quotient_check.log`, `logs/conditional_provider_check.log`): 1,203 + 1,800
+  fixed-layout comparisons against independent formula-column enumeration, exhaustive gate-set oracle agreement
+  (4-input monotone, 3-input free-NOT). `theory/quotient_bench.py` reproduces the six 7-input signed exact
+  excess-three cores (9 gates each).
+
+Corpus run (88 cores left undecided by two-sharing, 230 jobs, 120 s per job, `results/excess3_ladder.jsonl`):
+
+| Basis | excess 3 (witness) | excess >= 4 (provisional) | timeout |
+| --- | --- | --- | --- |
+| monotone | 8 | 32 | 0 |
+| free-NOT (binary) | 8 | 40 | 0 |
+
+- Cross-checks: production SAT (monotone, G = m+1, m+2) agrees on 22/22 finished cores (10 timeouts); regional FPT
+  agrees on 20/20 (2 timeouts). The two search orders always agree on the decision.
+- **Closed intervals (verified witness meets the known lower bound):** hypergraph-14 monotone [9, 13] -> **9**,
+  hypergraph-23 monotone [9, 13] -> **9**. Both are monotone targets whose NOT-enabled lower bound is 9, so the
+  NOT-enabled minimum is also 9. SAT independently finds the 9-gate hypergraph-14 circuit and excludes 8.
+- **New lower bound:** hypergraph-08 monotone >= 9 (was [8, 13]); confirmed by production SAT (G = 7, 8 UNSAT on
+  the whole function, core = function), not proof-checked.
+- Free-NOT exclusions imply counted-NOT lower bounds (binary min >= B and >= N NOTs give total >= B + N). Each implied
+  bound L was checked with the direct counted-NOT encoding at L-1 (`experiments/excess3_not_confirm.py`,
+  `results/excess3_not_confirm.jsonl`, maplechrono, 300 s, not proof-checked):
+
+  | Target | NOT-enabled before | Implied | SAT at L-1 | Status |
+  | --- | --- | --- | --- | --- |
+  | complete-4 | [6, 7] | >= 7 | UNSAT 2.4 s | **closed = 7** |
+  | threshold-4-3 | [6, 7] | >= 7 | UNSAT 2.6 s | **closed = 7** |
+  | graph-01 | [7, 9] | >= 8 | UNSAT 11.7 s | [8, 9] |
+  | hypergraph-08 | [8, 13] | >= 9 | UNSAT 73 s | [9, 13] |
+  | mux-4-to-1 | >= 10 | >= 11 | open 300 s | provisional (solve3 exhaustiveness) |
+  | random-monotone-10 | [10, 17] | >= 11 | open 300 s | provisional |
+
+  hypergraph-12 (8), comparator-07 (8) and random-monotone-08 (9) were already exact; SAT agrees with each.
+
+Search order (`solve3(internal_first=...)`):
+
+| Task | Cores | default | internal_first | min of both |
+| --- | --- | --- | --- | --- |
+| construction, targeted (quotient_bench) | 6 | 117.6 s | 3.5 s | 3.5 s |
+| construction, corpus | 16 | 21.7 s (wins 12) | 49.1 s | 17.7 s |
+| exclusion, corpus | 71 | 148.9 s | 146.3 s | 143.2 s |
+
+Neither order dominates construction; exclusion must exhaust both classes, so order is irrelevant there. Adaptive
+policy: race both orders in parallel for construction (time = min), single order for exclusion. A cheaper
+predictor than racing was not found.
+
 ## Second-chance screening (2026-11-24, stopped early for runtime)
 
 - Normalized phase encoding vs direct counted-NOT encoding (`experiments/second_chance_encoding.py`,

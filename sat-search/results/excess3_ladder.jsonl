@@ -1,0 +1,230 @@
+{"key": "hypergraph-17|free", "kind": "q-default", "core_n": 4, "trace": 1, "seconds": 0.265, "result": "one_internal", "witness_gates": 6, "stats": {"restriction_reject": 4, "primary_local": 13}}
+{"key": "hypergraph-17|monotone", "kind": "q-default", "core_n": 4, "trace": 1, "seconds": 0.336, "result": "one_internal", "witness_gates": 6, "stats": {"restriction_reject": 4, "primary_local": 13}}
+{"key": "parity-3|free", "kind": "q-default", "core_n": 3, "trace": 0, "seconds": 0.486, "result": null, "stats": {"restriction_reject": 13, "primary_local": 1, "layouts": 42, "decoder_reject": 102, "projection_reject": 54, "profiles": 108, "local_h": 108, "local_g": 54, "sign_reject": 66}}
+{"key": "parity-3|free", "kind": "q-internal", "core_n": 3, "trace": 0, "seconds": 0.481, "result": null, "stats": {"restriction_reject": 13, "primary_local": 1, "layouts": 42, "decoder_reject": 102, "projection_reject": 54, "profiles": 108, "local_h": 108, "local_g": 54, "sign_reject": 66}}
+{"key": "exactly-1-of-3|free", "kind": "q-default", "core_n": 3, "trace": 0, "seconds": 0.708, "result": null, "stats": {"restriction_reject": 13, "primary_local": 1, "layouts": 42, "decoder_reject": 108, "projection_reject": 66, "profiles": 114, "local_h": 114, "local_g": 66, "sign_reject": 60}}
+{"key": "exactly-1-of-3|free", "kind": "q-internal", "core_n": 3, "trace": 0, "seconds": 0.719, "result": null, "stats": {"restriction_reject": 13, "primary_local": 1, "layouts": 42, "decoder_reject": 108, "projection_reject": 66, "profiles": 114, "local_h": 114, "local_g": 66, "sign_reject": 60}}
+{"key": "threshold-4-3|monotone", "kind": "q-default", "core_n": 4, "trace": 0, "seconds": 1.785, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "parity-4|free", "kind": "q-default", "core_n": 4, "trace": 0, "seconds": 0.047, "result": null, "stats": {}}
+{"key": "hypergraph-17|monotone", "kind": "fpt", "core_n": 4, "trace": 1, "result": true, "seconds": 2.607}
+{"key": "complete-4|monotone", "kind": "q-default", "core_n": 4, "trace": 0, "seconds": 1.973, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "threshold-4-3|free", "kind": "q-default", "core_n": 4, "trace": 0, "seconds": 2.772, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 372, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 432}}
+{"key": "random-monotone-08|monotone", "kind": "q-default", "core_n": 4, "trace": 2, "seconds": 1.992, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "exactly-2-of-4|free", "kind": "q-default", "core_n": 4, "trace": 0, "seconds": 0.039, "result": null, "stats": {}}
+{"key": "comparator-07|monotone", "kind": "q-default", "core_n": 4, "trace": 1, "seconds": 1.909, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "hypergraph-17|monotone", "kind": "q-internal", "core_n": 4, "trace": 1, "seconds": 0.351, "result": "one_internal", "witness_gates": 6, "stats": {"restriction_reject": 4, "primary_local": 13}}
+{"key": "complete-4|free", "kind": "q-default", "core_n": 4, "trace": 0, "seconds": 2.773, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 336, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 360}}
+{"key": "hypergraph-17|free", "kind": "q-internal", "core_n": 4, "trace": 1, "seconds": 0.282, "result": "one_internal", "witness_gates": 6, "stats": {"restriction_reject": 4, "primary_local": 13}}
+{"key": "random-monotone-08|free", "kind": "q-default", "core_n": 4, "trace": 2, "seconds": 2.79, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 372, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 432}}
+{"key": "comparator-07|free", "kind": "q-default", "core_n": 4, "trace": 1, "seconds": 2.727, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 336, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 360}}
+{"key": "parity-4|free", "kind": "q-internal", "core_n": 4, "trace": 0, "seconds": 0.052, "result": null, "stats": {}}
+{"key": "threshold-4-3|monotone", "kind": "q-internal", "core_n": 4, "trace": 0, "seconds": 1.844, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "exactly-2-of-4|free", "kind": "q-internal", "core_n": 4, "trace": 0, "seconds": 0.042, "result": null, "stats": {}}
+{"key": "complete-4|monotone", "kind": "q-internal", "core_n": 4, "trace": 0, "seconds": 1.857, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "hypergraph-17|monotone", "kind": "sat", "core_n": 4, "trace": 1, "G5_seconds": 0.203, "G6_seconds": 0.228, "result": {"5": false, "6": true}, "seconds": 0.228}
+{"key": "random-monotone-08|monotone", "kind": "q-internal", "core_n": 4, "trace": 2, "seconds": 1.85, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "comparator-07|monotone", "kind": "q-internal", "core_n": 4, "trace": 1, "seconds": 1.72, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 168, "projection_reject": 108, "profiles": 138, "local_h": 138, "local_g": 60, "order_reject": 138}}
+{"key": "threshold-4-3|free", "kind": "q-internal", "core_n": 4, "trace": 0, "seconds": 2.669, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 372, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 432}}
+{"key": "complete-4|free", "kind": "q-internal", "core_n": 4, "trace": 0, "seconds": 2.516, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 336, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 360}}
+{"key": "complete-4|monotone", "kind": "sat", "core_n": 4, "trace": 0, "G5_seconds": 0.168, "G6_seconds": 0.422, "result": {"5": false, "6": false}, "seconds": 0.422}
+{"key": "threshold-4-3|monotone", "kind": "sat", "core_n": 4, "trace": 0, "G5_seconds": 0.199, "G6_seconds": 0.521, "result": {"5": false, "6": false}, "seconds": 0.521}
+{"key": "random-monotone-08|free", "kind": "q-internal", "core_n": 4, "trace": 2, "seconds": 2.45, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 372, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 432}}
+{"key": "comparator-07|monotone", "kind": "sat", "core_n": 4, "trace": 1, "G5_seconds": 0.191, "G6_seconds": 0.499, "result": {"5": false, "6": false}, "seconds": 0.499}
+{"key": "random-monotone-08|monotone", "kind": "sat", "core_n": 4, "trace": 2, "G5_seconds": 0.217, "G6_seconds": 0.586, "result": {"5": false, "6": false}, "seconds": 0.586}
+{"key": "comparator-07|free", "kind": "q-internal", "core_n": 4, "trace": 1, "seconds": 2.483, "result": null, "stats": {"restriction_reject": 21, "primary_local": 4, "layouts": 186, "decoder_reject": 348, "projection_reject": 336, "profiles": 360, "local_h": 360, "local_g": 168, "sign_reject": 360}}
+{"key": "random-monotone-08|monotone", "kind": "fpt", "core_n": 4, "trace": 2, "result": false, "seconds": 7.056}
+{"key": "comparator-07|monotone", "kind": "fpt", "core_n": 4, "trace": 1, "result": false, "seconds": 7.119}
+{"key": "threshold-4-3|monotone", "kind": "fpt", "core_n": 4, "trace": 0, "result": false, "seconds": 7.165}
+{"key": "complete-4|monotone", "kind": "fpt", "core_n": 4, "trace": 0, "result": false, "seconds": 7.177}
+{"key": "hypergraph-18|monotone", "kind": "fpt", "core_n": 5, "trace": 1, "result": true, "seconds": 1.131}
+{"key": "cycle-5|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": true, "seconds": 1.543}
+{"key": "hypergraph-18|monotone", "kind": "q-default", "core_n": 5, "trace": 1, "seconds": 0.077, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 2}}
+{"key": "hypergraph-07|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 1.931, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 15, "restriction_reject": 8}}
+{"key": "hypergraph-07|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 2.089, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 15, "restriction_reject": 8}}
+{"key": "hypergraph-18|free", "kind": "q-default", "core_n": 5, "trace": 1, "seconds": 0.077, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 2}}
+{"key": "threshold-5-3|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.037, "result": null, "stats": {}}
+{"key": "hypergraph-21|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.644, "result": null, "stats": {"restriction_reject": 33, "primary_local": 4, "layouts": 288, "decoder_reject": 222, "projection_reject": 190, "profiles": 168, "local_h": 168, "local_g": 64, "order_reject": 158}}
+{"key": "threshold-5-3|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": false, "seconds": 4.107}
+{"key": "hypergraph-21|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 1.024, "result": null, "stats": {"restriction_reject": 33, "primary_local": 4, "layouts": 288, "decoder_reject": 476, "projection_reject": 604, "profiles": 480, "local_h": 480, "local_g": 204, "sign_reject": 668}}
+{"key": "complete-5|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.042, "result": null, "stats": {}}
+{"key": "threshold-5-3|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.045, "result": null, "stats": {}}
+{"key": "complete-5|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.039, "result": null, "stats": {}}
+{"key": "hypergraph-12|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 4.329, "result": null, "stats": {"restriction_reject": 29, "primary_local": 4, "layouts": 2130, "decoder_reject": 314, "projection_reject": 1023, "profiles": 1236, "local_h": 264, "local_g": 184, "order_reject": 727, "states": 2216, "cofactor_reject": 986, "local": 956}}
+{"key": "cycle-5|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.423, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 22}}
+{"key": "cycle-5|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.479, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 22}}
+{"key": "comparator-04|monotone", "kind": "q-default", "core_n": 5, "trace": 2, "seconds": 0.051, "result": null, "stats": {}}
+{"key": "comparator-04|free", "kind": "q-default", "core_n": 5, "trace": 2, "seconds": 0.041, "result": null, "stats": {}}
+{"key": "comparator-02|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 1.663, "result": null, "stats": {"restriction_reject": 29, "primary_local": 9, "layouts": 354, "decoder_reject": 240, "projection_reject": 187, "profiles": 195, "local_h": 195, "local_g": 84, "order_reject": 201}}
+{"key": "parity-5|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.043, "result": null, "stats": {}}
+{"key": "exactly-2-of-5|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 0.038, "result": null, "stats": {}}
+{"key": "hypergraph-07|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.05, "result": "two_internal", "witness_gates": 7, "stats": {"layouts": 43, "states": 57, "cofactor_reject": 26, "profiles": 18, "local": 19, "projection_reject": 21, "order_reject": 3}}
+{"key": "graph-01|monotone", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 3.308, "result": null, "stats": {"restriction_reject": 26, "primary_local": 14, "layouts": 384, "decoder_reject": 279, "projection_reject": 221, "profiles": 224, "local_h": 224, "local_g": 76, "order_reject": 220}}
+{"key": "comparator-02|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 2.148, "result": null, "stats": {"restriction_reject": 29, "primary_local": 9, "layouts": 354, "decoder_reject": 530, "projection_reject": 720, "profiles": 556, "local_h": 556, "local_g": 238, "sign_reject": 852}}
+{"key": "hypergraph-07|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.067, "result": "two_internal", "witness_gates": 7, "stats": {"layouts": 43, "states": 69, "cofactor_reject": 26, "profiles": 42, "local": 39, "projection_reject": 104, "sign_reject": 86}}
+{"key": "hypergraph-18|monotone", "kind": "q-internal", "core_n": 5, "trace": 1, "seconds": 0.317, "result": "one_internal", "witness_gates": 7, "stats": {"layouts": 882, "states": 1170, "profiles": 576, "local": 606, "cofactor_reject": 413, "projection_reject": 505, "order_reject": 234, "primary_local": 2}}
+{"key": "graph-01|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 4.589, "result": null, "stats": {"restriction_reject": 26, "primary_local": 14, "layouts": 384, "decoder_reject": 590, "projection_reject": 720, "profiles": 624, "local_h": 624, "local_g": 264, "sign_reject": 812}}
+{"key": "hypergraph-12|free", "kind": "q-default", "core_n": 5, "trace": 0, "seconds": 8.665, "result": null, "stats": {"restriction_reject": 29, "primary_local": 4, "layouts": 2130, "decoder_reject": 804, "projection_reject": 3662, "profiles": 3604, "local_h": 868, "local_g": 696, "sign_reject": 3094, "states": 3188, "cofactor_reject": 1390, "local": 2580}}
+{"key": "hypergraph-21|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.633, "result": null, "stats": {"restriction_reject": 33, "primary_local": 4, "layouts": 288, "decoder_reject": 222, "projection_reject": 190, "profiles": 168, "local_h": 168, "local_g": 64, "order_reject": 158}}
+{"key": "hypergraph-18|free", "kind": "q-internal", "core_n": 5, "trace": 1, "seconds": 1.397, "result": "one_internal", "witness_gates": 7, "stats": {"layouts": 882, "states": 1750, "profiles": 1612, "local": 1672, "sign_reject": 1468, "cofactor_reject": 569, "projection_reject": 1916, "primary_local": 2}}
+{"key": "threshold-5-3|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.032, "result": null, "stats": {}}
+{"key": "threshold-5-3|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.044, "result": null, "stats": {}}
+{"key": "complete-5|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.042, "result": null, "stats": {}}
+{"key": "complete-5|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.044, "result": null, "stats": {}}
+{"key": "hypergraph-21|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 1.044, "result": null, "stats": {"restriction_reject": 33, "primary_local": 4, "layouts": 288, "decoder_reject": 476, "projection_reject": 604, "profiles": 480, "local_h": 480, "local_g": 204, "sign_reject": 668}}
+{"key": "cycle-5|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.383, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 22}}
+{"key": "cycle-5|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.407, "result": "one_internal", "witness_gates": 7, "stats": {"primary_local": 22}}
+{"key": "hypergraph-12|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 3.798, "result": null, "stats": {"layouts": 2130, "states": 2216, "cofactor_reject": 986, "order_reject": 727, "profiles": 1236, "local": 956, "projection_reject": 1023, "restriction_reject": 29, "primary_local": 4, "decoder_reject": 314, "local_h": 264, "local_g": 184}}
+{"key": "complete-5|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": false, "seconds": 12.317}
+{"key": "comparator-04|monotone", "kind": "q-internal", "core_n": 5, "trace": 2, "seconds": 0.043, "result": null, "stats": {}}
+{"key": "comparator-04|free", "kind": "q-internal", "core_n": 5, "trace": 2, "seconds": 0.046, "result": null, "stats": {}}
+{"key": "exactly-2-of-5|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.036, "result": null, "stats": {}}
+{"key": "parity-5|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 0.038, "result": null, "stats": {}}
+{"key": "comparator-02|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 1.369, "result": null, "stats": {"restriction_reject": 29, "primary_local": 9, "layouts": 354, "decoder_reject": 240, "projection_reject": 187, "profiles": 195, "local_h": 195, "local_g": 84, "order_reject": 201}}
+{"key": "graph-01|monotone", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 2.889, "result": null, "stats": {"restriction_reject": 26, "primary_local": 14, "layouts": 384, "decoder_reject": 279, "projection_reject": 221, "profiles": 224, "local_h": 224, "local_g": 76, "order_reject": 220}}
+{"key": "comparator-02|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 2.432, "result": null, "stats": {"restriction_reject": 29, "primary_local": 9, "layouts": 354, "decoder_reject": 530, "projection_reject": 720, "profiles": 556, "local_h": 556, "local_g": 238, "sign_reject": 852}}
+{"key": "hypergraph-18|monotone", "kind": "sat", "core_n": 5, "trace": 1, "G6_seconds": 0.814, "G7_seconds": 1.584, "result": {"6": false, "7": true}, "seconds": 1.584}
+{"key": "comparator-04|monotone", "kind": "fpt", "core_n": 5, "trace": 2, "result": false, "seconds": 15.431}
+{"key": "graph-01|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 4.955, "result": null, "stats": {"restriction_reject": 26, "primary_local": 14, "layouts": 384, "decoder_reject": 590, "projection_reject": 720, "profiles": 624, "local_h": 624, "local_g": 264, "sign_reject": 812}}
+{"key": "hypergraph-12|free", "kind": "q-internal", "core_n": 5, "trace": 0, "seconds": 9.183, "result": null, "stats": {"layouts": 2130, "states": 3188, "cofactor_reject": 1390, "profiles": 3604, "local": 2580, "projection_reject": 3662, "sign_reject": 3094, "restriction_reject": 29, "primary_local": 4, "decoder_reject": 804, "local_h": 868, "local_g": 696}}
+{"key": "cycle-5|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.844, "G7_seconds": 0.912, "result": {"6": false, "7": true}, "seconds": 0.912}
+{"key": "hypergraph-07|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.756, "G7_seconds": 4.092, "result": {"6": false, "7": true}, "seconds": 4.093}
+{"key": "hypergraph-12|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.818, "G7_seconds": 8.788, "result": {"6": false, "7": false}, "seconds": 8.788}
+{"key": "hypergraph-21|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.926, "G7_seconds": 9.292, "result": {"6": false, "7": false}, "seconds": 9.292}
+{"key": "graph-01|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.86, "G7_seconds": 9.094, "result": {"6": false, "7": false}, "seconds": 9.094}
+{"key": "complete-5|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.78, "G7_seconds": 9.751, "result": {"6": false, "7": false}, "seconds": 9.751}
+{"key": "threshold-5-3|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 1.05, "G7_seconds": 12.168, "result": {"6": false, "7": false}, "seconds": 12.168}
+{"key": "hypergraph-21|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": false, "seconds": 28.778}
+{"key": "comparator-02|monotone", "kind": "sat", "core_n": 5, "trace": 0, "G6_seconds": 0.917, "G7_seconds": 11.236, "result": {"6": false, "7": false}, "seconds": 11.236}
+{"key": "comparator-04|monotone", "kind": "sat", "core_n": 5, "trace": 2, "G6_seconds": 1.038, "G7_seconds": 11.27, "result": {"6": false, "7": false}, "seconds": 11.27}
+{"key": "hypergraph-03|monotone", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 1.5, "result": null, "stats": {"restriction_reject": 39, "primary_local": 9, "layouts": 3264, "decoder_reject": 258, "projection_reject": 899, "profiles": 1320, "local_h": 208, "local_g": 84, "order_reject": 606, "states": 3344, "cofactor_reject": 1947, "local": 1102}}
+{"key": "hypergraph-03|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 2.986, "result": null, "stats": {"restriction_reject": 39, "primary_local": 9, "layouts": 3264, "decoder_reject": 538, "projection_reject": 2944, "profiles": 3408, "local_h": 576, "local_g": 296, "sign_reject": 3302, "states": 4250, "cofactor_reject": 2529, "local": 2724}}
+{"key": "threshold-6-4|monotone", "kind": "fpt", "core_n": 6, "trace": 0, "result": false, "seconds": 12.917}
+{"key": "threshold-6-4|monotone", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.052, "result": null, "stats": {}}
+{"key": "comparator-02|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": false, "seconds": 37.706}
+{"key": "threshold-6-4|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.052, "result": null, "stats": {}}
+{"key": "complete-6|monotone", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.07, "result": null, "stats": {}}
+{"key": "hypergraph-08|monotone", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 7.058, "result": null, "stats": {"primary_local": 15, "restriction_reject": 34, "layouts": 4806, "profiles": 2064, "local_h": 279, "local_g": 141, "order_reject": 1017, "decoder_reject": 345, "projection_reject": 1514, "states": 5191, "local": 1786, "cofactor_reject": 3012}}
+{"key": "complete-6|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.049, "result": null, "stats": {}}
+{"key": "random-monotone-04|monotone", "kind": "q-default", "core_n": 6, "trace": 1, "seconds": 0.163, "result": "one_internal", "witness_gates": 8, "stats": {"primary_local": 3, "restriction_reject": 1}}
+{"key": "random-monotone-04|free", "kind": "q-default", "core_n": 6, "trace": 1, "seconds": 0.179, "result": "one_internal", "witness_gates": 8, "stats": {"primary_local": 3, "restriction_reject": 1}}
+{"key": "hypergraph-07|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": true, "seconds": 42.121}
+{"key": "comparator-08|monotone", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.068, "result": null, "stats": {}}
+{"key": "comparator-08|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.084, "result": null, "stats": {}}
+{"key": "exactly-3-of-6|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 0.051, "result": null, "stats": {}}
+{"key": "hypergraph-03|monotone", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 1.716, "result": null, "stats": {"layouts": 3264, "states": 3344, "cofactor_reject": 1947, "profiles": 1320, "local": 1102, "projection_reject": 899, "order_reject": 606, "restriction_reject": 39, "primary_local": 9, "decoder_reject": 258, "local_h": 208, "local_g": 84}}
+{"key": "graph-02|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 5.767, "result": "one_internal", "witness_gates": 8, "stats": {"restriction_reject": 6, "primary_local": 22}}
+{"key": "graph-02|monotone", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 6.585, "result": "one_internal", "witness_gates": 8, "stats": {"restriction_reject": 6, "primary_local": 22}}
+{"key": "graph-02|monotone", "kind": "fpt", "core_n": 6, "trace": 0, "result": true, "seconds": 21.323}
+{"key": "threshold-6-4|monotone", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.054, "result": null, "stats": {}}
+{"key": "hypergraph-03|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 2.961, "result": null, "stats": {"layouts": 3264, "states": 4250, "cofactor_reject": 2529, "profiles": 3408, "local": 2724, "sign_reject": 3302, "projection_reject": 2944, "restriction_reject": 39, "primary_local": 9, "decoder_reject": 538, "local_h": 576, "local_g": 296}}
+{"key": "threshold-6-4|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.06, "result": null, "stats": {}}
+{"key": "complete-6|monotone", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.05, "result": null, "stats": {}}
+{"key": "complete-6|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.047, "result": null, "stats": {}}
+{"key": "hypergraph-08|free", "kind": "q-default", "core_n": 6, "trace": 0, "seconds": 18.092, "result": null, "stats": {"primary_local": 15, "restriction_reject": 34, "layouts": 4806, "profiles": 5592, "local_h": 838, "local_g": 526, "decoder_reject": 780, "sign_reject": 4900, "projection_reject": 5396, "states": 6929, "local": 4650, "cofactor_reject": 3984}}
+{"key": "hypergraph-08|monotone", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 7.79, "result": null, "stats": {"layouts": 4806, "states": 5191, "profiles": 2064, "local": 1786, "cofactor_reject": 3012, "order_reject": 1017, "projection_reject": 1514, "primary_local": 15, "restriction_reject": 34, "local_h": 279, "local_g": 141, "decoder_reject": 345}}
+{"key": "random-monotone-04|monotone", "kind": "q-internal", "core_n": 6, "trace": 1, "seconds": 1.226, "result": "two_internal", "witness_gates": 8, "stats": {"layouts": 4046, "states": 5194, "cofactor_reject": 2885, "profiles": 1880, "local": 1921, "projection_reject": 1539, "order_reject": 969}}
+{"key": "comparator-08|monotone", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.069, "result": null, "stats": {}}
+{"key": "comparator-08|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.069, "result": null, "stats": {}}
+{"key": "graph-02|monotone", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 7.147, "result": "one_internal", "witness_gates": 8, "stats": {"layouts": 2894, "states": 3626, "cofactor_reject": 2012, "profiles": 1320, "local": 1363, "projection_reject": 1011, "order_reject": 553, "restriction_reject": 6, "primary_local": 22}}
+{"key": "exactly-3-of-6|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 0.053, "result": null, "stats": {}}
+{"key": "random-monotone-04|free", "kind": "q-internal", "core_n": 6, "trace": 1, "seconds": 4.611, "result": "two_internal", "witness_gates": 8, "stats": {"layouts": 4046, "states": 7659, "cofactor_reject": 4072, "profiles": 5445, "local": 5512, "projection_reject": 7005, "sign_reject": 4148}}
+{"key": "graph-02|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 8.879, "result": "one_internal", "witness_gates": 8, "stats": {"layouts": 2894, "states": 5060, "cofactor_reject": 2752, "profiles": 3556, "local": 3638, "sign_reject": 2778, "projection_reject": 3652, "restriction_reject": 6, "primary_local": 22}}
+{"key": "hypergraph-08|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 16.981, "result": null, "stats": {"layouts": 4806, "states": 6929, "profiles": 5592, "local": 4650, "sign_reject": 4900, "cofactor_reject": 3984, "projection_reject": 5396, "primary_local": 15, "restriction_reject": 34, "local_h": 838, "local_g": 526, "decoder_reject": 780}}
+{"key": "complete-6|monotone", "kind": "fpt", "core_n": 6, "trace": 0, "result": false, "seconds": 39.578}
+{"key": "hypergraph-12|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": false, "seconds": 88.031}
+{"key": "graph-01|monotone", "kind": "fpt", "core_n": 5, "trace": 0, "result": false, "seconds": 105.065}
+{"key": "random-monotone-04|monotone", "kind": "sat", "core_n": 6, "trace": 1, "G7_seconds": 13.467, "G8_seconds": 18.746, "result": {"7": false, "8": true}, "seconds": 18.746}
+{"key": "hypergraph-04|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.093, "result": null, "stats": {}}
+{"key": "hypergraph-04|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.118, "result": null, "stats": {}}
+{"key": "hypergraph-09|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.135, "result": null, "stats": {"restriction_reject": 49, "layouts": 46, "decoder_reject": 40, "projection_reject": 13, "profiles": 26, "local_h": 26, "local_g": 8, "order_reject": 19}}
+{"key": "hypergraph-09|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.131, "result": null, "stats": {"restriction_reject": 49, "layouts": 46, "decoder_reject": 74, "projection_reject": 66, "profiles": 66, "local_h": 66, "local_g": 28, "sign_reject": 106}}
+{"key": "hypergraph-14|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.231, "result": "one_internal", "witness_gates": 9, "stats": {"primary_local": 3, "restriction_reject": 2}}
+{"key": "hypergraph-14|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.244, "result": "one_internal", "witness_gates": 9, "stats": {"primary_local": 3, "restriction_reject": 2}}
+{"key": "hypergraph-19|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 2.244, "result": null, "stats": {"restriction_reject": 28, "primary_local": 21, "layouts": 9809, "decoder_reject": 522, "projection_reject": 1784, "profiles": 2910, "local_h": 378, "local_g": 159, "order_reject": 1033, "states": 10096, "cofactor_reject": 7028, "local": 2534}}
+{"key": "random-monotone-04|monotone", "kind": "fpt", "core_n": 6, "trace": 1, "result": true, "seconds": 88.331}
+{"key": "graph-02|monotone", "kind": "sat", "core_n": 6, "trace": 0, "G7_seconds": 13.308, "G8_seconds": 50.114, "result": {"7": false, "8": true}, "seconds": 50.114}
+{"key": "hypergraph-19|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 3.245, "result": null, "stats": {"restriction_reject": 28, "primary_local": 21, "layouts": 9809, "decoder_reject": 1032, "projection_reject": 4846, "profiles": 6956, "local_h": 1016, "local_g": 540, "sign_reject": 6458, "states": 11734, "cofactor_reject": 8296, "local": 5876}}
+{"key": "threshold-7-4|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.045, "result": null, "stats": {}}
+{"key": "hypergraph-23|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.979, "result": "one_internal", "witness_gates": 9, "stats": {"primary_local": 10, "restriction_reject": 2}}
+{"key": "complete-7|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.037, "result": null, "stats": {}}
+{"key": "threshold-7-4|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.041, "result": null, "stats": {}}
+{"key": "hypergraph-23|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 1.856, "result": "one_internal", "witness_gates": 9, "stats": {"primary_local": 10, "restriction_reject": 2}}
+{"key": "complete-7|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.037, "result": null, "stats": {}}
+{"key": "hypergraph-03|monotone", "kind": "fpt", "core_n": 6, "trace": 0, "result": false, "seconds": 101.832}
+{"key": "graph-03|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 10.151, "result": null, "stats": {"restriction_reject": 38, "primary_local": 16, "layouts": 19222, "decoder_reject": 561, "projection_reject": 3736, "profiles": 5919, "local_h": 409, "local_g": 178, "order_reject": 2022, "states": 20421, "cofactor_reject": 13354, "local": 5510}}
+{"key": "comparator-09|monotone", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.063, "result": null, "stats": {}}
+{"key": "comparator-09|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 0.059, "result": null, "stats": {}}
+{"key": "random-monotone-10|monotone", "kind": "q-default", "core_n": 7, "trace": 1, "seconds": 11.234, "result": null, "stats": {"primary_local": 11, "restriction_reject": 39, "layouts": 23494, "profiles": 7701, "local_h": 401, "local_g": 301, "order_reject": 3476, "decoder_reject": 489, "projection_reject": 5162, "states": 26776, "cofactor_reject": 18160, "local": 7303}}
+{"key": "hypergraph-04|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.088, "result": null, "stats": {}}
+{"key": "hypergraph-04|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.075, "result": null, "stats": {}}
+{"key": "hypergraph-09|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.092, "result": null, "stats": {"restriction_reject": 49, "layouts": 46, "decoder_reject": 40, "projection_reject": 13, "profiles": 26, "local_h": 26, "local_g": 8, "order_reject": 19}}
+{"key": "hypergraph-09|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.112, "result": null, "stats": {"restriction_reject": 49, "layouts": 46, "decoder_reject": 74, "projection_reject": 66, "profiles": 66, "local_h": 66, "local_g": 28, "sign_reject": 106}}
+{"key": "graph-03|free", "kind": "q-default", "core_n": 7, "trace": 0, "seconds": 15.182, "result": null, "stats": {"restriction_reject": 38, "primary_local": 16, "layouts": 19222, "decoder_reject": 1214, "projection_reject": 10474, "profiles": 14374, "local_h": 1166, "local_g": 658, "sign_reject": 14348, "states": 24236, "cofactor_reject": 16204, "local": 13008}}
+{"key": "hypergraph-14|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 4.254, "result": "one_internal", "witness_gates": 9, "stats": {"layouts": 18372, "states": 22492, "cofactor_reject": 14467, "profiles": 6472, "local": 6550, "projection_reject": 4873, "order_reject": 3728, "primary_local": 3, "restriction_reject": 2}}
+{"key": "hypergraph-19|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 2.242, "result": null, "stats": {"layouts": 9809, "states": 10096, "cofactor_reject": 7028, "profiles": 2910, "local": 2534, "projection_reject": 1784, "order_reject": 1033, "restriction_reject": 28, "primary_local": 21, "decoder_reject": 522, "local_h": 378, "local_g": 159}}
+{"key": "hypergraph-19|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 3.795, "result": null, "stats": {"layouts": 9809, "states": 11734, "cofactor_reject": 8296, "profiles": 6956, "local": 5876, "sign_reject": 6458, "projection_reject": 4846, "restriction_reject": 28, "primary_local": 21, "decoder_reject": 1032, "local_h": 1016, "local_g": 540}}
+{"key": "hypergraph-23|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 3.483, "result": "one_internal", "witness_gates": 9, "stats": {"layouts": 13779, "states": 15871, "cofactor_reject": 10981, "profiles": 4215, "local": 4233, "projection_reject": 2738, "order_reject": 1606, "primary_local": 10, "restriction_reject": 2}}
+{"key": "random-monotone-10|free", "kind": "q-default", "core_n": 7, "trace": 1, "seconds": 20.189, "result": null, "stats": {"primary_local": 11, "restriction_reject": 39, "layouts": 23494, "profiles": 20592, "local_h": 1394, "local_g": 1108, "decoder_reject": 1340, "sign_reject": 14086, "projection_reject": 16424, "states": 33895, "cofactor_reject": 23485, "local": 18870}}
+{"key": "threshold-7-4|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.036, "result": null, "stats": {}}
+{"key": "threshold-7-4|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.045, "result": null, "stats": {}}
+{"key": "complete-7|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.035, "result": null, "stats": {}}
+{"key": "complete-7|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.037, "result": null, "stats": {}}
+{"key": "hypergraph-08|monotone", "kind": "fpt", "status": "timeout", "deadline": 120.0}
+{"key": "hypergraph-23|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 2.414, "result": "one_internal", "witness_gates": 9, "stats": {"layouts": 13779, "states": 19773, "cofactor_reject": 13931, "profiles": 10538, "local": 10412, "sign_reject": 7722, "projection_reject": 8032, "primary_local": 10, "restriction_reject": 2}}
+{"key": "hypergraph-14|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 13.829, "result": "one_internal", "witness_gates": 9, "stats": {"layouts": 18372, "states": 30492, "cofactor_reject": 19695, "profiles": 19080, "local": 19112, "sign_reject": 11286, "projection_reject": 20818, "primary_local": 3, "restriction_reject": 2}}
+{"key": "comparator-09|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.059, "result": null, "stats": {}}
+{"key": "comparator-09|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 0.059, "result": null, "stats": {}}
+{"key": "comparator-08|monotone", "kind": "fpt", "status": "timeout", "deadline": 120.0}
+{"key": "graph-03|monotone", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 10.038, "result": null, "stats": {"layouts": 19222, "states": 20421, "cofactor_reject": 13354, "profiles": 5919, "local": 5510, "projection_reject": 3736, "order_reject": 2022, "restriction_reject": 38, "primary_local": 16, "decoder_reject": 561, "local_h": 409, "local_g": 178}}
+{"key": "random-monotone-10|monotone", "kind": "q-internal", "core_n": 7, "trace": 1, "seconds": 10.999, "result": null, "stats": {"layouts": 23494, "states": 26776, "cofactor_reject": 18160, "profiles": 7701, "local": 7303, "projection_reject": 5162, "order_reject": 3476, "primary_local": 11, "restriction_reject": 39, "local_h": 401, "local_g": 301, "decoder_reject": 489}}
+{"key": "hypergraph-08|monotone", "kind": "sat", "core_n": 6, "trace": 0, "G7_seconds": 14.494, "G8_seconds": 95.163, "result": {"7": false, "8": false}, "seconds": 95.163}
+{"key": "graph-03|free", "kind": "q-internal", "core_n": 7, "trace": 0, "seconds": 15.047, "result": null, "stats": {"layouts": 19222, "states": 24236, "cofactor_reject": 16204, "profiles": 14374, "local": 13008, "sign_reject": 14348, "projection_reject": 10474, "restriction_reject": 38, "primary_local": 16, "decoder_reject": 1214, "local_h": 1166, "local_g": 658}}
+{"key": "hypergraph-03|monotone", "kind": "sat", "core_n": 6, "trace": 0, "G7_seconds": 16.507, "G8_seconds": 102.868, "result": {"7": false, "8": false}, "seconds": 102.868}
+{"key": "mux-4-to-1|free", "kind": "q-default", "status": "timeout", "deadline": 120.0}
+{"key": "random-monotone-10|free", "kind": "q-internal", "core_n": 7, "trace": 1, "seconds": 19.09, "result": null, "stats": {"layouts": 23494, "states": 33895, "cofactor_reject": 23485, "profiles": 20592, "local": 18870, "projection_reject": 16424, "sign_reject": 14086, "primary_local": 11, "restriction_reject": 39, "local_h": 1394, "local_g": 1108, "decoder_reject": 1340}}
+{"key": "complete-6|monotone", "kind": "sat", "core_n": 6, "trace": 0, "G7_seconds": 17.856, "G8_seconds": 108.852, "result": {"7": false, "8": false}, "seconds": 108.852}
+{"key": "mux-4-to-1|free", "kind": "q-internal", "core_n": 6, "trace": 0, "seconds": 119.361, "result": null, "stats": {"layouts": 3663, "states": 7550, "cofactor_reject": 3350, "profiles": 8950, "local": 6720, "sign_reject": 3120, "projection_reject": 14008, "primary_local": 14, "local_h": 2066, "local_g": 1300, "decoder_reject": 2098, "restriction_reject": 15}}
+{"key": "hypergraph-05|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.192, "result": null, "stats": {}}
+{"key": "hypergraph-05|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.155, "result": null, "stats": {}}
+{"key": "hypergraph-10|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.149, "result": null, "stats": {}}
+{"key": "hypergraph-10|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.167, "result": null, "stats": {}}
+{"key": "threshold-6-4|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "hypergraph-15|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 2.113, "result": null, "stats": {"primary_local": 3, "restriction_reject": 42, "layouts": 14545, "decoder_reject": 207, "projection_reject": 1704, "profiles": 2964, "local_h": 136, "local_g": 52, "order_reject": 811, "states": 15184, "cofactor_reject": 11717, "local": 2823}}
+{"key": "hypergraph-20|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.231, "result": null, "stats": {}}
+{"key": "hypergraph-20|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.212, "result": null, "stats": {}}
+{"key": "threshold-8-5|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.043, "result": null, "stats": {}}
+{"key": "hypergraph-15|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 2.736, "result": null, "stats": {"primary_local": 3, "restriction_reject": 42, "layouts": 14545, "decoder_reject": 398, "projection_reject": 3948, "profiles": 6764, "local_h": 358, "local_g": 178, "sign_reject": 6388, "states": 16753, "cofactor_reject": 13077, "local": 6346}}
+{"key": "threshold-8-5|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.037, "result": null, "stats": {}}
+{"key": "random-monotone-05|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.146, "result": null, "stats": {}}
+{"key": "random-monotone-05|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.148, "result": null, "stats": {}}
+{"key": "comparator-05|monotone", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.116, "result": null, "stats": {}}
+{"key": "comparator-05|free", "kind": "q-default", "core_n": 8, "trace": 0, "seconds": 0.132, "result": null, "stats": {}}
+{"key": "hypergraph-05|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.169, "result": null, "stats": {}}
+{"key": "hypergraph-05|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.183, "result": null, "stats": {}}
+{"key": "hypergraph-10|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.175, "result": null, "stats": {}}
+{"key": "hypergraph-10|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.164, "result": null, "stats": {}}
+{"key": "hypergraph-15|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 2.082, "result": null, "stats": {"layouts": 14545, "states": 15184, "cofactor_reject": 11717, "profiles": 2964, "local": 2823, "projection_reject": 1704, "order_reject": 811, "primary_local": 3, "restriction_reject": 42, "decoder_reject": 207, "local_h": 136, "local_g": 52}}
+{"key": "hypergraph-20|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.17, "result": null, "stats": {}}
+{"key": "hypergraph-15|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 2.747, "result": null, "stats": {"layouts": 14545, "states": 16753, "cofactor_reject": 13077, "profiles": 6764, "local": 6346, "sign_reject": 6388, "projection_reject": 3948, "primary_local": 3, "restriction_reject": 42, "decoder_reject": 398, "local_h": 358, "local_g": 178}}
+{"key": "hypergraph-20|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.188, "result": null, "stats": {}}
+{"key": "threshold-8-5|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.043, "result": null, "stats": {}}
+{"key": "threshold-8-5|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.041, "result": null, "stats": {}}
+{"key": "random-monotone-05|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.173, "result": null, "stats": {}}
+{"key": "random-monotone-05|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.141, "result": null, "stats": {}}
+{"key": "comparator-05|monotone", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.13, "result": null, "stats": {}}
+{"key": "comparator-05|free", "kind": "q-internal", "core_n": 8, "trace": 0, "seconds": 0.118, "result": null, "stats": {}}
+{"key": "petersen-10|monotone", "kind": "q-default", "core_n": 10, "trace": 0, "seconds": 1.27, "result": null, "stats": {}}
+{"key": "petersen-10|free", "kind": "q-default", "core_n": 10, "trace": 0, "seconds": 1.284, "result": null, "stats": {}}
+{"key": "petersen-10|monotone", "kind": "q-internal", "core_n": 10, "trace": 0, "seconds": 1.333, "result": null, "stats": {}}
+{"key": "petersen-10|free", "kind": "q-internal", "core_n": 10, "trace": 0, "seconds": 1.384, "result": null, "stats": {}}
+{"key": "comparator-08|monotone", "kind": "sat", "core_n": 6, "trace": 0, "G7_seconds": 14.504, "G8_seconds": 91.741, "result": {"7": false, "8": false}, "seconds": 91.741}
+{"key": "hypergraph-14|monotone", "kind": "sat", "core_n": 7, "trace": 0, "G8_seconds": 92.048, "G9_seconds": 97.38, "result": {"8": false, "9": true}, "seconds": 97.38}
+{"key": "hypergraph-04|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "hypergraph-09|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "hypergraph-19|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "hypergraph-23|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "threshold-7-4|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "complete-7|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "graph-03|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "random-monotone-10|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}
+{"key": "comparator-09|monotone", "kind": "sat", "status": "timeout", "deadline": 120.0}

@@ -1,0 +1,9 @@
+{"case": "complete-4", "n": 4, "G": 6, "status": "UNSAT", "seconds": 2.44, "conflicts": 70048}
+{"case": "threshold-4-3", "n": 4, "G": 6, "status": "UNSAT", "seconds": 2.56, "conflicts": 66284}
+{"case": "hypergraph-12", "n": 5, "G": 7, "status": "UNSAT", "seconds": 9.99, "conflicts": 183226}
+{"case": "comparator-07", "n": 5, "G": 7, "status": "UNSAT", "seconds": 10.08, "conflicts": 207230}
+{"case": "graph-01", "n": 5, "G": 7, "status": "UNSAT", "seconds": 11.71, "conflicts": 219317}
+{"case": "hypergraph-08", "n": 6, "G": 8, "status": "UNSAT", "seconds": 73.39, "conflicts": 1044564}
+{"case": "random-monotone-08", "n": 6, "G": 8, "status": "UNSAT", "seconds": 102.25, "conflicts": 1533781}
+{"case": "mux-4-to-1", "n": 6, "G": 10, "status": "open", "seconds": 300.02, "conflicts": 4745845}
+{"case": "random-monotone-10", "n": 8, "G": 10, "status": "open", "seconds": 300.01, "conflicts": 2978988}
