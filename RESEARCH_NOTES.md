@@ -14,6 +14,10 @@ The deleted-point projective-plane probe L-meta-2216 has a Lean-checked 62-gate 
 construction and a matching 62-gate lower bound when the graph-output cone is single-level.
 The unrestricted budget of 61 remains open. [Witness, proof scope, and SAT records](sat-search/results/pg3_deleted_point_proxy_2216/README.md)
 
+For the six-input table in L-meta-16102, Lean checked an eight-gate monotone construction.
+Two synthesis encodings exclude the requested nine-gate circuit with a NOT reading a gate.
+The exclusion is computational evidence. [Exact syntax, coverage, and replay](sat-search/results/mid_not_16102/README.md)
+
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
 to targeted verification of changed components, and 5% to documentation. The research targets are:
 

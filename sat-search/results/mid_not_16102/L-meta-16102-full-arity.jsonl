@@ -1,0 +1,64 @@
+{"size": 6, "first": null, "result": "UNSAT", "elapsed_s": 5.4553, "solver": {"restarts": 317, "conflicts": 70494, "decisions": 181375, "propagations": 12005905}}
+{"size": 7, "first": null, "result": "UNSAT", "elapsed_s": 18.6404, "solver": {"restarts": 593, "conflicts": 175305, "decisions": 320005, "propagations": 35743433}}
+{"size": 9, "first": [0, [1, 4]], "result": "UNSAT", "elapsed_s": 28.8112, "solver": {"restarts": 793, "conflicts": 287557, "decisions": 481765, "propagations": 75973094}}
+{"size": 9, "first": [0, [0, 5]], "result": "UNSAT", "elapsed_s": 29.8766, "solver": {"restarts": 814, "conflicts": 307517, "decisions": 496710, "propagations": 68876240}}
+{"size": 9, "first": [0, [1, 5]], "result": "UNSAT", "elapsed_s": 40.577, "solver": {"restarts": 1028, "conflicts": 380825, "decisions": 564163, "propagations": 88561509}}
+{"size": 9, "first": [0, [5]], "result": "UNSAT", "elapsed_s": 40.8688, "solver": {"restarts": 884, "conflicts": 329999, "decisions": 514484, "propagations": 62144776}}
+{"size": 9, "first": [0, [3]], "result": "UNSAT", "elapsed_s": 41.6097, "solver": {"restarts": 886, "conflicts": 326770, "decisions": 502796, "propagations": 72348192}}
+{"size": 9, "first": [0, [3, 4]], "result": "UNSAT", "elapsed_s": 42.0703, "solver": {"restarts": 1182, "conflicts": 438140, "decisions": 672460, "propagations": 89639180}}
+{"size": 9, "first": [0, [4, 5]], "result": "UNSAT", "elapsed_s": 46.1491, "solver": {"restarts": 1092, "conflicts": 403397, "decisions": 620006, "propagations": 85769557}}
+{"size": 9, "first": [0, []], "result": "UNSAT", "elapsed_s": 47.8965, "solver": {"restarts": 1185, "conflicts": 455505, "decisions": 707509, "propagations": 104751748}}
+{"size": 9, "first": [0, [3, 5]], "result": "UNSAT", "elapsed_s": 49.4817, "solver": {"restarts": 974, "conflicts": 358380, "decisions": 538222, "propagations": 80960900}}
+{"size": 9, "first": [0, [0, 3]], "result": "UNSAT", "elapsed_s": 52.4082, "solver": {"restarts": 1181, "conflicts": 482966, "decisions": 718279, "propagations": 100023444}}
+{"size": 9, "first": [0, [0, 1]], "result": "UNSAT", "elapsed_s": 55.5476, "solver": {"restarts": 1176, "conflicts": 520281, "decisions": 738455, "propagations": 110863652}}
+{"size": 9, "first": [1, [3]], "result": "UNSAT", "elapsed_s": 37.787, "solver": {"restarts": 886, "conflicts": 326770, "decisions": 502796, "propagations": 72348192}}
+{"size": 9, "first": [0, [1, 2]], "result": "UNSAT", "elapsed_s": 61.2417, "solver": {"restarts": 1185, "conflicts": 486112, "decisions": 719891, "propagations": 104094264}}
+{"size": 9, "first": [1, [5]], "result": "UNSAT", "elapsed_s": 33.231, "solver": {"restarts": 884, "conflicts": 329999, "decisions": 514484, "propagations": 62144776}}
+{"size": 9, "first": [0, [1]], "result": "UNSAT", "elapsed_s": 70.1165, "solver": {"restarts": 1555, "conflicts": 660962, "decisions": 879892, "propagations": 139147794}}
+{"size": 9, "first": [0, [1, 3]], "result": "UNSAT", "elapsed_s": 70.3376, "solver": {"restarts": 1158, "conflicts": 509815, "decisions": 706346, "propagations": 115336708}}
+{"size": 9, "first": [0, [4]], "result": "UNSAT", "elapsed_s": 71.064, "solver": {"restarts": 1267, "conflicts": 557892, "decisions": 759172, "propagations": 121747536}}
+{"size": 9, "first": [1, [1]], "result": "UNSAT", "elapsed_s": 67.3616, "solver": {"restarts": 1555, "conflicts": 660962, "decisions": 879892, "propagations": 139147794}}
+{"size": 9, "first": [0, [0, 4]], "result": "UNSAT", "elapsed_s": 78.2868, "solver": {"restarts": 1444, "conflicts": 630434, "decisions": 861416, "propagations": 139670973}}
+{"size": 9, "first": [0, [0]], "result": "UNSAT", "elapsed_s": 80.7674, "solver": {"restarts": 1647, "conflicts": 694327, "decisions": 953846, "propagations": 160778943}}
+{"size": 9, "first": [1, [0]], "result": "UNSAT", "elapsed_s": 81.5803, "solver": {"restarts": 1647, "conflicts": 694327, "decisions": 953846, "propagations": 160778943}}
+{"size": 9, "first": [1, [0, 4]], "result": "UNSAT", "elapsed_s": 40.7335, "solver": {"restarts": 906, "conflicts": 338392, "decisions": 535621, "propagations": 74434897}}
+{"size": 9, "first": [1, [3, 5]], "result": "UNSAT", "elapsed_s": 27.4219, "solver": {"restarts": 777, "conflicts": 275011, "decisions": 480121, "propagations": 61943323}}
+{"size": 9, "first": [1, [4]], "result": "UNSAT", "elapsed_s": 58.6499, "solver": {"restarts": 1267, "conflicts": 557892, "decisions": 759172, "propagations": 121747536}}
+{"size": 9, "first": [1, [1, 4]], "result": "UNSAT", "elapsed_s": 39.7257, "solver": {"restarts": 882, "conflicts": 344395, "decisions": 563094, "propagations": 72158953}}
+{"size": 9, "first": [1, [0, 5]], "result": "UNSAT", "elapsed_s": 47.4346, "solver": {"restarts": 1167, "conflicts": 459765, "decisions": 661443, "propagations": 99031348}}
+{"size": 9, "first": [1, [1, 5]], "result": "UNSAT", "elapsed_s": 38.2558, "solver": {"restarts": 1030, "conflicts": 382047, "decisions": 594531, "propagations": 77552325}}
+{"size": 9, "first": [1, []], "result": "UNSAT", "elapsed_s": 93.5324, "solver": {"restarts": 1679, "conflicts": 749733, "decisions": 1003945, "propagations": 185652604}}
+{"size": 8, "first": null, "result": "UNSAT", "elapsed_s": 94.3964, "solver": {"restarts": 1684, "conflicts": 722730, "decisions": 968858, "propagations": 166753469}}
+{"size": 9, "first": [1, [1, 2]], "result": "UNSAT", "elapsed_s": 48.7896, "solver": {"restarts": 1166, "conflicts": 434948, "decisions": 676972, "propagations": 87994389}}
+{"size": 9, "first": [1, [1, 3]], "result": "UNSAT", "elapsed_s": 50.1804, "solver": {"restarts": 1179, "conflicts": 439713, "decisions": 682302, "propagations": 105979079}}
+{"size": 9, "first": [1, [4, 5]], "result": "UNSAT", "elapsed_s": 41.4073, "solver": {"restarts": 1042, "conflicts": 375825, "decisions": 593856, "propagations": 82167325}}
+{"size": 9, "first": [2, [4]], "result": "UNSAT", "elapsed_s": 34.6932, "solver": {"restarts": 904, "conflicts": 328044, "decisions": 534287, "propagations": 70048356}}
+{"size": 9, "first": [1, [0, 1]], "result": "UNSAT", "elapsed_s": 67.7913, "solver": {"restarts": 1497, "conflicts": 651326, "decisions": 927774, "propagations": 132395074}}
+{"size": 9, "first": [1, [0, 3]], "result": "UNSAT", "elapsed_s": 70.5651, "solver": {"restarts": 1149, "conflicts": 493851, "decisions": 669782, "propagations": 126227623}}
+{"size": 9, "first": [2, [0, 5]], "result": "UNSAT", "elapsed_s": 31.2225, "solver": {"restarts": 868, "conflicts": 302115, "decisions": 498583, "propagations": 64281928}}
+{"size": 9, "first": [2, [5]], "result": "UNSAT", "elapsed_s": 37.0822, "solver": {"restarts": 930, "conflicts": 343620, "decisions": 619447, "propagations": 72424496}}
+{"size": 9, "first": [2, [0, 4]], "result": "UNSAT", "elapsed_s": 36.5894, "solver": {"restarts": 818, "conflicts": 295493, "decisions": 601682, "propagations": 64115131}}
+{"size": 9, "first": [1, [3, 4]], "result": "UNSAT", "elapsed_s": 64.6581, "solver": {"restarts": 1269, "conflicts": 547232, "decisions": 789769, "propagations": 115906368}}
+{"size": 9, "first": [2, [1, 3]], "result": "UNSAT", "elapsed_s": 33.6038, "solver": {"restarts": 922, "conflicts": 322061, "decisions": 713898, "propagations": 73836530}}
+{"size": 9, "first": [2, [1, 5]], "result": "UNSAT", "elapsed_s": 30.1963, "solver": {"restarts": 694, "conflicts": 255829, "decisions": 531140, "propagations": 50044622}}
+{"size": 9, "first": [2, []], "result": "UNSAT", "elapsed_s": 63.7349, "solver": {"restarts": 1240, "conflicts": 551025, "decisions": 856874, "propagations": 118888007}}
+{"size": 9, "first": [2, [1]], "result": "UNSAT", "elapsed_s": 58.9388, "solver": {"restarts": 1166, "conflicts": 432023, "decisions": 727516, "propagations": 97299066}}
+{"size": 9, "first": [2, [0, 1]], "result": "UNSAT", "elapsed_s": 50.751, "solver": {"restarts": 1156, "conflicts": 478746, "decisions": 741922, "propagations": 101412619}}
+{"size": 9, "first": [2, [1, 4]], "result": "UNSAT", "elapsed_s": 41.2728, "solver": {"restarts": 1014, "conflicts": 371811, "decisions": 573575, "propagations": 81505013}}
+{"size": 9, "first": [2, [0]], "result": "UNSAT", "elapsed_s": 63.0186, "solver": {"restarts": 1243, "conflicts": 541454, "decisions": 779459, "propagations": 113653595}}
+{"size": 9, "first": [2, [1, 2]], "result": "UNSAT", "elapsed_s": 44.7342, "solver": {"restarts": 1022, "conflicts": 368772, "decisions": 574794, "propagations": 84536164}}
+{"size": 9, "first": [2, [4, 5]], "result": "UNSAT", "elapsed_s": 22.5728, "solver": {"restarts": 651, "conflicts": 236566, "decisions": 411005, "propagations": 48153478}}
+{"size": 9, "first": [2, [3, 4]], "result": "UNSAT", "elapsed_s": 40.3786, "solver": {"restarts": 1038, "conflicts": 379768, "decisions": 556442, "propagations": 87394760}}
+{"size": 9, "first": [2, [3, 0]], "result": "UNSAT", "elapsed_s": 45.1133, "solver": {"restarts": 962, "conflicts": 354118, "decisions": 796716, "propagations": 78483101}}
+{"size": 9, "first": [2, [0, 3]], "result": "UNSAT", "elapsed_s": 58.4363, "solver": {"restarts": 1194, "conflicts": 525623, "decisions": 754121, "propagations": 115844972}}
+{"size": 9, "first": [2, [4, 1]], "result": "UNSAT", "elapsed_s": 31.7132, "solver": {"restarts": 903, "conflicts": 316123, "decisions": 496852, "propagations": 62961324}}
+{"size": 9, "first": [2, [4, 3]], "result": "UNSAT", "elapsed_s": 29.6354, "solver": {"restarts": 754, "conflicts": 279247, "decisions": 501338, "propagations": 59762975}}
+{"size": 9, "first": [2, [5, 4]], "result": "UNSAT", "elapsed_s": 21.592, "solver": {"restarts": 743, "conflicts": 264381, "decisions": 454341, "propagations": 56272706}}
+{"size": 9, "first": [2, [3, 1]], "result": "UNSAT", "elapsed_s": 51.7486, "solver": {"restarts": 1104, "conflicts": 510035, "decisions": 735200, "propagations": 108352244}}
+{"size": 9, "first": [2, [5, 0]], "result": "UNSAT", "elapsed_s": 31.4005, "solver": {"restarts": 970, "conflicts": 354406, "decisions": 553314, "propagations": 79639988}}
+{"size": 9, "first": [2, [3]], "result": "UNSAT", "elapsed_s": 77.0431, "solver": {"restarts": 1441, "conflicts": 610925, "decisions": 880869, "propagations": 131610956}}
+{"size": 9, "first": [2, [5, 3]], "result": "UNSAT", "elapsed_s": 29.579, "solver": {"restarts": 972, "conflicts": 354642, "decisions": 526873, "propagations": 76141636}}
+{"size": 9, "first": [2, [4, 0]], "result": "UNSAT", "elapsed_s": 42.4866, "solver": {"restarts": 1174, "conflicts": 480534, "decisions": 729999, "propagations": 100008151}}
+{"size": 9, "first": [2, [1, 0]], "result": "UNSAT", "elapsed_s": 63.1752, "solver": {"restarts": 1434, "conflicts": 613310, "decisions": 878680, "propagations": 131619097}}
+{"size": 9, "first": [2, [3, 5]], "result": "UNSAT", "elapsed_s": 48.21, "solver": {"restarts": 1141, "conflicts": 453836, "decisions": 646409, "propagations": 103649521}}
+{"size": 9, "first": [2, [5, 1]], "result": "UNSAT", "elapsed_s": 33.2877, "solver": {"restarts": 1151, "conflicts": 413219, "decisions": 641004, "propagations": 84089596}}

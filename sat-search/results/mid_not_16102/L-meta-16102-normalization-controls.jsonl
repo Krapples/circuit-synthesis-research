@@ -1,0 +1,32 @@
+{"size": 5, "first": null, "signed": false, "result": "UNSAT", "elapsed_s": 0.0761, "solver": {"restarts": 8, "conflicts": 2603, "decisions": 12148, "propagations": 360004}}
+{"size": 6, "first": null, "signed": true, "result": "UNSAT", "elapsed_s": 1.6024, "solver": {"restarts": 117, "conflicts": 26981, "decisions": 79494, "propagations": 3857313}}
+{"size": 6, "first": null, "signed": false, "result": "UNSAT", "elapsed_s": 1.7846, "solver": {"restarts": 128, "conflicts": 34276, "decisions": 103314, "propagations": 5253211}}
+{"size": 8, "first": [0, 0, 5], "signed": true, "result": "UNSAT", "elapsed_s": 2.3958, "solver": {"restarts": 212, "conflicts": 34554, "decisions": 118766, "propagations": 6485647}}
+{"size": 8, "first": [0, 4, 5], "signed": true, "result": "UNSAT", "elapsed_s": 2.9515, "solver": {"restarts": 176, "conflicts": 50241, "decisions": 135731, "propagations": 7350933}}
+{"size": 8, "first": [1, 0, 4], "signed": true, "result": "UNSAT", "elapsed_s": 3.1586, "solver": {"restarts": 171, "conflicts": 52922, "decisions": 173079, "propagations": 8478503}}
+{"size": 8, "first": [1, 0, 5], "signed": true, "result": "UNSAT", "elapsed_s": 3.2908, "solver": {"restarts": 184, "conflicts": 42715, "decisions": 154056, "propagations": 7100091}}
+{"size": 8, "first": [0, 1, 5], "signed": true, "result": "UNSAT", "elapsed_s": 3.5485, "solver": {"restarts": 106, "conflicts": 45221, "decisions": 146251, "propagations": 8231985}}
+{"size": 8, "first": [0, 3, 5], "signed": true, "result": "UNSAT", "elapsed_s": 3.5628, "solver": {"restarts": 180, "conflicts": 51202, "decisions": 143329, "propagations": 8144113}}
+{"size": 8, "first": [1, 3, 5], "signed": true, "result": "UNSAT", "elapsed_s": 1.5214, "solver": {"restarts": 98, "conflicts": 25021, "decisions": 78261, "propagations": 3898892}}
+{"size": 8, "first": [0, 1, 4], "signed": true, "result": "UNSAT", "elapsed_s": 4.049, "solver": {"restarts": 170, "conflicts": 55520, "decisions": 146858, "propagations": 9660109}}
+{"size": 8, "first": [1, 1, 4], "signed": true, "result": "UNSAT", "elapsed_s": 4.0459, "solver": {"restarts": 195, "conflicts": 54969, "decisions": 153381, "propagations": 8279309}}
+{"size": 8, "first": [0, 0, 4], "signed": true, "result": "UNSAT", "elapsed_s": 4.1452, "solver": {"restarts": 165, "conflicts": 54387, "decisions": 134705, "propagations": 9382918}}
+{"size": 8, "first": [1, 0, 3], "signed": true, "result": "UNSAT", "elapsed_s": 4.167, "solver": {"restarts": 179, "conflicts": 57195, "decisions": 193511, "propagations": 9224677}}
+{"size": 8, "first": [0, 3, 4], "signed": true, "result": "UNSAT", "elapsed_s": 4.2145, "solver": {"restarts": 197, "conflicts": 56853, "decisions": 165734, "propagations": 7905967}}
+{"size": 8, "first": [0, 1, 3], "signed": true, "result": "UNSAT", "elapsed_s": 4.3099, "solver": {"restarts": 202, "conflicts": 59220, "decisions": 166648, "propagations": 11346200}}
+{"size": 8, "first": [1, 1, 5], "signed": true, "result": "UNSAT", "elapsed_s": 2.7684, "solver": {"restarts": 149, "conflicts": 41409, "decisions": 132252, "propagations": 6525018}}
+{"size": 8, "first": [1, 3, 4], "signed": true, "result": "UNSAT", "elapsed_s": 3.3186, "solver": {"restarts": 189, "conflicts": 55002, "decisions": 183466, "propagations": 8200616}}
+{"size": 8, "first": [0, 1, 2], "signed": true, "result": "UNSAT", "elapsed_s": 5.2095, "solver": {"restarts": 244, "conflicts": 65319, "decisions": 148583, "propagations": 11635107}}
+{"size": 7, "first": null, "signed": true, "result": "UNSAT", "elapsed_s": 5.5066, "solver": {"restarts": 268, "conflicts": 70096, "decisions": 189216, "propagations": 11293598}}
+{"size": 8, "first": [0, 0, 3], "signed": true, "result": "UNSAT", "elapsed_s": 5.499, "solver": {"restarts": 186, "conflicts": 58461, "decisions": 172815, "propagations": 10963362}}
+{"size": 8, "first": [0, 0, 1], "signed": true, "result": "UNSAT", "elapsed_s": 5.5068, "solver": {"restarts": 260, "conflicts": 71413, "decisions": 190058, "propagations": 12562707}}
+{"size": 8, "first": [1, 1, 2], "signed": true, "result": "UNSAT", "elapsed_s": 5.5394, "solver": {"restarts": 201, "conflicts": 64861, "decisions": 173049, "propagations": 13220594}}
+{"size": 8, "first": [1, 1, 3], "signed": true, "result": "UNSAT", "elapsed_s": 5.6271, "solver": {"restarts": 244, "conflicts": 61251, "decisions": 157413, "propagations": 11335948}}
+{"size": 8, "first": [1, 4, 5], "signed": true, "result": "UNSAT", "elapsed_s": 2.7079, "solver": {"restarts": 210, "conflicts": 50900, "decisions": 146372, "propagations": 7727566}}
+{"size": 7, "first": null, "signed": false, "result": "UNSAT", "elapsed_s": 5.9422, "solver": {"restarts": 317, "conflicts": 82703, "decisions": 192199, "propagations": 16136983}}
+{"size": 8, "first": [1, 0, 1], "signed": true, "result": "UNSAT", "elapsed_s": 5.9202, "solver": {"restarts": 271, "conflicts": 70255, "decisions": 172105, "propagations": 12350495}}
+{"size": 8, "first": [2, 4, 4], "signed": true, "result": "UNSAT", "elapsed_s": 3.7044, "solver": {"restarts": 252, "conflicts": 65282, "decisions": 201157, "propagations": 10701010}}
+{"size": 8, "first": [2, 5, 5], "signed": true, "result": "UNSAT", "elapsed_s": 3.5006, "solver": {"restarts": 229, "conflicts": 63226, "decisions": 154138, "propagations": 10020191}}
+{"size": 8, "first": [2, 3, 3], "signed": true, "result": "UNSAT", "elapsed_s": 4.9477, "solver": {"restarts": 269, "conflicts": 79495, "decisions": 190884, "propagations": 14766811}}
+{"size": 8, "first": [2, 0, 0], "signed": true, "result": "UNSAT", "elapsed_s": 6.1701, "solver": {"restarts": 346, "conflicts": 97944, "decisions": 209672, "propagations": 18711047}}
+{"size": 8, "first": [2, 1, 1], "signed": true, "result": "UNSAT", "elapsed_s": 6.1161, "solver": {"restarts": 361, "conflicts": 88409, "decisions": 227632, "propagations": 17326312}}
