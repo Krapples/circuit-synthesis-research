@@ -11,6 +11,7 @@
 
 #include "regional_kernel.hpp"
 #include "tight_residual.hpp"
+#include "slack_two_boundary.hpp"
 
 namespace py = pybind11;
 
@@ -273,4 +274,48 @@ PYBIND11_MODULE(_regional_native, mod) {
             py::arg("slack"), py::arg("work_limit") = 100000, py::arg("dominance") = false,
             "Return status and optional normalized occurrence witness (case, repeated index, provider mask,"
             " provider column, provider tree with phase, decoder tree with phase).");
+    mod.def("slack_two_boundary",
+            [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
+               unsigned mixed, const std::vector<uint64_t>& gate_columns, uint64_t target, uint64_t care,
+               unsigned work_limit, double seconds, unsigned mode) {
+                if (mode > 3) throw py::value_error("slack-two mode must be 0 through 3");
+                using Clock = synthesis::residual_detail::Clock;
+                const auto deadline = seconds > 0
+                    ? Clock::now() + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(seconds))
+                    : Clock::time_point::max();
+                synthesis::SlackTwoBoundary result;
+                {
+                    const py::gil_scoped_release release;
+                    result = synthesis::slack_two_boundary(columns, h, primaries, mixed, gate_columns,
+                                                           target, care, work_limit, deadline, mode);
+                }
+                const auto& exact = result.exact;
+                using Status = residual_directed::Status;
+                py::dict metrics;
+                metrics["status"] = exact.status == Status::sat ? 1 : exact.status == Status::unsat ? 0 : 2;
+                metrics["work"] = exact.work;
+                metrics["allocations"] = exact.allocations;
+                metrics["parity_rejects"] = exact.parity_rejects;
+                metrics["provider_trials"] = exact.provider_trials;
+                metrics["tree_calls"] = exact.tree_calls;
+                metrics["memo_hits"] = exact.memo_hits;
+                metrics["unate_rejects"] = exact.unate_rejects;
+                metrics["unate_merges"] = exact.unate_merges;
+                metrics["gate_extensions"] = result.gate_extensions;
+                metrics["mixed_extensions"] = result.mixed_extensions;
+                metrics["extension_feasible"] = result.feasible;
+                metrics["extension_unknown"] = result.unknown;
+                metrics["extension_excluded"] = result.excluded;
+                py::list regions;
+                for (const auto& region : exact.regions) {
+                    py::list inputs;
+                    for (const auto& leaf : region.inputs)
+                        inputs.append(py::make_tuple(leaf.wire, leaf.column, leaf.raw));
+                    regions.append(py::make_tuple(region.output, region.column, inputs,
+                                                  directed_witness(region.witness)));
+                }
+                return py::make_tuple(metrics, regions);
+            }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
+            py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
+            py::arg("deadline_seconds") = 0.025, py::arg("mode") = 2);
 }

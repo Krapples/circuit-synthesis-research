@@ -1,0 +1,10 @@
+checks 4470 sat 2876 providers0=2771 providers1=102 providers2=3
+2500 rejected 163 merges 128 original_columns 30634 refined_columns 29230 compatible_columns 19248
+gate-boundary mode=0 sat=65 unsat=7 unknown=28 ms=894.82 work=37954325 allocations=4710 parity_rejects=0 provider_trials=3121 tree_calls=4099 memo_hits=0 unate_rejects=0 unate_merges=0
+gate-boundary mode=1 sat=69 unsat=8 unknown=23 ms=809.36 work=37336415 allocations=8371 parity_rejects=4097 provider_trials=6250 tree_calls=21621 memo_hits=0 unate_rejects=0 unate_merges=0
+gate-boundary mode=2 sat=69 unsat=8 unknown=23 ms=784.70 work=36973695 allocations=8818 parity_rejects=4333 provider_trials=6648 tree_calls=21654 memo_hits=1130 unate_rejects=0 unate_merges=0
+gate-boundary mode=3 sat=70 unsat=12 unknown=18 ms=712.85 work=39807961 allocations=13626 parity_rejects=6892 provider_trials=9513 tree_calls=21875 memo_hits=2272 unate_rejects=1982 unate_merges=3297
+six-wire-partial mode=0 sat=67 unsat=0 unknown=33 ms=1071.04 work=44196870 allocations=3365 parity_rejects=0 provider_trials=1412 tree_calls=2644 memo_hits=0 unate_rejects=0 unate_merges=0
+six-wire-partial mode=1 sat=68 unsat=10 unknown=22 ms=933.72 work=49871192 allocations=12680 parity_rejects=5636 provider_trials=6656 tree_calls=34225 memo_hits=0 unate_rejects=0 unate_merges=0
+six-wire-partial mode=2 sat=68 unsat=12 unknown=20 ms=925.35 work=49621658 allocations=13272 parity_rejects=5894 provider_trials=6888 tree_calls=34475 memo_hits=913 unate_rejects=0 unate_merges=0
+six-wire-partial mode=3 sat=68 unsat=14 unknown=18 ms=900.96 work=48625643 allocations=15448 parity_rejects=6940 provider_trials=7910 tree_calls=27085 memo_hits=1125 unate_rejects=3657 unate_merges=2047

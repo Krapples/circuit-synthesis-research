@@ -81,7 +81,7 @@ def check_generated(reference):
     print(json.dumps(dict(kind='generated', **counts)), flush=True)
 
 
-def captured_boundaries(reference, path, limit):
+def captured_boundaries(reference, path, limit, event='slack_one'):
     with path.open(encoding='utf-8') as source:
         jobs = [json.loads(line) for line in source]
     seen = set()
@@ -92,7 +92,7 @@ def captured_boundaries(reference, path, limit):
         care = (1 << rows) - 1
         pairs = [(a, b) for b in range(n) for a in range(b)]
         for record in job['records']:
-            if record.get('event') != 'slack_one':
+            if record.get('event') != event:
                 continue
             types, mixed = record['types'], record['mixed']
             key = n, target, tuple(sorted(types)), mixed

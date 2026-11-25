@@ -534,3 +534,187 @@ python sat-search/experiments/residual_directed_check.py $directedRef --capture 
 python sat-search/baselines/first_layer_check.py check sat-search/logs/residual_directed_oracle_replay.jsonl --exe $percy --workers 1 --memory-mib 512 --modes slack-one-direct slack-one-directed slack-one-dominance
 python sat-search/baselines/first_layer_check.py screen sat-search/logs/residual_directed_screen_replay.jsonl --exe $percy --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes slack-one-direct slack-one-directed slack-one-dominance
 ```
+
+## Exact slack-two completion
+
+For a trimmed size-`B` free-NOT circuit whose output is after the first
+layer, let `h` count typed first-layer **occurrences** and let `m` count
+distinct mixed primaries. The residual has `h+m` boundary wires and
+`B-h` binary gates. Its excess is `s = B+1-(2h+m)`. At `s=2`, every
+extra read is either on the boundary or an internal output. With no shared
+internal output, the extra reads are distributed among boundary wires. One
+shared output can have three readers, or two readers with one repeated
+boundary wire. Two shared outputs have two readers each and may feed
+independent regions or be nested.
+
+Cut each shared internal output at its outgoing edges. Its region is a tree
+on available occurrences, and the regions can be processed in provider
+topological order. Reader-count distributions and allocations enumerate
+every such decomposition. At each provider, opposed labels in a fiber of the
+other available signals must be separated by the provider output. This
+imposes equality and inequality relations on its input fibers. Consistent
+component orientations give candidate columns for exact tree recognition.
+The alternative path enumerates provider trees and tests their columns.
+The final region uses target-directed completion. Every tree preserves
+distinct fanins, exact occurrence use, and the ban on cherries with two
+raw primaries.
+
+A failed frontier stores one entry per still-available distinct wire, keyed
+by normalized cared truth column, raw status, and remaining reader count.
+The sorted multiset preserves separate equal-column wires. Together with the
+ordered suffix of pending provider multiplicities it gives a bijection
+between the remaining choices of equivalent frontiers. Previous regions
+constrain the rest only through the live wires and their counts. Free phases
+allow column normalization. Only proved failures enter this per-query cache.
+The optional singleton filter uses the fixed polarity of a wire appearing
+once in a provider tree. A forced output difference along that coordinate
+links component orientations to the same phase variable across all such
+pairs. Contradictions exclude an allocation. Consistent parity and phase
+systems still require exact tree recognition.
+
+### Extensions and cut scope
+
+After proving the exact boundary infeasible, retaining its first-layer
+occurrences and mixed-primary presences leaves two units for extension.
+One additional mixed primary leaves slack one, two leave slack zero, and
+one extra first-layer occurrence leaves slack zero. The latter includes
+types already present. The adapter checks those extensions with the
+existing directed slack-zero and slack-one kernels. Its clause negates the
+old occurrences by their SAT positions and the old mixed presences. It
+adds a positive literal for every feature in a feasible or unknown extension.
+The added-gate literals range over positions outside the old first layer.
+This preserves multiplicity even when an added type matches an old one.
+A union of extensions in one clause may admit combinations already shown
+infeasible, which weakens the cut while keeping it valid.
+
+The adapter uses 100,000 work units for the exact search and each slack-one
+extension, 4,096 for each tight extension, and a single 25 ms deadline
+shared across all of them. The per-budget Percy query cap is 128. An
+unknown exact boundary produces no clause. Unknown extensions are retained.
+Percy integration is opt-in for complete, trimmed AIG CEGAR and two to five
+primary inputs. The standalone native engine also accepts partial cared
+columns, which the Python differential check exercises.
+
+### Stronger clause for a proved-infeasible singleton
+
+Suppose an extension containing just a new mixed input `x` is proved
+infeasible. Under the original boundary and presence of `x`, only one
+unit remains. Every completing extension must therefore add a second mixed
+input `y` whose tight pair `{x,y}` remains feasible or unknown. This gives
+a clause with the original negative antecedent, a negative literal for
+`x`, and positive literals for those `y`. The rule is valid even if the
+unextended slack-two boundary was feasible, since the antecedent includes
+`x`. An infeasible tight extension can similarly exclude its entire
+presence antecedent. This is a derivation for future ablation. The current
+adapter emits only the union clause.
+
+### Native checks and captured boundaries
+
+The three supplied programs built and ran with MSVC in C++20 mode. The DAG
+oracle checked 4,470 complete and partial queries, including three feasible
+witnesses with two internal providers. The separate unateness oracle checked
+2,500 cases. In the generated benchmark rerun with 2,000,000 work units and
+25 ms per query, mode 0 completed 139 of 200 queries, including seven
+exclusions. Mode 3 completed 164, including 26 exclusions. The archive's
+published completion totals were 138 and 191 under its GCC run. The checks
+agree on the qualitative gain and the absolute deadline-sensitive counts
+differ between runs. The in-repo Python harness independently enumerates
+small exact DAGs with complete and partial care, reconstructs and checks
+native witnesses, and tests duplicate wires, extensions and exhausted limits.
+It passed 4,224 mode-by-query oracle comparisons plus the focused tests.
+The 96 fixed-budget Percy checks agreed with forward DAG enumeration at
+small sizes and with plain all-row Percy on three hard size-seven budgets.
+They exercised 102 slack-two queries, including 14 feasible residuals
+and 48 pure clauses.
+[MSVC archive test and benchmark output](results/baselines/slack_two_archive_msvc.txt)
+
+The directed slack-one control emitted 90 observations of actual slack-two
+boundaries on the first eight hard Percy targets. After deduplicating by
+target, sorted first-layer multiset and mixed mask, 44 remained. They came
+from size-seven and size-eight searches and had no repeated first-layer type.
+Every decisive replay result was an exclusion, and every excluded boundary
+justified a pure position-based cut. At the 100,000 work limit every unknown
+exhausted its work allowance. Elapsed time includes extension checks and
+the Python call. These are single sequential passes.
+
+| Native replay mode | Excluded / 44 at 100k | Total at 100k | Excluded / 44 at 2M | Total at 2M |
+| --- | ---: | ---: | ---: | ---: |
+| No parity pruning or cache | 8 | 152.5 ms | 38 | 635.6 ms |
+| Parity plus direct provider columns | 30 | 111.5 ms | 44 | 161.7 ms |
+| Plus failed-frontier memo | 34 | 111.4 ms | 44 | 155.3 ms |
+| Plus singleton unateness | 35 | 107.5 ms | 44 | 143.7 ms |
+
+All four modes used the same 25 ms limit. Memo recorded 377 frontier hits
+at 100k. With unateness enabled, 809 provider allocations failed the phase
+test, and directed tree calls fell from 7,763 to 4,884 while more boundaries
+completed. At 2M the nine boundaries still open in unate mode at the
+production allowance were all excluded.
+[Raw traces](results/baselines/slack_two_percy_captured.jsonl)
+· [100k replay](results/baselines/slack_two_captured_replay.jsonl)
+· [2M replay](results/baselines/slack_two_captured_replay_2m.jsonl)
+
+### Matched Percy screen
+
+The three modes shared all-pair distinction, the boundary budget, tight set
+cuts, and directed slack-one. The 43-target hard screen used one Windows
+worker, a 512 MiB process-family commit cap, an 8 s per-target deadline and
+20,000 Satoko conflicts per solve. Every run closed sizes three through six.
+All jobs stopped at a solver limit with no verified upper bound or minimum
+from this screen. Percy reported the exclusions below; independent proof
+packets were unavailable for the hard budgets.
+
+| Metric | Directed slack-one | Plus slack-two memo | Plus memo and unateness |
+| --- | ---: | ---: | ---: |
+| Size-seven exclusions / 43 | 19 | 38 | 41 |
+| Size-eight exclusions | 0 | 0 | 0 |
+| Conflicts on 188 jointly excluded budgets | 476,965 | 205,103 | 186,807 |
+| Solver seconds on jointly excluded budgets | 7.436 | 3.120 | 2.907 |
+| Slack-two queries / unknown | — | 813 / 222 | 827 / 157 |
+| Slack-two pure / conditional clauses | — | 591 / 0 | 670 / 0 |
+| Slack-two completion and extension seconds | — | 2.173 | 2.185 |
+| Largest Percy peak working set | 25.5 MiB | 33.5 MiB | 22.2 MiB |
+| Sum of job wall seconds | 39.632 | 43.351 | 42.148 |
+
+All attempted extensions of excluded boundaries were excluded in this hard
+screen. The independent synthetic extension test exercises a conditional cut
+with one mixed pair and one extra first-layer occurrence retained. The
+additional size-seven exclusions put more jobs into size eight. Measured
+whole-screen time increased in both experimental modes. Both remain opt-in.
+[Raw matched Percy records](results/baselines/slack_two_percy_screen.jsonl)
+· [Fixed-budget oracle records](results/baselines/slack_two_percy_oracle.jsonl)
+
+The 90 observations versus 44 unique boundaries suggest a separate
+cross-query reuse opportunity. At one fixed budget and target, a cache
+keyed by the typed first-layer multiset and mixed mask could reuse exact
+exclusions and extension masks as SAT positions change. The SAT clause
+would still be rebuilt using the positions in the current model. This
+cache is independent of the existing within-query failed-frontier cache.
+The measured duplication comes from the trace-only control, so reuse in
+the active cut path still needs a screen.
+
+When every extension is excluded and the old first-layer types are distinct,
+the same proof gives a position-independent pure presence clause. Any model
+with all the old types present contains an injection of the old boundary
+wires into its first layer. The slack-two extension list therefore still
+covers the model, including any extra occurrence of one of those types.
+Each of the 35 exclusions in the 100k unate replay qualifies. This is a
+candidate for the next cut-quality ablation. The repeated-type case still
+requires positions or a multiplicity threshold.
+
+### Replay commands
+
+```powershell
+Expand-Archive 'C:\Users\Carson\Downloads\residual_slack_two_native.zip' external/residual-slack-two
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cd /d external\residual-slack-two && cl /nologo /std:c++20 /O2 /EHsc residual_slack_two_check.cpp /Feslack_two_check.exe && slack_two_check.exe && cl /nologo /std:c++20 /O2 /EHsc residual_provider_unate_check.cpp /Feunate_check.exe && unate_check.exe && cl /nologo /std:c++20 /O2 /EHsc residual_slack_two_bench.cpp /Feslack_two_bench.exe && slack_two_bench.exe'
+& 'sat-search/native/build_native.bat'
+$env:PERCY_BUILD_DIR = 'percy-first-layer-release'
+& 'sat-search/baselines/build/build_percy.bat'
+$percy = 'external/percy-first-layer-release/percy_run.exe'
+$trace = 'sat-search/logs/slack_two_trace.jsonl'
+python sat-search/experiments/slack_two_native_check.py
+python sat-search/baselines/first_layer_check.py check sat-search/logs/slack_two_oracle.jsonl --exe $percy --workers 1 --memory-mib 512 --modes slack-one-directed slack-two-memo slack-two-unate
+python sat-search/baselines/first_layer_check.py screen $trace --exe $percy --workers 1 --memory-mib 512 --limit 8 --seconds 8 --conflicts 20000 --modes slack-two-trace
+python sat-search/experiments/slack_two_native_check.py --capture $trace --output sat-search/logs/slack_two_replay.jsonl
+python sat-search/experiments/slack_two_native_check.py --capture $trace --output sat-search/logs/slack_two_replay_2m.jsonl --work-limit 2000000
+python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_two_screen.jsonl --exe $percy --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes slack-one-directed slack-two-memo slack-two-unate
+```

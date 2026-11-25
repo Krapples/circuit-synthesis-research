@@ -33,6 +33,10 @@ for residual_filter in ('root', 'parity', 'direct'):
 for residual_backend in ('directed', 'dominance'):
     RESIDUAL_MODES[f'slack-one-{residual_backend}'] = (
         *RESIDUAL_MODES['slack-one-direct'], '--residual-backend', residual_backend)
+RESIDUAL_MODES['slack-two-trace'] = (*RESIDUAL_MODES['slack-one-directed'], '--trace-slack-two')
+for slack_two_filter in ('memo', 'unate'):
+    RESIDUAL_MODES[f'slack-two-{slack_two_filter}'] = (
+        *RESIDUAL_MODES['slack-one-directed'], '--slack-two-residual', slack_two_filter)
 
 
 def exact_tables(n, steps):
@@ -111,6 +115,23 @@ def check_jobs(exe, modes):
             for mode in modes:
                 yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 5, 0, 3), (
                     'SAT' if tt in known else 'UNSAT')
+    if any(mode.startswith('slack-two-') for mode in modes):
+        known = exact_tables(4, 4)
+        for tt in (0x0116, 0x17e8, 0x6996, 0x7fff, 0x8000, 0x8880):
+            for mode in modes:
+                yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 5, 0, 4), (
+                    'SAT' if tt in known else 'UNSAT')
+        known = exact_tables(3, 5)
+        for tt in (0x1e, 0x36, 0x96):
+            for mode in modes:
+                yield (exe, mode, f'check-{tt:02x}', 3, tt, 0xff, 'cegar', 5, 0, 5), (
+                    'SAT' if tt in known else 'UNSAT')
+        # The plain full-row encoding independently excludes these hard budgets.
+        # The CEGAR jobs reach the slack-two clause path at this size.
+        for tt in (0x0116, 0x0168, 0x016a):
+            yield (exe, 'base', f'check-{tt:04x}', 4, tt, 0xffff, 'std', 8, 250_000, 7), 'UNSAT'
+            for mode in modes:
+                yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 8, 250_000, 7), 'UNSAT'
 
 
 def screen_jobs(exe, workload, limit, seconds, conflicts, modes):
