@@ -6,6 +6,10 @@ The project uses exact synthesis and analytical lower bounds to study small Bool
 latest cross-family benchmark shows that frontier bounds transfer beyond graph functions, including
 to 3-uniform hypergraphs. The main open shard is L-meta-1343 at size 19.
 
+The one-hot bipartite representation probe L-meta-11869 has a computational lower bound of 17
+and a Lean-checked upper bound of 30 AND/OR gates. The requested budget of 20 remains open.
+[Representation probe](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md#one-hot-bipartite-representation)
+
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
 to targeted verification of changed components, and 5% to documentation. The research targets are:
 

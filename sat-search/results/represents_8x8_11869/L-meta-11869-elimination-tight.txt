@@ -1,0 +1,4 @@
+14 conditional-exclusion nodes=1
+15 conditional-exclusion nodes=7849175
+16 conditional-exclusion nodes=18776679
+17 open nodes=18807103

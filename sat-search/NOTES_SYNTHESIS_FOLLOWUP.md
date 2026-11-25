@@ -1,5 +1,42 @@
 # Synthesis Audit and Endpoint Followup
 
+## One-hot bipartite representation
+
+The desk step L-meta-11869 asks whether the 8-by-8 table with row-major word
+`7583035862004050432` requires at least 21 fan-in-two AND/OR gates. Its domain has
+64 labels, each with one row input and one column input active. The smallest circuit
+found has **30 gates**. Lean 4.36.0 checked its gate basis, budget, and representation
+on the whole declared domain, using only `propext`.
+[Lean upper bound](results/represents_8x8_11869/audit-L-meta-11869-upper.lean)
+
+The elimination prototype establishes a **computational lower bound of 17**.
+The exact budget of 20 remains open. First set the isolated row input to zero.
+Its positive coordinate occurs only on zero-labeled samples, and monotonicity preserves
+those labels when the coordinate decreases. Allow both constants for free and normalize a
+minimum circuit by discarding unused gates and simplifying constant operands, copies, and
+sample-equivalent wires. Each remaining input whose removal causes an ordered positive
+and negative pair to collide must occur in the output cone. There are 15 such inputs initially.
+
+The prototype branches on the first gate and which of its two operands have an additional
+reader. If the gate loses a positive versus negative distinction after projecting away its
+operands, some raw operand on which the ordered pair differs must have another reader.
+Fixing a raw input eliminates its direct reader gates. A controlling value also removes a
+successor of the first gate. This successor cannot also read the raw input, because either
+AND or OR with the raw input and the first gate simplifies by absorption. When neither
+operand has another reader, contracting the first gate leaves one new feature on the labeled
+rows. These transformations only use valid labels on the selected restriction.
+
+At the support-tight budget, equality in the operand-slot count forces a read-once formula.
+For an OR root and a fixed positive sample, any child accepting it must distinguish it from
+every negative sample. If a comparison differs in one coordinate in the positive-to-negative
+direction, that coordinate must be in the accepting child's support. The dual argument
+applies to an AND root and a fixed negative sample. If the resulting co-location constraints
+connect all essential coordinates for both root operations, a read-once formula is impossible.
+The bounded elimination replay excludes budgets 14 through 16 and leaves 17 open. It was
+cross-checked at the exact minima of 1,920 satisfiable three-input partial labelings. A
+separate two-child projection test also excludes the read-once and single-extra-fanout cases.
+[Reproduction and raw records](results/represents_8x8_11869/README.md)
+
 ## Frozen baseline and harder budgets
 
 The audit joined the 2,386 records to the complete target-label manifest and independently
