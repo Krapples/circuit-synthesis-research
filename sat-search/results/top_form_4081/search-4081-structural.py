@@ -12,7 +12,7 @@ BASE, N, EDGES, ROWS, POS, LOSING, cs = (
 )
 
 
-def encode(size, first_op, phased):
+def encode(size, first_op, phased, five):
     output, pool, clauses, ops, select = cs.build(N, size, colex_from=size if phased else 0)
     cs.add_fanout_rules(N, POS, ops, select, clauses)
     cs.add_readonce_rules(N, size, POS, pool, ops, select, clauses)
@@ -102,6 +102,7 @@ def encode(size, first_op, phased):
                                     -left[left_id], -next_left[smaller]] for smaller in range(left_id))
 
     marked, budget = {}, list(junk.values())
+    charged_or = []
     for w in reversed(ops):
         readers = []
         for reader in range(w + 1, output + 1):
@@ -116,9 +117,20 @@ def encode(size, first_op, phased):
             dirty = -clean[w]
         else:
             dirty = any_of(("dirty_or", w), (row[w] for row in truth[len(POS):]))
-        budget.append(both(("charged_or", w), ops[w][1], dirty, -lam))
+        exceptional = both(("charged_or", w), ops[w][1], dirty, -lam)
+        charged_or.append(exceptional)
+        budget.append(exceptional)
         either_empty = any_of(("either_empty", w), [empty[w, 0], empty[w, 1]])
         budget.extend(both(("centreless", w, copy), top[w], either_empty) for copy in (0, 1))
+        if five:
+            clauses.extend(([-top[w], -either_empty], [-exceptional, either_empty]))
+            clauses.append([-exceptional, -empty[w, 0], -empty[w, 1]])
+            clauses.extend([-exceptional, -support[w][u], -support[w][v]]
+                           for u, v in combinations(range(N), 2))
+            for u in range(N):
+                for v in range(N):
+                    if (min(u, v), max(u, v)) not in EDGES:
+                        clauses.append([-top[w], -sides[w, 0][u], -sides[w, 1][v]])
 
     covered = []
     for i, (u, v) in enumerate(EDGES):
@@ -133,6 +145,9 @@ def encode(size, first_op, phased):
     for lits, bound in (([-lit for lit in junk.values()], size - 3),
                         (covered, len(EDGES) - 3), (budget + covered, len(EDGES) - 1)):
         clauses.extend(cs.CardEnc.atmost(lits, bound=bound, vpool=pool).clauses)
+    if five:
+        for lits, count in ((list(junk.values()), 3), (charged_or, 1), (covered, len(EDGES) - 5)):
+            clauses.extend(cs.CardEnc.equals(lits, bound=count, vpool=pool).clauses)
     return clauses, ops, select
 
 
@@ -180,8 +195,8 @@ def check_gates(gates):
 
 
 def solve(job):
-    size, first_op, seconds, phased = job
-    clauses, ops, select = encode(size, first_op, phased)
+    size, first_op, seconds, phased, five = job
+    clauses, ops, select = encode(size, first_op, phased, five)
     with cs.Solver(name="maplechrono", bootstrap_with=clauses) as solver:
         timer = Timer(seconds, solver.interrupt)
         timer.start()
@@ -196,18 +211,20 @@ def solve(job):
                       *(next(src for src, sel in enumerate(select[w, b]) if sel in model)
                         for b in (0, 1))) for w, flags in ops.items()]
             checked = check_gates(gates)
-        return dict(size=size, first_op=first_op, seconds=seconds, phased=phased, clauses=len(clauses),
+        return dict(size=size, first_op=first_op, seconds=seconds, phased=phased, five=five,
+                    clauses=len(clauses),
                     result={True: "SAT", False: "UNSAT", None: "OPEN"}[verdict],
                     statistics=solver.accum_stats(), gates=gates, checked=checked)
 
 
 if __name__ == "__main__":
-    phased = "--phased" in sys.argv[1:]
-    seconds = 180 if phased else 150
-    jobs = [(size, op, seconds, phased) for size in range(12, 22) for op in (0, 1)]
-    jobs.extend((size, None, seconds, phased) for size in (10, 11))
+    five = "--five" in sys.argv[1:]
+    phased = five or "--phased" in sys.argv[1:]
+    seconds = 120 if five else 180 if phased else 150
+    jobs = [(size, op, seconds, phased, five) for size in range(12, 22) for op in (0, 1)]
+    jobs.extend((size, None, seconds, phased, five) for size in (10, 11))
     assert len(jobs) == 22
-    run = "phased" if phased else "structural"
+    run = "five" if five else "phased" if phased else "structural"
     with (BASE / f"L-meta-4081-{run}.jsonl").open("x", encoding="utf-8") as log:
         with ProcessPoolExecutor(max_workers=22) as pool:
             for future in as_completed(pool.submit(solve, job) for job in jobs):

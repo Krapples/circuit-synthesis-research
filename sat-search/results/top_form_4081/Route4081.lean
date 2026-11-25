@@ -136,7 +136,42 @@ theorem atMostFourUncovered (least : IsLeastAO G C) (many : 3 ≤ (junk G C).car
     (Finset.card_eq_zero.mp ho)
   simp [empty] at deficit
 
+theorem fiveEdgeObstruction (least : IsLeastAO G C) (four : NoFourCycle G)
+    (degree : ∀ v, G.degree v ≤ 4) (many : 3 ≤ (junk G C).card)
+    (five : (Ustar G C).card = 5)
+    (deficit : 2 * (centreless G C).card + (junk G C).card +
+      (orN G C \ lam G C).card < (Ustar G C).card) :
+    centreless G C = ∅ ∧ (junk G C).card = 3 ∧
+      ∃ m, orN G C \ lam G C = {m} ∧ m ∈ mixing G C ∧
+        (orIn n C (n+m)).card = 1 := by
+  classical
+  have hCentre : (centreless G C).card = 0 := by omega
+  have empty := Finset.card_eq_zero.mp hCentre
+  obtain ⟨edge, he⟩ := Finset.card_pos.mp (by omega : 0 < (Ustar G C).card)
+  have witness : ∃ m ∈ mixing G C, (orIn n C (n+m)).Nonempty := by
+    induction edge using Sym2.ind with
+    | _ u v =>
+      rcases uncoveredAcceptance least he with ⟨a, ha, _⟩ | ⟨_, _, _, m, hm, _, _, raw, _⟩
+      · simp [empty] at ha
+      · exact ⟨m, hm, raw⟩
+  obtain ⟨m, hm, raw⟩ := witness
+  have exceptional := mixingOutside hm
+  have positive : 0 < (orN G C \ lam G C).card := Finset.card_pos.mpr ⟨m, exceptional⟩
+  have exactlyOne : (orN G C \ lam G C).card = 1 := by omega
+  have unique : ∀ j ∈ mixing G C, j = m := by
+    intro j hj
+    exact Finset.card_le_one.mp exactlyOne.le j (mixingOutside hj) m exceptional
+  have rawPositive := Finset.card_pos.mpr raw
+  have rawOne : (orIn n C (n+m)).card = 1 := by
+    by_contra h
+    have bound := oneMixerWideSupport least empty four degree unique (by omega)
+    omega
+  obtain ⟨j, only⟩ := Finset.card_eq_one.mp exactlyOne
+  have eq : m = j := Finset.mem_singleton.mp (only ▸ exceptional)
+  exact ⟨empty, by omega, m, eq.symm ▸ only, hm, rawOne⟩
+
 end Route4081
 
 #print axioms Route4081.atMostFourUncovered
 #print axioms Route4081.oneMixerWideSupport
+#print axioms Route4081.fiveEdgeObstruction

@@ -30,6 +30,7 @@ quantities by direct set traversal.
 | [Synthesis baseline](L-meta-4081-search.jsonl) | 95 s cap, CEGAR boundary rows | 0 | All 22 shards at sizes 19–21 |
 | [Structural search](L-meta-4081-structural.jsonl) | 150 s cap, full boundary, top form and `Q < \|U\|` | 4 UNSAT, all of sizes 10–12 | Both first-operator shards at every size 13–21 |
 | [Phased structural search](L-meta-4081-phased.jsonl) | 180 s cap, clean and dirty phases with separate colex ordering | 4 UNSAT, all of sizes 10–12 | Both first-operator shards at every size 13–21 |
+| [Five-edge structural search](L-meta-4081-five.jsonl) | 120 s cap, phased with the Lean-checked five-edge restrictions below | 11 UNSAT, all sizes 10–15 and size-16 first AND | Size-16 first OR and all shards at sizes 17–21 |
 
 Every input is essential, so a connected binary circuit on eleven inputs needs at least
 ten gates. The searches disallow unread wires and duplicate operands, which a least
@@ -58,6 +59,7 @@ exclusively.
 python search-4081.py
 python search-4081-structural.py
 python search-4081-structural.py --phased
+python search-4081-structural.py --five
 python one-mixer-4081.py
 ```
 
@@ -90,8 +92,11 @@ least two inputs, no four-cycle implies that all uncovered edges meet the same v
 For this graph that bounds the residual edge count by four.
 [Accepted routing tools](https://github.com/open-goat/pequalnp-proofs/blob/13f3d3447f6ae30076544637de9fbe37cbb3be92/lean/PEqualNP/Outside/L_meta_7467.lean)
 
-Lean 4.36.0 checked both restrictions in [Route4081.lean](Route4081.lean) against
-the public project definitions and the accepted routing module above. Both theorems
+Lean 4.36.0 checked the restrictions in [Route4081.lean](Route4081.lean) against
+the public project definitions and the accepted routing module above. The file also proves
+that any counterexample with exactly five uncovered edges, no four-cycle and maximum
+degree four has no centreless tops, exactly three junk gates, and exactly one dirty OR
+outside `lam`. That OR is a mixing gate with singleton support. All three theorems
 use only `propext`, `Classical.choice`, and `Quot.sound`. To reproduce from the public
 project's Lean workspace with its dependency cache built, build the routing module
 and run the local file under the same Lake environment.
