@@ -1,0 +1,64 @@
+row-enumeration
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.351891600061208
+witness
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.17051229998469353
+witness-min-core
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.1817363000009209
+port-first
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.1671829998958856
+port-first-witness
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.17437899997457862
+old-blocks 0 True 0.3049
+old-blocks 1 True 0.0084
+old-blocks 2 True 0.0015
+old-blocks 3 False 0.5003
+old-blocks 4 False 0.137
+old-blocks 5 False 0.2568
+old-blocks 6 True 0.4518
+old-blocks 7 True 0.23
+old-blocks total 1.8907 stats {'queries': 219, 'local': 75, 'rec': 90293} CacheInfo(hits=144, misses=75, maxsize=4096, currsize=75)
+row-enumeration 0 True 0.023
+row-enumeration 1 True 0.0069
+row-enumeration 2 True 0.0017
+row-enumeration 3 False 0.0644
+row-enumeration 4 False 0.0183
+row-enumeration 5 False 0.0307
+row-enumeration 6 True 0.0271
+row-enumeration 7 True 0.066
+row-enumeration total 0.2381 stats {'queries': 219, 'local': 75, 'rec': 1556, 'partitions': 19079, 'cover_nodes': 11982, 'row_reject': 8603} CacheInfo(hits=144, misses=75, maxsize=4096, currsize=75)
+witness 0 True 0.0256
+witness 1 True 0.0063
+witness 2 True 0.0016
+witness 3 False 0.0653
+witness 4 False 0.0226
+witness 5 False 0.0367
+witness 6 True 0.0408
+witness 7 True 0.0996
+witness total 0.2985 stats {'queries': 219, 'local': 75, 'rec': 1539, 'partitions': 19068, 'cover_nodes': 11766, 'row_reject': 8605} CacheInfo(hits=144, misses=75, maxsize=4096, currsize=75)
+witness-min-core 0 True 0.031
+witness-min-core 1 True 0.0088
+witness-min-core 2 True 0.0015
+witness-min-core 3 False 0.0781
+witness-min-core 4 False 0.0229
+witness-min-core 5 False 0.0319
+witness-min-core 6 True 0.032
+witness-min-core 7 True 0.0701
+witness-min-core total 0.2765 stats {'queries': 219, 'local': 75, 'rec': 1700, 'partitions': 19450, 'cover_nodes': 12072, 'row_reject': 8821} CacheInfo(hits=144, misses=75, maxsize=4096, currsize=75)
+port-first 0 True 0.0112
+port-first 1 True 0.0044
+port-first 2 True 0.0015
+port-first 3 False 0.0287
+port-first 4 False 0.0102
+port-first 5 False 0.017
+port-first 6 True 0.01
+port-first 7 True 0.0109
+port-first total 0.0939 stats {'queries': 219, 'local': 75, 'rec': 502, 'partitions': 354, 'cover_nodes': 410, 'row_reject': 4} CacheInfo(hits=144, misses=75, maxsize=4096, currsize=75)
+port-first-witness 0 True 0.0079
+port-first-witness 1 True 0.003
+port-first-witness 2 True 0.0014
+port-first-witness 3 False 0.0261
+port-first-witness 4 False 0.01
+port-first-witness 5 False 0.0204
+port-first-witness 6 True 0.0097
+port-first-witness 7 True 0.0128
+port-first-witness total 0.0912 stats {'queries': 219, 'local': 75, 'rec': 464, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4} CacheInfo(hits=144, misses=75, maxsize=4096, currsize=75)

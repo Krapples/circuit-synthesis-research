@@ -1,0 +1,2 @@
+{"conflicts": 2500, "endpoints_sha256": "3f52b801c5764014c6730275915a33c46d089aecf7a5ac7e8ef7cdc813c3e7dc", "jobs": [["comparator-09", 13]], "kind": "meta", "levels": [null], "local_intersection": true, "manifest_sha256": "3abb4efc3342e94498c253ed9b4ff2afeb571b8de0a8bd8546f14aa66d01da98", "proof": false, "seconds": 6.0}
+{"budget": 13, "kind": "lazy", "level": null, "name": "comparator-09", "peak_bytes": 78106624, "seconds": 6.0, "status": "TIMEOUT"}

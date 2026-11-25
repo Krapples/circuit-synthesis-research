@@ -648,3 +648,159 @@ python sat-search/theory/regional_block_completion.py --bench --endpoint-branche
 python sat-search/theory/regional_block_completion.py --bench --dominance-branches --output fresh-regional-dominance.jsonl
 python sat-search/theory/regional_block_completion.py --bench --higher --mode dominance-branches --profile --seconds 4 --output fresh-regional-dominance-higher.jsonl
 ```
+
+## Port-first partition propagation and witness-guided completion
+
+Three opt-in completion modes share the integrated dominance implementation.
+`port-first` changes partition generation. `witness-cover` changes absorbing-row
+branching. `port-first-witness` enables both. The dominance solver remains the
+default. The supplied `python regional_cover_completion.py --bench` replay used
+the supplied companion files and the ordered quotient API from `30760d7`, which
+the prototype expects. It reproduced 19,079 versus 354 partitions reaching the
+prototype's cover routine, at 0.238 versus 0.094 s. The integrated ablations below
+use the newer dominance solver as the reference. [Prototype replay](results/regional_cover_prototype.log)
+
+### Soundness and local checks
+
+At a fixed root operation, let a slice be nonabsorbing when its specified table
+is neither arbitrary nor the root's absorbing constant. In a nonabsorbing AND
+slice, both children can attain 1. Their private supports are disjoint, so each
+child's essential variables remain essential in the product. The dual argument
+uses children that can attain 0 at an OR root. The required support in a child
+is therefore exactly its share of the target support. Equal projected provider
+patterns require equal child functions and hence equal supports. Any variable
+in the symmetric difference between two such slice supports must be assigned
+to the other child. The implementation assigns whole opposite-operation
+connected components and rejects an allocation if it forces a component to
+both sides. For positive literals, a nonabsorbing child with all ports fixed
+to the root's absorbing value must retain an essential primary. The same
+necessity follows at that child's all-zero or all-one input endpoint.
+
+On an absorbing row at least one child has to produce the absorbing constant
+identically. This follows from independence of the private variables of the
+two children. Given fixed child obligations, build a left witness for the
+currently required rows and test the right child on every row the witness
+leaves uncovered. If the right query is impossible, every valid alternative
+must cover at least one more row from that failed query on the left. Branch
+on these rows and memoize visited required subsets with a bounded set. Each
+step adds a row. The recursion is exact even with an arbitrary choice of
+left witness and uses the entire failed right demand as its branching set.
+For free NOTs, the private leaves are read once, so their independently
+attainable extrema combine exactly through each gate. Provider polarities
+are evaluated on the actual observed patterns. The monotone-only endpoint
+and dominance checks still apply only in the monotone basis.
+
+All three variants matched independent formula-column enumeration on 2,000
+queries each, including renamings, signed phases, repeated occurrences, and
+unspecified rows. Returned local formulas were evaluated on every specified
+slice and checked for exact occurrence counts. The stress runner uses a
+Windows-compatible worker timer with a hard parent-process fallback.
+
+### Matched measurements
+
+Eight isolated queries were captured from the first, slowest completed, or
+in-flight dominance call on the five stalled corpus jobs. Caps were 1.5 s
+per isolated query and 0.35 s per generated query. Times include time spent
+on timed-out jobs. Candidate counts on these capped jobs include only work
+observed before interruption.
+
+| Integrated mode | Isolated query outcomes | Isolated time | Candidate partitions | Partitions entering child obligations | Recursive states | Peak working set |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Dominance | 6 UNSAT, 2 timeouts | 8.915 s | 848,426 | 52,089 | 35,924 | 38.2 MiB |
+| Port-first | 7 UNSAT, 1 timeout | 3.718 s | 8,554 | 4,943 | 22,095 | 38.1 MiB |
+| Witness-guided | 8 UNSAT | 0.564 s | 43,541 | 6,429 | 3,287 | 36.0 MiB |
+| Combined | 8 UNSAT | 0.140 s | 1,312 | 789 | 994 | 36.1 MiB |
+
+The first `comparator-09` query had two private primaries and ten port reads.
+Port-first propagation alone timed out after sending a single partition to
+child completion. The combined variant decided that query in 0.017 s. On 20
+generated signed queries with four to six private primaries, the integrated
+dominance baseline completed 13 in 2.794 s including cap costs. The combined
+variant completed all 20 in 0.069 s, with recursive states dropping from
+254,157 to 1,599 and peak working set from 38.6 to 36.0 MiB. On the 20
+generated monotone queries both completed all 20, at 0.045 and 0.047 s.
+
+| Target | Core gate budget | Dominance | Combined |
+| --- | ---: | --- | --- |
+| `comparator-09` | 11 | Timeout | Timeout |
+| `random-monotone-10` | 10 | Timeout | Layout exhausted in 3.720 s |
+| `comparator-02` | 9 | Timeout | Verified witness in 0.138 s |
+| `graph-03` | 10 | Timeout | Layout exhausted in 1.507 s |
+| `comparator-04` | 9 | Timeout | Timeout |
+
+This four-second end-to-end sample had five dominance timeouts. The combined
+mode reached three layout decisions and timed out twice. Peak working set
+increased from 39.6 to 49.6 MiB while the faster mode reached more layouts
+and cached more queries. The signed and isolated workloads do not establish a
+production default. [Captured queries](results/regional_cover_captured.jsonl) ·
+[Isolated replay](results/regional_cover_isolated.jsonl) ·
+[Generated stress](results/regional_cover_signed_stress.jsonl) ·
+[Whole-layout ablation](results/regional_cover_layout.jsonl)
+
+### Input symmetry after the local improvement
+
+The combined local mode took `comparator-09` from one tested layout to 5,866
+under the deadline. The next ablation used input transpositions that preserve
+the complete target. Pairwise interchangeability gives a symmetric group on
+each class: transpositions generate permutations, and conjugation makes the
+interchangeability relation transitive. A representative can first choose a
+prefix of each class for the repeated set, then order those repeated providers
+by their recipient multiplicity vectors, then choose a prefix of each remaining
+class for each private group. The later steps fix the previously chosen inputs.
+Renaming a witness using these transpositions preserves its gate count and
+target. The normal layout checks still run. Independent small-circuit minima
+and a subset-enumeration oracle agreed with the representative generator.
+
+Filtering after generating individual private subsets was too slow on
+`comparator-09`. Generating class prefixes directly exhausted its 11-gate
+layouts in 2.875 s and reduced the `graph-03` exclusion from 1.507 to 0.583 s
+with 645 rather than 2,538 fixed-layout calls. `comparator-04` still reached
+the cap inside its second local query. Both analysis variants remain opt-in.
+[Filter-first run](results/regional_cover_symmetry.jsonl) ·
+[Representative generation run](results/regional_cover_symmetry_direct.jsonl)
+
+### Independently certified frontiers
+
+The optional layout engine tests its allocated excess on reduced cores. The
+separate lazy certificate backend was run on each original frozen function
+with an at-most gate budget. It covered all applicable reader shapes by its
+existing analytical prescreens and DRUP-checked SAT instances. This provides
+the exclusion evidence independently of higher-excess layout coverage and of
+the new local and symmetry rules. The witness evaluator checked every row
+of each original truth table and the gate references and budgets.
+
+| Original monotone target | Prior interval | New result | Evidence |
+| --- | --- | --- | --- |
+| `graph-03` | [10, 15] | **11 gates** | 10 excluded with 11 proof packets and 491 RUP steps. An 11-gate witness was found in 0.071 s. |
+| `random-monotone-10` | [10, 17] | **12 gates** | The layout replay excluded the 10-gate reduced core. The original eight-input target has a one-gate contraction and was independently excluded at 11 gates with five packets and 2,060 RUP steps. A 12-gate witness was found in 0.079 s. |
+| `comparator-09` | [11, 14] | **[13, 14]** | Separate runs excluded 11 and 12 gates. The 12-gate run used seven packets and 11,155 RUP steps. The 13-gate lazy and MapleChrono queries reached their caps. The archived 14-gate witness was reevaluated independently. |
+
+The checks use the frozen target-manifest hashes in the job records and the
+saved CNF and DRUP hashes. The proof counts cover the SAT subproblems that
+survived the established prescreens. The [proof files](results/regional_cover_proofs)
+are indexed by the [first exclusions](results/regional_cover_independent_checks.jsonl),
+[original random-function exclusion](results/regional_cover_original_random11.jsonl),
+[comparator 11-gate exclusion](results/regional_cover_comparator09_11.jsonl),
+and [comparator 12-gate exclusion](results/regional_cover_comparator09_12.jsonl).
+The [upper-bound runs](results/regional_cover_upper_checks.jsonl) save the
+two new minimum circuits. The next MapleChrono budgets also reached four
+seconds on both functions. [MapleChrono runs](results/regional_cover_next_witness.jsonl) ·
+[Comparator lazy 13-gate run](results/regional_cover_comparator09_13.jsonl) ·
+[Comparator MapleChrono 13-gate run](results/regional_cover_comparator09_sat13.jsonl) ·
+[Comparator 14-gate witness](results/port_certificate_constructions.jsonl)
+
+```powershell
+python sat-search/experiments/regional_completion_check.py -v
+python sat-search/experiments/layout_projection_check.py -v
+python sat-search/experiments/regional_cover_stress.py capture --seconds 1.5 --output fresh-cover-capture.jsonl
+python sat-search/experiments/regional_cover_stress.py isolated --seconds 1.5 --source fresh-cover-capture.jsonl --output fresh-cover-isolated.jsonl
+python sat-search/experiments/regional_cover_stress.py stress --large --seconds .35 --output fresh-cover-stress.jsonl
+python sat-search/experiments/regional_cover_stress.py layout --seconds 4 --output fresh-cover-layout.jsonl
+python sat-search/experiments/regional_cover_stress.py layout --seconds 4 --modes port-first-witness --input-symmetry --case comparator-09 --case graph-03 --case comparator-04 --output fresh-cover-symmetry.jsonl
+python sat-search/experiments/port_certificates_check.py --benchmark fresh-cover-proof.jsonl --seconds 8 --conflicts 2500 --proof --proof-dir fresh-cover-proofs --levels baseline --job graph-03 10 --job random-monotone-10 11 --job comparator-09 12
+python sat-search/experiments/port_certificates_check.py --benchmark fresh-cover-upper.jsonl --seconds 6 --conflicts 2500 --levels baseline --job graph-03 11 --job random-monotone-10 12 --job comparator-09 13
+Get-ChildItem sat-search/results/regional_cover_proofs -Filter '*.cnf.gz' | ForEach-Object {
+    $trace = $_.FullName -replace '\.cnf\.gz$', '.drup.gz'
+    python sat-search/experiments/certify_synthesis.py --verify $_.FullName $trace
+}
+```

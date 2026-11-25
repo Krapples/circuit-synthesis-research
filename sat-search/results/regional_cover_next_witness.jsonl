@@ -1,0 +1,2 @@
+{"case": "graph-03", "contraction": 0, "excess": 5, "mode": "sat", "n": 7, "peak_bytes": 52293632, "seconds": 4.0, "status": "TIMEOUT", "target": "0xfffefffefffafffaffecffecffa0eca0"}
+{"case": "random-monotone-10", "contraction": 1, "excess": 5, "mode": "sat", "n": 7, "peak_bytes": 52236288, "seconds": 4.0, "status": "TIMEOUT", "target": "0xfcf0e0c0c0c0c0c0fcf0e000c000c000"}
