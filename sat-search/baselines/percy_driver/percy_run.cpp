@@ -11,6 +11,8 @@
 //   --first-layer-budget : optional trimmed boundary cardinality constraint
 //   --tight-residual : optional bounded exact regional exclusions during CEGAR
 //   --tight-residual-set-cuts : use feature presence for exclusions with distinct first-layer types
+//   --slack-one-residual : check slack-one boundaries and learn extension clauses (requires --first-layer)
+//   --trace-slack-one : emit the boundaries and their verdicts as JSON events
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
@@ -55,6 +57,7 @@ struct Extra {
     bool first_layer_budget = false;
     bool tight_residual = false;
     bool residual_set_cuts = false;
+    bool slack_one = false, trace_slack_one = false;
 };
 
 struct ClauseSink {
@@ -242,6 +245,9 @@ struct TightResidual {
     uint64_t target = 0, care = 0;
     std::array<uint64_t, 5> primaries{};
     int queries = 0, cuts = 0, unknown = 0, set_cuts = 0;
+    int slack_queries = 0, slack_feasible = 0, slack_unknown = 0, slack_pure = 0, slack_conditional = 0;
+    int extension_feasible = 0, extension_unknown = 0, extension_excluded = 0, slack_position_cuts = 0;
+    double slack_seconds = 0;
 
     explicit TightResidual(const kitty::dynamic_truth_table& tt) {
         const int n = tt.num_vars();
@@ -256,8 +262,8 @@ struct TightResidual {
 
     // An empty result leaves CEGAR on its ordinary simulation path.
     std::vector<int> exclusion(ssv_encoder& enc, const spec& sp, solver_wrapper& solver,
-                               std::span<const int> features) {
-        if (queries >= 128) return {};
+                               std::span<const int> features, const Extra& ex) {
+        if ((!ex.tight_residual || queries >= 128) && (!ex.slack_one || slack_queries >= 128)) return {};
         const int n = sp.get_nr_in(), k = sp.nr_steps;
         std::vector<std::pair<int, int>> first;  // (step, selected fanin variable)
         std::array<int, 5> mixed;
@@ -275,12 +281,16 @@ struct TightResidual {
         }
         const int h = (int)first.size();
         const int m = (int)std::count_if(mixed.begin(), mixed.end(), [](int s) { return s >= 0; });
-        if (2 * h + m != k + 1 || h + m > 6) return {};
+        const int slack = k + 1 - (2 * h + m);
+        const bool is_tight = slack == 0 && ex.tight_residual && queries < 128;
+        const bool is_slack_one = slack == 1 && ex.slack_one && slack_queries < 128;
+        if ((!is_tight && !is_slack_one) || h + m > 6) return {};
 
         std::vector<int> cut;
         std::vector<uint64_t> columns;
+        std::vector<int> observed_types;
         uint64_t types = 0;
-        bool distinct = !features.empty();
+        bool distinct = is_slack_one || ex.residual_set_cuts;
         for (auto [step, s] : first) {
             cut.push_back(pabc::Abc_Var2Lit(enc.get_sel_var(s), 1));
             const auto& pair = enc.svar_map[s];
@@ -297,36 +307,74 @@ struct TightResidual {
                     op |= 1u << bit;
                 }
             }
-            if (distinct) {
-                const auto op_index = std::find(FirstLayer::aigs.begin(), FirstLayer::aigs.end(), op)
-                                      - FirstLayer::aigs.begin();
+            if (distinct || (is_slack_one && ex.trace_slack_one)) {
+                const auto entry = std::find(FirstLayer::aigs.begin(), FirstLayer::aigs.end(), op);
+                if (entry == FirstLayer::aigs.end()) return {};
+                const auto op_index = entry - FirstLayer::aigs.begin();
                 const int pair_index = pair[1] * (pair[1] - 1) / 2 + pair[0];
-                const uint64_t type = uint64_t{1} << (pair_index * FirstLayer::aigs.size() + op_index);
-                distinct = !(types & type);
+                const int type_index = int(pair_index * FirstLayer::aigs.size() + op_index);
+                const uint64_t type = uint64_t{1} << type_index;
+                distinct = distinct && !(types & type);
                 types |= type;
+                if (is_slack_one && ex.trace_slack_one) observed_types.push_back(type_index);
             }
             columns.push_back(column);
         }
+        unsigned mixed_mask = 0;
         for (int i = 0; i < n; ++i)
             if (mixed[i] >= 0) {
                 cut.push_back(pabc::Abc_Var2Lit(enc.get_sel_var(mixed[i]), 1));
                 columns.push_back(primaries[i]);
+                mixed_mask |= 1u << i;
             }
-        ++queries;
-        const auto result = synthesis::tight_residual(columns, h, target, care, 4096);
-        if (result == synthesis::ResidualStatus::unknown) ++unknown;
-        if (result != synthesis::ResidualStatus::infeasible) return {};
-        // Any model retaining these literals retains at least these h gate
-        // occurrences and m primaries. Equality and trimming forbid additions.
-        ++cuts;
+        unsigned allowed_extensions = 0;
+        if (is_tight) {
+            ++queries;
+            const auto result = synthesis::tight_residual(columns, h, target, care, 4096);
+            if (result == synthesis::ResidualStatus::unknown) ++unknown;
+            if (result != synthesis::ResidualStatus::infeasible) return {};
+            ++cuts;
+            if (distinct) ++set_cuts;
+        } else {
+            ++slack_queries;
+            synthesis::SlackOneStats stats;
+            const auto started = clk::now();
+            const auto result = synthesis::slack_one_extensions(
+                std::move(columns), h, std::span(primaries).first(n), mixed_mask, target, care,
+                100000, 4096, stats, started + std::chrono::milliseconds(25));
+            const double elapsed = since(started);
+            slack_seconds += elapsed;
+            if (ex.trace_slack_one) {
+                printf("{\"event\":\"slack_one\",\"k\":%d,\"mixed\":%u,\"types\":[", k, mixed_mask);
+                for (size_t i = 0; i < observed_types.size(); ++i)
+                    printf("%s%d", i ? "," : "", observed_types[i]);
+                printf("],\"exact\":%d,\"feasible_extensions\":%u,\"unknown_extensions\":%u,"
+                       "\"work\":%u,\"providers\":%u,\"filtered\":%u,\"decoders\":%u,\"seconds\":%.6f}\n",
+                       int(result.exact), result.feasible, result.unknown,
+                       stats.work, stats.providers, stats.filtered, stats.decoders, elapsed);
+            }
+            if (result.exact == synthesis::ResidualStatus::unknown) ++slack_unknown;
+            if (result.exact == synthesis::ResidualStatus::feasible) ++slack_feasible;
+            if (result.exact != synthesis::ResidualStatus::infeasible) return {};
+            allowed_extensions = result.feasible | result.unknown;
+            extension_feasible += std::popcount(result.feasible);
+            extension_unknown += std::popcount(result.unknown);
+            extension_excluded += n - m - std::popcount(allowed_extensions);
+            if (allowed_extensions) ++slack_conditional;
+            else ++slack_pure;
+            if (!distinct) ++slack_position_cuts;
+        }
+        // The negative antecedent retains at least h occurrences and m mixed
+        // inputs. The only possible extension under slack one is one mixed input.
         if (distinct) {
-            ++set_cuts;
             cut.clear();
             for (; types; types &= types - 1)
                 cut.push_back(features[std::countr_zero(types)] ^ 1);
             for (int i = 0; i < n; ++i)
                 if (mixed[i] >= 0) cut.push_back(features[features.size() - n + i] ^ 1);
         }
+        for (; allowed_extensions; allowed_extensions &= allowed_extensions - 1)
+            cut.push_back(features[features.size() - n + std::countr_zero(allowed_extensions)]);
         return cut;
     }
 };
@@ -353,6 +401,8 @@ int main(int argc, char** argv) {
         else if (a == "--first-layer-budget") ex.first_layer_budget = true;
         else if (a == "--tight-residual") ex.tight_residual = true;
         else if (a == "--tight-residual-set-cuts") ex.residual_set_cuts = true;
+        else if (a == "--slack-one-residual") ex.slack_one = true;
+        else if (a == "--trace-slack-one") ex.trace_slack_one = true;
         else if (a == "--first-layer") {
             const auto scope = next();
             if (scope == "edges") ex.pairs = synthesis::PairScope::edges;
@@ -374,8 +424,12 @@ int main(int argc, char** argv) {
         fprintf(stderr, "first-layer options need 2-5 inputs, alonce for the budget bound, and std for partial tables\n");
         return 2;
     }
-    if (ex.tight_residual && (n < 2 || n > 5 || nosym || method != "cegar" || !dc_hex.empty())) {
-        fprintf(stderr, "tight residual exclusions need trimmed CEGAR and a complete 2-5 input table\n");
+    if ((ex.tight_residual || ex.slack_one) && (n < 2 || n > 5 || nosym || method != "cegar" || !dc_hex.empty())) {
+        fprintf(stderr, "residual exclusions need trimmed CEGAR and a complete 2-5 input table\n");
+        return 2;
+    }
+    if ((ex.slack_one && ex.pairs == synthesis::PairScope::none) || (ex.trace_slack_one && !ex.slack_one)) {
+        fprintf(stderr, "slack-one exclusions need --first-layer edges or all; tracing needs --slack-one-residual\n");
         return 2;
     }
     if (ex.residual_set_cuts && (!ex.tight_residual || ex.pairs == synthesis::PairScope::none)) {
@@ -449,7 +503,7 @@ int main(int argc, char** argv) {
             std::vector<int> layer_features;
             const auto residual_start = clk::now();
             std::optional<TightResidual> residual;
-            if (ex.tight_residual) residual.emplace(tt);
+            if (ex.tight_residual || ex.slack_one) residual.emplace(tt);
             double residual_seconds = residual ? since(residual_start) : 0;
             if (!cegar) {
                 const bool encoded = enc.encode(sp) &&
@@ -481,8 +535,7 @@ int main(int argc, char** argv) {
                         if (r != success) { st = "TIMEOUT"; break; }
                         if (residual) {
                             const auto check_start = clk::now();
-                            auto cut = residual->exclusion(enc, sp, *solver,
-                                ex.residual_set_cuts ? std::span<const int>(layer_features) : std::span<const int>{});
+                            auto cut = residual->exclusion(enc, sp, *solver, layer_features, ex);
                             const bool retained = cut.empty() || solver->add_clause(cut.data(), cut.data() + cut.size());
                             residual_seconds += since(check_start);
                             if (!retained) { st = "UNSAT"; break; }
@@ -504,6 +557,14 @@ int main(int argc, char** argv) {
                 printf(",\"residual_queries\":%d,\"residual_cuts\":%d,\"residual_set_cuts\":%d,"
                        "\"residual_unknown\":%d,\"residual_seconds\":%.6f",
                        residual->queries, residual->cuts, residual->set_cuts, residual->unknown, residual_seconds);
+            if (ex.slack_one)
+                printf(",\"slack_queries\":%d,\"slack_feasible\":%d,\"slack_unknown\":%d,\"slack_pure\":%d,"
+                       "\"slack_conditional\":%d,\"extension_feasible\":%d,\"extension_unknown\":%d,"
+                       "\"extension_excluded\":%d,\"slack_position_cuts\":%d,\"slack_seconds\":%.6f",
+                       residual->slack_queries, residual->slack_feasible, residual->slack_unknown,
+                       residual->slack_pure, residual->slack_conditional, residual->extension_feasible,
+                       residual->extension_unknown, residual->extension_excluded, residual->slack_position_cuts,
+                       residual->slack_seconds);
 #ifdef USE_SATOKO
             if (satoko_backend) {
                 const long propagations = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;

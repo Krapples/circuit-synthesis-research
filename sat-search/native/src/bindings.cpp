@@ -187,4 +187,27 @@ PYBIND11_MODULE(_regional_native, mod) {
             }, py::arg("columns"), py::arg("first_layer"), py::arg("target"), py::arg("care"),
             py::arg("work_limit") = 4096,
             "Exact fixed-boundary free-NOT completion: 0 infeasible, 1 feasible, 2 unknown.");
+    mod.def("slack_one_extensions",
+            [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
+               unsigned mixed, uint64_t target, uint64_t care, unsigned work_limit,
+               unsigned tight_work_limit, double deadline_seconds) {
+                if (primaries.size() > 6) throw py::value_error("at most six candidate primaries");
+                using Clock = synthesis::residual_detail::Clock;
+                const auto deadline = deadline_seconds > 0
+                    ? Clock::now() + std::chrono::duration_cast<Clock::duration>(
+                        std::chrono::duration<double>(deadline_seconds))
+                    : Clock::time_point::max();
+                synthesis::SlackOneStats stats;
+                synthesis::SlackOneExtension result;
+                {
+                    const py::gil_scoped_release release;
+                    result = synthesis::slack_one_extensions(columns, h, primaries, mixed, target, care,
+                                                             work_limit, tight_work_limit, stats, deadline);
+                }
+                return py::make_tuple(int(result.exact), result.feasible, result.unknown, stats.completion_case,
+                                      stats.work, stats.providers, stats.filtered, stats.decoders);
+            }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
+            py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
+            py::arg("tight_work_limit") = 4096, py::arg("deadline_seconds") = 0.0,
+            "Return (status, feasible extensions, unknown extensions, case, work, providers, filtered, decoders).");
 }

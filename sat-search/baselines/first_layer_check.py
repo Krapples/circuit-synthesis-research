@@ -24,6 +24,8 @@ RESIDUAL_MODES = {
     'all+set-cuts': (*MODES['all'], '--tight-residual', '--tight-residual-set-cuts'),
     'all+budget+set-cuts': (*MODES['all+budget'], '--tight-residual', '--tight-residual-set-cuts'),
 }
+RESIDUAL_MODES['slack-one'] = (*RESIDUAL_MODES['all+budget+set-cuts'], '--slack-one-residual')
+RESIDUAL_MODES['slack-one-trace'] = (*RESIDUAL_MODES['slack-one'], '--trace-slack-one')
 
 
 def exact_tables(n, steps):
@@ -146,7 +148,7 @@ def main():
             output.flush()
             key = row['name'], row['care'], row['method']
             for record in row['records']:
-                if 'k' in record and record['status'] != 'TIMEOUT':
+                if 'status' in record and record['status'] != 'TIMEOUT':
                     verdict = verdicts.setdefault((*key, record['k']), record['status'])
                     assert verdict == record['status'], (row, verdict)
                 if record.get('final') == 'SAT' and args.kind == 'screen':
