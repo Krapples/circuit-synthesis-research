@@ -1,0 +1,22 @@
+{"seed": 4874, "released": [16, 17, 18, 19, 21, 23, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1253, "conflicts": 556711, "decisions": 1701526, "propagations": 101129016}}
+{"seed": 4876, "released": [15, 17, 23, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1182, "conflicts": 464286, "decisions": 956945, "propagations": 93034943}}
+{"seed": 4875, "released": [14, 26, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1322, "conflicts": 561833, "decisions": 1081527, "propagations": 102753724}}
+{"seed": 4877, "released": [14, 20, 21, 26, 27, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1191, "conflicts": 506865, "decisions": 1069203, "propagations": 95804639}}
+{"seed": 4879, "released": [15, 20, 23, 24, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1203, "conflicts": 522603, "decisions": 1472487, "propagations": 99089601}}
+{"seed": 4878, "released": [15, 18, 20, 23, 26, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1302, "conflicts": 557815, "decisions": 1610043, "propagations": 106176479}}
+{"seed": 4880, "released": [18, 25, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1157, "conflicts": 515596, "decisions": 1157102, "propagations": 106894508}}
+{"seed": 4881, "released": [14, 15, 17, 26, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1189, "conflicts": 524168, "decisions": 1278000, "propagations": 95846445}}
+{"seed": 4883, "released": [21, 23, 24, 25, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1244, "conflicts": 533117, "decisions": 1266398, "propagations": 90783089}}
+{"seed": 4882, "released": [14, 17, 20, 21, 27, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1206, "conflicts": 504039, "decisions": 1083381, "propagations": 86787997}}
+{"seed": 4887, "released": [16, 19, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1445, "conflicts": 636660, "decisions": 1481512, "propagations": 101710125}}
+{"seed": 4885, "released": [21, 24, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1237, "conflicts": 550982, "decisions": 1354728, "propagations": 104218300}}
+{"seed": 4886, "released": [18, 25, 26, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1525, "conflicts": 652337, "decisions": 1146976, "propagations": 106474027}}
+{"seed": 4884, "released": [15, 17, 18, 21, 24, 28, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1208, "conflicts": 533905, "decisions": 1487494, "propagations": 99978472}}
+{"seed": 4892, "released": [15, 22, 25, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1195, "conflicts": 459261, "decisions": 1226345, "propagations": 113932368}}
+{"seed": 4888, "released": [14, 19, 23, 24, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1194, "conflicts": 443294, "decisions": 1012692, "propagations": 88651552}}
+{"seed": 4889, "released": [14, 17, 21, 23, 25, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1118, "conflicts": 429269, "decisions": 1437104, "propagations": 90502713}}
+{"seed": 4890, "released": [17, 25, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1298, "conflicts": 549650, "decisions": 1292092, "propagations": 98954632}}
+{"seed": 4891, "released": [19, 22, 25, 28, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1452, "conflicts": 658261, "decisions": 1391385, "propagations": 100925798}}
+{"seed": 4894, "released": [14, 20, 21, 22, 25, 27, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1311, "conflicts": 581569, "decisions": 1543161, "propagations": 110453868}}
+{"seed": 4893, "released": [16, 18, 20, 21, 23, 24, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1192, "conflicts": 499247, "decisions": 994791, "propagations": 87554160}}
+{"seed": 4895, "released": [16, 22, 24, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], "result": "OPEN", "solver": {"restarts": 1296, "conflicts": 557561, "decisions": 1117058, "propagations": 98534218}}

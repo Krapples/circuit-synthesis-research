@@ -18,6 +18,11 @@ For the six-input table in L-meta-16102, Lean checked an eight-gate monotone con
 Two synthesis encodings exclude the requested nine-gate circuit with a NOT reading a gate.
 The exclusion is computational evidence. [Exact syntax, coverage, and replay](sat-search/results/mid_not_16102/README.md)
 
+For the Fano incidence function in L-meta-4874, Lean checked a 28-gate circuit with
+the required final AND and singleton constraints. A 28-gate lower bound applies to a
+factorized star-cover form. The unrestricted budget of 27 remains open.
+[Proof, witness, and search coverage](sat-search/results/fano_final_and_4874/README.md)
+
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
 to targeted verification of changed components, and 5% to documentation. The research targets are:
 

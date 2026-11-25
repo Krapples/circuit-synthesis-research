@@ -1,0 +1,22 @@
+{"fixed": [7, 9, 11, 12], "seed": 6672, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 2.757, "solver": {"restarts": 196, "conflicts": 53003, "decisions": 113145, "propagations": 5932015}}
+{"fixed": [7, 10, 11, 12], "seed": 6670, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 3.25, "solver": {"restarts": 185, "conflicts": 51121, "decisions": 107811, "propagations": 5516547}}
+{"fixed": [7, 8, 10, 11], "seed": 6676, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 3.195, "solver": {"restarts": 170, "conflicts": 54503, "decisions": 111566, "propagations": 5784755}}
+{"fixed": [7, 8, 11, 12], "seed": 6671, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 3.504, "solver": {"restarts": 185, "conflicts": 53581, "decisions": 116923, "propagations": 6007744}}
+{"fixed": [7, 8, 9, 10], "seed": 6675, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 3.542, "solver": {"restarts": 183, "conflicts": 54301, "decisions": 113881, "propagations": 5751973}}
+{"fixed": [8, 9, 10, 12], "seed": 6674, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 4.091, "solver": {"restarts": 180, "conflicts": 55131, "decisions": 123227, "propagations": 5618248}}
+{"fixed": [7, 9, 10, 12], "seed": 6673, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 4.227, "solver": {"restarts": 171, "conflicts": 56667, "decisions": 143480, "propagations": 6231792}}
+{"fixed": [7, 8, 9, 12], "seed": 6677, "result": "UNSAT", "labels": 22, "models": 0, "elapsed_s": 4.481, "solver": {"restarts": 191, "conflicts": 56844, "decisions": 110850, "propagations": 5494327}}
+{"fixed": [7, 8, 12], "seed": 6678, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.07, "solver": {"restarts": 2222, "conflicts": 1091081, "decisions": 1497670, "propagations": 193862975}}
+{"fixed": [8, 11, 12], "seed": 6682, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.078, "solver": {"restarts": 2219, "conflicts": 1072265, "decisions": 1421205, "propagations": 192294760}}
+{"fixed": [8, 10, 12], "seed": 6680, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.083, "solver": {"restarts": 2210, "conflicts": 1073545, "decisions": 1427231, "propagations": 191425422}}
+{"fixed": [9, 10, 12], "seed": 6681, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.08, "solver": {"restarts": 1969, "conflicts": 897725, "decisions": 1162606, "propagations": 168149668}}
+{"fixed": [10, 11, 12], "seed": 6683, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.074, "solver": {"restarts": 2181, "conflicts": 1011891, "decisions": 1386943, "propagations": 198149954}}
+{"fixed": [7, 11, 12], "seed": 6684, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.075, "solver": {"restarts": 2075, "conflicts": 885764, "decisions": 1259091, "propagations": 170731567}}
+{"fixed": [7, 11], "seed": 6685, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.096, "solver": {"restarts": 2227, "conflicts": 1029081, "decisions": 1507121, "propagations": 172782806}}
+{"fixed": [7, 12], "seed": 6686, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.093, "solver": {"restarts": 2207, "conflicts": 1010323, "decisions": 1465607, "propagations": 214839168}}
+{"fixed": [10, 11], "seed": 6687, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.107, "solver": {"restarts": 2229, "conflicts": 991730, "decisions": 1501354, "propagations": 171191252}}
+{"fixed": [9, 11], "seed": 6689, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.093, "solver": {"restarts": 2317, "conflicts": 1165193, "decisions": 1707532, "propagations": 235856580}}
+{"fixed": [7, 8], "seed": 6691, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.087, "solver": {"restarts": 2227, "conflicts": 956289, "decisions": 1449125, "propagations": 201471883}}
+{"fixed": [8, 12], "seed": 6690, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.099, "solver": {"restarts": 2219, "conflicts": 937839, "decisions": 1512061, "propagations": 192091581}}
+{"fixed": [8, 9, 11], "seed": 6679, "result": "OPEN", "labels": 25, "models": 0, "elapsed_s": 78.198, "solver": {"restarts": 2212, "conflicts": 1035715, "decisions": 1349904, "propagations": 183844537}}
+{"fixed": [9, 12], "seed": 6688, "result": "OPEN", "labels": 28, "models": 0, "elapsed_s": 78.129, "solver": {"restarts": 2204, "conflicts": 930157, "decisions": 1534961, "propagations": 185838580}}
