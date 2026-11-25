@@ -1,0 +1,28 @@
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.38554379995912313
+baseline 0 5 3 False True 0.8709
+baseline 1 5 3 False True 0.0251
+baseline 2 5 3 False True 0.0088
+baseline 3 5 3 False False 2.5554
+baseline 4 5 3 False False 0.4177
+baseline 5 5 3 False False 0.938
+baseline 6 5 4 False True 3.3321
+baseline 7 7 3 True True 0.5321
+baseline total 8.68003850011155 local {} cache CacheInfo(hits=0, misses=0, maxsize=50000, currsize=0)
+cached 0 5 3 False True 0.8469
+cached 1 5 3 False True 0.023
+cached 2 5 3 False True 0.0088
+cached 3 5 3 False False 1.0282
+cached 4 5 3 False False 0.3356
+cached 5 5 3 False False 0.5802
+cached 6 5 4 False True 2.2985
+cached 7 7 3 True True 0.3045
+cached total 5.4257353998254985 local {'queries': 219, 'local': 75, 'rec': 211165} cache CacheInfo(hits=144, misses=75, maxsize=50000, currsize=75)
+blocks 0 5 3 False True 0.284
+blocks 1 5 3 False True 0.0077
+blocks 2 5 3 False True 0.0015
+blocks 3 5 3 False False 0.4789
+blocks 4 5 3 False False 0.1314
+blocks 5 5 3 False False 0.2503
+blocks 6 5 4 False True 0.4364
+blocks 7 7 3 True True 0.2026
+blocks total 1.7928732002619654 local {'queries': 219, 'local': 75, 'rec': 90293} cache CacheInfo(hits=144, misses=75, maxsize=50000, currsize=75)

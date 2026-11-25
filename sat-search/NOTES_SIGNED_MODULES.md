@@ -494,9 +494,157 @@ without re-solving. Reusing that file for a four-cycle was rejected before
 search. The worker also joins its stop timer before reusing the temporary
 path. The change applies to all branch-and-bound runs.
 
+Branch-and-bound now reuses analytical child probes after choosing to split a
+node. The input to each reused bound is identical: target, budget, and full
+prefix. The cache lives for the next frontier and has no effect on resumed
+journals. At four gates for the four-vertex path, 162 duplicate bound calls
+were skipped, 160 leaves were excluded analytically, and all four reported
+witnesses passed independent truth-table evaluation. The regression checks
+the same case with one worker.
+
 ```powershell
 python sat-search/experiments/layout_projection_check.py -v
 python sat-search/experiments/layout_projection_check.py --output fresh-higher.jsonl --seconds 4
 python sat-search/experiments/layout_projection_check.py --output fresh-matched.jsonl --matched --seconds 3
 python sat-search/verify/test_bnb.py -k resume_scope
+python sat-search/verify/test_bnb.py -k probe
+```
+
+## Regional obligation caching and block completion
+
+[ObligationCache](theory/regional_obligation_cache.py) and
+[local_blocks](theory/regional_block_completion.py) are the default local
+completion for the experimental ordered quotient and provider-first layout
+searches. The reference remains selectable with `make_completion('reference')`
+and the cache-only ablation with `make_completion('cached')`. Each search
+creates one completion object and passes it to its subordinate recognizers.
+
+For a fixed region, unconstrained slices can be omitted. The remaining port
+columns determine all obligations. Equal columns are interchangeable, and in
+the free-NOT basis complemented columns are interchangeable after flipping
+literal phase. Each group still carries its full number of occurrences. The
+cached tree is lifted using one original provider reference per occurrence,
+with phase restored by XOR. This is valid on the observed slice patterns.
+Separate LRUs for normalized and solved queries default to 4,096 entries each.
+A bounded search over tied canonical orderings can miss equivalent cache keys
+when it hits the cap. Both keys still encode exact problems.
+
+A port assignment restricts a local formula to a read-once formula on its
+surviving private variables. For any pair of surviving leaves its AND/OR
+lowest common ancestor is unchanged by contraction. Thus an OR constraint
+keeps its endpoints together across an AND split, and an AND constraint keeps
+them together across an OR split. Connected components of the opposite
+graph are the indivisible units of each candidate split. Every legal split
+assigns each component to exactly one child. Ports with the same normalized
+provider are indistinguishable up to their individual literal phases, which
+remain free in the signed leaf checks. Enumerating the count given to each
+child covers all occurrence assignments up to that symmetry. Recursive
+completion still checks every slice of each candidate. Its per-query memo
+tables are individually bounded and cleared at the end of the query.
+
+The supplied prototype replay performed 2,000 oracle comparisons and
+reconstructed the selected excess-four circuit in 0.436 s. The integrated
+test checked 2,000 queries against independent formula-column enumeration,
+including sparse provider IDs, row permutations, polarity flips, and exact
+port occurrence counts. It had 1,348 cache hits. All three completion modes
+agreed on nine matched jobs. This includes three exhausted excess-three
+layout searches and six verified witnesses across the two drivers.
+
+| Integrated metric | Reference | Cache only | Cache and blocks |
+| --- | ---: | ---: | ---: |
+| Six excess-three projection jobs | 4.184 s | 2.776 s | 1.220 s |
+| Selected excess-four projection job | 2.490 s | 2.226 s | 0.471 s |
+| All nine jobs, including two ordered quotient jobs | 7.648 s | 5.154 s | 1.698 s |
+| Peak process working set | 56.6 MiB | 58.0 MiB | 38.5 MiB |
+| Canonical cache hits / queries | — | 136 / 207 | 136 / 207 |
+| Uncached completion recursion states | — | 196,827 | 78,092 |
+
+The integrated eight-budget higher-excess replay used a strict four-second
+worker cap per job. Both modes timed out on every case. Those runs established
+zero new witnesses, exclusions, or minima. Block completion lowered measured
+peak working set on every paired job. A one-second sampling profile on
+`hypergraph-12`, `comparator-09`, and `random-monotone-10` located the main
+cost in local completion. On `comparator-09`, both variants spent their first
+second inside their first local query, with zero opportunities for a cache
+hit. The sample is diagnostic and does not establish full-search coverage.
+
+### Monotone row bounds and branch propagation
+
+Three subsequent ablations target the local query accepting most of the work.
+For a subtree, project each observed provider pattern to the providers present
+in that subtree. At fixed primary values, subset order on those patterns
+implies pointwise order on the output slices. Identical projected patterns
+therefore require identical slices. A nonempty AND/OR tree is zero when all
+its leaves are zero and one when all are one. These are additional endpoint
+tests at the all-zero and all-one private assignments. The tests apply to
+exact slices and ignore unspecified slices. Free-NOT mode bypasses them.
+
+The endpoint test also eliminates inconsistent child-slice choices before
+enumerating combinations across rows. An AND at an absorbing zero row can
+require zero from either child. If a fixed row requires a nonzero slice from
+one child at a smaller provider pattern, that child cannot be chosen to
+supply the zero. The OR case uses the dual order and absorbing one. Choices
+at two absorbing rows require the same constant, so those choices create
+no pairwise incompatibility with each other. Bitsets identify the relevant
+fixed obligations. Recursive completion still decides every surviving query.
+
+Each ablation preserved the matched verdicts and reconstructed witnesses.
+The final implementation also passed the 2,000-query independent test.
+Timings below come from successive paired batches on the same nine jobs.
+
+| Added check | Prior time | With check | Recursive states with check |
+| --- | ---: | ---: | ---: |
+| Subtree row order and endpoints | 1.748 s | 0.641 s | 45,274 |
+| Prefilter child endpoints before branching | 0.657 s | 0.209 s | 7,083 |
+| Propagate fixed-row dominance into absorbing branches | 0.205 s | 0.172 s | 2,228 |
+
+The final dominance variant is the experimental default. On the selected
+excess-four construction it took 0.041 s. Its profiled higher-excess round
+used a four-second deadline. Interrupt delivery added at most 0.031 s.
+Three budgets that had reached the prior layout cap yielded witnesses. The
+independent reference evaluated all three witnesses. Their minima were
+already established, so the replay changed zero certified intervals.
+
+| Monotone target | Gates | Dominance variant | Earlier MapleChrono |
+| --- | ---: | ---: | ---: |
+| `hypergraph-12` | 8 | 0.068 s | 1.067 s |
+| `hypergraph-21` | 8 | 0.255 s | 3.585 s |
+| `hypergraph-03` | 9 | 0.422 s | 4 s timeout |
+
+The SAT comparison uses the [earlier recorded run](results/layout_projection_higher.jsonl).
+The remaining five dominance jobs timed out. Peak working sets for the eight
+jobs were 35.5–40.1 MiB. On `comparator-09`, the first query still spent more
+than four seconds checking 333,961 partitions. Absorbing-row propagation
+rejected or simplified many candidates and left that query open. The next
+test is whether many partitions have the same downstream slice constraints.
+The comparator and random monotone timeouts offer probes for a proposed
+quotient, with the original completion as a correctness reference.
+
+[Row bound comparison](results/regional_completion_row_matched.jsonl) ·
+[Endpoint comparison](results/regional_completion_endpoint_matched.jsonl) ·
+[Dominance comparison](results/regional_completion_dominance_matched.jsonl) ·
+[Row profiles](results/regional_completion_row_profile.jsonl) ·
+[Endpoint profiles](results/regional_completion_endpoint_profile.jsonl) ·
+[Dominance higher-excess records](results/regional_completion_dominance_higher.jsonl)
+
+[Supplied prototype run](results/regional_block_prototype_bench.log) ·
+[Integrated matched replay](results/regional_completion_matched.jsonl) ·
+[Higher-excess jobs](results/regional_completion_higher.jsonl) ·
+[Higher-excess profiles](results/regional_completion_profile.jsonl)
+
+The supplied [fused quotient prototype](theory/archive/fused_quotient_search.py)
+is archived outside the active solver. Its reported 148 oracle comparisons
+are prior evidence. It expects the original companion prototype APIs. A
+scaling replay would be useful if sampling shows global partial-layout
+work dominating after local completion has been reduced.
+
+```powershell
+python sat-search/experiments/regional_completion_check.py -v
+python sat-search/theory/regional_block_completion.py --bench --output fresh-regional-matched.jsonl
+python sat-search/theory/regional_block_completion.py --bench --higher --seconds 4 --output fresh-regional-higher.jsonl
+python sat-search/theory/regional_block_completion.py --bench --higher --profile --seconds 1 --output fresh-regional-profile.jsonl
+python sat-search/theory/regional_block_completion.py --bench --row-bounds --output fresh-regional-row.jsonl
+python sat-search/theory/regional_block_completion.py --bench --endpoint-branches --output fresh-regional-endpoint.jsonl
+python sat-search/theory/regional_block_completion.py --bench --dominance-branches --output fresh-regional-dominance.jsonl
+python sat-search/theory/regional_block_completion.py --bench --higher --mode dominance-branches --profile --seconds 4 --output fresh-regional-dominance-higher.jsonl
 ```

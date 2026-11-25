@@ -1,0 +1,16 @@
+{"basis": "monotone", "case": "hypergraph-12", "completion": "cached", "engine": "layout", "excess": 4, "n": 5, "peak_bytes": 56631296, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xf880e880"}
+{"basis": "monotone", "case": "hypergraph-21", "completion": "cached", "engine": "layout", "excess": 4, "n": 5, "peak_bytes": 65302528, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfae0a800"}
+{"basis": "monotone", "case": "hypergraph-03", "completion": "cached", "engine": "layout", "excess": 4, "n": 6, "peak_bytes": 50925568, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xeeeaecc0a880a880"}
+{"basis": "monotone", "case": "comparator-02", "completion": "cached", "engine": "layout", "excess": 5, "n": 5, "peak_bytes": 47894528, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xe8a0a080"}
+{"basis": "monotone", "case": "graph-03", "completion": "cached", "engine": "layout", "excess": 4, "n": 7, "peak_bytes": 54784000, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfffefffefffafffaffecffecffa0eca0"}
+{"basis": "monotone", "case": "comparator-09", "completion": "cached", "engine": "layout", "excess": 5, "n": 7, "peak_bytes": 114458624, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfeeefaa8faa8a000eccca000a000a000"}
+{"basis": "monotone", "case": "random-monotone-10", "completion": "cached", "engine": "layout", "excess": 4, "n": 7, "peak_bytes": 51884032, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfcf0e0c0c0c0c0c0fcf0e000c000c000"}
+{"basis": "monotone", "case": "comparator-04", "completion": "cached", "engine": "layout", "excess": 5, "n": 5, "peak_bytes": 47505408, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xe8808000"}
+{"basis": "monotone", "case": "hypergraph-12", "completion": "blocks", "engine": "layout", "excess": 4, "n": 5, "peak_bytes": 38715392, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xf880e880"}
+{"basis": "monotone", "case": "hypergraph-21", "completion": "blocks", "engine": "layout", "excess": 4, "n": 5, "peak_bytes": 37756928, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfae0a800"}
+{"basis": "monotone", "case": "hypergraph-03", "completion": "blocks", "engine": "layout", "excess": 4, "n": 6, "peak_bytes": 37847040, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xeeeaecc0a880a880"}
+{"basis": "monotone", "case": "comparator-02", "completion": "blocks", "engine": "layout", "excess": 5, "n": 5, "peak_bytes": 37670912, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xe8a0a080"}
+{"basis": "monotone", "case": "graph-03", "completion": "blocks", "engine": "layout", "excess": 4, "n": 7, "peak_bytes": 37785600, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfffefffefffafffaffecffecffa0eca0"}
+{"basis": "monotone", "case": "comparator-09", "completion": "blocks", "engine": "layout", "excess": 5, "n": 7, "peak_bytes": 39190528, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfeeefaa8faa8a000eccca000a000a000"}
+{"basis": "monotone", "case": "random-monotone-10", "completion": "blocks", "engine": "layout", "excess": 4, "n": 7, "peak_bytes": 39215104, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xfcf0e0c0c0c0c0c0fcf0e000c000c000"}
+{"basis": "monotone", "case": "comparator-04", "completion": "blocks", "engine": "layout", "excess": 5, "n": 5, "peak_bytes": 37933056, "seconds": 4.0, "status": "TIMEOUT", "truth": "0xe8808000"}
