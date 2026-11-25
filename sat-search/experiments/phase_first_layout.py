@@ -50,6 +50,9 @@ if __name__ == '__main__':
     tag = '' if (base_mode, challenger) == ('row-quotient', 'phase-first') else f'_{challenger}'
     names = sorted({json.loads(l)['key'].split('|')[0] for l in open(os.path.join(HERE, 'results', 'excess3_ladder.jsonl'))
                     if json.loads(l)['key'].endswith('|free')})
+    if len(sys.argv) > 6:                       # optional comma-separated subset of cases
+        names = [nm for nm in names if nm in set(sys.argv[6].split(','))]
+        tag += '_subset'
     out = open(os.path.join(HERE, 'results', ('phase_first_layout' if excess == 3 else f'phase_first_layout_e{excess}') + tag + '.jsonl'), 'w', encoding='utf-8')
     # every solve in a fresh process (no warm module caches); baselines first, then phase-first with early stopping
     with Pool(workers, maxtasksperchild=1) as p:

@@ -526,6 +526,40 @@ Consequences: feasibility is monotone in occurrence counts. For construction, tr
 pad. For exclusion, a child sub-query that is infeasible at the largest count it could receive excludes every smaller
 allocation, so allocation branches can be pruned as a group (not yet implemented in `local_blocks`).
 
+## Certificate-propagation prescreen for phase-first (`theory/regional_certificate_propagation.py`, opt-in)
+
+After phase-first fixes literal polarities, each monotone query is screened by a necessary test: mandatory positive /
+negative certificate memberships are propagated with the exact-one-intersection property, necessary AND/OR
+lowest-common-ancestor relations are learned, and incompatible cotrees are rejected. Separate leaf occurrences
+(duplicate provider columns) are kept; redundant monotone labels are reduced first. A rejection is sound UNSAT for that
+phase class; passing is "unknown" and goes to the production solver.
+- Mode: `make_completion('phase-certificate')` = `certificate_completion` (same routing as `phase-first`, prescreen
+  skipped above 1,024 labelled entries). Added to the multislice oracle test (passes). Default unchanged.
+- Checks: 1,200 random + 336 structured fixed-phase cases, 0 unsound rejections, 70 structured rejections beyond the
+  basic distinction test. Supplied benches reproduced on Windows (`logs/cert_prop_bench.log`): original 66 queries
+  55 -> 59 decided; fresh 80: 68 -> 71; exclusion-oriented 60: 45 -> 59 decided, local calls 132 -> 29, 5.85 s -> 1.34 s.
+
+Production replay (`experiments/certificate_replay.py`, `results/certificate_replay.jsonl`, 0.5 s per query, witnesses
+checked, decisions agree):
+
+| Workload | phase-first | phase-certificate |
+| --- | --- | --- |
+| held-out SAT (33) | 32 decided, 2.66 s, 293 local calls | **33**, 0.67 s, 63 |
+| held-out UNSAT (514) | 514, 9.26 s, 2,260 local calls | 514, **4.02 s**, **89** |
+| dev SAT (18) | 18, 0.89 s, 184 | 18, 0.27 s, 31 |
+| dev UNSAT (878) | 878, 6.76 s, 4,276 | 878, 2.72 s, 71 |
+
+No losses; 2.3-2.5x less time and 17-60x fewer production local calls.
+
+**Excess-5 timeouts unchanged.** The 12 free-NOT excess-5 searches that phase-first does not finish in 120 s
+(comparator-04, -08, complete-5, -6, hypergraph-05, -09, -10, -15, -20, petersen-10, random-monotone-05,
+threshold-5-3) still time out with `phase-certificate` (`results/phase_first_layout_e5_phase-certificate_subset.jsonl`).
+Profile of 30 s of complete-5: 66,746 completion queries, 98.4% cache hits; 1,021 of 1,047 misses rejected by the
+certificate; `local_blocks` 5 s of 25 s, while `ObligationCache._normalize`/`_pack` (canonical keys) take ~20 s.
+The remaining bottleneck at excess 5 is cache canonicalization and layout count, not local completion; passing learned
+AND/OR relations into the partition generator would not address it. Next: a cheaper cache key (e.g. hash before
+canonicalizing, or memoize by raw query first) or fewer layouts.
+
 ## Second-chance screening (2026-11-24, stopped early for runtime)
 
 - Normalized phase encoding vs direct counted-NOT encoding (`experiments/second_chance_encoding.py`,
