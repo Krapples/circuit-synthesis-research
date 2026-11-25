@@ -1,6 +1,6 @@
 # Handoff: circuit synthesis research
 
-*Last updated 2026-11-24, by the Claude Code research agent. Keep this current after every major step.*
+*Last updated 2026-11-24 (evening), by the Claude Code research agent. Keep this current after every major step.*
 
 Read this first, then [AGENTS.md](AGENTS.md) (role and rules), [RESEARCH_NOTES.md](RESEARCH_NOTES.md) (results)
 and [sat-search/verify/AUDIT.md](sat-search/verify/AUDIT.md) (verification status).
@@ -86,6 +86,8 @@ The user's current research queue, in order:
     feedback.
   - Size pools at 11 workers, up to 22 in total. Never wrap a Pool in `timeout` (it orphans workers). Stop
     jobs by task ID, never by process name.
+  - On Windows, stopping a task kills the bash wrapper but can leave its Python child running. After
+    every stop, list Python processes and kill leftovers of your own by explicit PID.
 - **Guard.** `cube_search.py` refuses untested rule combinations. Harnesses pass `--allow-unverified`.
   Regenerate the allowlist with `python verify/inventory.py && python verify/make_allowlist.py` after
   adding coverage.
@@ -117,6 +119,23 @@ The user's current research queue, in order:
   Monotone minima are the same. Upper bounds are verified by witnesses lifted from the core. Lower
   bounds rest on the module theorem, which is provisional. Next: certify with checked exclusions where n
   is small.
+
+## Jobs running at last update
+
+- `experiments/module_core_minima.py`: 6 of 11 cases left, working on random-monotone-10 (7-input core).
+- `experiments/certify_module_minima.py 6 900`: checked exclusions at M−1 and M−2 for the n ≤ 6 module
+  minima → `results/module_minima_certificates.jsonl`.
+- `experiments/module_fpt_bench.py 5 5`: FPT on the original vs on the core vs the reference →
+  `results/module_fpt_bench.jsonl`.
+
+## Lean: module-contraction proof plan (deferred)
+
+- **Substitution:** a circuit for the contracted function plus one AND/OR gate is a circuit for f. Short.
+- **Restriction:** fix x_j to the neutral value of the module; at least one reader of x_j becomes a copy
+  and is removed under constant propagation; rename x_i as the module input. This needs a formal
+  constant-simplification on `Circuit n m` with semantics preservation and a gate count. Estimate:
+  several hundred lines.
+- Needs evaluation semantics added to `CircuitLemmas/Basic.lean`.
 
 ## Next steps
 
