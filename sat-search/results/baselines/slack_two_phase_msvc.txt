@@ -1,0 +1,17 @@
+Supplied check, unmodified
+phase systems=5000 rejected=3084
+DAG queries=4470 sat=2844
+
+Supplied benchmark, unmodified
+gate-boundary screen=0 sat=70 unsat=15 unknown=15 ms=705.124 calls=23097 phase_rejects=0 work=40557400
+gate-boundary screen=1 sat=72 unsat=28 unknown=0 ms=179.142 calls=35951 phase_rejects=16701 work=7670434
+six-wire-partial screen=0 sat=69 unsat=16 unknown=15 ms=898.499 calls=27823 phase_rejects=0 work=48946547
+six-wire-partial screen=1 sat=70 unsat=30 unknown=0 ms=223.181 calls=39933 phase_rejects=24314 work=9106438
+
+Production packed phase screen, supplied oracles adapted for up to 12 coordinates and 64 rows
+phase systems=5000 rejected=3100
+DAG queries=4470 sat=2857
+
+Production packed phase screen with repeated-mask cache, same cases
+phase systems=5000 rejected=3100
+DAG queries=4470 sat=2857

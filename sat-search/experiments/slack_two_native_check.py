@@ -1,4 +1,4 @@
-"""Verify slack-two witnesses and replay actual Percy boundaries in four modes."""
+"""Verify slack-two witnesses and replay actual Percy boundaries."""
 
 import argparse
 from collections import Counter
@@ -106,7 +106,7 @@ def check():
                 for value in range(full + 1):
                     if value & ~care:
                         continue
-                    for mode in (0, 2, 3):
+                    for mode in (0, 2, 3, 4, 5):
                         metrics, regions = _native.slack_two_boundary(
                             columns, h, [], 0, [], value, care, 2_000_000, 0, mode)
                         assert metrics['status'] == (value in expected), (columns, h, care, value, mode)
@@ -118,7 +118,7 @@ def check():
     a, b, c, d, e = primaries = independent_columns(5)
     columns = [a & b, c]
     args = columns, 1, primaries, 4, types(primaries), a & b & c & d & e, 0xffffffff
-    for mode in (2, 3):
+    for mode in (2, 3, 4, 5):
         metrics, regions = _native.slack_two_boundary(*args, deadline_seconds=0, mode=mode)
         assert not regions and metrics['status'] == 0 and metrics['extension_unknown'] == 0, metrics
         assert metrics['extension_feasible'] == 2, metrics
@@ -130,15 +130,32 @@ def check():
     # Identical columns still describe distinct first-layer wires.
     columns = [0x88, 0x88, 0xf0]
     care = 0xff
-    for target in (0, 0x80, 0xf0, 0x7f):
-        metrics, regions = _native.slack_two_boundary(columns, 2, [], 0, [], target, care)
-        assert metrics['status'] == (target in direct_tables(columns, 2, care))
-        if regions:
-            verify(columns, 2, target, care, regions)
-    print(json.dumps({'oracle_comparisons': checks, 'duplicated_wire_checks': 4, 'extension_and_limit_checks': 6}))
+    expected = direct_tables(columns, 2, care)
+    for mode in (2, 3, 4, 5):
+        for target in (0, 0x80, 0xf0, 0x7f):
+            metrics, regions = _native.slack_two_boundary(columns, 2, [], 0, [], target, care, mode=mode)
+            assert metrics['status'] == (target in expected)
+            if regions:
+                verify(columns, 2, target, care, regions)
+
+    x, y, z = columns = independent_columns(3)
+    for mode in (4, 5):
+        # This cap interrupts the first phase check before any exact tree call.
+        metrics, regions = _native.slack_two_boundary(columns, 3, [], 0, [], 0x96, care, 24, 0, mode)
+        assert not regions and metrics['status'] == 2 and metrics['phase_checks'] == 1
+        assert not (metrics['phase_rejects'] or metrics['tree_calls'] or metrics['extension_excluded'])
+
+        # (x & z) XOR y can be binate in x and z even when each feeds only
+        # the shared provider. Screening the whole DAG as one tree would be unsound.
+        target = (x & z) ^ y
+        metrics, regions = _native.slack_two_boundary(columns, 3, [], 0, [], target, care, mode=mode)
+        assert metrics['status'] == 1
+        verify(columns, 3, target, care, regions)
+    print(json.dumps({'oracle_comparisons': checks, 'duplicated_wire_checks': 16,
+                      'extension_and_limit_checks': 14, 'shared_provider_checks': 2}))
 
 
-def replay(path, output, work_limit, deadline, limit):
+def replay(path, output, work_limit, deadline, limit, modes, repetitions):
     reference = SimpleNamespace(independent_columns=independent_columns)
     with output.open('x', encoding='utf-8') as out:
         for name, record, first, mixed_ids, primaries, _, target, care in captured_boundaries(
@@ -147,19 +164,21 @@ def replay(path, output, work_limit, deadline, limit):
             assert record['k'] == 2 * len(first) + len(mixed_ids) + 1
             gate_columns = types(primaries)
             decided = set()
-            for mode in range(4):
-                start = perf_counter()
-                metrics, regions = _native.slack_two_boundary(
-                    columns, len(first), primaries, record['mixed'], gate_columns, target, care,
-                    work_limit, deadline, mode)
-                elapsed = perf_counter() - start
-                if metrics['status'] != 2:
-                    decided.add(metrics['status'])
-                if metrics['status'] == 1:
-                    verify(columns, len(first), target, care, regions)
-                out.write(json.dumps(dict(record, **metrics, name=name, mode=mode,
-                                          wall_seconds=elapsed, deadline_seconds=deadline,
-                                          work_limit=work_limit)) + '\n')
+            for repetition in range(repetitions):
+                offset = repetition % len(modes)
+                for mode in (*modes[offset:], *modes[:offset]):
+                    start = perf_counter()
+                    metrics, regions = _native.slack_two_boundary(
+                        columns, len(first), primaries, record['mixed'], gate_columns, target, care,
+                        work_limit, deadline, mode)
+                    elapsed = perf_counter() - start
+                    if metrics['status'] != 2:
+                        decided.add(metrics['status'])
+                    if metrics['status'] == 1:
+                        verify(columns, len(first), target, care, regions)
+                    out.write(json.dumps(dict(record, **metrics, name=name, mode=mode, repetition=repetition,
+                                              wall_seconds=elapsed, deadline_seconds=deadline,
+                                              work_limit=work_limit)) + '\n')
             assert len(decided) <= 1, (name, record, decided)
 
 
@@ -171,11 +190,15 @@ if __name__ == '__main__':
     parser.add_argument('--deadline', type=float, default=0.025)
     parser.add_argument('--limit', type=int, default=128)
     parser.add_argument('--memory-mib', type=int, default=512)
+    parser.add_argument('--modes', type=int, nargs='+', choices=range(6), default=list(range(4)))
+    parser.add_argument('--repetitions', type=int, default=1)
     args = parser.parse_args()
+    if args.repetitions < 1:
+        parser.error('--repetitions must be positive')
     limit_commit_mib(args.memory_mib)
     if args.capture:
         if not args.output:
             parser.error('--capture requires --output')
-        replay(args.capture, args.output, args.work_limit, args.deadline, args.limit)
+        replay(args.capture, args.output, args.work_limit, args.deadline, args.limit, args.modes, args.repetitions)
     else:
         check()

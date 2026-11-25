@@ -3,6 +3,7 @@
 // directed tree kernel and parity filter; independent of Percy.
 #include "residual_directed.hpp"
 #include "residual_parity_filter.hpp"
+#include "residual_phase_screen.hpp"
 #include "residual_provider_unate.hpp"
 #include <functional>
 #include <map>
@@ -12,7 +13,10 @@ namespace residual_slack_two {
 using namespace residual_directed;
 using Clock=std::chrono::steady_clock;
 struct Region { std::vector<Leaf> inputs; unsigned output; U column; Witness witness; };
-struct Answer { Status status; std::vector<Region> regions; U work,allocations,parity_rejects,provider_trials,tree_calls,memo_hits,unate_rejects,unate_merges; };
+struct PhaseStats {
+    U checks = 0, rejects = 0, work = 0, cache_hits = 0, dominance_hits = 0;
+};
+struct Answer { Status status; std::vector<Region> regions; U work,allocations,parity_rejects,provider_trials,tree_calls,memo_hits,unate_rejects,unate_merges; PhaseStats phase; };
 struct Entry { Leaf leaf; unsigned count; };
 class Engine {
     struct Limit{};
@@ -20,6 +24,10 @@ class Engine {
     U care,anchor,target,limit,work=0,allocs=0,rejects=0,trials=0,tree_calls=0;
     Clock::time_point end;
     bool parity, direct, memoize, unate;
+    bool phase_screen, cache_phases;
+    PhaseStats phase_stats;
+    struct PhaseMasks { std::vector<unsigned> feasible, infeasible; };
+    std::map<std::pair<U, std::vector<U>>, PhaseMasks> phase_cache;
     U unate_rejects=0,unate_merges=0;
     using State = std::pair<std::vector<std::tuple<U,bool,unsigned>>,std::vector<unsigned>>;
     std::set<State> failed;
@@ -31,8 +39,60 @@ class Engine {
     U norm(U c)const {c&=care;return c&anchor?c^care:c;}
     static std::vector<Leaf> expand(const std::vector<Entry>& a) { std::vector<Leaf> out;for(auto e:a)for(unsigned j=0;j<e.count;++j)out.push_back(e.leaf);return out; }
     static std::vector<U> cols(const std::vector<Leaf>& a) {std::vector<U> out;for(auto l:a)out.push_back(l.column);return out;}
+    bool phase_feasible(const std::vector<Leaf>& leaves, U column) {
+        const auto wires = residual_phase_screen::collect(leaves);
+        const unsigned repeated = wires.repeated;
+        PhaseMasks* masks = nullptr;
+        if (cache_phases) {
+            auto key = std::make_pair(norm(column), wires.columns);
+            auto it = phase_cache.find(key);
+            if (it == phase_cache.end() && phase_cache.size() < 128)
+                it = phase_cache.try_emplace(std::move(key)).first;
+            if (it != phase_cache.end()) masks = &it->second;
+        }
+        const auto subset = [](unsigned a, unsigned b) { return (a & b) == a; };
+        if (masks) {
+            for (const auto known : masks->feasible)
+                if (subset(known, repeated)) {
+                    ++phase_stats.cache_hits;
+                    phase_stats.dominance_hits += known != repeated;
+                    return true;
+                }
+            for (const auto known : masks->infeasible)
+                if (subset(repeated, known)) {
+                    ++phase_stats.cache_hits;
+                    phase_stats.dominance_hits += known != repeated;
+                    return false;
+                }
+        }
+        ++phase_stats.checks;
+        const bool feasible = residual_phase_screen::feasible(wires, column, care ^ column, [&](unsigned units) {
+            if (Clock::now() >= end) throw Limit{};
+            tick(units);
+            phase_stats.work += units;
+        });
+        if (masks) {
+            auto& entries = feasible ? masks->feasible : masks->infeasible;
+            std::erase_if(entries, [&](unsigned known) {
+                return feasible ? subset(repeated, known) : subset(known, repeated);
+            });
+            entries.push_back(repeated);
+        }
+        return feasible;
+    }
     // Exact tree lookup, preserving the witness phase and shared deadline.
-    Witness ask(const std::vector<Leaf>& a,U c){tick();++tree_calls;auto r=Solver(a,care,limit-work,end).run(c,care^c);tick(r.work);if(r.status==Status::unknown)throw Limit{};return r.witness;}
+    Witness ask(const std::vector<Leaf>& a,U c) {
+        tick();
+        if (phase_screen && !phase_feasible(a, c)) {
+            ++phase_stats.rejects;
+            return {};
+        }
+        ++tree_calls;
+        auto r = Solver(a, care, limit - work, end).run(c, care ^ c);
+        tick(r.work);
+        if (r.status == Status::unknown) throw Limit{};
+        return r.witness;
+    }
     // Column enumeration for provider regions when there are too many free
     // parity components to enumerate their orientations. Occurrence subsets
     // are local to this allocation. Signed output normalized at anchor.
@@ -136,8 +196,8 @@ class Engine {
         return split(0,0);
     }
 public:
-    Engine(U mask,U f,U cap=1000000,Clock::time_point deadline=Clock::time_point::max(),bool use_parity=true,bool use_direct=true,bool use_memo=true,bool use_unate=false)
-      :care(mask),anchor(mask&-mask),target(f&mask),limit(cap),end(deadline),parity(use_parity),direct(use_direct),memoize(use_memo),unate(use_unate){if(!care)throw std::invalid_argument("empty care");}
+    Engine(U mask,U f,U cap=1000000,Clock::time_point deadline=Clock::time_point::max(),bool use_parity=true,bool use_direct=true,bool use_memo=true,bool use_unate=false,bool use_phase_screen=false,bool use_phase_cache=false)
+      :care(mask),anchor(mask&-mask),target(f&mask),limit(cap),end(deadline),parity(use_parity),direct(use_direct),memoize(use_memo),unate(use_unate),phase_screen(use_phase_screen),cache_phases(use_phase_cache){if(!care)throw std::invalid_argument("empty care");}
     Answer run(std::vector<Leaf> a,unsigned s){
         if(used)throw std::invalid_argument("Engine is single-use");used=true;
         k=a.size();if(k<2||k>8||s>2)throw std::invalid_argument("reference supports k=2..8, s=0..2");
@@ -155,11 +215,11 @@ public:
                     }
                     for(unsigned c=0;c<=left;++c){extra[i]=c;if(dist(i+1,left-c))return true;}return false;
                 };
-                if(dist(0,s-q)){if(Clock::now()>=end)throw Limit{};return {Status::sat,path,work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges};}
+                if(dist(0,s-q)){if(Clock::now()>=end)throw Limit{};return {Status::sat,path,work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats};}
             }
             if(Clock::now()>=end)throw Limit{};
-            return {Status::unsat,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges};
-        }catch(const Limit&){return {Status::unknown,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges};}
+            return {Status::unsat,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats};
+        }catch(const Limit&){return {Status::unknown,{},work,allocs,rejects,trials,tree_calls,memo_hits,unate_rejects,unate_merges,phase_stats};}
     }
 };
 }

@@ -718,3 +718,182 @@ python sat-search/experiments/slack_two_native_check.py --capture $trace --outpu
 python sat-search/experiments/slack_two_native_check.py --capture $trace --output sat-search/logs/slack_two_replay_2m.jsonl --work-limit 2000000
 python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_two_screen.jsonl --exe $percy --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes slack-one-directed slack-two-memo slack-two-unate
 ```
+
+## Singleton phase screening and slack-two presence cuts
+
+In an exact signed tree, a wire used once has a fixed polarity. Fix any two
+oppositely labeled cared rows that agree on repeated coordinates. For the
+positive row to avoid lying below the negative row in the phase-adjusted
+singleton order, at least one differing singleton must become 1 on the
+positive row and 0 on the negative row. Thus the pair forbids exactly the
+phase subcube whose differing bits equal those of the positive row.
+Singleton differences force phase bits. The integrated screen intersects
+the remaining allowed phases with packed 64-bit word masks. The conjunction
+is exact for unrestricted functions unate in the singletons and arbitrary
+in the repeated coordinates, since the upward closure of the positives
+gives a completion in each repeated fiber. A passing result goes to the
+existing exact tree solver. The code charges row, pair and word-mask work
+and polls the shared deadline at batches of at most 64 charged steps.
+An interrupted screen yields unknown through the engine's existing limit
+path, which emits no clause.
+
+The check runs just before an exact tree lookup, both for directed provider
+columns and for the decoder. It cannot screen the whole shared DAG as if it
+were one tree. For example the circuit `(x AND z) XOR y` can have `x` and
+`z` each read once by the shared AND, with the AND and `y` each read twice
+in the decoder. In the whole DAG there is no common phase for `x` at
+`z = 1` across the two `y` fibers. The independent dynamic allocation
+reference from the archive stays standalone.
+
+### Repeated-wire masks
+
+At fixed care, target column and distinct wire universe, turning a singleton
+into a repeated wire only removes constraints. Row pairs newly distinguished
+by that wire drop out. Pairs that remain agree on it, so it was absent from
+their phase clause. Hence feasible masks are upward closed and infeasible
+masks are downward closed. Mode `phase-cache` keeps minimal feasible and
+maximal infeasible masks within each of at most 128 signatures. Signatures
+use the target modulo output complement and the sorted distinct-wire column
+multiset. Equal-valued separate wires retain separate entries and IDs supply
+the tie break within the query. This reuse applies before direction-based
+exact completion for a concrete tree, including tree-only reader allocations.
+The repeated count above one does not enter the phase relaxation. Reversing
+the target phase reverses every singleton phase, so the status is invariant
+under output complement.
+
+For a fixed whole-tree orientation, the repeated sets can also be described
+as a hitting problem. Each opposing pair whose positive row would be below
+its negative row supplies the set of their differing coordinates. Repeating
+one coordinate in that set discards the pair. Therefore the minimal repeated
+sets for that orientation are the inclusion-minimal hitting sets of its
+violated pairs. This gives a possible joint phase-and-multiplicity
+formulation under a repetition cap. The per-query cache above is the tested
+reduction. Enumerating phases and minimal hitting sets up front remains an
+unmeasured alternative for a single tree.
+
+### Independent cut ablation
+
+`--slack-two-set-cuts` replaces a pure positional clause by negative type
+and mixed-primary presences when the old first-layer types are distinct.
+Any model containing those types has an injection of the corresponding
+old wire occurrences into its first layer. Its additional boundary is
+one of the previously checked extensions, including an extra copy of an
+old type. This implication is independent of SAT position. A repeated old
+type or any feasible or unknown extension uses the existing position-based
+clause path. The fixed-budget harness exercises the optional clauses without
+changing the default driver or the slack-zero and slack-one kernels.
+
+### Checks and captured costs
+
+The supplied phase check and benchmark built and ran under MSVC in C++20
+mode. The standalone oracle passed 5,000 polarity cases and 4,470 full
+DAG comparisons. On this MSVC run the archive benchmark completed 170
+of 200 queries in 1.604 s with the screen off, and all 200 in 0.402 s
+with the screen on. The phase test rejected 41,015 tree requests. The
+archive's recorded GCC run completed 190 and 200 in 1.134 s and 0.288 s.
+The packed production screen and its cache variant also passed the
+adapted standalone oracles, with polarity widths up to 12 and up to 64
+cared rows. The in-repo binding passed 7,040 exact-DAG comparisons,
+including complete and partial targets, plus focused duplicate-wire,
+shared-provider, extension and interruption checks.
+[MSVC check and benchmark output](results/baselines/slack_two_phase_msvc.txt)
+
+The captured cases used 100,000 work units, a 25 ms total query deadline
+and a 512 MiB process-family cap. Status and counters were stable across
+five interleaved passes. Times sum per-boundary medians, including
+extension checks and Python binding overhead. Every decided case was
+excluded, and each justified a pure cut.
+
+| 44 captured queries | Memo + unateness | Plus phase screen | Plus phase-mask cache |
+| --- | ---: | ---: | ---: |
+| Proved exclusions | 35 | 44 | 44 |
+| Proved exclusions in the nine previously open | 0 | 9 | 9 |
+| Median time sum, all 44 | 113.4 ms | 80.3 ms | 80.1 ms |
+| Median time sum, nine previously open | 19.1 ms | 28.5 ms | 28.5 ms |
+| Exact tree calls | 4,884 | 3,209 | 3,209 |
+| Phase rejections before a tree call | — | 2,694 | 2,694 |
+| Phase-cache hits, including strict repeated-set implications | — | — | 1,712 / 697 |
+| Charged work | 3,081,318 | 716,421 | 569,885 |
+
+The nine previously open queries cost more in aggregate when taken to an
+exclusion. The full replay was faster overall. The cache reduced charged
+work without a measurable local elapsed-time gain and stayed outside
+the end-to-end screen. At 2 million work units and the same 25 ms deadline,
+all three modes excluded all 44. Median time sums were 156.9, 84.1, and
+83.7 ms. On this equally completed comparison the phase screen prevented
+2,694 of 5,903 exact tree calls.
+[Captured replay](results/baselines/slack_two_phase_captured.jsonl)
+· [Equal-completion replay](results/baselines/slack_two_phase_captured_2m.jsonl)
+
+### Matched Percy screen
+
+All modes used the same 43 hard four-input targets, Satoko, one worker,
+20,000 conflicts per SAT call, an 8 s process deadline per target and a
+512 MiB process-family commit cap. The phase and set-cut flags form two
+independent factors. All modes excluded sizes three through six. The
+runtime is the sum of target wall times, including encoding and process
+startup. Memory is the largest recorded Percy peak working set.
+
+| Metric | Memo + unateness | Phase | Set cuts | Phase and set cuts |
+| --- | ---: | ---: | ---: | ---: |
+| Size-seven exclusions | 41 | 43 | 36 | 40 |
+| Size-eight attempts | 41 | 43 | 36 | 40 |
+| Size-eight SAT / UNSAT | 0 / 0 | 0 / 0 | 0 / 0 | 1 / 0 |
+| SAT conflicts on 207 jointly excluded budgets | 426,810 | 291,324 | 322,988 | 222,864 |
+| Solver seconds on those budgets | 8.086 | 5.109 | 5.940 | 3.900 |
+| Slack-two queries / unknown | 827 / 157 | 801 / 0 | 812 / 163 | 812 / 0 |
+| Slack-two pure clauses / set clauses | 670 / 0 | 801 / 0 | 649 / 649 | 812 / 812 |
+| Slack-two exact tree calls | 113,253 | 62,249 | 110,500 | 62,521 |
+| Phase rejections before tree calls | — | 48,963 | — | 49,140 |
+| Slack-two completion and extension seconds | 2.273 | 1.425 | 2.156 | 1.439 |
+| Peak Percy working set | 22.1 MiB | 26.5 MiB | 36.6 MiB | 18.2 MiB |
+| Total wall seconds | 44.367 | 46.785 | 45.755 | 36.806 |
+
+The changes alter which boundaries Satoko visits, so total tree-call
+counts and phase rejection counts describe different comparisons. Phase
+alone reached size eight for every target. Phase with set cuts recovered
+the known eight-gate optimum for `npn4-016a`, with a witness independently
+verified by the harness. The other size-eight jobs reached a solver limit.
+The set clauses can change CDCL behavior in either direction. The combined
+mode solved one additional target and ran faster overall, while phase
+alone excluded three more size-seven budgets. All modes remain opt-in.
+All 127 fixed-budget jobs matched the independent small DAG enumeration
+or the plain full-row encoding at size seven. The two set-cut variants
+learned 57 set clauses in that check.
+[Matched records](results/baselines/slack_two_phase_percy_screen.jsonl)
+· [Fixed-budget checks](results/baselines/slack_two_phase_percy_oracle.jsonl)
+· [Previously verified optima](results/baselines/caps_hard_npn4.jsonl)
+
+### Replay commands
+
+```powershell
+$archive = 'external/residual-phase-screen'
+$zip = 'C:\Users\Carson\Downloads\residual_phase_screen_native.zip'
+Expand-Archive -LiteralPath $zip -DestinationPath $archive
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cd /d external\residual-phase-screen && cl /nologo /std:c++20 /O2 /EHsc residual_phase_screen_check.cpp /Fephasecheck.exe && phasecheck.exe && cl /nologo /std:c++20 /O2 /EHsc residual_phase_screen_bench.cpp /Fephasebench.exe && phasebench.exe'
+& 'sat-search/native/build_native.bat'
+$env:PERCY_BUILD_DIR = 'percy-first-layer-release'
+& 'sat-search/baselines/build/build_percy.bat'
+$percy = 'external/percy-first-layer-release/percy_run.exe'
+$modes = 'slack-two-unate', 'slack-two-phase', 'slack-two-unate-set', 'slack-two-phase-set'
+python sat-search/experiments/slack_two_native_check.py
+python sat-search/experiments/slack_two_native_check.py --capture sat-search/results/baselines/slack_two_percy_captured.jsonl --output sat-search/logs/phase_captured_replay.jsonl --modes 3 4 5 --repetitions 5
+python sat-search/experiments/slack_two_native_check.py --capture sat-search/results/baselines/slack_two_percy_captured.jsonl --output sat-search/logs/phase_captured_equal_replay.jsonl --modes 3 4 5 --repetitions 5 --work-limit 2000000
+python sat-search/baselines/first_layer_check.py check sat-search/logs/phase_oracle_replay.jsonl --exe $percy --workers 1 --memory-mib 512 --modes $modes
+python sat-search/baselines/first_layer_check.py screen sat-search/logs/phase_screen_replay.jsonl --exe $percy --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes $modes
+```
+
+For the production standalone differential, copy the archive's
+`residual_slack_two_check.cpp` to `production_dag_oracle.inc` and change its
+engine include to `../../sat-search/native/src/residual_slack_two.hpp`.
+In a copy of `residual_phase_screen_check.cpp`, include the adapted oracle
+instead and remove the `residual_phase_slack.hpp` include. Replace the
+standalone phase call with
+`residual_phase_screen::feasible(residual_phase_screen::collect(a),p,n,[](unsigned){})`.
+Construct `residual_slack_two::Engine` with parity, direct, memo, unateness
+and phase enabled, testing both settings for the final cache flag. Draw
+widths 1–12 and row counts 2–64 in the polarity oracle, avoiding shifts by 64
+and limiting duplicate insertion to leave room for the remaining distinct
+coordinates. The archived dynamic reference is `residual_dynamic.hpp` in
+the same archive, SHA-256
+`8b541aa2a08a9946300d95364d3831400da007ede6358772fc2482dbc41712fe`.

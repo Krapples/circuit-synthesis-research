@@ -15,7 +15,8 @@
 //   --trace-slack-one : emit the boundaries and their verdicts as JSON events
 //   --residual-filter off|root|parity|direct : choose the residual completion ablation
 //   --residual-backend columns|directed|dominance : choose the exact tree completion backend
-//   --slack-two-residual memo|unate : opt-in exact slack-two completion and cuts
+//   --slack-two-residual memo|unate|phase|phase-cache : opt-in exact slack-two completion and cuts
+//   --slack-two-set-cuts : use position-independent pure cuts for distinct first-layer types
 //   --trace-slack-two : record slack-two candidates, including in the slack-one control
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
@@ -64,6 +65,7 @@ struct Extra {
     bool residual_set_cuts = false;
     bool slack_one = false, trace_slack_one = false;
     int slack_two_mode = -1;
+    bool slack_two_set_cuts = false;
     bool trace_slack_two = false;
     synthesis::ResidualFilterMode residual_filter = synthesis::ResidualFilterMode::off;
     synthesis::ResidualBackend residual_backend = synthesis::ResidualBackend::columns;
@@ -266,8 +268,11 @@ struct TightResidual {
     double slack_seconds = 0;
     int slack_two_seen = 0, slack_two_unknown = 0, slack_two_feasible = 0;
     int slack_two_pure = 0, slack_two_conditional = 0;
+    unsigned two_set_cuts = 0;
     unsigned two_extension_feasible = 0, two_extension_unknown = 0, two_extension_excluded = 0;
     uint64_t two_work = 0, two_allocations = 0, two_memo_hits = 0, two_unate_rejects = 0, two_unate_merges = 0;
+    uint64_t two_tree_calls = 0;
+    residual_slack_two::PhaseStats two_phase;
     double slack_two_seconds = 0;
 
     explicit TightResidual(const kitty::dynamic_truth_table& tt) {
@@ -313,6 +318,12 @@ struct TightResidual {
         two_memo_hits += result.exact.memo_hits;
         two_unate_rejects += result.exact.unate_rejects;
         two_unate_merges += result.exact.unate_merges;
+        two_tree_calls += result.exact.tree_calls;
+        two_phase.checks += result.exact.phase.checks;
+        two_phase.rejects += result.exact.phase.rejects;
+        two_phase.work += result.exact.phase.work;
+        two_phase.cache_hits += result.exact.phase.cache_hits;
+        two_phase.dominance_hits += result.exact.phase.dominance_hits;
         using Status = residual_directed::Status;
         if (result.exact.status == Status::unknown) ++slack_two_unknown;
         if (result.exact.status == Status::sat) ++slack_two_feasible;
@@ -320,8 +331,23 @@ struct TightResidual {
         two_extension_feasible += result.feasible;
         two_extension_unknown += result.unknown;
         two_extension_excluded += result.excluded;
-        if (result.mixed_extensions || result.gate_extensions) ++slack_two_conditional;
-        else ++slack_two_pure;
+        if (result.mixed_extensions || result.gate_extensions) {
+            ++slack_two_conditional;
+        } else {
+            ++slack_two_pure;
+            uint64_t types = 0;
+            for (const int type : observed_types) types |= uint64_t{1} << type;
+            if (ex.slack_two_set_cuts && size_t(std::popcount(types)) == observed_types.size()) {
+                // Each distinct type guarantees a separate old occurrence;
+                // every possible addition, including duplicate types, was excluded.
+                cut.clear();
+                for (const int type : observed_types) cut.push_back(features[type] ^ 1);
+                for (unsigned mask = mixed; mask; mask &= mask - 1)
+                    cut.push_back(features[features.size() - n + std::countr_zero(mask)] ^ 1);
+                ++two_set_cuts;
+                return cut;
+            }
+        }
         for (unsigned mask = result.mixed_extensions; mask; mask &= mask - 1)
             cut.push_back(features[features.size() - n + std::countr_zero(mask)]);
         for (int step = 0; result.gate_extensions && step < sp.nr_steps; ++step) {
@@ -497,11 +523,14 @@ int main(int argc, char** argv) {
         else if (a == "--slack-one-residual") ex.slack_one = true;
         else if (a == "--trace-slack-one") ex.trace_slack_one = true;
         else if (a == "--trace-slack-two") ex.trace_slack_two = true;
+        else if (a == "--slack-two-set-cuts") ex.slack_two_set_cuts = true;
         else if (a == "--slack-two-residual") {
             const auto mode = next();
             if (mode == "memo") ex.slack_two_mode = 2;
             else if (mode == "unate") ex.slack_two_mode = 3;
-            else { fprintf(stderr, "expected --slack-two-residual memo or unate\n"); return 2; }
+            else if (mode == "phase") ex.slack_two_mode = 4;
+            else if (mode == "phase-cache") ex.slack_two_mode = 5;
+            else { fprintf(stderr, "expected --slack-two-residual memo, unate, phase or phase-cache\n"); return 2; }
         }
         else if (a == "--residual-filter") {
             const auto mode = next();
@@ -553,6 +582,10 @@ int main(int argc, char** argv) {
     }
     if (slack_two && ex.pairs == synthesis::PairScope::none) {
         fprintf(stderr, "slack-two completion and tracing need --first-layer edges or all\n");
+        return 2;
+    }
+    if (ex.slack_two_set_cuts && ex.slack_two_mode < 0) {
+        fprintf(stderr, "--slack-two-set-cuts needs --slack-two-residual\n");
         return 2;
     }
     if ((ex.residual_filter != synthesis::ResidualFilterMode::off ||
@@ -703,7 +736,10 @@ int main(int argc, char** argv) {
                        "\"slack_two_pure\":%d,\"slack_two_conditional\":%d,\"slack_two_seconds\":%.6f,"
                        "\"two_extension_feasible\":%u,\"two_extension_unknown\":%u,\"two_extension_excluded\":%u,"
                        "\"two_work\":%llu,\"two_allocations\":%llu,\"two_memo_hits\":%llu,"
-                       "\"two_unate_rejects\":%llu,\"two_unate_merges\":%llu",
+                       "\"two_unate_rejects\":%llu,\"two_unate_merges\":%llu,"
+                       "\"two_set_cuts\":%u,\"two_tree_calls\":%llu,\"two_phase_checks\":%llu,"
+                       "\"two_phase_rejects\":%llu,\"two_phase_work\":%llu,"
+                       "\"two_phase_cache_hits\":%llu,\"two_phase_dominance_hits\":%llu",
                        residual->slack_two_seen, residual->slack_two_unknown, residual->slack_two_feasible,
                        residual->slack_two_pure, residual->slack_two_conditional, residual->slack_two_seconds,
                        residual->two_extension_feasible, residual->two_extension_unknown,
@@ -711,7 +747,13 @@ int main(int argc, char** argv) {
                        static_cast<unsigned long long>(residual->two_allocations),
                        static_cast<unsigned long long>(residual->two_memo_hits),
                        static_cast<unsigned long long>(residual->two_unate_rejects),
-                       static_cast<unsigned long long>(residual->two_unate_merges));
+                       static_cast<unsigned long long>(residual->two_unate_merges), residual->two_set_cuts,
+                       static_cast<unsigned long long>(residual->two_tree_calls),
+                       static_cast<unsigned long long>(residual->two_phase.checks),
+                       static_cast<unsigned long long>(residual->two_phase.rejects),
+                       static_cast<unsigned long long>(residual->two_phase.work),
+                       static_cast<unsigned long long>(residual->two_phase.cache_hits),
+                       static_cast<unsigned long long>(residual->two_phase.dominance_hits));
 #ifdef USE_SATOKO
             if (satoko_backend) {
                 const long propagations = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;

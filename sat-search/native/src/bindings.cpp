@@ -278,7 +278,7 @@ PYBIND11_MODULE(_regional_native, mod) {
             [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
                unsigned mixed, const std::vector<uint64_t>& gate_columns, uint64_t target, uint64_t care,
                unsigned work_limit, double seconds, unsigned mode) {
-                if (mode > 3) throw py::value_error("slack-two mode must be 0 through 3");
+                if (mode > 5) throw py::value_error("slack-two mode must be 0 through 5");
                 using Clock = synthesis::residual_detail::Clock;
                 const auto deadline = seconds > 0
                     ? Clock::now() + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(seconds))
@@ -301,6 +301,11 @@ PYBIND11_MODULE(_regional_native, mod) {
                 metrics["memo_hits"] = exact.memo_hits;
                 metrics["unate_rejects"] = exact.unate_rejects;
                 metrics["unate_merges"] = exact.unate_merges;
+                metrics["phase_checks"] = exact.phase.checks;
+                metrics["phase_rejects"] = exact.phase.rejects;
+                metrics["phase_work"] = exact.phase.work;
+                metrics["phase_cache_hits"] = exact.phase.cache_hits;
+                metrics["phase_dominance_hits"] = exact.phase.dominance_hits;
                 metrics["gate_extensions"] = result.gate_extensions;
                 metrics["mixed_extensions"] = result.mixed_extensions;
                 metrics["extension_feasible"] = result.feasible;

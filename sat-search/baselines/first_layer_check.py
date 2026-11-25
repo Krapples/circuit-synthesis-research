@@ -34,9 +34,12 @@ for residual_backend in ('directed', 'dominance'):
     RESIDUAL_MODES[f'slack-one-{residual_backend}'] = (
         *RESIDUAL_MODES['slack-one-direct'], '--residual-backend', residual_backend)
 RESIDUAL_MODES['slack-two-trace'] = (*RESIDUAL_MODES['slack-one-directed'], '--trace-slack-two')
-for slack_two_filter in ('memo', 'unate'):
+for slack_two_filter in ('memo', 'unate', 'phase', 'phase-cache'):
     RESIDUAL_MODES[f'slack-two-{slack_two_filter}'] = (
         *RESIDUAL_MODES['slack-one-directed'], '--slack-two-residual', slack_two_filter)
+for slack_two_filter in ('unate', 'phase'):
+    RESIDUAL_MODES[f'slack-two-{slack_two_filter}-set'] = (
+        *RESIDUAL_MODES[f'slack-two-{slack_two_filter}'], '--slack-two-set-cuts')
 
 
 def exact_tables(n, steps):

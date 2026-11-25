@@ -25,7 +25,8 @@ inline SlackTwoBoundary slack_two_boundary(
     std::vector<residual_directed::Leaf> leaves;
     for (unsigned i = 0; i < columns.size(); ++i) leaves.push_back({i, columns[i], i >= h});
     result.exact = residual_slack_two::Engine(
-        care, target, work_limit, deadline, mode >= 1, mode >= 1, mode >= 2, mode >= 3)
+        care, target, work_limit, deadline, mode >= 1, mode >= 1, mode >= 2, mode >= 3,
+        mode >= 4, mode >= 5)
         .run(std::move(leaves), 2);
     if (result.exact.status != Status::unsat) return result;
 
