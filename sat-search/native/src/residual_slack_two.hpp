@@ -1,7 +1,9 @@
 #pragma once
-// Standalone C++20 exact residual solver, slack 0..2. Uses the previous
-// directed tree kernel and parity filter; independent of Percy.
+// Standalone C++20 exact residual solver, slack 0..3. Uses the previous
+// directed tree kernel and parity filter; independent of Percy. Slack three and
+// the occurrence-symmetric tree solver are opt-in (use_symmetric, run(a, 3)).
 #include "residual_directed.hpp"
+#include "residual_symmetric_directed.hpp"
 #include "residual_parity_filter.hpp"
 #include "residual_phase_screen.hpp"
 #include "residual_provider_unate.hpp"
@@ -24,7 +26,7 @@ class Engine {
     U care,anchor,target,limit,work=0,allocs=0,rejects=0,trials=0,tree_calls=0;
     Clock::time_point end;
     bool parity, direct, memoize, unate;
-    bool phase_screen, cache_phases;
+    bool phase_screen, cache_phases, symmetric;
     PhaseStats phase_stats;
     struct PhaseMasks { std::vector<unsigned> feasible, infeasible; };
     std::map<std::pair<U, std::vector<U>>, PhaseMasks> phase_cache;
@@ -88,7 +90,8 @@ class Engine {
             return {};
         }
         ++tree_calls;
-        auto r = Solver(a, care, limit - work, end).run(c, care ^ c);
+        auto r = symmetric ? SymmetricSolver(a, care, limit - work, end).run(c, care ^ c)
+                           : Solver(a, care, limit - work, end).run(c, care ^ c);
         tick(r.work);
         if (r.status == Status::unknown) throw Limit{};
         return r.witness;
@@ -196,11 +199,11 @@ class Engine {
         return split(0,0);
     }
 public:
-    Engine(U mask,U f,U cap=1000000,Clock::time_point deadline=Clock::time_point::max(),bool use_parity=true,bool use_direct=true,bool use_memo=true,bool use_unate=false,bool use_phase_screen=false,bool use_phase_cache=false)
-      :care(mask),anchor(mask&-mask),target(f&mask),limit(cap),end(deadline),parity(use_parity),direct(use_direct),memoize(use_memo),unate(use_unate),phase_screen(use_phase_screen),cache_phases(use_phase_cache){if(!care)throw std::invalid_argument("empty care");}
+    Engine(U mask,U f,U cap=1000000,Clock::time_point deadline=Clock::time_point::max(),bool use_parity=true,bool use_direct=true,bool use_memo=true,bool use_unate=false,bool use_phase_screen=false,bool use_phase_cache=false,bool use_symmetric=false)
+      :care(mask),anchor(mask&-mask),target(f&mask),limit(cap),end(deadline),parity(use_parity),direct(use_direct),memoize(use_memo),unate(use_unate),phase_screen(use_phase_screen),cache_phases(use_phase_cache),symmetric(use_symmetric){if(!care)throw std::invalid_argument("empty care");}
     Answer run(std::vector<Leaf> a,unsigned s){
         if(used)throw std::invalid_argument("Engine is single-use");used=true;
-        k=a.size();if(k<2||k>8||s>2)throw std::invalid_argument("reference supports k=2..8, s=0..2");
+        k=a.size();if(k<2||k>8||s>3)throw std::invalid_argument("reference supports k=2..8, s=0..3");
         for(unsigned i=0;i<k;++i){if(a[i].wire!=i)throw std::invalid_argument("boundary IDs must be 0..k-1");a[i].column=norm(a[i].column);}
         try{
             for(unsigned q=0;q<=s;++q){

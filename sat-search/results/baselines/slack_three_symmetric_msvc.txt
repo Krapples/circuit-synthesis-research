@@ -1,0 +1,33 @@
+residual_occurrence_symmetry_native.zip (SHA-256 e3edcc7ffe726ea57befa4674c62feb2ee8239179126b887abef244211f0255b)
+residual_symmetric_directed.hpp SHA-256 d22f3e5e23009275a0dc3a665c37c0bd90006482f25842494f163e0425799f48
+MSVC (VS 18) cl /nologo /std:c++20 /O2 /EHsc, 2026-11-25, idle machine
+
+== residual_symmetric_merge_check
+native independent merge oracle 1200 x 2, SAT 461, no disagreements
+
+== residual_symmetric_check
+phase systems=5000 rejected=3084
+DAG queries=5520 sat=3831
+
+The README's 1,572 multiplicity counting checks are not in any bundled source; not reproduced.
+In the benchmark output 'screen=0' is the original directed tree solver and 'screen=1' the occurrence-symmetric solver.
+
+== residual_symmetric_bench 2
+gate-boundary screen=0 sat=72 unsat=28 unknown=0 ms=190.523 calls=35951 phase_rejects=16701 work=7670434
+gate-boundary screen=1 sat=72 unsat=28 unknown=0 ms=174.281 calls=35951 phase_rejects=16701 work=5759303
+six-wire-partial screen=0 sat=70 unsat=30 unknown=0 ms=242.604 calls=39933 phase_rejects=24314 work=9106438
+six-wire-partial screen=1 sat=70 unsat=30 unknown=0 ms=207.559 calls=39933 phase_rejects=24314 work=6742754
+== residual_symmetric_bench 3
+gate-boundary screen=0 sat=82 unsat=4 unknown=14 ms=577.654 calls=55126 phase_rejects=31200 work=37161365
+gate-boundary screen=1 sat=83 unsat=4 unknown=13 ms=453.083 calls=69373 phase_rejects=39084 work=17390002
+six-wire-partial screen=0 sat=89 unsat=0 unknown=11 ms=620.455 calls=43125 phase_rejects=28369 work=38004691
+six-wire-partial screen=1 sat=91 unsat=0 unknown=9 ms=407.929 calls=48219 phase_rejects=32039 work=14809117
+== residual_symmetric_bench 3
+gate-boundary screen=0 sat=82 unsat=4 unknown=14 ms=578.57 calls=54691 phase_rejects=31067 work=37023796
+gate-boundary screen=1 sat=83 unsat=4 unknown=13 ms=453.014 calls=68747 phase_rejects=38775 work=17271692
+six-wire-partial screen=0 sat=89 unsat=0 unknown=11 ms=623.306 calls=42613 phase_rejects=28027 work=38024853
+six-wire-partial screen=1 sat=91 unsat=0 unknown=9 ms=410.315 calls=48073 phase_rejects=31937 work=14777436
+
+== in-repo native checks (python experiments/slack_three_native_check.py; slack_two_native_check.py control)
+{"oracle_comparisons": 14080, "duplicated_wire_checks": 60, "extension_and_limit_checks": 20, "argument_checks": 3}
+{"oracle_comparisons": 7040, "duplicated_wire_checks": 16, "extension_and_limit_checks": 14, "shared_provider_checks": 2}

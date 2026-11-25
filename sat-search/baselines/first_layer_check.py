@@ -40,6 +40,17 @@ for slack_two_filter in ('memo', 'unate', 'phase', 'phase-cache'):
 for slack_two_filter in ('unate', 'phase'):
     RESIDUAL_MODES[f'slack-two-{slack_two_filter}-set'] = (
         *RESIDUAL_MODES[f'slack-two-{slack_two_filter}'], '--slack-two-set-cuts')
+RESIDUAL_MODES['slack-three-trace'] = (*RESIDUAL_MODES['slack-two-phase-set'], '--trace-slack-three')
+for slack_three_filter in ('memo', 'unate', 'phase', 'phase-cache'):
+    RESIDUAL_MODES[f'slack-three-{slack_three_filter}'] = (
+        *RESIDUAL_MODES['slack-two-phase-set'], '--slack-three-residual', slack_three_filter)
+    RESIDUAL_MODES[f'slack-three-{slack_three_filter}-sym'] = (
+        *RESIDUAL_MODES[f'slack-three-{slack_three_filter}'], '--slack-three-symmetric')
+for slack_three_filter in ('phase', 'phase-sym'):
+    RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set'] = (
+        *RESIDUAL_MODES[f'slack-three-{slack_three_filter}'], '--slack-three-set-cuts')
+    RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-100ms'] = (
+        *RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set'], '--slack-three-ms', '100')
 
 
 def exact_tables(n, steps):
@@ -118,7 +129,7 @@ def check_jobs(exe, modes):
             for mode in modes:
                 yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 5, 0, 3), (
                     'SAT' if tt in known else 'UNSAT')
-    if any(mode.startswith('slack-two-') for mode in modes):
+    if any(mode.startswith(('slack-two-', 'slack-three-')) for mode in modes):
         known = exact_tables(4, 4)
         for tt in (0x0116, 0x17e8, 0x6996, 0x7fff, 0x8000, 0x8880):
             for mode in modes:
@@ -135,6 +146,12 @@ def check_jobs(exe, modes):
             yield (exe, 'base', f'check-{tt:04x}', 4, tt, 0xffff, 'std', 8, 250_000, 7), 'UNSAT'
             for mode in modes:
                 yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 8, 250_000, 7), 'UNSAT'
+    if any(mode.startswith('slack-three-') for mode in modes):
+        # Verified four-input optima (caps_hard_npn4.jsonl): 0116 needs nine gates, 016a needs eight.
+        # These size-eight jobs reach the slack-three clause path.
+        for tt, expected in ((0x0116, 'UNSAT'), (0x016a, 'SAT')):
+            for mode in ('slack-two-phase-set', *modes):
+                yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 60, 0, 8), expected
 
 
 def screen_jobs(exe, workload, limit, seconds, conflicts, modes):

@@ -12,6 +12,7 @@
 #include "regional_kernel.hpp"
 #include "tight_residual.hpp"
 #include "slack_two_boundary.hpp"
+#include "slack_three_boundary.hpp"
 
 namespace py = pybind11;
 
@@ -323,4 +324,52 @@ PYBIND11_MODULE(_regional_native, mod) {
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
             py::arg("deadline_seconds") = 0.025, py::arg("mode") = 2);
+    mod.def("slack_three_boundary",
+            [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
+               unsigned mixed, const std::vector<uint64_t>& gate_columns, uint64_t target, uint64_t care,
+               unsigned work_limit, double seconds, unsigned mode, bool symmetric) {
+                if (mode > 5) throw py::value_error("slack-three mode must be 0 through 5");
+                using Clock = synthesis::residual_detail::Clock;
+                const auto deadline = seconds > 0
+                    ? Clock::now() + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(seconds))
+                    : Clock::time_point::max();
+                synthesis::SlackThreeBoundary result;
+                {
+                    const py::gil_scoped_release release;
+                    result = synthesis::slack_three_boundary(columns, h, primaries, mixed, gate_columns, target,
+                                                             care, work_limit, deadline, mode, symmetric);
+                }
+                const auto& exact = result.exact;
+                using Status = residual_directed::Status;
+                py::dict metrics;
+                metrics["status"] = exact.status == Status::sat ? 1 : exact.status == Status::unsat ? 0 : 2;
+                metrics["work"] = exact.work;
+                metrics["tree_calls"] = exact.tree_calls;
+                metrics["phase_checks"] = exact.phase.checks;
+                metrics["phase_rejects"] = exact.phase.rejects;
+                metrics["phase_work"] = exact.phase.work;
+                metrics["gate_extensions"] = result.gate_extensions;
+                metrics["mixed_extensions"] = result.mixed_extensions;
+                metrics["extension_feasible"] = result.feasible;
+                metrics["extension_unknown"] = result.unknown;
+                metrics["extension_excluded"] = result.excluded;
+                metrics["extension_subsumed"] = result.subsumed;
+                metrics["tight_calls"] = result.tight_calls;
+                metrics["slack_one_calls"] = result.slack_one_calls;
+                metrics["slack_two_calls"] = result.slack_two_calls;
+                metrics["slack_two_work"] = result.slack_two_work;
+                py::list regions;
+                for (const auto& region : exact.regions) {
+                    py::list inputs;
+                    for (const auto& leaf : region.inputs)
+                        inputs.append(py::make_tuple(leaf.wire, leaf.column, leaf.raw));
+                    regions.append(py::make_tuple(region.output, region.column, inputs,
+                                                  directed_witness(region.witness)));
+                }
+                return py::make_tuple(metrics, regions);
+            }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
+            py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 2000000,
+            py::arg("deadline_seconds") = 0.025, py::arg("mode") = 5, py::arg("symmetric") = false,
+            "Slack-three boundary: exact Engine(.,3) answer plus retained extensions of cost <= 3"
+            " (opt-in occurrence-symmetric tree solver).");
 }

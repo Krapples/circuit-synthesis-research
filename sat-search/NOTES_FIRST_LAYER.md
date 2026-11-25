@@ -897,3 +897,239 @@ and limiting duplicate insertion to leave room for the remaining distinct
 coordinates. The archived dynamic reference is `residual_dynamic.hpp` in
 the same archive, SHA-256
 `8b541aa2a08a9946300d95364d3831400da007ede6358772fc2482dbc41712fe`.
+
+## Slack-three boundary extensions and occurrence-symmetric trees
+
+Source: `residual_occurrence_symmetry_native.zip` (SHA-256
+`e3edcc7ffe726ea57befa4674c62feb2ee8239179126b887abef244211f0255b`). Its
+directed occurrence-symmetric tree solver is vendored, with only a
+four-line provenance comment added, as
+[residual_symmetric_directed.hpp](native/src/residual_symmetric_directed.hpp)
+(bundle file SHA-256
+`d22f3e5e23009275a0dc3a665c37c0bd90006482f25842494f163e0425799f48`).
+The bundle has no slack-three Percy cuts. This repository adds them in
+[slack_three_boundary.hpp](native/src/slack_three_boundary.hpp).
+
+### Rule and soundness
+
+For a first-layer boundary with h typed occurrences and m distinct mixed
+primaries at budget k, slack is s = k+1-(2h+m). At s = 3 the exact
+residual question is `Engine.run(.,3)`; `run()` now accepts s = 0..3.
+
+When that query is UNSAT, the boundary itself cannot be completed. A
+sibling boundary that adds structure still can, at lower slack. A new mixed
+primary costs one unit of slack and a new first-layer occurrence costs two.
+Every addition of cost at most three is tested with the exact recognizer for
+the remaining slack:
+
+| Addition | Remaining slack | Recognizer |
+| --- | ---: | --- |
+| One new mixed primary | 2 | `Engine.run(.,2)` |
+| Two new mixed primaries | 1 | `slack_one_residual` |
+| One first-layer occurrence | 1 | `slack_one_residual` |
+| Three new mixed primaries | 0 | tight `residual_zero` |
+| One occurrence and one new mixed primary | 0 | tight `residual_zero` |
+
+Antecedents stay multiplicity-aware. A new occurrence may repeat an
+existing type, and the extended boundary then keeps both copies.
+
+An extension is excluded only by a decided UNSAT. A SAT or unknown
+extension is retained. A larger extension whose elements are all retained
+is subsumed rather than tested.
+
+The Percy clause has the slack-two clause shape:
+
+- The antecedent is the position-based first-layer selection and operation
+  variables plus the negated mixed-primary features.
+- The consequent lists the retained mixed features and the gate
+  `typed_steps` for steps outside the current first layer.
+- With nothing retained the clause is pure.
+- A set clause over type features is emitted only for a pure result whose
+  observed types are distinct. Only then do the type features name separate
+  old occurrences.
+
+An unknown exact query emits no clause. Retained extensions only weaken
+the clause. Neither can exclude a completable boundary.
+
+The vendored solver makes these changes:
+
+- It partitions a region's leaves into classes by wire identity. Distinct
+  wires with equal columns are not merged.
+- It enumerates per-class count vectors instead of occurrence subsets.
+- It memoizes on canonical multiplicity subsets and relabels leaves to fresh
+  occurrences once, at the end.
+- It installs no failure memo on interrupted searches.
+
+It is selected per `Engine` by a final `use_symmetric` constructor flag that
+defaults off.
+
+### Checks
+
+- Bundle, built with MSVC (VS 18):
+  - Merge oracle: 1,200 x 2 queries, 461 SAT, no disagreements.
+  - DAG oracle: 5,520 queries, 3,831 SAT.
+  - 5,000 phase systems.
+  - The README's 1,572 multiplicity counting checks are not in any bundled
+    source and were not reproduced.
+- [slack_three_native_check.py](experiments/slack_three_native_check.py):
+  - 14,080 independent DAG-oracle comparisons of the native slack-three
+    extension decisions, over both residual modes and both tree solvers.
+  - 60 duplicate-wire, 20 extension/limit and 3 argument checks.
+  - The slack-two control check still passes 7,040 comparisons.
+- Percy fixed-budget check: 104 jobs, 0 verdict mismatches against the small
+  DAG enumeration, the plain encoding, or known optima. This includes, for
+  every slack-three mode:
+  - size-eight `npn4-0116`: UNSAT at 8;
+  - size-eight `npn4-016a`: SAT at 8, with the witness verified by the
+    harness.
+
+### Captured boundaries
+
+`--trace-slack-three` captured 382 events from 40 of 43 hard four-input
+targets, giving 168 distinct boundaries. Their (h,m) shapes:
+
+- (1,4): 128 times. Here all four primaries are already mixed, so only
+  occurrence extensions remain.
+- (2,2): 36 times.
+- (1,3): twice.
+
+The replay used 2 million work units per query:
+
+| 168 captured | 25 ms deadline (median of 3) | Unlimited deadline |
+| --- | ---: | ---: |
+| Exact UNSAT / SAT | 166 / 2 | 166 / 2 |
+| Pure cuts | 37-38 | 166 |
+| Excluded / unknown extensions | about 4,600 / 1,250-1,325 | 5,870 / 0 |
+| Time sum | about 3.81 s | 5.35-5.44 s |
+
+The exact query always completes. The 25 ms deadline is spent on the
+extension recognizers. Time is unchanged across mode 4/5 and across
+directed/symmetric trees.
+
+At the unlimited deadline all four settings retained identical masks;
+`replay()` now asserts this. Work was:
+
+| Mode | Directed | Symmetric |
+| --- | ---: | ---: |
+| 4 | 32.0M | 31.6M |
+| 5 | 24.3M | 24.0M |
+
+Symmetric trees give no measurable gain on these production boundaries.
+They did help on the bundle's generated benchmark:
+
+- MSVC rerun: 175 vs 178 of 200 decided, in 1,199 vs 862 ms.
+- The bundle's GCC claim: 175 vs 180-181.
+
+[Captured boundaries](results/baselines/slack_three_percy_captured.jsonl)
+· [25 ms replay](results/baselines/slack_three_captured_replay.jsonl)
+· [Unlimited replay](results/baselines/slack_three_captured_unlimited.jsonl)
+· [Bundle and native check output](results/baselines/slack_three_symmetric_msvc.txt)
+
+### Matched Percy screen
+
+Settings:
+
+- 43 hard four-input targets, Satoko, one worker;
+- 20,000 conflicts per SAT call, 8 s per target, a 512 MiB cap;
+- an increasing search from n-1.
+
+Every slack-three mode includes slack-two phase and set cuts. Joint
+conflicts and solver seconds are summed over the 212 budgets that every
+mode excluded. Wall time is the sum of target wall times.
+
+| Mode | Size-7 excl | Size-8 SAT / UNSAT | Joint conflicts | Joint solver s | Size-8 conflicts | Wall s | Peak MiB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| slack-two phase | 43 | 0 / 0 | 312,515 | 5.368 | 1,936,350 | 44.0 | 26.5 |
+| slack-two phase + set | 40 | 1 / 0 | 233,182 | 4.118 | 1,628,679 | 34.7 | 17.9 |
+| slack-three, 25 ms | 40 | 1 / 4 | 208,335 | 3.878 | 1,896,633 | 67.0 | 32.8 |
+| slack-three symmetric, 25 ms | 40 | 1 / 6 | 208,335 | 3.875 | 1,950,160 | 68.0 | 33.0 |
+| slack-three, 100 ms | 40 | 0 / 8 | 208,335 | 3.865 | 2,167,126 | 85.8 | 49.7 |
+| slack-three symmetric, 100 ms | 40 | 0 / 8 | 208,335 | 3.878 | 2,167,126 | 86.3 | 49.5 |
+
+Slack-three cut statistics:
+
+| Mode | Boundaries | Pure | Conditional | Extensions excluded / unknown | Slack-three s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 25 ms | 499 | 47 | 440 | 9,401 / 4,631 | 11.7 |
+| 25 ms, symmetric | 518 | 43 | 463 | 9,288 / 4,996 | 12.1 |
+| 100 ms, either solver | 529 | 501 | 16 | 14,362 / 361 | 18.1 |
+
+Size-8 exclusions by mode:
+
+- 25 ms directed: `1668`, `1669`, `177e`, `6996`.
+- 25 ms symmetric: the same four plus `166b` and `1697`.
+- 100 ms, either solver: `0116`, `1668`, `1669`, `1681`, `16a9`, `177e`,
+  `19e1`, `6996`.
+- No slack-two mode proved any size-8 exclusion.
+
+All 10 distinct size-8 UNSAT targets agree with plain Percy's size-8 UNSAT
+budgets in [caps_hard_npn4.jsonl](results/baselines/caps_hard_npn4.jsonl),
+so no new lower bound is claimed. For `1669`, `166b` and `1681` the plain
+run proved size 8 UNSAT and then timed out at size 9.
+
+The cuts are valid only in an increasing search from a proved lower bound,
+which is how these exclusions were obtained.
+
+Observations:
+
+- Joint conflicts match across the slack-three modes because the rule rarely
+  fires below size 8.
+- The extra wall time is spent in the extension recognizers.
+- The 100 ms modes lost the `016a` optimum to the conflict limit, a CDCL
+  trajectory change.
+- Directed and symmetric trees made identical decisions at 100 ms.
+
+All modes stay opt-in. The captured replay shows that the extension
+decisions, not the trees, are deadline-bound, so cheaper extension
+decisions are the useful next direction.
+
+[Matched records](results/baselines/slack_three_percy_screen.jsonl)
+· [Fixed-budget checks](results/baselines/slack_three_percy_oracle.jsonl)
+
+Not verified:
+
+- UNSAT proof certificates for the size-8 exclusions;
+- the bundle's 1,572 counting checks and its GCC timings;
+- any target beyond four inputs.
+
+The bundle's pair-screen and guided-slack alternatives stay unintegrated.
+
+### Flags and binding
+
+Percy flags:
+
+- `--slack-three-residual memo|unate|phase|phase-cache` (Engine modes 2-5);
+- `--slack-three-set-cuts`;
+- `--slack-three-symmetric`;
+- `--slack-three-ms N` (default 25);
+- `--slack-three-work N` (default 2,000,000);
+- `--trace-slack-three`.
+
+Harness modes:
+
+- `slack-three-{memo,unate,phase,phase-cache}[-sym]`;
+- `slack-three-{phase,phase-sym}-set[-100ms]`;
+- `slack-three-trace`.
+
+Python binding:
+
+- Call:
+  `_native.slack_three_boundary(columns, first_layer, primaries, mixed_mask, gate_columns, target, care, work_limit=2000000, deadline_seconds=0.025, mode=5, symmetric=False)`.
+- It returns `(metrics, regions)`.
+- A deadline of 0 or less means unlimited.
+
+The captured file is a copy of the trace screen's records.
+
+```powershell
+$archive = 'external/residual-occurrence-symmetry'
+Expand-Archive -LiteralPath 'C:\Users\Carson\Downloads\residual_occurrence_symmetry_native.zip' -DestinationPath $archive
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cd /d external\residual-occurrence-symmetry && cl /nologo /std:c++20 /O2 /EHsc residual_symmetric_merge_check.cpp /Fesymmerge.exe && symmerge.exe && cl /nologo /std:c++20 /O2 /EHsc residual_symmetric_check.cpp /Fesymcheck.exe && symcheck.exe && cl /nologo /std:c++20 /O2 /EHsc residual_symmetric_bench.cpp /Fesymbench.exe && symbench.exe 2 && symbench.exe 3'
+& 'sat-search/native/build_native.bat'
+& 'sat-search/baselines/build/build_percy.bat'
+python sat-search/experiments/slack_three_native_check.py
+python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_three_trace_capture.jsonl --workers 6 --limit 43 --seconds 8 --conflicts 20000 --modes slack-three-trace
+python sat-search/experiments/slack_three_native_check.py --capture sat-search/results/baselines/slack_three_percy_captured.jsonl --output sat-search/logs/slack_three_captured_replay.jsonl --limit 400 --modes 4 5 --repetitions 3
+python sat-search/experiments/slack_three_native_check.py --capture sat-search/results/baselines/slack_three_percy_captured.jsonl --output sat-search/logs/slack_three_captured_unlimited.jsonl --limit 400 --modes 4 5 --deadline 0
+python sat-search/baselines/first_layer_check.py check sat-search/logs/slack_three_percy_check2.jsonl --workers 6 --modes slack-three-phase-set slack-three-phase-sym-set slack-three-phase-sym-set-100ms
+python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_three_screen.jsonl --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes slack-two-phase slack-two-phase-set slack-three-phase-set slack-three-phase-sym-set slack-three-phase-set-100ms slack-three-phase-sym-set-100ms
+```
