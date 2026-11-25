@@ -24,12 +24,19 @@
 //   --restriction-burst M : with cut/all, after M consecutive certificate cuts also simulate the next model
 //                    and add its CEGAR row (0, the default, never does)
 //   --capture-models PATH : write every CEGAR candidate model (chain) as JSON lines to a new file
+//   --restriction-counters zero|const|anchor : eager constant-only restriction counters in the CNF. For each
+//                    constant restriction pi (x_i := 0 for zero; both constants for const; per input the constant
+//                    with the larger restricted cost for anchor) the gates with a provably constant operand
+//                    are counted and capped at K - L(f o pi); a negative cap is UNSAT without solving
+//   --complement-inputs auto : synthesize f with every input complemented whose x_i := 1 cofactor costs more than
+//                    its x_i := 0 cofactor (puts the stronger bound at zero); the chain is mapped back
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
@@ -112,7 +119,15 @@ struct Extra {
     int restriction_cuts = 0;
     unsigned restriction_burst = 0;  // cut/all: after this many consecutive cuts the next model also gets its row (0 = never)
     std::string capture_models;
+    // Eager restriction counters: 0 off, 1 zero, 2 const, 3 anchor; the restrictions they encode.
+    int restriction_counters = 0;
+    std::vector<restriction_certificate::Restriction> counters;
+    bool complement_inputs = false;
 };
+
+// Per-budget restriction counter encoding size (set by encode_counters).
+struct CounterStats { int restrictions = 0, vars = 0, clauses = 0, negative_cap = 0; double seconds = 0; };
+static CounterStats g_counter;
 
 // Per-budget restriction certificate counters.
 struct RestrictionStats {
@@ -248,11 +263,104 @@ struct FirstLayer {
     }
 };
 
+// Eager constant-only restriction counters. For a constant restriction pi, a gate with a selected operand that is
+// provably constant under pi is deletable (it becomes a constant or a possibly complemented copy of its other
+// operand), and the deletions are simultaneous, so a K-step chain of f leaves a K - D step chain of f o pi:
+// D <= K - L(f o pi). Flags are one-way implications from the shared operand-selection literals, so on a
+// single-selection model the least assignment is the exact propagation; models with several selected pairs per
+// step only see over-approximated flags (they are excluded more often, never admitted wrongly). Normalized AIG
+// gate g = AND(a ^ na, b ^ nb) ^ (na & nb) with na = op bit 2 and nb = op bit 1 (ops 2, 4, 8, 14). For x_i := 0
+// every provably constant wire is 0 (each wire is 0 on row zero), so one flag per wire suffices:
+// D = A | B and Z = (A & !na) | (B & !nb) | (A & B). x_i := 1 uses two flags (provably 0, provably 1).
+static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start,
+                            const Extra& ex) {
+    const auto t0 = clk::now();
+    g_counter = {};
+    const int vars0 = cs.next;
+    const size_t clauses0 = cs.clauses.size();
+    const int n = sp.get_nr_in(), k = sp.nr_steps;
+    for (const auto& r : ex.counters)
+        if (int(r.lower) > k) { g_counter.negative_cap = 1; return false; }  // negative cap: UNSAT, no clause
+    const auto fresh = [&] { return pabc::Abc_Var2Lit(cs.var(), 0); };
+    // use[t][pos][w] is implied by every pair of step t whose operand pos is wire w (shared by all restrictions).
+    std::vector<std::array<std::vector<int>, 2>> use(k);
+    for (int t = 0; t < k; ++t) {
+        for (int pos = 0; pos < 2; ++pos) use[t][pos].assign(n + t, -1);
+        for (int s = start[t]; s < start[t + 1]; ++s) {
+            const int sel = pabc::Abc_Var2Lit(enc.get_sel_var(s), 0);
+            for (int pos = 0; pos < 2; ++pos) {
+                int& u = use[t][pos][enc.svar_map[s][pos]];
+                if (u < 0) u = fresh();
+                cs.add({sel ^ 1, u});
+            }
+        }
+    }
+    const auto opv = [&](int t, int bit) { return pabc::Abc_Var2Lit(enc.get_op_var(sp, t, bit), 0); };
+    std::vector<int> inv(k, -1);
+    constexpr int F = -1, T = -2;  // statically false / true flags
+    for (const auto& r : ex.counters) {
+        const int cap = k - int(r.lower);
+        if (cap >= k) continue;
+        std::vector<std::array<int, 2>> z;  // per wire: provably 0, provably 1
+        bool zero = true;
+        for (int i = 0; i < n; ++i) {
+            z.push_back({r.primary[i] == 0 ? T : F, r.primary[i] == 1 ? T : F});
+            zero &= r.primary[i] != 1;
+        }
+        const auto operand = [&](int t, int pos, int c) {
+            const int a = fresh();
+            for (int w = 0; w < n + t; ++w) {
+                const int u = use[t][pos][w];
+                if (u < 0 || z[w][c] == F) continue;
+                if (z[w][c] == T) cs.add({u ^ 1, a});
+                else cs.add({u ^ 1, z[w][c] ^ 1, a});
+            }
+            return a;
+        };
+        std::vector<int> deleted;
+        for (int t = 0; t < k; ++t) {
+            const int na = opv(t, 2), nb = opv(t, 1), d = fresh();
+            deleted.push_back(d);
+            if (zero) {
+                const int A = operand(t, 0, 0), B = operand(t, 1, 0), Z = fresh();
+                cs.add({A ^ 1, d}); cs.add({B ^ 1, d});
+                cs.add({A ^ 1, na, Z}); cs.add({B ^ 1, nb, Z}); cs.add({A ^ 1, B ^ 1, Z});
+                z.push_back({Z, F});
+                continue;
+            }
+            const int A0 = operand(t, 0, 0), A1 = operand(t, 0, 1), B0 = operand(t, 1, 0), B1 = operand(t, 1, 1);
+            for (int f : {A0, A1, B0, B1}) cs.add({f ^ 1, d});
+            // operands after the normalized negations: provably 0 (az, bz) or provably 1 (ao, bo)
+            const int az = fresh(), ao = fresh(), bz = fresh(), bo = fresh();
+            cs.add({A0 ^ 1, na, az}); cs.add({A1 ^ 1, na ^ 1, az});
+            cs.add({A1 ^ 1, na, ao}); cs.add({A0 ^ 1, na ^ 1, ao});
+            cs.add({B0 ^ 1, nb, bz}); cs.add({B1 ^ 1, nb ^ 1, bz});
+            cs.add({B1 ^ 1, nb, bo}); cs.add({B0 ^ 1, nb ^ 1, bo});
+            if (inv[t] < 0) {
+                inv[t] = fresh();
+                cs.add({inv[t] ^ 1, na}); cs.add({inv[t] ^ 1, nb}); cs.add({inv[t], na ^ 1, nb ^ 1});
+            }
+            const int Z0 = fresh(), Z1 = fresh(), I = inv[t];
+            // the AND is provably 0 if an operand is, provably 1 if both are; I complements the output
+            cs.add({az ^ 1, I, Z0}); cs.add({bz ^ 1, I, Z0}); cs.add({ao ^ 1, bo ^ 1, I ^ 1, Z0});
+            cs.add({ao ^ 1, bo ^ 1, I, Z1}); cs.add({az ^ 1, I ^ 1, Z1}); cs.add({bz ^ 1, I ^ 1, Z1});
+            z.push_back({Z0, Z1});
+        }
+        cs.at_most(deleted, cap);
+        ++g_counter.restrictions;
+    }
+    g_counter.vars = cs.next - vars0;
+    g_counter.clauses = int(cs.clauses.size() - clauses0);
+    g_counter.seconds = since(t0);
+    return true;
+}
+
 // Returns false if the extra constraints make budget k infeasible outright; adds clauses to the solver otherwise.
 static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, const Extra& ex,
                       const FirstLayer& layer, int& extra_clauses, std::vector<int>& layer_features,
                       std::vector<int>& typed_steps, std::vector<int>& thresholds) {
-    if (!ex.noreapply_full && ex.cof.empty() && ex.pairs == synthesis::PairScope::none && !ex.first_layer_budget)
+    if (!ex.noreapply_full && ex.cof.empty() && ex.pairs == synthesis::PairScope::none && !ex.first_layer_budget &&
+        ex.counters.empty())
         return true;
     const int n = sp.get_nr_in(), k = sp.nr_steps;
     ClauseSink cs{solver, enc.total_nr_vars, {}};
@@ -307,6 +415,7 @@ static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, 
                                       ex.slack_two_mode >= 0 || ex.slack_three_mode >= 0, typed_steps,
                                       ex.slack_three_policy != synthesis::SlackThreePolicy::full ? &thresholds
                                                                                                 : nullptr);
+    if (!ex.counters.empty() && !encode_counters(cs, enc, sp, start, ex)) return false;
     solver.set_nr_vars(cs.next);
     extra_clauses = (int)cs.clauses.size();
     for (auto& cl : cs.clauses) {
@@ -818,6 +927,17 @@ static int run_main(int argc, char** argv) {
             else { fprintf(stderr, "expected --restriction-cuts trace, cut, all or rows\n"); return 2; }
         }
         else if (a == "--capture-models") ex.capture_models = next();
+        else if (a == "--restriction-counters") {
+            const auto mode = next();
+            if (mode == "zero") ex.restriction_counters = 1;
+            else if (mode == "const") ex.restriction_counters = 2;
+            else if (mode == "anchor") ex.restriction_counters = 3;
+            else { fprintf(stderr, "expected --restriction-counters zero, const or anchor\n"); return 2; }
+        }
+        else if (a == "--complement-inputs") {
+            if (next() != "auto") { fprintf(stderr, "expected --complement-inputs auto\n"); return 2; }
+            ex.complement_inputs = true;
+        }
         else if (a == "--restriction-burst") ex.restriction_burst = unsigned(std::stoul(next()));
         else if (a == "--slack-two-ms") ex.slack_two_ms = std::stoi(next());
         else if (a == "--slack-two-work") ex.slack_two_work = unsigned(std::stoul(next()));
@@ -925,6 +1045,14 @@ static int run_main(int argc, char** argv) {
         fprintf(stderr, "--restriction-cuts and --capture-models need CEGAR and 2-6 inputs\n");
         return 2;
     }
+    if ((ex.restriction_counters || ex.complement_inputs) && (n < 2 || n > 6)) {
+        fprintf(stderr, "--restriction-counters and --complement-inputs need 2-6 inputs\n");
+        return 2;
+    }
+    if (ex.restriction_counters && ex.restriction_cuts) {
+        fprintf(stderr, "--restriction-counters is not combined with --restriction-cuts\n");
+        return 2;
+    }
     if (ex.slack_two_ms <= 0 || ex.slack_two_work == 0) {
         fprintf(stderr, "--slack-two-ms and --slack-two-work must be positive\n");
         return 2;
@@ -945,6 +1073,37 @@ static int run_main(int argc, char** argv) {
     kitty::dynamic_truth_table tt(n), dc(n);
     kitty::create_from_hex_string(tt, tt_hex);
     if (!dc_hex.empty()) kitty::create_from_hex_string(dc, dc_hex);
+    const auto tt_given = tt, dc_given = dc;
+    const auto pack = [&](const kitty::dynamic_truth_table& t, bool flip) {
+        uint64_t m = 0;
+        for (int r = 0; r < (1 << n); ++r) m |= uint64_t(kitty::get_bit(t, r) ^ flip) << r;
+        return m;
+    };
+    unsigned complement_mask = 0;  // inputs complemented by --complement-inputs auto
+    if (ex.complement_inputs) {
+        const auto rs = restriction_certificate::restrictions(unsigned(n), pack(tt, false), pack(dc, true));
+        for (int i = 0; i < n; ++i)
+            if (rs[2 * i + 1].lower > rs[2 * i].lower) complement_mask |= 1u << i;
+        auto t2 = tt, d2 = dc;
+        for (int r = 0; r < (1 << n); ++r) {
+            if (kitty::get_bit(tt, r ^ complement_mask)) kitty::set_bit(t2, r); else kitty::clear_bit(t2, r);
+            if (kitty::get_bit(dc, r ^ complement_mask)) kitty::set_bit(d2, r); else kitty::clear_bit(d2, r);
+        }
+        tt = t2; dc = d2;
+        for (int i = 0; i < (int)ex.cof.size() && i < n; ++i)
+            if (complement_mask >> i & 1) {
+                std::swap(ex.cof[i][0], ex.cof[i][1]);
+                std::swap(ex.cof[i][2], ex.cof[i][3]);
+            }
+    }
+    if (ex.restriction_counters) {
+        const auto rs = restriction_certificate::restrictions(unsigned(n), pack(tt, false), pack(dc, true));
+        for (int i = 0; i < n; ++i) {
+            if (ex.restriction_counters == 1) ex.counters.push_back(rs[2 * i]);
+            else if (ex.restriction_counters == 2) { ex.counters.push_back(rs[2 * i]); ex.counters.push_back(rs[2 * i + 1]); }
+            else ex.counters.push_back(rs[2 * i + (rs[2 * i + 1].lower > rs[2 * i].lower)]);
+        }
+    }
     if ((ex.pairs != synthesis::PairScope::none || ex.first_layer_budget) && kitty::get_bit(dc, 0)) {
         fprintf(stderr, "first-layer partial tables must label row zero (Percy normalizes to that row)\n");
         return 2;
@@ -1280,6 +1439,11 @@ static int run_main(int argc, char** argv) {
                 for (size_t w = 0; w < rstats.width.size(); ++w) printf("%s%u", w ? "," : "", rstats.width[w]);
                 printf("]");
             }
+            if (ex.restriction_counters || ex.complement_inputs)
+                printf(",\"counter_restrictions\":%d,\"counter_vars\":%d,\"counter_clauses\":%d,"
+                       "\"counter_seconds\":%.6f,\"counter_negative_cap\":%d,\"complement_mask\":%u",
+                       g_counter.restrictions, g_counter.vars, g_counter.clauses, g_counter.seconds,
+                       g_counter.negative_cap, complement_mask);
             if (slack_two && ex.decoder_phase)
                 printf(",\"two_decoder\":[%llu,%llu,%llu,%llu,%llu]",
                        static_cast<unsigned long long>(residual->two_decoder.screens),
@@ -1349,7 +1513,41 @@ static int run_main(int argc, char** argv) {
     printf("{\"final\":\"%s\",\"reason\":\"%s\",\"last_k\":%d,\"steps\":%d,\"seconds\":%.6f,"
            "\"target_constraints_seconds\":%.6f,\"distinction_clauses\":%zu", final_status.c_str(),
            final_reason.c_str(), g_current_k, found, total, target_constraints_seconds, layer.clauses.size());
-    if (found >= 0) {
+    if (found >= 0 && complement_mask) {
+        // Map the chain of f(x ^ mask) back to f: complementing an operand that reads a complemented input
+        // permutes the operator's truth table (operand 0 = index bit 0, operand 1 = index bit 1). Verified
+        // against the given table and care set; operators stay AND-type but need not be normal.
+        std::vector<kitty::dynamic_truth_table> val;
+        for (int i = 0; i < n; ++i) { val.emplace_back(n); kitty::create_nth_var(val.back(), i); }
+        std::vector<std::array<int, 3>> mapped;
+        bool and_type = true;
+        for (int i = 0; i < c.get_nr_steps(); i++) {
+            const auto& s = c.get_step(i);
+            unsigned op = 0;
+            const auto& o = c.get_operator(i);
+            for (int b = 0; b < 4; b++) op |= kitty::get_bit(o, b) << b;
+            unsigned flip = (s[0] < n && (complement_mask >> s[0] & 1) ? 1u : 0u) |
+                            (s[1] < n && (complement_mask >> s[1] & 1) ? 2u : 0u);
+            unsigned op2 = 0;
+            for (unsigned j = 0; j < 4; ++j) op2 |= (op >> (j ^ flip) & 1) << j;
+            and_type &= std::popcount(op2) == 1 || std::popcount(op2) == 3;
+            auto v = kitty::create<kitty::dynamic_truth_table>(n);
+            for (unsigned j = 0; j < 4; ++j)
+                if (op2 >> j & 1) v |= ((j & 1) ? val[s[0]] : ~val[s[0]]) & ((j >> 1) ? val[s[1]] : ~val[s[1]]);
+            val.push_back(v);
+            mapped.push_back({int(op2), s[0], s[1]});
+        }
+        int out = c.get_outputs()[0];
+        if ((out >> 1) >= 1 && (out >> 1) <= n && (complement_mask >> ((out >> 1) - 1) & 1)) out ^= 1;  // projection
+        auto sim = (out >> 1) == 0 ? kitty::create<kitty::dynamic_truth_table>(n) : val[(out >> 1) - 1];
+        if (out & 1) sim = ~sim;
+        const bool ok = ((sim ^ tt_given) & ~dc_given) == kitty::create<kitty::dynamic_truth_table>(n);
+        printf(",\"aig\":%s,\"verified\":%s,\"complement_mask\":%u,\"chain\":[", and_type ? "true" : "false",
+               ok ? "true" : "false", complement_mask);
+        for (size_t i = 0; i < mapped.size(); i++)
+            printf("%s[%d,%d,%d]", i ? "," : "", mapped[i][0], mapped[i][1], mapped[i][2]);
+        printf("],\"out\":[%d,%d]", out >> 1, out & 1);
+    } else if (found >= 0) {
         auto sim = c.simulate()[0];
         bool ok = dc_hex.empty() ? sim == tt : ((sim ^ tt) & ~dc) == kitty::create<kitty::dynamic_truth_table>(n);
         printf(",\"aig\":%s,\"verified\":%s,\"chain\":[", c.is_aig() ? "true" : "false", ok ? "true" : "false");

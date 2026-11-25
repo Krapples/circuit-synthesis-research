@@ -70,6 +70,18 @@ RESIDUAL_MODES['base-restrict'] = ('--restriction-cuts', 'cut')
 RESIDUAL_MODES['base-restrict-rows'] = ('--restriction-cuts', 'rows')
 RESIDUAL_MODES['slack-three-phase-set-lift1-restrict'] = (
     *RESIDUAL_MODES['slack-three-phase-set-lift1'], '--restriction-cuts', 'cut')
+# Eager constant-only restriction counters and input-complement normalization (std and CEGAR).
+COUNTER_MODES = {'base-renorm': ('--complement-inputs', 'auto')}
+for counters in ('zero', 'const', 'anchor'):
+    COUNTER_MODES[f'base-count-{counters}'] = ('--restriction-counters', counters)
+    COUNTER_MODES[f'base-renorm-count-{counters}'] = (*COUNTER_MODES['base-renorm'], '--restriction-counters', counters)
+RESIDUAL_MODES['slack-three-phase-set-lift1-renorm'] = (
+    *RESIDUAL_MODES['slack-three-phase-set-lift1'], '--complement-inputs', 'auto')
+for counters in ('zero', 'const', 'anchor'):
+    RESIDUAL_MODES[f'slack-three-phase-set-lift1-count-{counters}'] = (
+        *RESIDUAL_MODES['slack-three-phase-set-lift1'], '--restriction-counters', counters)
+    RESIDUAL_MODES[f'slack-three-phase-set-lift1-renorm-count-{counters}'] = (
+        *RESIDUAL_MODES['slack-three-phase-set-lift1-renorm'], '--restriction-counters', counters)
 
 
 def exact_tables(n, steps):
@@ -112,7 +124,7 @@ def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, s
         conflict_scope='call', driver_deadline=True, memory_capped=False):
     full = (1 << (1 << n)) - 1
     cmd = [exe, '--n', str(n), '--tt', hexstr(n, tt), '--method', method, '--solver', 'satoko',
-           '--conflicts', str(conflicts), '--conflict-scope', conflict_scope, *(MODES | RESIDUAL_MODES)[mode]]
+           '--conflicts', str(conflicts), '--conflict-scope', conflict_scope, *(MODES | RESIDUAL_MODES | COUNTER_MODES)[mode]]
     if driver_deadline:
         cmd += ['--seconds', str(seconds)]
     if care != full:
@@ -202,6 +214,13 @@ def check_jobs(exe, modes):
         for tt, expected in ((0x0116, 'UNSAT'), (0x016a, 'SAT')):
             for mode in ('slack-two-phase-set', *modes):
                 yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 60, 0, 8), expected
+    if any('-count-' in mode or '-renorm' in mode for mode in modes):
+        # Same verified optima: the counters cap deletions on every size-eight and size-nine budget and
+        # complement normalization flips an input of 1699, so the mapped-back witness is checked too.
+        for tt, budget, expected in ((0x0116, 8, 'UNSAT'), (0x016a, 8, 'SAT'), (0x6996, 8, 'UNSAT'),
+                                     (0x1668, 8, 'UNSAT'), (0x0116, 9, 'SAT'), (0x1699, 8, 'SAT')):
+            for mode in modes:
+                yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 60, 0, budget), expected
     if any('-restrict' in mode for mode in modes):
         # Verified four-input optima (tier records): restriction cores fire on almost every size-eight
         # and size-nine model, so these budgets exercise the learned clauses on both verdicts.
@@ -244,7 +263,7 @@ def main():
     parser.add_argument('--no-driver-deadline', action='store_true',
                         help='legacy: only the harness kill enforces --seconds (no per-budget record on timeout)')
     parser.add_argument('--targets', nargs='+', help='screen only these workload names or truth tables')
-    parser.add_argument('--modes', nargs='+', choices=tuple(MODES | RESIDUAL_MODES), default=tuple(MODES))
+    parser.add_argument('--modes', nargs='+', choices=tuple(MODES | RESIDUAL_MODES | COUNTER_MODES), default=tuple(MODES))
     parser.add_argument('--memory-mib', type=int, help='commit cap for the single-worker process family')
     args = parser.parse_args()
     if args.memory_mib is not None:

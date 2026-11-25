@@ -1770,3 +1770,190 @@ python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_wall
 python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_extended_restrict.jsonl --logs sat-search/logs/tiers/extended_restrict --tier extended --modes base-restrict slack-three-phase-set-lift1-restrict
 python sat-search/baselines/tier_summary.py sat-search/results/baselines/tier_extended.jsonl sat-search/results/baselines/tier_extended_restrict.jsonl
 ```
+
+## Eager constant-only restriction counters in the Percy encoding (opt-in, positive end to end)
+
+The eager follow-up to the certificates above, from the `restriction_counter_native.zip` bundle
+(extracted to `external/restriction-counter`, not committed). Instead of learning cores from models,
+every budget's CNF caps the deletions of each constant restriction directly:
+`sum_g D_g(pi) <= K - L(f o pi)`. The default stays off.
+- `--restriction-counters zero|const|anchor` enables the counters.
+- `--complement-inputs auto` enables complement normalization.
+
+### Rule and encoding (proven for single-selection models; one-way flags)
+
+- **Restrictions.** pi is `x_i := c`, and L is the exact `kCost3` cost of the restricted
+  three-input function (min over completions). The configurations are:
+  - zero: `x_i := 0` for every i;
+  - const: both constants;
+  - anchor: per input, the constant with the larger L (ties to 0).
+- **Deletions.** A gate with a selected operand that is provably constant under pi becomes a
+  constant or a possibly complemented copy of its other operand. All such gates are deleted
+  together, so a K-step chain of f leaves a `K - D` step chain of `f o pi`.
+- **Gate semantics.** The normalized AIG gate is `AND(a ^ na, b ^ nb) ^ (na & nb)`, with
+  `na = op bit 2` and `nb = op bit 1` (Percy ops 2, 4, 8, 14; op bit j is the output at fanin0 =
+  j & 1, fanin1 = j >> 1).
+- **x_i := 0 (one flag per wire).** The restriction contains row zero and every wire is 0 there,
+  so a provably constant wire is 0. The rules are `D = A | B` and
+  `Z = (A & !na) | (B & !nb) | (A & B)`.
+- **x_i := 1 (two flags per wire).** Each wire gets "provably 0" and "provably 1" flags. Each
+  operand flag is pushed through its negation, the AND is provably 0 if either input is and provably
+  1 if both are, and `na & nb` swaps the two output flags.
+- **Shared literals and one-way flags.** Shared operand-selection literals `use[t][pos][w]` are
+  implied by every selected pair with that operand, and all restrictions reuse them. Every flag is
+  a one-way implication.
+  - On a model with one selected pair per step, the least flag assignment is exactly the
+    propagation above.
+  - Percy has no at-most-one constraint on selections. Models with several selected pairs get
+    over-approximated flags, which are excluded more often but never wrongly admitted.
+  - Soundness therefore assumes that every feasible budget keeps a single-selection model of a
+    valid chain under Percy's symmetry breaking. The checks below test this; it is not proven
+    separately.
+- **Cap.** The cap uses the existing Sinz `at_most`. A negative cap (`L > K`) returns UNSAT before
+  any clause is added, so Satoko never receives an empty clause. Caps of K or more are skipped.
+- **Input-complement normalization.** `--complement-inputs auto` complements every input whose
+  `x_i := 1` cofactor costs more than its `x_i := 0` cofactor, so the stronger bound sits at zero.
+  It then synthesizes the complemented target and maps the chain back by permuting each reading
+  gate's operator table. The mapped chain is verified against the given table and may contain
+  non-normal AND-type ops; the harness accepts any AND-type op.
+- **Implementation.** `percy_run.cpp` (`encode_counters`, called from `add_extra`). The
+  combination with `--restriction-cuts` is rejected.
+
+### Verification
+
+- **Bundle checks** (MSVC build in the scratchpad) reproduce the bundle's outputs exactly:
+  4,800 representative-counter checks, 30,000 alias/deletion checks and 4,800 constant-only checks.
+  The bundle bench gives:
+
+  | Budget | const8 | zero4 | all-hash certificates |
+  | --- | ---: | ---: | ---: |
+  | B=8 | 1,240 | 1,133 | 1,254 |
+  | B=9 | 2,284 | 2,061 | 2,333 |
+
+- **Fixed-budget oracle** (`results/baselines/restriction_counter_check.jsonl`): 368/368 verdicts
+  as expected. Modes: zero, const, anchor, renorm and renorm+zero, plus lift1+const and
+  lift1+renorm+zero. Coverage spans all three-input checks (std and CEGAR, with a partial table)
+  and the hard four-input budgets 0116 8 U, 016a 8 S, 6996 8 U, 1668 8 U, 0116 9 S and 1699 8 S.
+  For 1699, renorm complements x3, so the mapped-back witness is checked.
+- **Tier caps.** Every tier below passes the caps cross-check against the 36 known optima: no
+  UNSAT at or above an optimum, and no SAT below one.
+
+### Coverage on the 145,978 captured CEGAR models
+
+Computed by `experiments/restriction_counter_replay.py`, which propagates constants independently
+in Python. Output: `results/restriction_certificates/counter_replay.jsonl`.
+
+| Rule | Models excluded | Share |
+| --- | ---: | ---: |
+| cert20 (earlier certificates, alias + hashing, 20 restrictions) | 145,818 | 99.89% |
+| ids20 (representative IDs, no hashing) | 145,805 | 99.88% |
+| const8 | 145,353 | 99.57% |
+| ids_zero10 (IDs on the 10 restrictions containing row zero) | 124,419 | 85.2% |
+| anchor4 | 120,634 | 82.6% |
+| zero4 | 116,087 | 79.5% |
+
+- Every model const8 excludes is also excluded by cert20.
+- IDs add only about 450 models over const8, so representative-ID counters (option 3) were not
+  implemented.
+
+### CNF overhead (four inputs)
+
+| Mode | k=8 vars | k=8 clauses | k=9 vars | k=9 clauses |
+| --- | ---: | ---: | ---: | ---: |
+| zero | 288-337 | 975-1,066 | 366 | 1,274 |
+| const | 704-837 | 2,154-2,401 | 995 | 2,975 |
+
+Encoding takes at most 8 ms summed over a whole tier.
+
+### Bounded comparisons (CEGAR, single budget, conflicts to verdict)
+
+| Budget | base | zero | const | lift1+const |
+| --- | ---: | ---: | ---: | ---: |
+| 6996 k=8 U | 160,734 | 73,163 | 274 | 453 |
+| 1668 k=8 U | 519,505 | 59,783 | 401 | 479 |
+| 0116 k=8 U | 111,207 | 53,256 | 45,449 | 2,886 |
+| 016a k=8 S | 72,947 | 109,421 | 159,873 | 142,170 |
+| 1699 k=8 S | 607,063 | 481,384 | 134,731 | 28,217 |
+
+- The base column is base-renorm, which for these targets has an empty complement mask and so is
+  identical to base. 1699 is the exception: its base value comes from the separate base run.
+- The signed `x_i := 1` counters are what refute 6996 and 1668. zero alone needs about 150 times
+  more conflicts on those budgets.
+
+### End-to-end tiers (10 hard targets)
+
+60 s jobs ran matched in one batch with fresh controls; 300 s const jobs are compared with the
+archived idle-machine `tier_extended` controls.
+
+| Limits | Mode | Minima | Size-8 excl | Wall s total | Conflicts |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 60 s / 200k | base | 4 | 4 | 231 | 4.40M |
+| 60 s / 200k | base-count-zero | 5 | 7 | 205 | 3.48M |
+| 60 s / 200k | base-count-const | 6 | 7 | 159 | 2.80M |
+| 60 s / 200k | base-count-anchor | 7 | 8 | 178 | 3.30M |
+| 60 s / 200k | base-renorm | 3 | 4 | 252 | 4.68M |
+| 60 s / 200k | base-renorm-count-zero | 5 | 7 | 175 | 3.40M |
+| 60 s / 200k | lift1 | 6 | 8 | 225 | 3.35M |
+| 60 s / 200k | lift1-count-zero | 5 | 8 | 236 | 3.30M |
+| 60 s / 200k | lift1-count-const | 8 | 8 | 116 | 2.05M |
+| 60 s / 200k | lift1-renorm | 3 | 7 | 323 | 4.24M |
+| 60 s / 200k | lift1-renorm-count-zero | 4 | 7 | 272 | 3.26M |
+| 60 s wall only | base | 6 | 8 | 405 | 6.40M |
+| 60 s wall only | base-count-zero | 5 | 8 | 344 | 4.97M |
+| 60 s wall only | base-count-const | 9 | 8 | 264 | 3.53M |
+| 60 s wall only | base-count-anchor | 7 | 8 | 294 | 3.98M |
+| 60 s wall only | base-renorm | 4 | 6 | 421 | 6.33M |
+| 60 s wall only | base-renorm-count-zero | 6 | 7 | 349 | 4.42M |
+| 60 s wall only | lift1 | 4 | 8 | 398 | 4.09M |
+| 60 s wall only | lift1-count-zero | 6 | 8 | 374 | 3.91M |
+| 60 s wall only | lift1-count-const | 8 | 8 | 219 | 2.86M |
+| 60 s wall only | lift1-renorm | 4 | 7 | 421 | 4.78M |
+| 60 s wall only | lift1-renorm-count-zero | 5 | 7 | 359 | 3.60M |
+| 300 s / 2M | base (archived) | 8 | 8 | 632 | 11.81M |
+| 300 s / 2M | base-count-const | 9 | 8 | 570 | 5.31M |
+| 300 s / 2M | lift1 (archived) | 10 | 8 | 765 | 11.29M |
+| 300 s / 2M | lift1-count-const | 10 | 8 | 372 | 2.69M |
+
+- **Const counters win time-matched in every tier.**
+  - Base: 4 -> 6 minima (200k), 6 -> 9 (wall only), 8 -> 9 (300 s).
+  - lift1: 6 -> 8, 4 -> 8, and 10/10 at 300 s in 49% of the wall time with 24% of the conflicts.
+  - At 60 s, lift1+const finds 166b = 10 and base+const finds 1669 = 10; neither control reached
+    these in either 60 s tier.
+  - base+const at 300 s leaves 166b open at k=10, with k=9 excluded.
+- **Zero and anchor counters** help base under the 200k limit but are weaker than const. Zero gives
+  nothing for lift1.
+- **Input-complement normalization alone is negative** (base 4 -> 3 and 6 -> 4; lift1 6 -> 3).
+  renorm+zero is no better than zero, so the anchor effect is not a normalization effect. The
+  stronger cofactor bound helps when it is encoded (anchor beats zero for base) but loses to
+  encoding both constants.
+- **Scope of the 300 s rows.**
+  - Only const modes were run at 300 s. Archived controls were reused instead of re-run.
+  - Targets already solved by const at 60 s were re-run as part of the batch, which was
+    unnecessary: a SAT budget found under the 60 s limits is a prefix of the 300 s search.
+  - The batch overlapped another session's 22-process search, so its wall times are pessimistic.
+
+### Status and next questions
+
+- **Status.** `--restriction-counters const` is the first restriction rule with a demonstrated
+  end-to-end gain. It stays opt-in pending a decision on defaults.
+- **Identification counters.** Alias flags for `x_j := x_i ^ b` would cover the last 0.3% of
+  models. That is low value given the replay.
+- **More inputs.** For n > 4 the `kCost3` bound must be replaced by certified restricted costs;
+  the four-input exact table is the natural source. Re-measure on five-input targets.
+- **Combinations.** Combine `const` with first-layer budgets in the other residual modes (slack-two)
+  and re-run the oracle for each combination before using it.
+
+### Counter commands
+
+```powershell
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\restriction_counter_native.zip" -DestinationPath external/restriction-counter
+# From vcvars64, in a separate directory: cl /std:c++20 /O2 /EHsc <bundle>\restriction_counter_check.cpp; run it; run the bundle's restriction_counter_bench.py with python -I
+python sat-search/experiments/restriction_counter_replay.py sat-search/logs/restriction_capture sat-search/results/restriction_certificates/aig_costs3.json
+& sat-search/baselines/build/build_percy.bat
+python sat-search/baselines/first_layer_check.py check sat-search/results/baselines/restriction_counter_check.jsonl --workers 8 --modes base-count-zero base-count-const base-count-anchor base-renorm base-renorm-count-zero slack-three-phase-set-lift1-count-const slack-three-phase-set-lift1-renorm-count-zero
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_long_counters.jsonl --logs sat-search/logs/tiers_counters_long --tier long --modes base base-count-zero base-count-const base-count-anchor base-renorm base-renorm-count-zero slack-three-phase-set-lift1 slack-three-phase-set-lift1-count-zero slack-three-phase-set-lift1-count-const slack-three-phase-set-lift1-renorm slack-three-phase-set-lift1-renorm-count-zero
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_wall_only_60_counters.jsonl --logs sat-search/logs/tiers_counters_wall60 --seconds 60 --conflicts 0 --modes <same modes>
+python sat-search/baselines/tier_bench.py <out> --logs <dir> --tier extended --modes base-count-const slack-three-phase-set-lift1-count-const
+python sat-search/baselines/tier_summary.py sat-search/results/baselines/tier_extended.jsonl sat-search/results/baselines/tier_extended_counters_const.jsonl
+python sat-search/experiments/restriction_counter_summary.py sat-search/results/baselines/tier_long_counters.jsonl
+```
