@@ -12,6 +12,7 @@ from certificate_decomposition import complete_status, decomposition_status
 from certificate_rank import analyze, coexistence_color_bound, intersection_matrix, modular_rank, one_share_support
 from certify_synthesis import check_proof
 from cube_search import boundary_rows
+from rank_tight_family import guarded_family, verify_minor
 from synthesis_cases import Builder, Witness, full_rows, trim, truth_table
 from synthesis_followup import load_cases, read_rows
 
@@ -56,6 +57,14 @@ def concrete_certificate(n, circuit, row):
 
 
 class CertificateRankChecks(unittest.TestCase):
+    def test_guarded_family_rank_and_gate_optimum(self):
+        for excess in (1, 2, 3, 5, 8, 12):
+            self.assertEqual(verify_minor(excess), 3 * excess - 1)
+        for excess in (1, 2):
+            n, circuit, _, _, _ = guarded_family(excess)
+            p, z = complete_certificates(n, truth_table(n, circuit))
+            self.assertEqual(analyze(p, z).gates, 7 * excess)
+
     def test_one_share_support_strictly_strengthens_rank(self):
         matrix = ((1, 1), (0, 1))
         self.assertEqual(modular_rank(matrix, 101), 2)

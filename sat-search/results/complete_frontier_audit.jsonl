@@ -1,0 +1,10 @@
+{"experiment": "rank", "records": [[1, 7, 7, 6, 4, 2], [2, 13, 14, 18, 13, 5], [3, 19, 21, 66, 28, 8]], "explicit_minors": [2, 5, 8, 14, 23, 35]}
+{"experiment": "minima", "n": 2, "signed": true, "cases": 40, "feasible": 28, "prototypes": true, "seconds": 0.029}
+{"experiment": "minima", "n": 3, "signed": true, "cases": 654, "feasible": 143, "prototypes": true, "seconds": 4.1559}
+{"experiment": "minima", "n": 3, "signed": false, "cases": 27, "feasible": 25, "prototypes": true, "seconds": 4.1656}
+{"experiment": "minima", "n": 4, "signed": false, "cases": 342, "feasible": 224, "prototypes": true, "seconds": 5.9708}
+{"experiment": "profile", "mode": "uncompressed", "jobs": 82, "seconds": 0.1987, "states": 537, "local_states": 11352, "cache_hits": 669, "merged": 0, "fallbacks": 0}
+{"experiment": "profile", "mode": "uncached", "jobs": 82, "seconds": 0.258, "states": 527, "local_states": 10543, "cache_hits": 0, "merged": 158, "fallbacks": 0}
+{"experiment": "profile", "mode": "frontier", "jobs": 82, "seconds": 0.2216, "states": 527, "local_states": 9503, "cache_hits": 539, "merged": 158, "fallbacks": 0}
+{"experiment": "profile", "mode": "sat", "jobs": 82, "seconds": 0.4373, "states": 0, "local_states": 0, "cache_hits": 0, "merged": 0, "fallbacks": 0}
+{"experiment": "profile", "mode": "hybrid", "jobs": 82, "seconds": 0.3138, "states": 237, "local_states": 1706, "cache_hits": 5, "merged": 10, "fallbacks": 19}
