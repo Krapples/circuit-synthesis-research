@@ -406,6 +406,60 @@ Neither order dominates construction; exclusion must exhaust both classes, so or
 policy: race both orders in parallel for construction (time = min), single order for exclusion. A cheaper
 predictor than racing was not found.
 
+## Phase-first signed regional completion (`theory/regional_phase_first.py`, optional)
+
+Free-NOT only. Enumerates the feasible literal-polarity availability classes (positive / negative / both, from
+positive-negative row distinction clauses, unit propagation over finite domains), recodes each surviving class and
+mixed-phase multiplicity as a monotone query, and calls an exact monotone completion. In the repo the monotone
+solver is the production `regional_block_completion.local_blocks(port_first, witness_cover, row_quotient)`
+through `theory/regional_production_adapter.py`; the original prototype dependencies are not in the repo.
+
+- Oracle checks pass with the production solver underneath (600 phase-first, 600 axis-lift queries against
+  independent formula-column enumeration).
+- Supplied benches reproduced on Windows with the prototype solver (`experiments/win_deadline_run.py` maps
+  SIGALRM/setitimer to a timer + `interrupt_main`): 30 signed stress queries 26 vs 22 decided, recursive states
+  570 vs 8,904; extra 36-query workload complementary (phase 27 vs base 26 decided, 3 gained / 2 lost);
+  lift-phase 27/30 vs lift alone 22/30 (`logs/phase_first_bench.log`, `phase_extra_bench.log`, `axis_lift_bench.log`).
+
+**Production replay** (`experiments/phase_first_production.py`, `results/phase_first_replay.jsonl`, 0.5 s per query,
+witnesses checked, all decisions agree). Captured queries are the distinct signed regional calls made by free-NOT
+`solve3` (excess 3) and `layout_projection.search_exact` (excess 4) on 16 corpus cores, 60 s per search
+(`results/phase_first_captured.jsonl`, at most 60 per search, port-heavy first).
+
+| Workload | n | production base | phase | lift-phase | portfolio (25% phase) | adaptive |
+| --- | --- | --- | --- | --- | --- | --- |
+| captured from layout searches | 896 | 873 / 22.3 s | **896 / 8.5 s** | 896 / 7.7 s | 886 / 11.0 s | 896 / 8.3 s |
+| phase-extra (heavy repetition) | 36 | 16 / 11.2 s | 33 / 4.4 s | **34 / 3.3 s** | 26 / 6.0 s | 33 / 4.2 s |
+| generated stress, small (no repeats) | 20 | 18 / 2.5 s | 20 / 0.1 s | 20 / 0.1 s | 20 / 0.1 s | 18 / 2.4 s |
+| generated stress, large (no repeats) | 20 | 20 / 0.05 s | 20 / 0.84 s | 20 / 0.78 s | 20 / 0.87 s | 20 / 0.04 s |
+
+- Phase-first gained 42 queries over production and lost none. On the 927 queries both decided: 5.9 s vs 12.4 s.
+- Only cost: wide queries without repeated providers (large stress, m 4-6), where it is ~17x slower but still decides.
+- Adaptive rule tested: `repeats >= 1 and labels <= 512` -> 967/972, 15.4 s. A rule chosen after the fact on this
+  same data, `not (repeats == 0 and m >= 4)`, gives 969/972, 13.0 s (always-phase 969/972, 13.8 s; never 927/972,
+  36.1 s). In-sample only; needs a held-out workload before any default change.
+- The sequential portfolio is dominated: splitting the cap loses decisions that phase-first reaches alone.
+- Labelled table sizes stayed <= 1,024 here, so the quadratic distinction-clause build was never exercised; keep a
+  label cap in any integration.
+- Status: optional backend. Not wired into `make_completion` (owned by the regional work in progress); the evidence
+  supports adding it as an opt-in mode with the rule above.
+
+Singleton-port promotion (`theory/regional_axis_lift.py`) is kept as an optional cheap reduction: it alone changed
+no decision, and with phase-first it added one (phase-extra 34 vs 33).
+
+### Optional-occurrence lemma (repeated providers)
+
+Proved: for a regional formula over leaf occurrences, if the query is completable with each repeated provider p used
+d_p times (1 <= d_p <= c_p) and every singleton leaf used once, it is completable with c_p occurrences. Proof: take a
+leaf l of p with parent P = l op S (one exists, since the formula has >= 2 leaves) and replace P by P op l; idempotence
+gives the same function on every row and one more occurrence of p. Repeat. The argument uses no NOT, so it holds in the
+monotone basis too (the free-NOT complementary-pair restoration is not needed). Checked against the exact reference
+`two_sharing_core.local` on 1,365 free-NOT and 1,350 monotone random layouts: 0 counterexamples
+(`experiments/optional_occurrence_check.py`).
+Consequences: feasibility is monotone in occurrence counts. For construction, try minimal counts (d_p = 1) first and
+pad. For exclusion, a child sub-query that is infeasible at the largest count it could receive excludes every smaller
+allocation, so allocation branches can be pruned as a group (not yet implemented in `local_blocks`).
+
 ## Second-chance screening (2026-11-24, stopped early for runtime)
 
 - Normalized phase encoding vs direct counted-NOT encoding (`experiments/second_chance_encoding.py`,
