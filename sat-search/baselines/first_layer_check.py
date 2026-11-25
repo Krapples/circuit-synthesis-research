@@ -18,6 +18,12 @@ MODES = {
     'budget': ('--first-layer-budget',),
     'all+budget': ('--first-layer', 'all', '--first-layer-budget'),
 }
+RESIDUAL_MODES = {
+    'residual': ('--tight-residual',),
+    'all+budget+residual': (*MODES['all+budget'], '--tight-residual'),
+    'all+set-cuts': (*MODES['all'], '--tight-residual', '--tight-residual-set-cuts'),
+    'all+budget+set-cuts': (*MODES['all+budget'], '--tight-residual', '--tight-residual-set-cuts'),
+}
 
 
 def exact_tables(n, steps):
@@ -46,7 +52,7 @@ def exact_tables(n, steps):
 def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, start=None):
     full = (1 << (1 << n)) - 1
     cmd = [exe, '--n', str(n), '--tt', hexstr(n, tt), '--method', method, '--solver', 'satoko',
-           '--conflicts', str(conflicts), *MODES[mode]]
+           '--conflicts', str(conflicts), *(MODES | RESIDUAL_MODES)[mode]]
     if care != full:
         cmd += ['--dc', hexstr(n, full ^ care)]
     cmd += ['--budget', str(budget)] if budget is not None else ['--start', str(start), '--max', '12']
@@ -73,27 +79,39 @@ def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, s
                 wall_limit=seconds, records=rows)
 
 
-def check_jobs(exe):
+def check_jobs(exe, modes):
     n = 3
     # Complete AND, multiplexer, majority, parity, and their output phases.
+    complete_targets = [0x80, 0x7f, 0xca, 0xe8, 0x96, 0x69]
+    if any(mode in RESIDUAL_MODES for mode in modes):
+        complete_targets.extend((0x1b, 0x1e))  # exercise set cuts on both feasible and infeasible budgets
     for budget in (2, 3):
         known = exact_tables(n, budget)
-        for tt, care in [(tt, 0xff) for tt in (0x80, 0x7f, 0xca, 0xe8, 0x96, 0x69)] + [(0x96, 0x17)]:
+        for tt, care in [(tt, 0xff) for tt in complete_targets] + [(0x96, 0x17)]:
             expected = 'SAT' if any((tt ^ f) & care == 0 for f in known) else 'UNSAT'
             for method in ('std', 'cegar') if care == 0xff else ('std',):
-                for mode in MODES:
+                for mode in modes:
+                    if mode in RESIDUAL_MODES and method != 'cegar':
+                        continue
                     args = (exe, mode, f'check-{tt:02x}', n, tt, care, method, 5, 0, budget)
                     yield args, expected
+    if any(mode in RESIDUAL_MODES for mode in modes):
+        # ab(c|d) needs a different boundary from H=(ab), M=(c,d).
+        known = exact_tables(4, 3)
+        for tt in (0x8880, 0x8000, 0x6996):
+            for mode in modes:
+                yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 5, 0, 3), (
+                    'SAT' if tt in known else 'UNSAT')
 
 
-def screen_jobs(exe, workload, limit, seconds, conflicts):
+def screen_jobs(exe, workload, limit, seconds, conflicts, modes):
     with workload.open(encoding='utf-8') as source:
         targets = [json.loads(line) for line in source if line.strip()]
     eligible = [target for target in targets if 2 <= target['n'] <= 5]
     for target in eligible[:limit]:
         n, tt = target['n'], int(target['tt'], 16)
         care = (1 << (1 << n)) - 1
-        for mode in MODES:
+        for mode in modes:
             yield (exe, mode, target['name'], n, tt, care, 'cegar', seconds, conflicts, None, n - 1), None
 
 
@@ -108,9 +126,10 @@ def main():
     parser.add_argument('--limit', type=int, default=8)
     parser.add_argument('--seconds', type=float, default=6)
     parser.add_argument('--conflicts', type=int, default=20_000)
+    parser.add_argument('--modes', nargs='+', choices=tuple(MODES | RESIDUAL_MODES), default=tuple(MODES))
     args = parser.parse_args()
-    jobs = check_jobs(args.exe) if args.kind == 'check' else screen_jobs(
-        args.exe, args.workload, args.limit, args.seconds, args.conflicts)
+    jobs = check_jobs(args.exe, args.modes) if args.kind == 'check' else screen_jobs(
+        args.exe, args.workload, args.limit, args.seconds, args.conflicts, args.modes)
 
     def execute(job):
         command, expected = job

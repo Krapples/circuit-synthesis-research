@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "regional_kernel.hpp"
+#include "tight_residual.hpp"
 
 namespace py = pybind11;
 
@@ -179,4 +180,11 @@ PYBIND11_MODULE(_regional_native, mod) {
     mod.def("prelude", &prelude, py::arg("m"), py::arg("target_any"), py::arg("target_words"), py::arg("signed"),
             "Native read-once prelude: (ok, phase[m] (-1 unknown), forced_and[m], forced_or[m]).");
     mod.def("pack_obligation_rows", &pack_obligation_rows);
+    mod.def("tight_residual",
+            [](const std::vector<uint64_t>& columns, unsigned first_layer, uint64_t target,
+               uint64_t care, unsigned work_limit) {
+                return int(synthesis::tight_residual(columns, first_layer, target, care, work_limit));
+            }, py::arg("columns"), py::arg("first_layer"), py::arg("target"), py::arg("care"),
+            py::arg("work_limit") = 4096,
+            "Exact fixed-boundary free-NOT completion: 0 infeasible, 1 feasible, 2 unknown.");
 }

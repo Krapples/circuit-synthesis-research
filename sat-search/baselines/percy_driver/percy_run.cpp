@@ -9,6 +9,8 @@
 //   --budget K : decide only "exactly K steps" (Percy's fixed-step semantics, all steps used)
 //   --first-layer edges|all : cared-pair distinction constraints, up to five inputs
 //   --first-layer-budget : optional trimmed boundary cardinality constraint
+//   --tight-residual : optional bounded exact regional exclusions during CEGAR
+//   --tight-residual-set-cuts : use feature presence for exclusions with distinct first-layer types
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
@@ -18,10 +20,12 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
 #include "first_layer.hpp"
+#include "tight_residual.hpp"
 // Optional extra constraints need the SSV encoder's variable layout (svar_map, nr_svar_map, get_*_var), which Percy
 // keeps private; open it for this driver only.
 #define private public
@@ -49,6 +53,8 @@ struct Extra {
     std::vector<std::array<int, 4>> cof;   // per input: L0, L1, nonconst0, nonconst1 (empty = no caps)
     synthesis::PairScope pairs = synthesis::PairScope::none;
     bool first_layer_budget = false;
+    bool tight_residual = false;
+    bool residual_set_cuts = false;
 };
 
 struct ClauseSink {
@@ -102,7 +108,8 @@ struct FirstLayer {
         clauses = synthesis::distinction_masks(gates, zeros, ones, ex.pairs);
     }
 
-    void encode(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start, bool budget) const {
+    std::vector<int> encode(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start,
+                            bool budget) const {
         const int n = sp.get_nr_in(), k = sp.nr_steps;
         const auto fresh = [&] { return pabc::Abc_Var2Lit(cs.var(), 0); };
         std::vector<std::vector<int>> typed(gates.size()), mixed(n);
@@ -162,12 +169,13 @@ struct FirstLayer {
             for (; mask; mask &= mask - 1) clause.push_back(features[std::countr_zero(mask)]);
             cs.add(std::move(clause));
         }
+        return features;
     }
 };
 
 // Returns false if the extra constraints make budget k infeasible outright; adds clauses to the solver otherwise.
 static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, const Extra& ex,
-                      const FirstLayer& layer, int& extra_clauses) {
+                      const FirstLayer& layer, int& extra_clauses, std::vector<int>& layer_features) {
     if (!ex.noreapply_full && ex.cof.empty() && ex.pairs == synthesis::PairScope::none && !ex.first_layer_budget)
         return true;
     const int n = sp.get_nr_in(), k = sp.nr_steps;
@@ -219,7 +227,7 @@ static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, 
         }
     }
     if (ex.pairs != synthesis::PairScope::none || ex.first_layer_budget)
-        layer.encode(cs, enc, sp, start, ex.first_layer_budget);
+        layer_features = layer.encode(cs, enc, sp, start, ex.first_layer_budget);
     solver.set_nr_vars(cs.next);
     extra_clauses = (int)cs.clauses.size();
     for (auto& cl : cs.clauses) {
@@ -229,6 +237,99 @@ static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, 
     }
     return true;
 }
+
+struct TightResidual {
+    uint64_t target = 0, care = 0;
+    std::array<uint64_t, 5> primaries{};
+    int queries = 0, cuts = 0, unknown = 0, set_cuts = 0;
+
+    explicit TightResidual(const kitty::dynamic_truth_table& tt) {
+        const int n = tt.num_vars();
+        for (int row = 0; row < (1 << n); ++row) {
+            const uint64_t bit = uint64_t{1} << row;
+            care |= bit;
+            if (kitty::get_bit(tt, row)) target |= bit;
+            for (int i = 0; i < n; ++i)
+                if (row >> i & 1) primaries[i] |= bit;
+        }
+    }
+
+    // An empty result leaves CEGAR on its ordinary simulation path.
+    std::vector<int> exclusion(ssv_encoder& enc, const spec& sp, solver_wrapper& solver,
+                               std::span<const int> features) {
+        if (queries >= 128) return {};
+        const int n = sp.get_nr_in(), k = sp.nr_steps;
+        std::vector<std::pair<int, int>> first;  // (step, selected fanin variable)
+        std::array<int, 5> mixed;
+        mixed.fill(-1);
+        for (int step = 0, offset = 0; step < k; ++step) {
+            const int end = offset + enc.nr_svar_map[step];
+            for (int s = offset; s < end; ++s) {
+                if (!solver.var_value(enc.get_sel_var(s))) continue;
+                const auto& pair = enc.svar_map[s];
+                if (pair[1] < n) first.emplace_back(step, s);
+                else if (pair[0] < n) mixed[pair[0]] = s;
+                break;
+            }
+            offset = end;
+        }
+        const int h = (int)first.size();
+        const int m = (int)std::count_if(mixed.begin(), mixed.end(), [](int s) { return s >= 0; });
+        if (2 * h + m != k + 1 || h + m > 6) return {};
+
+        std::vector<int> cut;
+        std::vector<uint64_t> columns;
+        uint64_t types = 0;
+        bool distinct = !features.empty();
+        for (auto [step, s] : first) {
+            cut.push_back(pabc::Abc_Var2Lit(enc.get_sel_var(s), 1));
+            const auto& pair = enc.svar_map[s];
+            const uint64_t a = primaries[pair[0]], b = primaries[pair[1]];
+            const std::array<uint64_t, 4> rows{0, a & ~b, ~a & b, a & b};
+            uint64_t column = 0;
+            unsigned op = 0;
+            for (int bit = 1; bit <= 3; ++bit) {
+                const int var = enc.get_op_var(sp, step, bit);
+                const bool set = solver.var_value(var);
+                cut.push_back(pabc::Abc_Var2Lit(var, set));
+                if (set) {
+                    column |= rows[bit];
+                    op |= 1u << bit;
+                }
+            }
+            if (distinct) {
+                const auto op_index = std::find(FirstLayer::aigs.begin(), FirstLayer::aigs.end(), op)
+                                      - FirstLayer::aigs.begin();
+                const int pair_index = pair[1] * (pair[1] - 1) / 2 + pair[0];
+                const uint64_t type = uint64_t{1} << (pair_index * FirstLayer::aigs.size() + op_index);
+                distinct = !(types & type);
+                types |= type;
+            }
+            columns.push_back(column);
+        }
+        for (int i = 0; i < n; ++i)
+            if (mixed[i] >= 0) {
+                cut.push_back(pabc::Abc_Var2Lit(enc.get_sel_var(mixed[i]), 1));
+                columns.push_back(primaries[i]);
+            }
+        ++queries;
+        const auto result = synthesis::tight_residual(columns, h, target, care, 4096);
+        if (result == synthesis::ResidualStatus::unknown) ++unknown;
+        if (result != synthesis::ResidualStatus::infeasible) return {};
+        // Any model retaining these literals retains at least these h gate
+        // occurrences and m primaries. Equality and trimming forbid additions.
+        ++cuts;
+        if (distinct) {
+            ++set_cuts;
+            cut.clear();
+            for (; types; types &= types - 1)
+                cut.push_back(features[std::countr_zero(types)] ^ 1);
+            for (int i = 0; i < n; ++i)
+                if (mixed[i] >= 0) cut.push_back(features[features.size() - n + i] ^ 1);
+        }
+        return cut;
+    }
+};
 
 int main(int argc, char** argv) {
     int n = 0, start = 1, budget = -1, maxk = 64, conflicts = 0;
@@ -250,6 +351,8 @@ int main(int argc, char** argv) {
         else if (a == "--nosym") nosym = true;
         else if (a == "--noreapply-full") ex.noreapply_full = true;
         else if (a == "--first-layer-budget") ex.first_layer_budget = true;
+        else if (a == "--tight-residual") ex.tight_residual = true;
+        else if (a == "--tight-residual-set-cuts") ex.residual_set_cuts = true;
         else if (a == "--first-layer") {
             const auto scope = next();
             if (scope == "edges") ex.pairs = synthesis::PairScope::edges;
@@ -269,6 +372,14 @@ int main(int argc, char** argv) {
     if ((ex.pairs != synthesis::PairScope::none || ex.first_layer_budget) &&
         (n < 2 || n > 5 || (ex.first_layer_budget && nosym) || (!dc_hex.empty() && method == "cegar"))) {
         fprintf(stderr, "first-layer options need 2-5 inputs, alonce for the budget bound, and std for partial tables\n");
+        return 2;
+    }
+    if (ex.tight_residual && (n < 2 || n > 5 || nosym || method != "cegar" || !dc_hex.empty())) {
+        fprintf(stderr, "tight residual exclusions need trimmed CEGAR and a complete 2-5 input table\n");
+        return 2;
+    }
+    if (ex.residual_set_cuts && (!ex.tight_residual || ex.pairs == synthesis::PairScope::none)) {
+        fprintf(stderr, "tight residual set cuts need --tight-residual and --first-layer edges or all\n");
         return 2;
     }
     kitty::dynamic_truth_table tt(n), dc(n);
@@ -335,8 +446,14 @@ int main(int argc, char** argv) {
             int extra_clauses = 0;
             double encoding_seconds = 0;
             int cegar_rows = 0;
+            std::vector<int> layer_features;
+            const auto residual_start = clk::now();
+            std::optional<TightResidual> residual;
+            if (ex.tight_residual) residual.emplace(tt);
+            double residual_seconds = residual ? since(residual_start) : 0;
             if (!cegar) {
-                const bool encoded = enc.encode(sp) && add_extra(enc, sp, *solver, ex, layer, extra_clauses);
+                const bool encoded = enc.encode(sp) &&
+                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features);
                 encoding_seconds = since(tk);
                 if (!encoded) st = "UNSAT";
                 else {
@@ -345,20 +462,35 @@ int main(int argc, char** argv) {
                     if (r == success) enc.extract_chain(sp, c);
                 }
             } else {
-                const bool encoded = enc.cegar_encode(sp) && add_extra(enc, sp, *solver, ex, layer, extra_clauses);
+                const bool encoded = enc.cegar_encode(sp) &&
+                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features);
                 encoding_seconds = since(tk);
                 if (!encoded) st = "UNSAT";
                 else {
                     int iMint = 1; st = "UNSAT";
                     while (true) {
-                        const auto row_start = clk::now();
-                        ++cegar_rows;
-                        const bool row_encoded = enc.create_tt_clauses(sp, iMint - 1);
-                        encoding_seconds += since(row_start);
-                        if (!row_encoded) { st = "UNSAT"; break; }
+                        if (iMint > 0) {
+                            const auto row_start = clk::now();
+                            ++cegar_rows;
+                            const bool row_encoded = enc.create_tt_clauses(sp, iMint - 1);
+                            encoding_seconds += since(row_start);
+                            if (!row_encoded) { st = "UNSAT"; break; }
+                        }
                         auto r = solve();
                         if (r == failure) { st = "UNSAT"; break; }
                         if (r != success) { st = "TIMEOUT"; break; }
+                        if (residual) {
+                            const auto check_start = clk::now();
+                            auto cut = residual->exclusion(enc, sp, *solver,
+                                ex.residual_set_cuts ? std::span<const int>(layer_features) : std::span<const int>{});
+                            const bool retained = cut.empty() || solver->add_clause(cut.data(), cut.data() + cut.size());
+                            residual_seconds += since(check_start);
+                            if (!retained) { st = "UNSAT"; break; }
+                            if (!cut.empty()) {
+                                iMint = 0;
+                                continue;
+                            }
+                        }
                         iMint = enc.simulate(sp);
                         if (iMint == -1) { st = "SAT"; enc.cegar_extract_chain(sp, c); break; }
                     }
@@ -368,6 +500,10 @@ int main(int argc, char** argv) {
                    "\"encoding_seconds\":%.6f,\"cegar_rows\":%d,\"conflicts\":%d,\"vars\":%d,\"clauses\":%d",
                    k, st.c_str(), since(tk), extra_clauses, encoding_seconds, cegar_rows,
                    solver->nr_conflicts() - conflicts_before, solver->nr_vars(), solver->nr_clauses());
+            if (residual)
+                printf(",\"residual_queries\":%d,\"residual_cuts\":%d,\"residual_set_cuts\":%d,"
+                       "\"residual_unknown\":%d,\"residual_seconds\":%.6f",
+                       residual->queries, residual->cuts, residual->set_cuts, residual->unknown, residual_seconds);
 #ifdef USE_SATOKO
             if (satoko_backend) {
                 const long propagations = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;
