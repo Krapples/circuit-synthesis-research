@@ -3,6 +3,7 @@
 from collections import Counter
 from functools import lru_cache
 from itertools import combinations, product
+from math import comb
 
 from conditional_provider import compositions, options
 from module_contraction import essential, raw_monotone, simplify
@@ -92,8 +93,45 @@ def group_candidates(inputs):
         yield from combinations(inputs, size)
 
 
+def interchangeable_inputs(n, target):
+    """Classes whose pairwise transpositions fix the complete truth table."""
+    remaining = set(range(n))
+    groups = []
+    while remaining:
+        i = min(remaining)
+        same = [i]
+        for j in sorted(remaining - {i}):
+            swap = (1 << i) | (1 << j)
+            if all((target >> a ^ target >> (a ^ swap)) & 1 == 0
+                   for a in range(1 << n) if (a >> i & 1) and not (a >> j & 1)):
+                same.append(j)
+        remaining.difference_update(same)
+        if len(same) > 1:
+            groups.append(tuple(same))
+    return tuple(groups)
+
+
+def canonical_subset(subset, available, orbits):
+    for orbit in orbits:
+        candidates = tuple(i for i in orbit if i in available)
+        selected = tuple(i for i in candidates if i in subset)
+        if selected != candidates[:len(selected)]:
+            return False
+    return True
+
+
+def canonical_groups(available, orbits):
+    """Choose a prefix from each orbit and freely choose singleton inputs."""
+    groups = [tuple(i for i in orbit if i in available) for orbit in orbits]
+    grouped = {i for group in groups for i in group}
+    groups.extend((i,) for i in available if i not in grouped)
+    choices = (tuple(group[:size] for size in range(len(group) + 1)) for group in groups)
+    return tuple(sorted((tuple(sorted(i for prefix in picked for i in prefix)) for picked in product(*choices)),
+                        key=lambda subset: (len(subset), subset)))
+
+
 def search_exact(n, target, excess, signed=False, stats=None, *, projection=True, restrictions=True,
-                 support_filter=False, internal_first=False, completion=None):
+                 support_filter=False, internal_first=False, completion=None, input_symmetry=False):
     """Try one allocated excess. An empty result is provisional at higher excess."""
     if (n < 2 or not essential(n, target) or not signed and not raw_monotone(n, target)
             or simplify(n, target, signed)[0] != n):
@@ -104,6 +142,12 @@ def search_exact(n, target, excess, signed=False, stats=None, *, projection=True
     if completion is None:
         completion = make_completion()
     vertices = tuple(range(n))
+    orbits = interchangeable_inputs(n, target) if input_symmetry else ()
+
+    @lru_cache(maxsize=256)
+    def private_groups(available):
+        return canonical_groups(available, orbits)
+
     first = first_gate_candidates(n, target, excess, signed) if restrictions else None
     if first is not None and not first:
         stats['analytical_first_gate'] += 1
@@ -119,7 +163,15 @@ def search_exact(n, target, excess, signed=False, stats=None, *, projection=True
         classes.sort(key=lambda shape: -shape[1])
     for repeated_count, interne in classes:
         candidates = []
-        for repeated in combinations(vertices, repeated_count):
+        repeated_groups = combinations(vertices, repeated_count)
+        if orbits and n <= 10:
+            canonical = tuple(group for group in private_groups(vertices) if len(group) == repeated_count)
+            stats['repeat_orbit_reject'] += comb(n, repeated_count) - len(canonical)
+            repeated_groups = canonical
+        for repeated in repeated_groups:
+            if orbits and n > 10 and not canonical_subset(repeated, vertices, orbits):
+                stats['repeat_orbit_reject'] += 1
+                continue
             if first is not None and not any(set(row[-1]) <= set(repeated) for row in first):
                 stats['first_gate_reject'] += 1
                 continue
@@ -132,7 +184,15 @@ def search_exact(n, target, excess, signed=False, stats=None, *, projection=True
         patterns = tuple(port_patterns(repeated_count, interne, excess))
         for repeated in candidates:
             cut = Projection(n, target, repeated, signed)
+            repeated_orbits = [tuple(i for i, variable in enumerate(repeated) if variable in orbit) for orbit in orbits]
+            repeated_orbits = [orbit for orbit in repeated_orbits if len(orbit) > 1]
             for ports in patterns:
+                if repeated_orbits:
+                    recipients = tuple(tuple(row.count(i) for row in ports) for i in range(repeated_count))
+                    if any(any(recipients[a] > recipients[b] for a, b in zip(orbit, orbit[1:]))
+                           for orbit in repeated_orbits):
+                        stats['recipient_orbit_reject'] += 1
+                        continue
                 stats['patterns'] += 1
                 if restrictions:
                     degrees = Counter(i for row in ports for i in row)
@@ -160,7 +220,14 @@ def search_exact(n, target, excess, signed=False, stats=None, *, projection=True
                         stats['support_reject'] += 1
                         return None
                     output = region == interne
-                    for primary in ((remaining,) if output else group_candidates(remaining)):
+                    groups_to_try = (remaining,) if output else group_candidates(remaining)
+                    if orbits and not output and len(remaining) <= 10:
+                        groups_to_try = private_groups(remaining)
+                        stats['private_orbit_reject'] += (1 << len(remaining)) - len(groups_to_try)
+                    for primary in groups_to_try:
+                        if orbits and not output and len(remaining) > 10 and not canonical_subset(primary, remaining, orbits):
+                            stats['private_orbit_reject'] += 1
+                            continue
                         if len(primary) + len(ports[region]) < 2:
                             continue
                         if projection and not cut.step(processed, primary, *incoming[region], output):

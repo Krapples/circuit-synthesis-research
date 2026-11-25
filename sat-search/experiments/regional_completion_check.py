@@ -141,7 +141,7 @@ class RegionalCompletionChecks(unittest.TestCase):
                 self.assertEqual(len(gates), n + 3)
 
 
-def record_call(work, mode, completion, stats=None):
+def record_call(work, mode, completion, stats=None, *, input_symmetry=False):
     name, n, target, excess, signed, engine = work
     if stats is None:
         stats = Counter()
@@ -151,7 +151,7 @@ def record_call(work, mode, completion, stats=None):
         result = solve3(n, target, signed, stats, completion=completion)
         witness = materialize3(n, target, result, signed) if result is not None else None
     else:
-        result = search_exact(n, target, excess, signed, stats, completion=completion)
+        result = search_exact(n, target, excess, signed, stats, completion=completion, input_symmetry=input_symmetry)
         witness = reconstruct(n, target, *result, excess) if result is not None else None
     if witness is not None:
         gates, output = witness

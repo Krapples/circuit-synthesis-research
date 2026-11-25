@@ -14,7 +14,8 @@ sys.path.insert(0, str(ROOT / 'theory'))
 sys.path.insert(0, str(ROOT / 'verify'))
 
 from complete_frontier_check import programs
-from layout_projection import Projection, port_patterns, search_exact
+from layout_projection import (Projection, canonical_groups, canonical_subset, group_candidates,
+                               interchangeable_inputs, port_patterns, search_exact)
 from module_contraction import essential, simplify, vars as truth_variables
 from ordered_quotient_core import materialize3, reconstruct, solve3
 from port_certificates_check import bounded
@@ -24,6 +25,12 @@ from two_sharing_core import solve as solve2
 
 
 class LayoutProjectionChecks(unittest.TestCase):
+    def test_symmetry_group_generation(self):
+        orbits = ((0, 2, 5), (1, 4))
+        for available in group_candidates(tuple(range(6))):
+            expected = tuple(group for group in group_candidates(available) if canonical_subset(group, available, orbits))
+            self.assertEqual(canonical_groups(available, orbits), expected)
+
     def test_provider_connectivity_enumeration(self):
         for repeated, internal, excess in ((3, 0, 4), (2, 1, 4), (1, 2, 4), (1, 3, 4), (2, 2, 5)):
             count = repeated + internal
@@ -99,10 +106,11 @@ class LayoutProjectionChecks(unittest.TestCase):
             if not essential(4, target) or simplify(4, target, False)[0] != 4:
                 continue
             excess = budget - 3
-            result = search_exact(4, target, excess, support_filter=True)
-            self.assertIsNotNone(result, (hex(target), excess))
-            gates, _ = reconstruct(4, target, *result, excess)
-            self.assertEqual(len(gates), budget)
+            for symmetry in (False, True) if interchangeable_inputs(4, target) else (False,):
+                result = search_exact(4, target, excess, support_filter=True, input_symmetry=symmetry)
+                self.assertIsNotNone(result, (hex(target), excess, symmetry))
+                gates, _ = reconstruct(4, target, *result, excess)
+                self.assertEqual(len(gates), budget)
             count += 1
         self.assertGreater(count, 0)
 
