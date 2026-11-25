@@ -12,6 +12,10 @@ at least two forces all uncovered edges to share a vertex when there are no cent
 Structural SAT excluded counterexamples through 12 gates and timed out at sizes 13–21.
 [Routing proofs and search records](sat-search/results/top_form_4081/README.md)
 
+For the Petersen OR-substitution case L-meta-7893, Lean checked a 20-gate expanded circuit.
+The same cost is optimal when the retained and deleted edges use separate star covers.
+The posted 19-gate limit remains open. [Guard restrictions, witness, and search records](sat-search/results/petersen_guard_7893/README.md)
+
 The one-hot bipartite representation probe L-meta-11869 has a computational lower bound of 17
 and a Lean-checked upper bound of 30 AND/OR gates. The requested budget of 20 remains open.
 [Representation probe](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md#one-hot-bipartite-representation)
@@ -29,9 +33,10 @@ the required final AND and singleton constraints. A 28-gate lower bound applies 
 factorized star-cover form. The unrestricted budget of 27 remains open.
 [Proof, witness, and search coverage](sat-search/results/fano_final_and_4874/README.md)
 
-The order-three projective-plane step L-meta-9063 has a locally checked reduction
+The order-three projective-plane step L-meta-9063 has a merged reduction
 to two six-line circuits with budgets 28 and 29. Lean checked the 29-gate witness.
-The 28-gate budget remains open. The reduction was sent in [PR #22166](https://github.com/open-goat/pequalnp-proofs/pull/22166).
+The 28-gate budget remains open under L-meta-17641. The project posted the
+29-gate obligation as L-meta-17643. [Merged PR #22166](https://github.com/open-goat/pequalnp-proofs/pull/22166).
 [Reduction, search coverage, and related accepted methods](sat-search/results/pg3_seeded_boundary_9063/README.md)
 
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%

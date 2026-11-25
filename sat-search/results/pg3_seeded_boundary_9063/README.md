@@ -24,7 +24,9 @@ the line index. The final size is at most 28 + 29 + 1.
 [R_meta_9063_1.lean](R_meta_9063_1.lean) passed the upstream project's file guard
 and local kernel check in reduction mode on Lean 4.36.0. The checker accepted
 two children and reported only the standard axioms. The submission adds only
-that file. [Upstream PR #22166](https://github.com/open-goat/pequalnp-proofs/pull/22166)
+that file. GitHub merged the reduction and the project posted L-meta-17641
+for the 28-gate half and L-meta-17643 for the 29-gate half.
+[Merged PR #22166](https://github.com/open-goat/pequalnp-proofs/pull/22166)
 
 Lean also checked [Right29.lean](Right29.lean), a witness for the 29-gate side.
 It uses three OR gates and one AND for each four-point line, then five OR
