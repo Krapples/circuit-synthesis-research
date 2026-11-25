@@ -69,11 +69,55 @@ of regional slices.
 Claim: each step removes one input and one binary gate, and min(f) = len(trace) + min(core) holds in the
 counted-NOT basis and in the monotone basis. Traces allow reconstruction.
 
-- **Status:** provisional. Independently tested against gate-set enumeration up to 4 inputs (7,340
-  combined checks), with a proof sketch from the theory audit.
+- **Status: proved in Lean** for both raw step types (see "Formal proof" below). It was also tested
+  independently against gate-set enumeration up to 4 inputs (7,340 combined checks).
 - **Partial-function rule** (`theory/partial_module_contraction.py`, neutral-slice coverage, minimum of the
   contracted and ignored branches): tested on 6,360 rule queries.
 - **Scope:** whole-function reductions are never applied to pinned-prefix searches.
+
+### Formal proof (`lean/CircuitLemmas/Module.lean`, 2026-11-24)
+
+**Status: proved.** The file has no `sorry`. `#print axioms` (`lean/AxiomsCheck.lean`) lists only
+`propext`, `Classical.choice` and `Quot.sound`. This is a formal proof about the mathematical circuit
+model of `CircuitLemmas/Basic.lean`, not about the Python implementation.
+
+- **Model.** Circuits are well-formed `Circuit n m` (fan-in 2, AND/OR/NOT). Wire values are defined by
+  recursion on the wire index. `minSize b f` is the least number of gates of a circuit in basis `b` with
+  some wire computing `f`. The bases are counted-NOT (every gate counts, NOT included) and monotone
+  (AND/OR only).
+- **`module_contraction`.** Suppose `f(x) = g(update(x without x_j, i', h(x_i, x_j)))` with `h` AND or
+  OR, `f` depends on `x_j`, and `g` is computable in the basis. Then `minSize f = minSize g + 1`.
+  Stronger form `module_sizeLE`: f has a circuit with at most k + 1 gates iff g has one with at most k.
+- **`peel_contraction`.** If `f(x) = h(x_i, g(other inputs))` with `g` nonconstant, then
+  `minSize f = minSize g + 1`.
+- **`minSize_perm`.** Permuting inputs preserves `minSize` for nonconstant functions, so the convention
+  for where `g` receives the module output (Python puts it last) does not matter.
+- **Proof.** One pass, `run`, does constant propagation and input substitution. Inputs are bound to
+  constants or new wires. A gate with a constant argument, or a binary gate whose arguments became the
+  same wire, is dropped and its readers are redirected.
+  - `pass_circuit` proves the pass preserves semantics, basis and well-formedness, never adds gates, and
+    drops the first gate that reads an input fixed to a constant.
+  - **Restriction** (`restrict_const`): fix x_j to the neutral constant of h. Since f depends on x_j,
+    some gate reads it, so at least one gate goes; x_i then plays the module output.
+  - **Substitution:** prepend (module) or append (peel) one AND/OR gate.
+  - No graph-minor machinery is used.
+- **Hypotheses compared with the Python rule.** The theorems need less than all inputs essential: only
+  dependence on x_j (module) or nonconstant g (peel). The Python steps check both. `hfin`, the
+  computability of g in the basis, is automatic in the counted basis (completeness is not formalized
+  here); in the monotone basis it holds for monotone g.
+- **Not formalized.**
+  - The repo's output convention (last gate, every wire read) gives the same minimum as "some wire
+    computes f" by deleting dead gates. This is standard but not proved here.
+  - Signed (free-NOT) contraction.
+  - The cotree NOT-cost recurrence.
+- **Consequence for the corpus.** Every trace in `results/module_core_minima.jsonl` uses only raw `pair`
+  and `peel` steps (`simplify(..., signed=False)`), and each step's identity is confirmed by the
+  verified lifted witness. So min(f) = len(trace) + min(core) is now proved for those cases, by induction
+  on the trace. Each lower bound now rests only on the core minimum, which comes from the
+  `verify/reference.py` SAT search and is uncertified unless a checked exclusion exists
+  (`certify_split.py`).
+- **Effort.** About 1.5 hours of agent time for 807 lines. Checking `Module.lean` takes 30–45 s with
+  the direct `lean` call; `Basic.lean` must be compiled to an `.olean` first (see `HANDOFF.md`).
 
 ### Corpus (`experiments/module_corpus.py`, `results/module_corpus.jsonl`)
 
@@ -86,8 +130,10 @@ counted-NOT basis and in the monotone basis. Traces allow reconstruction.
 
 Each core is solved exactly by `verify/reference.py`. A witness for the original function is rebuilt by
 lifting the core witness through the trace and checked on every row, so **every upper bound is
-independently verified**. Each lower bound rests on the module theorem, unless certified separately
-(`experiments/certify_module_minima.py`).
+independently verified**. Each lower bound rests on the module theorem (now proved in Lean for `pair`
+and `peel` steps) plus the core minimum from the uncertified reference SAT search, unless certified
+separately (`experiments/certify_module_minima.py`, `experiments/certify_split.py`). Checking the core
+exclusion alone is enough: a full-size exclusion is no longer needed.
 
 | Case | Inputs → core | Previous NOT-enabled interval | Exact minimum (NOT-enabled = monotone) |
 | --- | --- | --- | --- |
