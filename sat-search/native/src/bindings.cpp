@@ -1,0 +1,151 @@
+// pybind11 bindings: one Python -> C++ call per regional completion query.
+// Interrupts: the core polls every POLL_INTERVAL work units; the poll runs PyErr_CheckSignals(), so
+// regional_deadline.timed (interrupt_main) and Ctrl-C raise KeyboardInterrupt out of the native call exactly as
+// they would out of the Python reference.  An optional native deadline (seconds) returns status ABORTED instead.
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+#include <chrono>
+#include <unordered_map>
+
+#include "regional_kernel.hpp"
+
+namespace py = pybind11;
+
+namespace {
+
+// The search holds the GIL (it owns no Python objects while running, so releasing it briefly is safe).  Yield it at
+// every poll so other Python threads run -- in particular the regional_deadline.timed alarm thread, which must take
+// the GIL to call interrupt_main(); PyErr_CheckSignals() then raises the resulting KeyboardInterrupt here.
+inline void yield_gil() {
+    Py_BEGIN_ALLOW_THREADS
+    Py_END_ALLOW_THREADS
+}
+
+py::object to_tree(const std::vector<regional::Node>& nodes, int id, std::unordered_map<int, py::object>& memo,
+                   const py::str& x, const py::str& land, const py::str& lor) {
+    auto it = memo.find(id);
+    if (it != memo.end()) return it->second;
+    const regional::Node& nd = nodes[id];
+    py::object out;
+    if (nd.op == 'x') {
+        out = py::make_tuple(x, nd.a, py::bool_(nd.b != 0));
+    } else {
+        py::object a = to_tree(nodes, nd.a, memo, x, land, lor);
+        py::object b = to_tree(nodes, nd.b, memo, x, land, lor);
+        out = py::make_tuple(nd.op == '&' ? land : lor, a, b);
+    }
+    memo.emplace(id, out);
+    return out;
+}
+
+py::dict stats_dict(const regional::Stats& s) {
+    py::dict d;
+#define PUT(name) d[#name] = s.name
+    PUT(rec); PUT(row_reject); PUT(module_reject); PUT(port_allocations); PUT(port_allocation_reject);
+    PUT(partition_checks); PUT(endpoint_split_reject); PUT(dominance_split_reject); PUT(obligation_partitions);
+    PUT(cover_nodes); PUT(quotient_conflicts); PUT(quotient_dropped); PUT(work); PUT(complete_cache_hits);
+    PUT(peak_cache_entries); PUT(local); PUT(phase_first_calls); PUT(phase_clauses); PUT(phase_nodes);
+    PUT(phase_classes); PUT(monotone_calls); PUT(phase_reject);
+#undef PUT
+    return d;
+}
+
+py::tuple solve_blocks(int m, std::vector<int> provider_ids, std::vector<int> counts, std::vector<uint32_t> pats,
+                       std::vector<uint8_t> target_any, std::vector<uint64_t> target_words, bool is_signed,
+                       bool module_filter, bool row_quotient, std::vector<int8_t> phase,
+                       std::vector<uint32_t> forced_and, std::vector<uint32_t> forced_or, int64_t work_limit,
+                       double deadline_seconds) {
+    regional::Query q;
+    q.m = m;
+    q.provider_ids = std::move(provider_ids);
+    q.counts = std::move(counts);
+    q.pats = std::move(pats);
+    q.target_any = std::move(target_any);
+    q.target_words = std::move(target_words);
+    q.is_signed = is_signed;
+    q.module_filter = module_filter;
+    q.row_quotient = row_quotient;
+    q.phase = std::move(phase);
+    q.forced_and = std::move(forced_and);
+    q.forced_or = std::move(forced_or);
+    q.work_limit = work_limit;
+    bool interrupted = false;
+    const bool timed = deadline_seconds > 0;
+    const auto until = std::chrono::steady_clock::now() + std::chrono::duration<double>(timed ? deadline_seconds : 0);
+    q.poll = [&]() {
+        yield_gil();
+        if (PyErr_CheckSignals() != 0) { interrupted = true; return true; }
+        return timed && std::chrono::steady_clock::now() >= until;
+    };
+    regional::Result r = regional::solve(q);
+    if (interrupted) throw py::error_already_set();  // KeyboardInterrupt from the deadline timer or Ctrl-C
+    py::object tree = py::none();
+    if (r.status == regional::Status::SAT) {
+        std::unordered_map<int, py::object> memo;
+        tree = to_tree(r.nodes, r.root, memo, py::str("x"), py::str("&"), py::str("|"));
+    }
+    py::dict st = stats_dict(r.stats);
+    st["nodes"] = int64_t(r.nodes.size());
+    return py::make_tuple(int(r.status), tree, st);
+}
+
+py::tuple solve_completion(int m, std::vector<int> provider_ids, std::vector<int> counts, std::vector<uint32_t> pats,
+                           std::vector<uint8_t> target_any, std::vector<uint64_t> target_words, bool is_signed,
+                           bool module_filter, bool adaptive) {
+    regional::Query q;
+    q.m = m;
+    q.provider_ids = std::move(provider_ids);
+    q.counts = std::move(counts);
+    q.pats = std::move(pats);
+    q.target_any = std::move(target_any);
+    q.target_words = std::move(target_words);
+    q.is_signed = is_signed;
+    q.module_filter = module_filter;
+    q.row_quotient = true;
+    q.phase.assign(m, -1); q.forced_and.assign(m, 0); q.forced_or.assign(m, 0);   // recomputed natively
+    bool interrupted = false;
+    q.poll = [&]() {
+        yield_gil();
+        if (PyErr_CheckSignals() != 0) { interrupted = true; return true; }
+        return false;
+    };
+    regional::Result r = regional::solve_completion(q, adaptive);
+    if (interrupted) throw py::error_already_set();
+    py::object tree = py::none();
+    if (r.status == regional::Status::SAT) {
+        std::unordered_map<int, py::object> memo;
+        tree = to_tree(r.nodes, r.root, memo, py::str("x"), py::str("&"), py::str("|"));
+    }
+    py::dict st = stats_dict(r.stats);
+    st["nodes"] = int64_t(r.nodes.size());
+    return py::make_tuple(int(r.status), tree, st);
+}
+
+py::tuple prelude(int m, std::vector<uint8_t> target_any, std::vector<uint64_t> target_words, bool is_signed) {
+    std::vector<int8_t> phase;
+    std::vector<uint32_t> fa, fo;
+    const bool ok = regional::prelude(m, target_any, target_words, is_signed, phase, fa, fo);
+    return py::make_tuple(ok, phase, fa, fo);
+}
+
+}  // namespace
+
+PYBIND11_MODULE(_regional_native, mod) {
+    mod.doc() = "Native regional completion kernel (port of theory/regional_block_completion.local_blocks)";
+    mod.attr("MAX_M") = regional::MAX_M;
+    mod.attr("MAX_PROVIDERS") = regional::MAX_PROVIDERS;
+    mod.attr("MAX_ROWS") = regional::MAX_ROWS;
+    mod.def("solve_blocks", &solve_blocks, py::arg("m"), py::arg("provider_ids"), py::arg("counts"), py::arg("pats"),
+            py::arg("target_any"), py::arg("target_words"), py::arg("signed"), py::arg("module_filter"),
+            py::arg("row_quotient"), py::arg("phase"), py::arg("forced_and"), py::arg("forced_or"),
+            py::arg("work_limit") = -1, py::arg("deadline_seconds") = 0.0,
+            "Returns (status, tree|None, stats); status 0 UNSAT, 1 SAT, 2 ABORTED (native deadline), 3 WORK_LIMIT.");
+    mod.def("solve_completion", &solve_completion, py::arg("m"), py::arg("provider_ids"), py::arg("counts"),
+            py::arg("pats"), py::arg("target_any"), py::arg("target_words"), py::arg("signed"),
+            py::arg("module_filter"), py::arg("adaptive"),
+            "Full completion call: native prelude + local_blocks (adaptive=False) or regional_phase_first."
+            "adaptive_completion (adaptive=True).  Returns (status, tree|None, stats).");
+    mod.def("prelude", &prelude, py::arg("m"), py::arg("target_any"), py::arg("target_words"), py::arg("signed"),
+            "Native read-once prelude: (ok, phase[m] (-1 unknown), forced_and[m], forced_or[m]).");
+}

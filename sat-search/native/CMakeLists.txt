@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.20)
+project(regional_native CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+if(MSVC)
+  add_compile_options(/O2 /EHsc /W3 /utf-8 /permissive-)
+endif()
+
+# Python-independent core (kernel + later ports), linked into the extension and the C++ self-test.
+add_library(regional_core STATIC src/regional_kernel.cpp)
+target_include_directories(regional_core PUBLIC src)
+set_target_properties(regional_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
+pybind11_add_module(_regional_native src/bindings.cpp)
+target_link_libraries(_regional_native PRIVATE regional_core)

@@ -1,0 +1,60 @@
+layout excess 5, mode native-phase-first, 2 cores, cap 60.0s: {'done': 2}
+profiled self-time total 103.42s (wall 59.0s)
+
+Inclusive time of components:
+      51.49s  49.8%  ObligationCache.__call__ (all completion work)
+      48.19s  46.6%  ObligationCache._normalize (cache-key normalization)
+       0.19s   0.2%  ObligationCache._solve (solver on cache miss)
+       0.00s   0.0%  check_tree (lifted witness check)
+       0.00s   0.0%  one_sharing_core.tree (read-once recognition)
+     101.00s  97.7%  ordered_quotient_core.fixed (layout DP)
+     114.38s 110.6%  layout_projection.search_exact
+
+Self time by file:
+      28.76s  27.8%  regional_obligation_cache.py
+      27.94s  27.0%  ordered_quotient_core.py
+      14.07s  13.6%  <built-in method builtins.sum>
+       9.78s   9.5%  layout_projection.py
+       5.02s   4.9%  conditional_provider.py
+       4.07s   3.9%  <built-in method builtins.sorted>
+       4.02s   3.9%  two_sharing_core.py
+       2.03s   2.0%  <built-in method builtins.len>
+       1.91s   1.8%  functools.py
+       1.47s   1.4%  <method 'update' of 'dict' objects>
+       0.80s   0.8%  <method 'items' of 'dict' objects>
+       0.56s   0.5%  <built-in method builtins.getattr>
+       0.46s   0.4%  <built-in method builtins.setattr>
+       0.43s   0.4%  <built-in method builtins.iter>
+       0.35s   0.3%  <built-in method builtins.next>
+
+Top self-time functions (calls, self s, cum s):
+     2629292    15.37    79.56  ordered_quotient_core.py:160 choose
+    14680851    14.07    27.68  ~:0 <built-in method builtins.sum>
+    51427342     8.13     8.13  regional_obligation_cache.py:90 <genexpr>
+       75073     6.91    48.19  regional_obligation_cache.py:25 _normalize
+      889673     6.23   112.12  layout_projection.py:214 place
+     3158838     5.02     6.16  conditional_provider.py:50 signs
+      197600     4.88   101.00  ordered_quotient_core.py:116 fixed
+      649130     4.66    33.17  regional_obligation_cache.py:88 _pack
+     3412457     4.07    28.40  ~:0 <built-in method builtins.sorted>
+    14563764     3.34     3.34  two_sharing_core.py:20 <genexpr>
+      579988     2.34    51.49  regional_obligation_cache.py:96 __call__
+     3193130     2.17     2.82  regional_obligation_cache.py:81 <genexpr>
+      242452     2.08    82.36  ordered_quotient_core.py:144 go
+    16069949     2.03     2.03  ~:0 <built-in method builtins.len>
+     5183252     1.47     1.47  ~:0 <method 'update' of 'dict' objects>
+     5790202     1.27     1.27  ordered_quotient_core.py:171 <genexpr>
+      579988     1.19    52.76  ordered_quotient_core.py:139 check
+      395702     1.15     2.25  functools.py:35 update_wrapper
+    10940512     0.96     0.96  regional_obligation_cache.py:94 <genexpr>
+     5025983     0.86     0.86  regional_obligation_cache.py:50 <genexpr>
+      956442     0.83     1.26  ordered_quotient_core.py:127 <genexpr>
+     1965810     0.83     0.86  layout_projection.py:91 group_candidates
+     4298395     0.80     0.80  ~:0 <method 'items' of 'dict' objects>
+     6579678     0.68     0.68  ordered_quotient_core.py:132 <genexpr>
+      406659     0.67     7.68  two_sharing_core.py:19 slices
+     5390594     0.66     0.66  ordered_quotient_core.py:133 project
+           2     0.66   114.38  layout_projection.py:133 search_exact
+     3166810     0.56     0.56  ~:0 <built-in method builtins.getattr>
+     3193130     0.55     0.55  regional_obligation_cache.py:80 <genexpr>
+      395684     0.46     2.72  functools.py:597 decorating_function

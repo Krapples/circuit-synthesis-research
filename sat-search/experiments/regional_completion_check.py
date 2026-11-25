@@ -31,6 +31,11 @@ COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-bra
                     'certificate-absorption', 'certificate-fallback', 'padding-first', 'phase-first', 'bounded-multiplicity', 'phase-certificate', 'phase-certificate-fastkey')
 
 
+from regional_native import available as native_available
+NATIVE_MODES = ('native-row-quotient', 'native-phase-first') if native_available() else ()   # C++ kernel, when built
+COMPLETION_MODES += NATIVE_MODES
+
+
 def check_tree(tree, m, ports, pats, targets, signed):
     counts = Counter()
     one = (1 << (1 << m)) - 1
@@ -62,7 +67,8 @@ class RegionalCompletionChecks(unittest.TestCase):
         cache = ObligationCache(solver=local_blocks, maxsize=512)
         variants = tuple(make_completion(mode, cache_size=512) for mode in
                          ('port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient',
-                          'root-relaxation', 'phase-first', 'bounded-multiplicity', 'phase-certificate', 'phase-certificate-fastkey'))
+                          'root-relaxation', 'phase-first', 'bounded-multiplicity', 'phase-certificate', 'phase-certificate-fastkey')
+                         + NATIVE_MODES)
         verdicts = Counter()
         for _ in range(500):
             m = rng.randrange(3)
