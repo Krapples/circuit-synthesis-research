@@ -5,6 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <algorithm>
 #include <chrono>
 #include <unordered_map>
 
@@ -129,6 +130,35 @@ py::tuple prelude(int m, std::vector<uint8_t> target_any, std::vector<uint64_t> 
     return py::make_tuple(ok, phase, fa, fo);
 }
 
+py::tuple pack_obligation_rows(const py::tuple& rows, const std::vector<uint64_t>& columns,
+                               const py::tuple& members) {
+    if (rows.size() > 64 || columns.size() > 64) {
+        throw py::value_error("at most 64 rows and columns can be packed");
+    }
+    std::vector<std::pair<uint64_t, size_t>> ordered;
+    ordered.reserve(rows.size());
+    for (size_t row = 0; row < rows.size(); ++row) {
+        uint64_t pattern = 0;
+        for (size_t column = 0; column < columns.size(); ++column) {
+            pattern |= ((columns[column] >> row) & 1) << column;
+        }
+        ordered.emplace_back(pattern, row);
+    }
+    std::sort(ordered.begin(), ordered.end());
+
+    py::tuple patterns(rows.size()), targets(rows.size());
+    for (size_t i = 0; i < ordered.size(); ++i) {
+        const auto [pattern, row] = ordered[i];
+        if (i && pattern == ordered[i - 1].first) {
+            PyErr_SetString(PyExc_AssertionError, "column equivalence did not preserve the observed row identities");
+            throw py::error_already_set();
+        }
+        patterns[i] = py::int_(pattern);
+        targets[i] = py::cast<py::tuple>(rows[row])[1];
+    }
+    return py::make_tuple(patterns, targets, members);
+}
+
 }  // namespace
 
 PYBIND11_MODULE(_regional_native, mod) {
@@ -148,4 +178,5 @@ PYBIND11_MODULE(_regional_native, mod) {
             "adaptive_completion (adaptive=True).  Returns (status, tree|None, stats).");
     mod.def("prelude", &prelude, py::arg("m"), py::arg("target_any"), py::arg("target_words"), py::arg("signed"),
             "Native read-once prelude: (ok, phase[m] (-1 unknown), forced_and[m], forced_or[m]).");
+    mod.def("pack_obligation_rows", &pack_obligation_rows);
 }

@@ -190,6 +190,8 @@ def layout_job(a):
 def layout(excess, seconds, base_mode, native_mode, workers, subset, output=None):
     names = sorted({json.loads(l)['key'].split('|')[0] for l in open(os.path.join(HERE, 'results', 'excess3_ladder.jsonl'))
                     if json.loads(l)['key'].endswith('|free')})
+    if subset == '-':
+        subset = ''
     if subset:
         names = [nm for nm in names if nm in set(subset.split(','))]
     tag = f'native_layout_e{excess}_{native_mode}' + ('_subset' if subset else '')

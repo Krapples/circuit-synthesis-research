@@ -21,6 +21,7 @@ from module_contraction import simplify, vars as truth_variables
 from ordered_quotient_core import make_completion, materialize3, reconstruct, solve3
 from port_certificates_check import bounded
 from regional_block_completion import local_blocks
+from regional_native import NativePackedObligationCache, available as native_available
 from regional_obligation_cache import ObligationCache
 from signed_bound_compare import cases, restrict_essential
 from two_sharing_core import ANY, local
@@ -31,8 +32,7 @@ COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-bra
                     'certificate-absorption', 'certificate-fallback', 'padding-first', 'phase-first', 'bounded-multiplicity', 'phase-certificate', 'phase-certificate-fastkey')
 
 
-from regional_native import available as native_available
-NATIVE_MODES = ('native-row-quotient', 'native-phase-first') if native_available() else ()   # C++ kernel, when built
+NATIVE_MODES = ('native-row-quotient', 'native-phase-first', 'native-phase-first-pack') if native_available() else ()
 COMPLETION_MODES += NATIVE_MODES
 
 
@@ -130,6 +130,51 @@ class RegionalCompletionChecks(unittest.TestCase):
         check_tree(b, 1, new_ports, changed[::-1], values[::-1], True)
         self.assertEqual(cache.metrics()['cache_hits'], 1)
         self.assertIsNone(cache(1, ports, (rows[0], rows[0] | 1), (0, 2), True))
+
+    @unittest.skipUnless(native_available(), 'native extension is unavailable')
+    def test_native_pack_normalization(self):
+        pack = NativePackedObligationCache._pack
+        for width in (64, 65):
+            rows = tuple((i, 1 << (128 + i)) for i in range(width))
+            columns = tuple(1 << i for i in reversed(range(width)))
+            members = tuple(((i, False),) for i in range(width))
+            self.assertEqual(pack(rows, columns, members), ObligationCache._pack(rows, columns, members))
+        with self.assertRaisesRegex(AssertionError, 'observed row identities'):
+            pack(((0, ANY), (1, 0)), (0,), (((1, False),),))
+
+        expected = ObligationCache()
+        candidate = NativePackedObligationCache()
+        checked = 0
+        for name in ('phase_first_captured.jsonl', 'phase_first_captured_heldout.jsonl'):
+            with (ROOT / 'results' / name).open(encoding='utf-8') as source:
+                for line in source:
+                    for query in json.loads(line)['queries']:
+                        _, ports, patterns, targets = query[:4]
+                        for signed in (False, True):
+                            args = ports, patterns, targets, signed
+                            self.assertEqual(candidate._normalize(*args), expected._normalize(*args))
+                            checked += 1
+        self.assertEqual(checked, 2886)
+        self.assertEqual(candidate.stats, expected.stats)
+
+    @unittest.skipUnless(native_available(), 'native extension is unavailable')
+    def test_native_pack_layout(self):
+        targets = {name: (n, target) for name, _, n, target in cases()
+                   if name in ('comparator-02', 'exactly-2-of-5')}
+        for name, feasible in (('comparator-02', True), ('exactly-2-of-5', False)):
+            with self.subTest(target=name):
+                n, target, _ = restrict_essential(*targets[name])
+                m, core, _ = simplify(n, target, True)
+                reference = make_completion('native-phase-first')
+                candidate = make_completion('native-phase-first-pack')
+                expected = search_exact(m, core, 5, True, completion=reference)
+                actual = search_exact(m, core, 5, True, completion=candidate)
+                self.assertEqual(actual, expected)
+                self.assertEqual(candidate.metrics(), reference.metrics())
+                self.assertEqual(actual is not None, feasible)
+                if actual is not None:
+                    gates, _ = reconstruct(m, core, *actual, 5)
+                    self.assertEqual(len(gates), m + 4)
 
     def test_quotient_backends_reconstruct_the_same_budget(self):
         targets = (0xffecf080, 0xeea0e000, 0xfcc8e0c0)

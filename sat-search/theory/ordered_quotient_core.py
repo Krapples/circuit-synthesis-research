@@ -61,12 +61,15 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
         from regional_phase_first import adaptive_completion   # opt-in: signed polarity classes, then monotone
 
         return ObligationCache(maxsize=cache_size, solver=adaptive_completion)
-    if mode in ('native-row-quotient', 'native-phase-first', 'native-a-phase-first'):
+    if mode in ('native-row-quotient', 'native-phase-first', 'native-a-phase-first', 'native-phase-first-pack'):
         # opt-in C++ kernel (sat-search/native, NOTES_NATIVE.md): same algorithm and search order as the Python modes
-        from regional_native import available, completion_native, native_adaptive_completion
+        from regional_native import (NativePackedObligationCache, available, completion_native,
+                                     native_adaptive_completion)
 
         if not available():
             raise RuntimeError('native kernel not built: run sat-search/native/build_native.bat')
+        if mode == 'native-phase-first-pack':
+            return NativePackedObligationCache(maxsize=cache_size, solver=completion_native)
         solver = {'native-row-quotient': partial(completion_native, adaptive=False),
                   'native-phase-first': completion_native,
                   'native-a-phase-first': native_adaptive_completion}[mode]

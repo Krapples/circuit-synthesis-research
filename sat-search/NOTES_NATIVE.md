@@ -1,4 +1,4 @@
-# Native (C++20) regional completion: staged migration, stage 1 (2026-11-25)
+# Native (C++20) regional completion: staged migration (2026-11-25)
 
 The Python implementations stay as the reference implementations and correctness oracles. Native code is opt-in,
 reached through the normal completion entry point (`ordered_quotient_core.make_completion`), and every native
@@ -162,7 +162,29 @@ Seven cold single-worker trials per complete table used Satoko CEGAR with a five
 All 28 returned AIGs passed independent simulation. Median elapsed time outside the driver's timed search was
 18.4 ms (two-input AND), 21.8 ms (four-input parity), 20.3 ms (four-input table `8ff0`), and
 19.4 ms (five-input AND). This measures the potential latency saving for short runs. Long runs motivated by
-hard-core coverage would benefit from improved SAT search first. [Raw trial records](results/native_percy_cold.jsonl)
+hard-core coverage would benefit from improved SAT search first. A process inventory with access to other
+sessions later found a previous Percy run on `e8808000` that the initial process check had missed. Treat these cold
+measurements as exploratory. A duplicate pilot on that table exceeded its five-second cap and was stopped by PID.
+[Raw trial records](results/native_percy_cold.jsonl)
+
+## 6. Stage C: native row packing within Python normalization
+
+`make_completion('native-phase-first-pack')` uses the stage-B solver and replaces only
+`ObligationCache._pack`. For each row index `r`, the packed key has bit `i` equal to bit `r` of column `i`.
+Sorting these packed keys gives the same target order as Python because equal packed keys raise the same
+row-identity assertion. The binding returns the existing Python target objects and the same occurrence map.
+This preserves arbitrary-size target truth tables and the lift's provider indices and phases. Inputs with
+more than 64 rows or columns use Python packing.
+
+Checks compare all three parts of the normalized key and normalization counters on 1,443 captured queries
+in each of the monotone and free-NOT bases. They also cover the 64-bit boundary, the 65-bit fallback, duplicate
+packed rows, and the independent 2,000-query multislice witness oracle. Two complete free-NOT excess-5 cores
+compare the exact layout result and completion metrics with stage B. The `comparator-02` witness is
+reconstructed at nine binary gates. The empty `exactly-2-of-5` layout result is provisional.
+
+The stage-C timing run is pending an idle machine. Start with `exactly-2-of-5`, `parity-5`,
+`threshold-6-4`, and `hypergraph-04`, which exercised substantial normalization work in stage B.
+Compare stage C directly with stage B before expanding the port to column grouping or canonical tie-breaking.
 
 ## Reproduction
 
@@ -175,9 +197,10 @@ python -m pytest experiments/regional_completion_check.py -q -k "multislice or c
 python experiments/native_differential.py random 2000 11
 python experiments/native_differential.py deadline
 python experiments/native_differential.py captured 11 2.0 logs/native_captured_replay.jsonl
-python experiments/native_differential.py layout 4 60 phase-first native-phase-first 11 "" logs/native_e4_phase_replay.jsonl
-python experiments/native_differential.py layout 5 60 phase-first native-phase-first 11 "" logs/native_e5_phase_replay.jsonl
-python experiments/native_differential.py layout 4 60 row-quotient native-row-quotient 11 "" logs/native_e4_row_replay.jsonl
+python experiments/native_differential.py layout 4 60 phase-first native-phase-first 11 - logs/native_e4_phase_replay.jsonl
+python experiments/native_differential.py layout 5 60 phase-first native-phase-first 11 - logs/native_e5_phase_replay.jsonl
+python experiments/native_differential.py layout 4 60 row-quotient native-row-quotient 11 - logs/native_e4_row_replay.jsonl
+python experiments/native_differential.py layout 5 60 native-phase-first native-phase-first-pack 4 'exactly-2-of-5,parity-5,threshold-6-4,hypergraph-04' logs/native_e5_pack_replay.jsonl
 python experiments/native_kernel_timing.py
 python experiments/native_differential.py startup
 python experiments/native_differential.py percy logs/native_percy_replay.jsonl

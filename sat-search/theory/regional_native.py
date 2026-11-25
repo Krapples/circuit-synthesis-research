@@ -15,6 +15,7 @@ Completion modes (ordered_quotient_core.make_completion), same decisions and wit
   'native-phase-first'    (= 'phase-first')   completion_native(adaptive=True): prelude, phase classes and every
                                               monotone local_blocks call in one native call per cache miss
   'native-a-phase-first'  stage A only: Python phase-first loop calling local_blocks_native per monotone call
+  'native-phase-first-pack'  stage B with native cache-key row packing (stage C)
 Build: & "sat-search\\native\\build_native.bat" (see sat-search/NOTES_NATIVE.md).
 """
 import os
@@ -22,6 +23,7 @@ import sys
 from collections import Counter
 
 from regional_block_completion import CompletionWorkLimit, indices, local_blocks
+from regional_obligation_cache import ObligationCache
 from two_sharing_core import ANY, tree
 
 _NATIVE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'native')
@@ -40,6 +42,16 @@ _MASK64 = (1 << 64) - 1
 
 def available():
     return _native is not None
+
+
+class NativePackedObligationCache(ObligationCache):
+    """Use bounded native row packing inside the Python canonicalization."""
+
+    @staticmethod
+    def _pack(rows, columns, members):
+        if len(rows) <= 64 and len(columns) <= 64:
+            return _native.pack_obligation_rows(rows, columns, members)
+        return ObligationCache._pack(rows, columns, members)
 
 
 def prelude(m, targets, signed):
