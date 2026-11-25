@@ -419,3 +419,73 @@ predictor than racing was not found.
 - `theory/archive/activity_port_bound.py`: local gains only, no whole-function strengthening.
 - Purely structural regional compatibility under unrestricted control is closed:
   `theory/signed_control_completion.py` shows the signed compatibility test is exact for that relaxation.
+
+## Provider-first layout projection
+
+The code in [layout_projection.py](theory/layout_projection.py) generalizes the
+ordered quotient layout enumerator. It chooses repeated primary inputs, the
+number of internal providers, and their recipient multiplicities before it
+places private primary groups. A partial placement is cut when the target
+cofactors at one fixed readable primary pattern require more states than the
+live internal wires can carry. A receiving region similarly needs at least
+enough input patterns to realize its distinct observable selector slices.
+For free NOTs the selector slices may be identified up to complement. The
+ordinary first-gate and multi-restriction excess bounds run before the
+fixed-layout solver. The stronger support-sensitive test stays optional.
+
+For a reduced core, a portless binary region would have a private cherry,
+which would give a raw pair module. Each normalized repeated internal region
+has at least two leaf occurrences. The connectivity generator exhausts
+ordered recipient multiplicities under those assumptions. An independent
+recipient enumerator agreed on five degree classes at excess four and five.
+All three projection checks passed on 161 concrete monotone and signed
+layouts. Small reduced monotone minima also matched independent enumeration
+of gate programs. Higher-excess layout exclusions are recorded as
+provisional. These checks cover the connectivity combinatorics and the tested
+filters within their scopes.
+
+On the six supplied monotone excess-three targets, the combined run used 117
+fixed-layout calls and took 4.34 seconds. The existing quotient solver took
+6.74 seconds including one timeout at the three-second cap. Projection alone
+used 203 calls and took 4.58 seconds. The unfiltered run made 6,561 calls on
+its completed jobs. The combined run returned three verified witnesses and
+three exhausted layout searches. [Matched replay](results/layout_projection_matched.jsonl)
+
+Ten frozen higher-excess budgets used a four-second cap per method.
+Projection found two witnesses and MapleChrono production SAT found four.
+The methods found five distinct witnesses across their union. The two
+newly closed intervals are:
+
+| Target | Prior interval | Verified projected upper | Independent checked lower |
+| --- | --- | --- | --- |
+| `graph-01` | [8, 9] | **8** in 0.764 s | 7 gates excluded, 4 proofs and 50 RUP steps |
+| `hypergraph-08` | [9, 13] | **9** in 1.418 s | 8 gates excluded, 4 proofs and 140 RUP steps |
+
+Both checked bounds used the independent lazy terminal encoding and all
+relevant reader shapes. The archived CNFs and traces were rechecked by both
+RUP checkers. The prior production exclusions agree. MapleChrono found the
+eight-gate `graph-01` witness in 2.083 s and timed out on `hypergraph-08`.
+Changing to internal-first did not close any of three selected construction
+timeouts. This suggests short conditional projection probes alongside SAT
+instead of replacing it at higher excess. The harder higher-excess budgets
+reached their caps, and this replay established no new higher-excess
+exclusions. [Higher budgets](results/layout_projection_higher.jsonl) ·
+[Proof index](results/layout_projection_checked_frontiers.jsonl) ·
+[Search order replay](results/layout_projection_order.jsonl)
+
+### Independent branch-and-bound work
+
+Branch-and-bound JSONL files now bind evidence to the exact graph, budget,
+seed, and colex scope. Legacy rows are retained and skipped when establishing
+a fresh scoped segment. A file with a different scope is rejected. An actual
+four-vertex path run resumed with its verified witness count and completed
+without re-solving. Reusing that file for a four-cycle was rejected before
+search. The worker also joins its stop timer before reusing the temporary
+path. The change applies to all branch-and-bound runs.
+
+```powershell
+python sat-search/experiments/layout_projection_check.py -v
+python sat-search/experiments/layout_projection_check.py --output fresh-higher.jsonl --seconds 4
+python sat-search/experiments/layout_projection_check.py --output fresh-matched.jsonl --matched --seconds 3
+python sat-search/verify/test_bnb.py -k resume_scope
+```

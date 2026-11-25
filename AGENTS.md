@@ -46,6 +46,8 @@ applicable checks before committing.
 | [RESEARCH_NOTES.md](RESEARCH_NOTES.md) | Current results, open endpoints, and links to the detailed records. |
 | [NOTES_SYNTHESIS_BENCH.md](sat-search/NOTES_SYNTHESIS_BENCH.md) and [NOTES_SYNTHESIS_FOLLOWUP.md](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md) | Frozen corpus, endpoint verification, sharing hardness, and regional certificate proofs. |
 | [NOTES_PORT_CERTIFICATES.md](sat-search/NOTES_PORT_CERTIFICATES.md) | Port ranks, provider eligibility, global capacity, known regressions, and negative ablations. |
+| [NOTES_COMPLETE_FRONTIER.md](sat-search/NOTES_COMPLETE_FRONTIER.md) | Complete-function FPT audit, counted NOTs, rank-tight certificates, typed ranks, and affine completion. |
+| [NOTES_SIGNED_MODULES.md](sat-search/NOTES_SIGNED_MODULES.md) | Module contraction, free-NOT core minima, ordered quotients, provider-first layouts, and branch-and-bound. |
 | [NOTES_L1343.md](sat-search/NOTES_L1343.md) | Fixed-prefix and cube-search work, with exact shard scope and surviving cube IDs. |
 | [sat-search/experiments](sat-search/experiments) | Research implementations, correctness references, and reproducible checks. |
 | [sat-search/results](sat-search/results) | Frozen targets, matched run records, witness circuits, and proof packets. |
@@ -71,7 +73,7 @@ certificate reconstruction, construction upper bounds, and hybrids with SAT. Aud
 separately from the prototypes that motivated them. Confirm a candidate with small independent
 enumeration or formal proof before making an asymptotic claim.
 
-Close the universal `rank(H) <= 2e` direction once the rank-tight family is confirmed. Revisit
+The guarded family closes the universal `rank(H) <= 2e` direction. Revisit
 sharing-only FPT for arbitrary partial labels only when a new restriction addresses the known
 hardness. Archive explicit enumeration work superseded by certificate completion. Resume
 provider matching, exact rectangle allocation, and capacity refinements when there is evidence

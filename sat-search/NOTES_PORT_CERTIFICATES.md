@@ -424,3 +424,35 @@ python sat-search/experiments/provider_capacity_check.py --benchmark fresh-capac
 [Four-input exact sweep](results/provider_capacity_four_inputs_exact.jsonl) ·
 [Weak SAT replay](results/provider_capacity_weak.jsonl) ·
 [Optional exact SAT replay](results/provider_capacity_exact.jsonl)
+
+## Allocating unknown outgoing capacity
+
+For an ordered layout with $r$ repeated providers, set $d_i=2+x_i$. The
+subset-clique certificates give $h(T)=\max(0,F(T)-2|T|)$ and the constraints
+$\sum_{i\in T}x_i\ge h(T)$. The deficit mode takes the largest individual
+constraint. The packing mode uses a subset DP to maximize the sum of deficits
+on pairwise disjoint sets in $O(3^r)$. Exact mode enumerates nonnegative vectors
+within the remaining overhead, checking all constraints. The bound on layout
+excess is $r+\sum_i x_i$ at the optimum of this relaxation.
+
+For $abc\lor bd\lor cd$ the three-region regression gives $F=(0,3,2,5)$.
+Unrestricted incoming-port counts permit excess two. Each allocation mode
+requires three. Synthetic overlapping constraints distinguish exact allocation
+from packing. An independent vector enumerator agreed on 200 small queries,
+and the typed/capacity tests were checked on 101 concrete circuits.
+
+`--capacityallocation` also checks complete small layouts when raising a
+whole-function lower bound. Empty regions remain in the enumeration. A size
+is excluded only if every eligible layout fails. The driver caps this stage
+at six primaries, checked excess at most five, and 6,000 layouts. The matched
+profile used a smaller 900-layout cap and checked the current lower endpoint.
+
+The 56-target comparison used the existing ordered formula, profile, exact
+port and provider bounds. Running the same layout enumeration without capacity
+allocation gave zero whole-target gains. Deficit raised three ordered
+bounds by one gate, on `hypergraph-07`, `hypergraph-18`, and `graph-01`.
+Independent evidence already covered all three new endpoints. Packing and
+exact allocation gave zero further whole-target gains. The reference setup
+took 0.191 s, structural layout screening 0.206 s, and allocation 0.226–0.228 s.
+This closes the follow-up experiment. Revisit larger allocation modes with
+evidence of new target bounds or a solver gain. [Results](results/regional_algebra_ablation.jsonl)
