@@ -1,0 +1,6 @@
+{"case": "graph-03", "contraction": 0, "excess": 4, "mode": "combined", "n": 7, "peak_bytes": 51478528, "seconds": 3.0, "status": "TIMEOUT", "target": "0xfffefffefffafffaffecffecffa0eca0"}
+{"case": "graph-03", "contraction": 0, "excess": 4, "mode": "support", "n": 7, "peak_bytes": 51589120, "seconds": 3.0, "status": "TIMEOUT", "target": "0xfffefffefffafffaffecffecffa0eca0"}
+{"case": "comparator-09", "contraction": 0, "excess": 5, "mode": "combined", "n": 7, "peak_bytes": 87502848, "seconds": 3.0, "status": "TIMEOUT", "target": "0xfeeefaa8faa8a000eccca000a000a000"}
+{"case": "comparator-09", "contraction": 0, "excess": 5, "mode": "support", "n": 7, "peak_bytes": 86753280, "seconds": 3.0, "status": "TIMEOUT", "target": "0xfeeefaa8faa8a000eccca000a000a000"}
+{"case": "complete-5", "contraction": 0, "excess": 4, "mode": "combined", "n": 5, "peak_bytes": 47321088, "seconds": 3.0, "status": "TIMEOUT", "target": "0xfffefee8"}
+{"case": "complete-5", "contraction": 0, "excess": 4, "mode": "support", "n": 5, "peak_bytes": 47255552, "seconds": 3.0, "status": "TIMEOUT", "target": "0xfffefee8"}

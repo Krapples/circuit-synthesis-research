@@ -433,6 +433,14 @@ For free NOTs the selector slices may be identified up to complement. The
 ordinary first-gate and multi-restriction excess bounds run before the
 fixed-layout solver. The stronger support-sensitive test stays optional.
 
+The restriction debit uses the cycle-rank identity for excess. Deleting
+fixed primary vertices of read counts $d_i$ leaves every remaining vertex
+connected to the output through a directed reader path. Such a path never
+passes through another primary. The deletion decreases cycle rank by
+$\sum_i(d_i-1)$. Constant propagation, identity contraction, and dead-cone
+removal cannot increase that rank. This justifies charging the repeated
+primary reads before the private groups are placed.
+
 For a reduced core, a portless binary region would have a private cherry,
 which would give a raw pair module. Each normalized repeated internal region
 has at least two leaf occurrences. The connectivity generator exhausts
@@ -466,12 +474,15 @@ relevant reader shapes. The archived CNFs and traces were rechecked by both
 RUP checkers. The prior production exclusions agree. MapleChrono found the
 eight-gate `graph-01` witness in 2.083 s and timed out on `hypergraph-08`.
 Changing to internal-first did not close any of three selected construction
-timeouts. This suggests short conditional projection probes alongside SAT
+timeouts. A separate support-sensitive replay on `graph-03`,
+`comparator-09`, and `complete-5` reached the three-second cap with or
+without the extra test. This suggests short conditional projection probes alongside SAT
 instead of replacing it at higher excess. The harder higher-excess budgets
 reached their caps, and this replay established no new higher-excess
 exclusions. [Higher budgets](results/layout_projection_higher.jsonl) ·
 [Proof index](results/layout_projection_checked_frontiers.jsonl) ·
-[Search order replay](results/layout_projection_order.jsonl)
+[Search order replay](results/layout_projection_order.jsonl) ·
+[Support-sensitive replay](results/layout_projection_support_probe.jsonl)
 
 ### Independent branch-and-bound work
 
