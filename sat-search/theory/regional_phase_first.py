@@ -159,3 +159,28 @@ if __name__=='__main__':
     import sys
     checks()
     if '--bench' in sys.argv:bench()
+
+
+# ---------------------------------------------------------------- production completion mode
+PRODUCTION_FLAGS = dict(port_first=True, witness_cover=True, row_quotient=True)
+PHASE_LABEL_CAP = 4096      # distinction clauses are quadratic in labelled rows; fall back above this
+
+
+def phase_rule(m, ports, targets):
+    """Activation rule (experiments/phase_first_production.py): phase-first unless the query is wide (m >= 4) with no
+    repeated provider, and only while the labelled table is small enough for the clause build."""
+    labels = sum(1 for t in targets if t != ANY) << m
+    repeats = len(ports) - len(set(ports))
+    return labels <= PHASE_LABEL_CAP and not (repeats == 0 and m >= 4)
+
+
+def adaptive_completion(m, ports, pats, targets, signed, stats=None, module_filter=True):
+    """Completion-solver contract of ordered_quotient_core.make_completion: signed queries passing phase_rule go to
+    phase-first over the production monotone solver; everything else goes to the production solver directly."""
+    from regional_block_completion import local_blocks
+    if signed and m + len(ports) > 0 and phase_rule(m, ports, targets):
+        if stats is not None:
+            stats['phase_first_calls'] += 1
+        mono = lambda mm, p, ps, ts: local_blocks(mm, p, ps, ts, False, stats, module_filter, **PRODUCTION_FLAGS)
+        return phase_first(m, ports, pats, targets, stats, mono)
+    return local_blocks(m, ports, pats, targets, signed, stats, module_filter, **PRODUCTION_FLAGS)

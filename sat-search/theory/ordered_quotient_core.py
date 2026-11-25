@@ -47,6 +47,10 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
                                 port_first=True, witness_cover=True, row_quotient=True)
 
         return ObligationCache(maxsize=cache_size, solver=solve)
+    if mode == 'phase-first':
+        from regional_phase_first import adaptive_completion   # opt-in: signed polarity classes, then monotone
+
+        return ObligationCache(maxsize=cache_size, solver=adaptive_completion)
     modes = {
         'blocks': dict(row_filter=False),
         'row-bounds': dict(endpoint_branches=False),

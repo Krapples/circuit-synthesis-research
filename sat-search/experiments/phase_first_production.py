@@ -13,8 +13,10 @@ and calls the same production solver on monotone recoded queries (regional_produ
             Workloads: captured queries, regional_cover_stress signed generated queries (small and large),
             regional_phase_extra_bench signed cases. Witnesses checked; decisions must agree.
             writes results/phase_first_replay.jsonl.
-Usage: python experiments/phase_first_production.py capture [workers] [seconds]
-       python experiments/phase_first_production.py replay [workers] [cap]"""
+Usage: python experiments/phase_first_production.py capture [workers] [seconds] [heldout]
+       python experiments/phase_first_production.py replay [workers] [cap] [heldout]
+The original replay (results/phase_first_replay.jsonl) used the pre-registration rule repeats >= 1 and labels <= 512
+for 'adaptive'; 'adaptive' now uses the frozen production rule regional_phase_first.phase_rule."""
 import json, os, sys, time
 from collections import Counter
 from multiprocessing import Pool
@@ -25,6 +27,13 @@ for d in ('', 'theory', 'experiments'):
 FREE_CORES = ('hypergraph-12', 'graph-01', 'comparator-07', 'hypergraph-08', 'hypergraph-03', 'hypergraph-19',
               'random-monotone-10', 'graph-03', 'comparator-02', 'hypergraph-21', 'mux-4-to-1', 'cycle-5',
               'graph-02', 'hypergraph-23', 'hypergraph-14', 'random-monotone-04')
+
+
+HELDOUT_CORES = ('comparator-04', 'comparator-05', 'comparator-08', 'comparator-09', 'complete-5', 'complete-6',
+                 'exactly-2-of-4', 'exactly-2-of-5', 'exactly-3-of-6', 'parity-4', 'parity-5', 'threshold-5-3',
+                 'threshold-6-4', 'hypergraph-04', 'hypergraph-05', 'hypergraph-09', 'hypergraph-10', 'hypergraph-15',
+                 'hypergraph-17', 'hypergraph-18', 'hypergraph-20', 'random-monotone-05', 'random-monotone-08',
+                 'threshold-4-3', 'complete-4', 'hypergraph-07')
 
 
 def features(q):
@@ -62,7 +71,7 @@ def capture_job(a):
         if kind == 'e3':
             solve3(m, core, True, completion=rec)
         else:
-            search_exact(m, core, 4, True, completion=rec)
+            search_exact(m, core, int(kind[1:]), True, completion=rec)
         return {'status': 'done'}
     r = timed(seconds, job, lambda: {})
     return name, kind, m, r['status'], [list(k) + [True] for k in seen]
@@ -106,7 +115,8 @@ def run_mode(mode, q, cap):
         if s == 'timeout':
             s, w, _ = go(base, cap - dt)
     elif mode == 'adaptive':
-        s, w, _ = go(phase if adaptive_rule(features(q)) else base, cap)
+        from regional_phase_first import phase_rule
+        s, w, _ = go(phase if phase_rule(m, ports, targets) else base, cap)
     if w is not None:
         check_tree(w, m, ports, pats, targets, True)
     return s, round(time.perf_counter() - t0, 4), st.get('rec', 0)
@@ -118,7 +128,8 @@ MODES = ('base', 'phase', 'lift-phase', 'portfolio', 'adaptive')
 def replay_job(a):
     src, idx, q, cap = a
     q = (q[0], tuple(q[1]), tuple(q[2]), tuple(q[3]), True)
-    out = dict(source=src, idx=idx, **features(q), rule=adaptive_rule(features(q)))
+    from regional_phase_first import phase_rule
+    out = dict(source=src, idx=idx, **features(q), rule=phase_rule(q[0], q[1], q[3]))
     for mode in MODES:
         out[mode] = run_mode(mode, q, cap)
     dec = {v[0] for v in (out[k] for k in MODES) if v[0] != 'timeout'}
@@ -126,12 +137,14 @@ def replay_job(a):
     return out
 
 
-def workloads():
+def workloads(held=False):
     W = []
-    for l in open(os.path.join(HERE, 'results', 'phase_first_captured.jsonl')):
+    for l in open(os.path.join(HERE, 'results', 'phase_first_captured_heldout.jsonl' if held else 'phase_first_captured.jsonl')):
         r = json.loads(l)
         for i, q in enumerate(r['queries']):
             W.append((f"captured:{r['case']}:{r['kind']}", i, q))
+    if held:
+        return W
     from regional_cover_stress import instances
     for large in (False, True):
         for j, q, _ in instances(large):
@@ -148,8 +161,12 @@ if __name__ == '__main__':
     workers = int(sys.argv[2]) if len(sys.argv) > 2 else 16
     if what == 'capture':
         seconds = float(sys.argv[3]) if len(sys.argv) > 3 else 60
-        jobs = [(nm, k, seconds) for nm in FREE_CORES for k in ('e3', 'e4')]
-        out = open(os.path.join(HERE, 'results', 'phase_first_captured.jsonl'), 'w', encoding='utf-8')
+        held = len(sys.argv) > 4 and sys.argv[4] == 'heldout'
+        if held:   # cores not used to choose the rule (e3, e4) and the original cores at excess 5
+            jobs = [(nm, k, seconds) for nm in HELDOUT_CORES for k in ('e3', 'e4')] + [(nm, 'e5', seconds) for nm in FREE_CORES]
+        else:
+            jobs = [(nm, k, seconds) for nm in FREE_CORES for k in ('e3', 'e4')]
+        out = open(os.path.join(HERE, 'results', 'phase_first_captured_heldout.jsonl' if held else 'phase_first_captured.jsonl'), 'w', encoding='utf-8')
         with Pool(workers, maxtasksperchild=1) as p:
             for name, kind, m, status, qs in p.imap_unordered(capture_job, jobs):
                 # keep at most 60 distinct queries per run, preferring port-heavy ones
@@ -159,8 +176,9 @@ if __name__ == '__main__':
                 print(f'{name:20} {kind} m={m} {status} captured {len(qs)}', flush=True)
     else:
         cap = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
-        W = workloads(); print(f'{len(W)} queries x {len(MODES)} modes, cap {cap}s, {workers} workers', flush=True)
-        out = open(os.path.join(HERE, 'results', 'phase_first_replay.jsonl'), 'w', encoding='utf-8')
+        held = len(sys.argv) > 4 and sys.argv[4] == 'heldout'
+        W = workloads(held); print(f'{len(W)} queries x {len(MODES)} modes, cap {cap}s, {workers} workers', flush=True)
+        out = open(os.path.join(HERE, 'results', 'phase_first_replay_heldout.jsonl' if held else 'phase_first_replay.jsonl'), 'w', encoding='utf-8')
         agg = Counter(); k = 0
         with Pool(workers) as p:
             for r in p.imap_unordered(replay_job, [(s, i, q, cap) for s, i, q in W], chunksize=2):

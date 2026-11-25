@@ -441,8 +441,28 @@ witnesses checked, all decisions agree). Captured queries are the distinct signe
 - The sequential portfolio is dominated: splitting the cap loses decisions that phase-first reaches alone.
 - Labelled table sizes stayed <= 1,024 here, so the quadratic distinction-clause build was never exercised; keep a
   label cap in any integration.
-- Status: optional backend. Not wired into `make_completion` (owned by the regional work in progress); the evidence
-  supports adding it as an opt-in mode with the rule above.
+- Status: **opt-in completion mode `phase-first`** (`make_completion('phase-first')`, `regional_phase_first.
+  adaptive_completion`): signed queries passing `phase_rule` (not (no repeated provider and m >= 4), labelled table
+  <= 4,096) go to phase-first over the production monotone solver; everything else goes to production `local_blocks`.
+  Added to the 2,000-query multislice oracle test in `experiments/regional_completion_check.py` (passes).
+- **Held-out validation of the frozen rule** (`results/phase_first_captured_heldout.jsonl`, 547 signed queries from 26
+  cores not used to choose the rule at excess 3-4, plus the original cores at excess 5; `results/phase_first_replay_heldout.jsonl`):
+  production 528/547 in 14.3 s, `phase-first` rule 546/547 in 11.9 s (always-phase 546 / 12.5 s, portfolio 531 /
+  16.0 s); 18 gained, 0 lost.
+- **End to end** (`experiments/phase_first_layout.py`, every solve in a fresh process, baseline 120 s, phase-first
+  early-stopped at max(10 s, 1.5x baseline); decisions agree on every pair, witnesses rebuilt and checked):
+
+  | Free-NOT layout search, 48 corpus cores | production `row-quotient` | `phase-first` |
+  | --- | --- | --- |
+  | solve3 (excess <= 3) | 48 decided, 12.0 s | 48 decided, 13.1 s |
+  | search_exact excess 4 | 41 decided (7 timeouts at 120 s), 70.3 s on the 41 | **48 decided**, 21.9 s on the 41 |
+
+  At excess 4 the seven newly finished searches are comparator-02, -04, -08, complete-5, exactly-2-of-4, parity-4
+  (all < 3 s) and random-monotone-10 (27 s). Witness searches also speed up (complete-4 4.65 s -> 0.19 s,
+  hypergraph-21 4.41 s -> 0.17 s). Empty excess-4 results are provisional under `search_exact`'s contract, so no
+  bound is claimed from them. At excess 3 the searches are dominated by cheap cached queries and phase-first adds ~9%.
+- Recommendation: use `phase-first` for free-NOT searches at excess >= 4; keep `row-quotient` as the default until
+  the regional owners decide.
 
 Singleton-port promotion (`theory/regional_axis_lift.py`) is kept as an optional cheap reduction: it alone changed
 no decision, and with phase-first it added one (phase-extra 34 vs 33).
