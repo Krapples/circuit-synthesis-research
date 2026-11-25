@@ -1982,6 +1982,29 @@ def first_gate_lb(n, masks, monotone):
     return mono_lower(len(ess), g) if monotone else fg_lower(len(ess), g, 1)
 
 
+@lru_cache(maxsize=64)
+def pair_irreducible(n, masks):
+    """True if the target has no raw AND/OR input module (theory/module_contraction.contract_pair)."""
+    theory = os.path.join(HERE, 'theory')
+    if theory not in sys.path:
+        sys.path.append(theory)
+    from module_contraction import contract_pair
+    f = sum(1 << x for x in range(1 << n) if any(x & m == m for m in masks))
+    return contract_pair(n, f) is None
+
+
+def add_irreducible_rules(n, G, pool, select, clauses):
+    """Pair-irreducible target: a gate whose two operands are primary inputs x_i, x_k (i < k) cannot be the
+    only reader of both, since then f would depend on them only through AND/OR(x_i, x_k), a raw module.
+    Valid for every circuit computing the target (any pinned prefix) in both bases. Needs --readonce
+    (the ('repeat', i) variables)."""
+    output = n + G - 1
+    for j in range(n, output + 1):
+        for k in range(n):
+            for i in range(k):
+                clauses.append([-select[j, 0][i], -select[j, 1][k], pool.id(('repeat', i)), pool.id(('repeat', k))])
+
+
 def run_cube(args):
     n, masks, G, solver_name, cube, fanout, readonce = args[:7]
     flags = args[7] if len(args) > 7 else {}
@@ -2117,6 +2140,12 @@ def run_cube(args):
             add_fanout_rules(n, masks, ops, select, clauses)
         if readonce:
             add_readonce_rules(n, G, masks, pool, ops, select, clauses, parity=flags.get('parity', False))
+        if flags.get('irreducible'):
+            if not readonce:
+                raise ValueError('--irreducible needs --readonce')
+            if not pair_irreducible(n, tuple(sorted(masks))):
+                raise ValueError('--irreducible requires a target without raw AND/OR input modules')
+            add_irreducible_rules(n, G, pool, select, clauses)
         if flags.get('minimal'):
             add_minimality_rules(n, G, ops, select, clauses)
         if flags.get('closedcone') and readonce:
@@ -2512,6 +2541,8 @@ def main():
                     help='with --portcertrank: include all certificates in the output-region bound')
     ap.add_argument('--portproviders', action='store_true',
                     help='require residual pairs to have an eligible earlier provider (monotone)')
+    ap.add_argument('--irreducible', action='store_true',
+                    help='with --readonce, pair-irreducible targets: a gate on two inputs shares one of them')
     ap.add_argument('--firstgate', action='store_true',
                     help='first-gate elimination lower bound (restrictions and first-gate absorption; n <= 9)')
     ap.add_argument('--signedregions', action='store_true',
@@ -2667,7 +2698,7 @@ def main():
                                  colorbounds=a.colorbounds, colorbudget=a.colorbudget, sharecolor=a.sharecolor,
                                  lostreader=a.lostreader, activecolor=a.activecolor, colorzero=a.colorzero,
                                  isolatedcolor=a.isolatedcolor,
-                                 orderedports=a.orderedports, signedregions=a.signedregions, firstgate=a.firstgate,
+                                 orderedports=a.orderedports, signedregions=a.signedregions, firstgate=a.firstgate, irreducible=a.irreducible,
                                  portcosts=costs))
                 for c in cubes]):
             done += 1; times.append(dt)

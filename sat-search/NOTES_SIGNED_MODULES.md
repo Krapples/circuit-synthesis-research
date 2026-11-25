@@ -238,6 +238,41 @@ NOT, or joint total through activation variables.
   children of the L-meta-1343 size-19 survivors.
 - **Status:** prototype. Not yet run on the survivors and not yet differential-tested.
 
+## Pair-irreducible cores (`theory/irreducible_region_fpt.py`, `cube_search --irreducible`)
+
+After module contraction, a core has no raw AND/OR input module. Consequence: a gate whose two operands
+are primary inputs cannot be the only reader of both. Otherwise f would depend on them only through that
+gate, which would be a module. This is a semantic property of every circuit computing the core, so it also
+holds with pinned prefixes.
+
+- **FPT form** (every regional subtree with two or more leaves contains a port): 153 queries agree;
+  recursive local calls fall 34% (37,883 → 25,095) and time from 0.85 s to 0.65 s (1.3×).
+- **SAT form** (`--irreducible`: ¬sel(j, left = i) ∨ ¬sel(j, right = k) ∨ R_i ∨ R_k; needs `--readonce`;
+  refuses targets that have a module):
+  - differential check: 748 jobs, 0 mismatches;
+  - ablation on pair-irreducible instances: conflicts −6% in the general basis, but time +5%; with
+    `--fast`, slower.
+  - **Decision:** a correct but redundant SAT constraint. Opt-in, not recommended, not allowlisted.
+
+## Saturated monotone cuts (`theory/saturated_frontier.py`)
+
+Deferred. Its own test needs `monotone_frontier_order.py` and `backward_column_synthesis.py`, which are not
+in the repository. Its bounds apply to circuits that respect a chosen cut; they are not whole-function bounds
+unless a cut must be respected.
+
+## Branch-and-bound on the L-meta-1343 size-19 survivors (validation, in progress)
+
+`experiments/l1343_bnb.py` runs `bnb.py` from each survivor's prefix. Survivors fully excluded so far, all
+analytically with no SAT call (rule-dependent: partial ordered and forced-repeat bounds):
+
+| Survivor | Result |
+| --- | --- |
+| b:1-1-4 | 323 analytical nodes; one child expanded one level deeper, all of its children closed |
+| b:1-1-8 | 124 analytical nodes |
+| b:1-2-9 | 106 analytical nodes |
+
+Trees are in `results/bnb_l1343/`.
+
 ## Archived and closed directions
 
 - `theory/archive/activity_port_bound.py`: local gains only, no whole-function strengthening.

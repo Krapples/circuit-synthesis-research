@@ -111,7 +111,8 @@ if __name__ == '__main__':
             if not r or r['minimum'] is None or r['minimum'] < 2:
                 continue
             for name, spec in configs.items():
-                if b not in spec['bases'] or (spec['graph'] and kind != 'graph'):
+                if b not in spec['bases'] or (spec['graph'] and kind != 'graph') or not dif.meets(spec, n, t)                         or (a.only and any(dif.configs()[o].get('requires') for o in a.only.split(','))
+                            and not cs.pair_irreducible(n, tuple(sorted(t)))):
                     continue
                 for G, expect in ((r['minimum'] - 1, 'UNSAT'), (r['minimum'], 'SAT')):
                     jobs.append((name, spec, n, t, kind, b, G, expect))

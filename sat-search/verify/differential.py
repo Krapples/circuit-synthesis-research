@@ -65,6 +65,13 @@ def instances(quick=False):
     return out
 
 
+def meets(spec, n, terms):
+    """Instance prerequisites of a configuration (e.g. pair-irreducible targets for --irreducible)."""
+    if spec.get('requires') == 'pair-irreducible':
+        return cs.pair_irreducible(n, tuple(sorted(terms)))
+    return True
+
+
 def is_graph(terms):
     return all(t.bit_count() == 2 for t in terms)
 
@@ -144,17 +151,21 @@ def configs(terms_example=None):
     add('minimal', both, ('minimal',))
     add('signedregions', both, ('signedregions',))
     add('firstgate', both, ('firstgate',))
+    add('irreducible', both, ('irreducible',), readonce=True)
+    C['irreducible']['requires'] = 'pair-irreducible'
     fast = ('sens', 'units', 'usens', 'bypass', 'elim', 'elimclosure', 'signeddom', 'recursivebounds', 'notbypass',
             'recclosure', 'identifybounds', 'fanoutelim', 'pairro', 'colorbounds', 'sharecolor', 'colorbudget')
     add('fast', both, fast, fanout=True, readonce=True, symmetry=True, graph=True)
     for name in ('cert', 'typed', 'frontier', 'partialordered', 'partialrepeat', 'partialmultiplicity', 'minimal',
                  'parity', 'closedcone', 'outdec', 'bottleneck', 'strongbounds', 'readersens', 'readerbudget',
                  'activecolor', 'colorzero', 'isolatedcolor', 'lostreader', 'elimlink', 'elimbypass', 'orderedports',
-                 'portcert_rank', 'signedregions', 'firstgate'):
+                 'portcert_rank', 'signedregions', 'firstgate', 'irreducible'):
         base = C[name]
         bases = tuple(b for b in base['bases'] if b in C['fast']['bases'])
         add(f'fast+{name}', bases, tuple(set(fast) | set(base['flags'])), fanout=True, readonce=True,
             symmetry=True, ports=base['ports'], graph=True)
+        if base.get('requires'):
+            C[f'fast+{name}']['requires'] = base['requires']
     return C
 
 
@@ -429,7 +440,7 @@ if __name__ == '__main__':
     jobs = []
     for n, t, kind, b, P, MP in pref:
         for name, spec in C.items():
-            if b in spec['bases'] and not spec['flags'].get('minimal'):
+            if b in spec['bases'] and not spec['flags'].get('minimal') and meets(spec, n, t):
                 if a.points == 'base':
                     jobs.append((name, spec, n, t, kind, b, MP, P, 'SAT'))
                     if MP - 1 >= len(P):
@@ -448,7 +459,7 @@ if __name__ == '__main__':
             if M is None:
                 continue
             for name, spec in C.items():
-                if b not in spec['bases']:
+                if b not in spec['bases'] or not meets(spec, n, t):
                     continue
                 if spec['graph'] and not is_graph(t) and name != 'fast' and not name.startswith('fast+'):
                     pass   # graph-specific rules still run on non-graphs: crashes/unsoundness are findings
