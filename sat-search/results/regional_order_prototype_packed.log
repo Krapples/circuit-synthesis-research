@@ -1,0 +1,8 @@
+exhaustive (f,S) cases 2120
+4 cases 200 reference 0.004419 packed 0.000566 speedup 7.81
+5 cases 200 reference 0.008372 packed 0.000896 speedup 9.35
+6 cases 200 reference 0.017196 packed 0.001083 speedup 15.88
+7 cases 200 reference 0.038598 packed 0.00123 speedup 31.37
+8 cases 200 reference 0.086835 packed 0.001425 speedup 60.95
+9 cases 200 reference 0.190605 packed 0.001726 speedup 110.43
+10 cases 200 reference 0.438004 packed 0.002172 speedup 201.67

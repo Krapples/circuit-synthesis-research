@@ -806,3 +806,148 @@ Get-ChildItem sat-search/results/regional_cover_proofs -Filter '*.cnf.gz' | ForE
     python sat-search/experiments/certify_synthesis.py --verify $_.FullName $trace
 }
 ```
+
+## Packed regional tables and ordered-block propagation
+
+[PackedTables](theory/packed_regional_tables.py) now supplies support,
+quantification, and exposed-cofactor checks to the existing regional block
+solver. Tables retain their original coordinates. Swapping the two bit
+halves of an axis and joining with OR or AND performs a single existential
+or universal elimination. Support compares the same halves by XOR. The
+scope is the exact private-variable slice representation used by monotone
+and free-NOT regional completion. The existing per-query memo tables remain
+bounded and the exact reconstruction checks still run.
+
+To find the common nonconstant cofactor on a set of private variables, first
+quantify those variables both ways. The difference marks precisely the
+outside assignments whose cofactor is nonconstant. Existentially eliminating
+the marked outside assignments gives a candidate cofactor. Comparing its
+lifted table against the original on all marked rows detects every disagreement.
+This handles zero, one, and multiple active outside slices without extracting
+their individual tables.
+
+The opt-in `ordered-block` mode extends port-first propagation. For a
+nonabsorbing exact slice, quantifying the other child's private variables
+recovers the owning child's table. For AND, existential quantification works
+because the other child can attain 1. For OR, universal quantification works
+because the other child can attain 0. Quantifying the rest of the owning
+child then gives the required function for a connected block. Quantification
+preserves pointwise order. If a required block table decreases between two
+provider patterns in the monotone basis, its child must read a provider
+that changes from one to zero. In the free-NOT basis, unequal tables require
+at least one differing provider. Each such pair supplies a necessary mask
+that must intersect the owning child's providers. These masks rule out a
+block placement but leave the exact split and completion checks in place.
+
+The supplied primitive script checked 3,520 function/subset pairs and measured
+7.8× at four inputs and 202× at ten against its assignment reference. The
+supplied regional `--bench` replay used the earlier prototype companion
+API. Across its three eight-job batches, the baseline median was 0.0782 s,
+the packed-only median was 0.0791 s, and ordered plus packed took 0.0832 s.
+The ordered check reduced its partition count from 354 to 342. These very
+short runs did not show a full-layout speedup. The integrated packed kernel
+passed 3,522 primitive checks, including the zero-primary cases, and the
+optional solver matched independent formula-column enumeration on 2,000
+queries. [Primitive replay](results/regional_order_prototype_packed.log) ·
+[Regional prototype replay](results/regional_order_prototype_completion.log)
+
+### Integrated profiling and higher-excess ablation
+
+The comparison kept the same integrated port-first and witness-guided search,
+input-symmetry setting, and bounded caches. The old table implementation was
+injected only as a benchmark reference. The new captures are the original
+13-gate `comparator-09` endpoint and the nine-gate `comparator-04` reduced
+core. They include a 13-occurrence, 64-row query and a 10-occurrence, 32-row
+port-only query. The older captured queries contain up to four private
+variables. The 24 generated queries exercise six, eight, and ten private
+variables, both bases, sparse IDs, and repeated occurrences.
+
+| Matched workload | Legacy tables | Packed tables | Packed with ordered-block |
+| --- | ---: | ---: | ---: |
+| 23 completed wide queries | 0.476 s | 0.206 s | 0.226 s |
+| Eight ten-input queries within that set | 0.314 s | 0.088 s | 0.090 s |
+| 12 completed captured queries, profiled | 1.454 s | 1.454 s | 1.647 s |
+| Five higher-excess layout jobs including cap costs | 12.577 s | 12.392 s | 12.811 s |
+
+Each method timed out on the same generated eight-input signed query and
+the same captured port-only query. On the 23 completed wide queries, a
+separate cProfile run attributed 0.608 s to exposed-cofactor calls and their
+callees before packing, and 0.006 s after packing. The completed searches
+visited the same 1,916 recursive states. On the narrow captured queries,
+cofactor work was already about 0.0024 s in the profiled legacy run.
+Partition generation and absorbing-row branching accounted for most of the
+profiled work. Peak working set over the wide workers was 39.1 MiB with
+legacy tables and 39.0 MiB with packed tables. Peak over the five layout
+workers was 50.9 and 50.8 MiB, respectively.
+
+Ordered-block filtering preserved all completed verdicts. It reduced
+`comparator-02` partition checks from 1,793 to 1,732 but increased the
+measured time from 0.134 to 0.139 s. On `random-monotone-10`, packed
+completion exhausted the allocated layouts in 3.643 s and the ordered
+variant timed out at four seconds. The rule stays optional. Packed tables
+remain active in the regional block solver. Neither change altered a
+certified interval. [New captures](results/regional_order_captured.jsonl) ·
+[Captured profiles](results/regional_order_isolated.jsonl) ·
+[Wide results](results/regional_order_wide.jsonl) ·
+[Wide profiles](results/regional_order_wide_profile.jsonl) ·
+[Layout replay](results/regional_order_layout.jsonl)
+
+There is also a limitation specific to the integrated free-NOT checker.
+Nonconstant child obligations are quantifier projections of learned
+read-once slices. Quantifying a unate read-once tree fixes the eliminated
+literals to their extrema, preserving polarity and the LCA operations of
+surviving leaves. Two block projections on the same support therefore have
+the same cotree under the already learned compatible LCA constraints.
+Constant projections on nonabsorbing slices can only be neutral. Thus
+signed equality on a block supplies the same placement restriction as
+support equality in this solver. The monotone directional masks can still
+add restrictions when projected patterns are comparable and distinct.
+
+### Quotienting recursive row obligations
+
+The profiles motivated an independent optional `row-quotient` mode. A
+subtree's function sees only the providers whose occurrences it owns.
+Equal projected patterns with conflicting exact tables are impossible.
+Equal patterns with equal tables share one obligation, retaining an
+original row index for slice-specific checks. In the monotone basis at
+fixed primary assignments, a zero at a larger provider pattern implies
+zero at a smaller pattern. A one at a smaller pattern implies one at a
+larger pattern. Keep the maximal constant-zero and minimal constant-one
+patterns. These are equivalent constraints for the candidate monotone
+subtree. Free-NOT uses equality alone. Canonicalization runs before the
+recursive memo lookup with bounded caches and keeps the same pool of
+allocated leaves. The variant also matched the 2,000 independent queries.
+
+| Focused replay | Packed | Packed with row quotient |
+| --- | ---: | ---: |
+| `comparator-04` port-only local query | 2 s timeout | UNSAT in 0.383 s |
+| `comparator-04` nine-gate reduced core | 4 s timeout | Layout exhausted in 2.056 s |
+| `comparator-02` nine-gate witness | 0.134 s | 0.075 s |
+| `comparator-09` open 13-gate budget | 4 s timeout | 4 s timeout |
+
+The port-only local query used 1,504 recursive states after quotienting,
+versus 11,565 observed before the packed baseline reached its two-second
+cap. The `comparator-04` exclusion is an additional completed layout job.
+Its reduced core costs two fewer gates than the original, whose exact
+12-gate monotone minimum was already certified. Whole-layout peak working
+set rose to 53.6 MiB in the row-quotient replay, which completed more work.
+The same generated signed outlier still reached its cap. The optional
+row quotient gives the largest gain when a region has many provider rows
+and few private variables. The 13-gate `comparator-09` budget remains open.
+[Focused local replay](results/regional_order_row_quotient.jsonl) ·
+[Layout replay](results/regional_order_row_layout.jsonl) ·
+[Wide replay](results/regional_order_row_wide.jsonl)
+
+```powershell
+python sat-search/experiments/regional_order_check.py -v
+python sat-search/experiments/regional_completion_check.py -v
+python sat-search/experiments/layout_projection_check.py -v
+python sat-search/experiments/regional_order_check.py --bench --dataset capture --seconds 2 --output fresh-order-capture.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset captured --source sat-search/results/regional_cover_captured.jsonl --source fresh-order-capture.jsonl --seconds 1 --profile --output fresh-order-isolated.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset wide --seconds 1 --output fresh-order-wide.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset wide --methods legacy packed --seconds 1 --profile --output fresh-order-wide-profile.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset layout --seconds 4 --output fresh-order-layout.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset captured --source fresh-order-capture.jsonl --methods packed quotient --seconds 2 --output fresh-row-local.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset layout --methods quotient --seconds 4 --output fresh-row-layout.jsonl
+python sat-search/experiments/regional_order_check.py --bench --dataset wide --methods quotient --seconds 1 --output fresh-row-wide.jsonl
+```

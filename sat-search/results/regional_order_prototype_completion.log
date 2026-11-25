@@ -1,0 +1,20 @@
+baseline
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.3337289000628516
+order
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.17188140004873276
+bits
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.163841100060381
+combined
+oracle {'queries': 2000, 'yes': 802} cache CacheInfo(hits=1428, misses=572, maxsize=50000, currsize=572) seconds 0.1690346000250429
+0 baseline 0.0944 {'queries': 219, 'local': 75, 'rec': 464, 'candidate_splits': 354, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4}
+0 order 0.0857 {'queries': 219, 'local': 75, 'rec': 463, 'candidate_splits': 342, 'partitions': 342, 'cover_nodes': 348, 'new_block_forces': 168}
+0 bits 0.0791 {'queries': 219, 'local': 75, 'rec': 464, 'candidate_splits': 354, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4}
+0 combined 0.0837 {'queries': 219, 'local': 75, 'rec': 463, 'candidate_splits': 342, 'partitions': 342, 'cover_nodes': 348, 'new_block_forces': 168}
+1 combined 0.0832 {'queries': 219, 'local': 75, 'rec': 463, 'candidate_splits': 342, 'partitions': 342, 'cover_nodes': 348, 'new_block_forces': 168}
+1 bits 0.0842 {'queries': 219, 'local': 75, 'rec': 464, 'candidate_splits': 354, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4}
+1 order 0.0854 {'queries': 219, 'local': 75, 'rec': 463, 'candidate_splits': 342, 'partitions': 342, 'cover_nodes': 348, 'new_block_forces': 168}
+1 baseline 0.0782 {'queries': 219, 'local': 75, 'rec': 464, 'candidate_splits': 354, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4}
+2 baseline 0.0779 {'queries': 219, 'local': 75, 'rec': 464, 'candidate_splits': 354, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4}
+2 order 0.0842 {'queries': 219, 'local': 75, 'rec': 463, 'candidate_splits': 342, 'partitions': 342, 'cover_nodes': 348, 'new_block_forces': 168}
+2 bits 0.0787 {'queries': 219, 'local': 75, 'rec': 464, 'candidate_splits': 354, 'partitions': 354, 'cover_nodes': 353, 'row_reject': 4}
+2 combined 0.0817 {'queries': 219, 'local': 75, 'rec': 463, 'candidate_splits': 342, 'partitions': 342, 'cover_nodes': 348, 'new_block_forces': 168}
