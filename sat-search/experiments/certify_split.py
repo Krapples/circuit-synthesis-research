@@ -57,6 +57,11 @@ if __name__ == '__main__':
         r = json.loads(line)
         if not r.get('partial') and r.get('upper') is not None and r['total'] >= r['upper'] > r['best_prior']:
             targets.setdefault((r['case'], 'general'), r['upper'])
+    # NOT-enabled intervals closed by a verified monotone witness plus the signed/first-gate lower bounds
+    # (experiments/skeleton_not_bench.py analysis, 2026-11-24): certify the lower bound independently
+    for key, M in {('hypergraph-22', 'general'): 7, ('graph-02', 'general'): 8, ('cycle-5', 'general'): 7,
+                   ('random-monotone-09', 'general'): 8}.items():
+        targets.setdefault(key, M)
     done = set()
     path = os.path.join(HERE, 'results', 'certified_exclusions.jsonl')
     if os.path.exists(path):
@@ -64,6 +69,13 @@ if __name__ == '__main__':
             r = json.loads(line)
             if r['status'] == 'CERTIFIED':
                 done.add((r['case'], r['basis'], r['G']))
+    piece_path = os.path.join(HERE, 'results', 'certified_pieces.jsonl')
+    piece_done = {}
+    if os.path.exists(piece_path):
+        for line in open(piece_path, encoding='utf-8'):
+            r = json.loads(line)
+            if r['status'] in ('checked_unsat', 'SAT'):
+                piece_done[(r['case'], r['basis'], r['G'], tuple(r['gate']))] = (r['status'], r['seconds'])
     jobs, meta = [], {}
     for name, fam, n0, f0 in cases():
         n, f, _ = restrict_essential(n0, f0)
@@ -75,10 +87,12 @@ if __name__ == '__main__':
                 if G < n - 1 or (name, basis, G) in done:
                     continue
                 gates = first_gates(n, basis)
-                meta[(name, basis, G)] = dict(n=n, pieces=len(gates), results={})
-                jobs += [(name, basis, n, f, G, g, seconds) for g in gates]
-    # hardest (largest n, largest G) first so the long tail starts early
-    jobs.sort(key=lambda j: (-j[2], -j[4]))
+                res = {g: piece_done[(name, basis, G, g)] for g in gates if (name, basis, G, g) in piece_done}
+                meta[(name, basis, G)] = dict(n=n, pieces=len(gates), results=res)
+                jobs += [(name, basis, n, f, G, g, seconds) for g in gates if g not in res]
+    # easiest (smallest n, smallest G) first so certified results arrive early; pieces persist individually
+    jobs.sort(key=lambda j: (j[2], j[4]))
+    pieces_out = open(piece_path, 'a', encoding='utf-8')
     print(f'{len(meta)} exclusions, {len(jobs)} first-gate pieces, {workers} workers', flush=True)
     out = open(path, 'a', encoding='utf-8')
     t0 = time.time()
@@ -87,6 +101,9 @@ if __name__ == '__main__':
             name, basis, n, f, G, gate, _ = job
             m = meta[(name, basis, G)]
             m['results'][gate] = (status, dt)
+            pieces_out.write(json.dumps(dict(case=name, basis=basis, G=G, gate=list(gate), status=status,
+                                             seconds=dt, proof_steps=extra if status == 'checked_unsat' else None)) + chr(10))
+            pieces_out.flush()
             if status == 'SAT':
                 print(f'!!! {name} {basis} size {G}: piece {gate} SAT -> minimum claim contradicted: {extra}', flush=True)
             if len(m['results']) == m['pieces']:

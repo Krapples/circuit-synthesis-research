@@ -86,8 +86,13 @@ The user's current research queue, in order:
     feedback.
   - Size pools at 11 workers, up to 22 in total. Never wrap a Pool in `timeout` (it orphans workers). Stop
     jobs by task ID, never by process name.
-  - On Windows, stopping a task kills the bash wrapper but can leave its Python child running. After
-    every stop, list Python processes and kill leftovers of your own by explicit PID.
+  - On Windows, stopping a task kills the bash wrapper but can leave its Python child running, and
+    killing a pool parent leaves its `spawn_main` workers alive. After every stop, list Python processes
+    (filter workers on `parent_pid=<pid>`) and kill your own leftovers by explicit PID.
+  - PowerShell output lines end in ``. Pipe through `tr -d ''` before `while read p; do taskkill
+    //PID $p ...`, or every kill silently fails.
+  - Keep about 22 threads busy. Split single-threaded work: one worker per case, or split an exact-G
+    exclusion by first gate.
 - **Guard.** `cube_search.py` refuses untested rule combinations. Harnesses pass `--allow-unverified`.
   Regenerate the allowlist with `python verify/inventory.py && python verify/make_allowlist.py` after
   adding coverage.
@@ -122,16 +127,22 @@ The user's current research queue, in order:
 
 ## Jobs running at last update
 
-- `experiments/certify_split.py 18 3600 8`: 34 exclusions (M−1, M−2 for every new minimum) split into 1,326
-  first-gate pieces, each with a RUP-checked proof → `results/certified_exclusions.jsonl`.
-- `experiments/module_core_minima.py`: parallel, appending; 3 cases left (random-monotone-10,
-  comparator-04, comparator-10).
-- `experiments/module_fpt_bench.py 5 5` → `results/module_fpt_bench.jsonl`.
-- `verify/differential.py --only firstgate,...` and `verify/cli_differential.py --only firstgate,...`:
-  targeted check of `--firstgate`, whose patch is staged and applied to the working tree. Commit after
-  the check, together with the inventory and allowlist.
+- `experiments/certify_split.py 18 900 8`: exclusions at M−1 and M−2 for the new minima (module cores plus
+  4 intervals closed by monotone witnesses).
+  - Each exclusion is split exhaustively by first gate, and every piece gets a RUP-checked proof.
+  - Pieces persist in `results/certified_pieces.jsonl`; a restart resumes. Exclusions go to
+    `results/certified_exclusions.jsonl`.
+  - Easiest first, 900 s per piece. Open pieces should be retried with a longer limit.
+- `experiments/l1343_bnb.py 4 1800`: `bnb.py` on the 23 size-19 survivors as a validation case. One tree
+  per survivor in `results/bnb_l1343/`; resumable.
 
-## Newest results (not yet committed)
+## Newest results (committed in e50971c unless noted)
+
+- **Phase-budget encoding** (normalized signed skeletons): 54% fewer conflicts but 6.2× more clauses, 26%
+  slower overall and 2.7× slower on monotone UNSAT. The existing encoder is kept.
+- **`bnb.py`:** passes `verify/test_bnb.py` (whole-function and seeded, against the reference).
+- **10 NOT-enabled intervals close** using cross-basis monotone witnesses and today's lower bounds; see
+  NOTES_SIGNED_MODULES.md.
 
 - **More exact minima from module cores**, each with a verified lifted witness: generated-08 = 6
   (was [6, 10]), comparator-07 = 8 (was [7, 14]), generated-09 = 8 (was [7, 13]).
