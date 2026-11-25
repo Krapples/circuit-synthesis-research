@@ -1634,3 +1634,139 @@ python sat-search/baselines/first_layer_check.py check sat-search/results/baseli
 python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_long_decoder.jsonl --logs sat-search/logs/tiers/long_decoder --tier long --modes slack-two-phase-set-dec1 slack-three-phase-set-dec1 slack-three-phase-set-lift1-dec1 slack-three-phase-set-exact-dec1
 python sat-search/baselines/tier_summary.py sat-search/results/baselines/tier_long.jsonl sat-search/results/baselines/tier_long_exact.jsonl sat-search/results/baselines/tier_long_decoder.jsonl
 ```
+
+## Restriction (gate-elimination) certificates on CEGAR models (opt-in, negative end to end)
+
+Source: `restriction_certificate_native.zip` (extracted to `external/restriction-certificate`).
+Port: [restriction_certificate.hpp](native/src/restriction_certificate.hpp), wired into
+`percy_run --restriction-cuts trace|cut|all|rows` with `--restriction-burst M` and
+`--capture-models PATH`.
+
+### Rule and scope (proven, complete four-input targets; partial labels use min over completions)
+
+- For a primary substitution pi (8 constants `x_i := b` and 12 identifications `x_j := x_i ^ b`), every
+  gate that becomes a constant or an alias (up to complement) of an earlier wire can be deleted.
+  So a `B`-gate circuit for f has `B >= L(f o pi) + D`, where `D` counts the deleted gates.
+- `L` is the exact free-NOT AIG cost of the restricted three-input function. The table `kCost3` was
+  recomputed with Percy over all 256 functions and matches the bundle's brute force exactly
+  (`results/restriction_certificates/aig_costs3.json`). With don't cares, `L` is the minimum over
+  completions. Above three variables, the header falls back to essential variables - 1, an
+  independently valid but weak bound.
+- Deletions are found by constant, alias, equal/complementary-operand and structural-hash propagation.
+  Each deletion carries a proof: step masks `pairs` (fanin selector fixed) and `typed` (selector plus
+  operator fixed).
+- A deletion caused by a constant operand, or by equal or complementary operands, needs only its own
+  pair, because `g(c, y)` and `g(y, +-y)` lie in {0, 1, y, ~y} for every operator. Propagated values
+  keep typed proofs.
+- If the deletion count exceeds `B - L`, the cheapest set of proofs covering `B - L + 1` deletions
+  gives the clause: one `-sel` literal per core step, plus the two operator bits for each typed step.
+  Percy's primitive clauses forbid ops 0/6/10/12, so op bits 1 and 2 identify the AIG op.
+- Output phases are read from the normalized op itself: 8 `a&b`, 2 `a&!b`, 4 `!a&b`, 14 `!(!a&!b)`.
+  Nothing is pushed into neighbouring gates.
+- `L > B` gives an empty core, which refutes the budget outright. The first port passed that empty
+  clause to satoko, which crashed on n=3 budget 2. The fixed-budget check caught it, and the code now
+  returns UNSAT directly.
+
+### Verification
+
+- Bundle checks (MSVC build of `restriction_certificate_check.cpp`): 80,000 restriction cases;
+  161,235 mutated cores; Python oracle 50,000 restrictions / 55,448 mutated cores. All passed.
+- Tripwires in Percy:
+  - `deletions_hold` semantically re-checks every certificate; a failure exits with code 4.
+  - In trace, rows and burst modes, a certified model that then simulates as correct also exits with code 4.
+  - Neither tripwire fired in any run.
+- Independent replay ([restriction_replay.py](experiments/restriction_replay.py)): it re-implements
+  restrictions, propagation, cores and a semantic deletion check from scratch. Over all 145,978
+  captured models, models, rejects and literal counts equal Percy's exactly. Structural deletions are a
+  subset of semantic ones on every model. 1,418,260 mutations kept the deletion count; each mutation
+  resampled every step outside the core and the phases of pair-only steps.
+- `first_layer_check.py check` with `base-restrict`, `base-restrict-rows` and
+  `slack-three-phase-set-lift1-restrict`: 122/122 expected verdicts, including the new size-8/9 jobs
+  (0116 8 U, 016a 8 S, 6996 8 U, 1668 8 U, 0116 9 S, 1699 8 S).
+- All tier minima pass the caps cross-check against the 36 known optima. No unknown was read as UNSAT.
+
+### Captured CEGAR models (10 hard targets, budgets 8 and 9, 60 s / 200k per call)
+
+`trace` follows plain Percy's trajectory exactly and only measures. `cut` learns the cheapest core
+and skips simulation of rejected models.
+
+| Mode, k | Models | Rejected | Literals/clause | Pair-only / typed steps | Repeats | Rows | us/model | Conflicts | Propagations | Decided |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| trace 8 | 107 | 104 (97.2%) | 4.58 | 275 / 67 | 10 | 116 | 35 | 2.50M | 93.7M | 4/10 |
+| trace 9 | 119 | 106 (89.1%) | 7.11 | 328 / 142 | 9 | 125 | 35 | 2.84M | 115.1M | 4/10 |
+| cut 8 | 40,011 | 39,961 | 5.84 | 94,394 / 46,286 | 0 | 58 | 54 | 1.74M | 71.7M | 9/10 |
+| cut 9 | 105,741 | 105,647 | 6.16 | 316,668 / 111,440 | 0 | 98 | 72 | 2.74M | 127.1M | 6/10 |
+
+- Nearly every non-final CEGAR model is certifiably redundant under some restriction. Pair-only
+  (operator-independent) steps are 69-80% of core steps.
+- In trace mode, 210 of 241 rows went to certified models, so each could have been replaced by a
+  clause of about 5 literals. Repeats (10 and 9) show plain Percy revisiting the same core.
+- Subsumption is negligible: 32 new clauses subsumed older ones across 145,608 cuts, and no clause
+  was subsumed. Certificate time is 35-72 us per model, at most 2.7 s of a 60 s run.
+- The catch is that cut clauses are narrow and position-specific. The solver finds the next nearly
+  identical model at once: cut mode needs 400-1,100 models per CEGAR row.
+- Cut mode decides 9/10 size-8 budgets against trace's 4/10, with 0.2 s refutations for 1668, 1669,
+  166b and 6996. But size-9 SAT budgets slow down: 6996 k=9 takes 50.9 s against 5.6 s.
+
+### Variants
+
+- `rows` keeps simulating and adds the CEGAR row as well as the clause. It is no better than plain
+  (016a k=8 reached the conflict limit).
+- `--restriction-burst M` makes the next model after M consecutive cuts get a row too
+  (`results/restriction_certificates/restriction_burst_sweep.jsonl`, 8 budgets × M ∈ {0, 1, 4, 16, 64}).
+  Results were dominated by SAT variance with no consistent winner: cut decided 6/8, burst16 5/8,
+  plain 1/8 under the 200k-per-call limit.
+
+### End-to-end tiers (10 hard targets; controls from `tier_long`, `tier_wall_only_60`, `tier_extended`)
+
+| Limits | Mode | Minima | Size-8 excl | Excl k>=7 | Wall s total |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 60 s / 200k | base | 4 | 4 | 14 | 192 |
+| 60 s / 200k | base-restrict | 3 | 7 | 17 | 455 |
+| 60 s / 200k | lift1 | 6 | 8 | 18 | 227 |
+| 60 s / 200k | lift1-restrict | 3 | 8 | 18 | 405 |
+| 60 s wall only | base | 6 | 8 | 18 | 357 |
+| 60 s wall only | base-restrict | 3 | 7 | 17 | 456 |
+| 60 s wall only | lift1 | 6 | 8 | 19 | 362 |
+| 60 s wall only | lift1-restrict | 4 | 7 | 17 | 402 |
+| 300 s / 2M | base | 8 | 8 | 19 | 632 |
+| 300 s / 2M | base-restrict | 6 | 7 | 17 | 1,497 |
+| 300 s / 2M | lift1 | 10 | 8 | 20 | 765 |
+| 300 s / 2M | lift1-restrict | 7 | 8 | 18 | 1,257 |
+
+- Under 200k per call, restriction cuts raise base's size-8 exclusions from 4 to 7. That gain is
+  mostly the per-call limit: cut mode makes thousands of short calls, and with the wall-only control
+  base already excludes 8/10.
+- Time-matched (wall only, and 300 s), restriction cuts lose minima and exclusions in both base and
+  lift1. 1686 k=8 is never refuted by base-restrict at 300 s, while lift1 needs 10 s.
+- Verdict: keep `--restriction-cuts` off by default (opt-in). It is sound and cheap per model, but as
+  local blocking clauses the cores exclude too few assignments to pay for the extra SAT calls.
+
+### What would justify reopening
+
+- Position-independent certificates: a core is a small pattern (pairs of fanins with constant or
+  aliased operands). Encoding "no restriction makes more than `B - L` gates redundant" as auxiliary
+  propagation over all positions (eager, like the first-layer counters) would exclude whole families
+  instead of one model.
+- A reified per-restriction deletion counter in the encoding (constant and alias propagation
+  variables per restriction) is the eager analogue. Measure clause and variable cost on the hard
+  budgets first.
+- For n > 4, replace `kCost3` with certified lower bounds for the restricted functions (exact
+  four-input costs from the frozen corpus, or the existing analytical bounds). The current
+  essential-variable fallback is valid but weak.
+
+### Restriction commands
+
+```powershell
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\restriction_certificate_native.zip" -DestinationPath external/restriction-certificate
+# From vcvars64, in a separate directory: cl /std:c++20 /O2 /EHsc <bundle>\restriction_certificate_check.cpp; then run the bundle's restriction_certificate_cuts.py with python -I
+& sat-search/baselines/build/build_percy.bat
+python sat-search/experiments/restriction_capture.py sat-search/logs/restriction_capture --modes trace cut
+python -I sat-search/experiments/restriction_replay.py sat-search/logs/restriction_capture sat-search/results/restriction_certificates/aig_costs3.json
+python sat-search/baselines/first_layer_check.py check sat-search/results/baselines/restriction_percy_check.jsonl --workers 8 --modes base-restrict slack-three-phase-set-lift1-restrict base-restrict-rows
+python sat-search/experiments/restriction_burst_sweep.py external/percy-build/percy_run.exe
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_long_restrict.jsonl --logs sat-search/logs/tiers/long_restrict --tier long --modes base-restrict slack-three-phase-set-lift1-restrict
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_wall_only_60_restrict.jsonl --logs sat-search/logs/tiers/wall_only_60_restrict --seconds 60 --conflicts 0 --modes base-restrict slack-three-phase-set-lift1-restrict
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_extended_restrict.jsonl --logs sat-search/logs/tiers/extended_restrict --tier extended --modes base-restrict slack-three-phase-set-lift1-restrict
+python sat-search/baselines/tier_summary.py sat-search/results/baselines/tier_extended.jsonl sat-search/results/baselines/tier_extended_restrict.jsonl
+```

@@ -65,6 +65,11 @@ for name in ('slack-two-phase-set', 'slack-three-phase-set', 'slack-three-phase-
              'slack-three-phase-set-lift1'):
     for decoder in ('1', '2'):
         RESIDUAL_MODES[f'{name}-dec{decoder}'] = (*RESIDUAL_MODES[name], '--decoder-phase', decoder)
+# Restriction (gate-elimination) certificates learned on CEGAR models (restriction_certificate.hpp).
+RESIDUAL_MODES['base-restrict'] = ('--restriction-cuts', 'cut')
+RESIDUAL_MODES['base-restrict-rows'] = ('--restriction-cuts', 'rows')
+RESIDUAL_MODES['slack-three-phase-set-lift1-restrict'] = (
+    *RESIDUAL_MODES['slack-three-phase-set-lift1'], '--restriction-cuts', 'cut')
 
 
 def exact_tables(n, steps):
@@ -197,6 +202,13 @@ def check_jobs(exe, modes):
         for tt, expected in ((0x0116, 'UNSAT'), (0x016a, 'SAT')):
             for mode in ('slack-two-phase-set', *modes):
                 yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 60, 0, 8), expected
+    if any('-restrict' in mode for mode in modes):
+        # Verified four-input optima (tier records): restriction cores fire on almost every size-eight
+        # and size-nine model, so these budgets exercise the learned clauses on both verdicts.
+        for tt, budget, expected in ((0x0116, 8, 'UNSAT'), (0x016a, 8, 'SAT'), (0x6996, 8, 'UNSAT'),
+                                     (0x1668, 8, 'UNSAT'), (0x0116, 9, 'SAT'), (0x1699, 8, 'SAT')):
+            for mode in modes:
+                yield (exe, mode, f'check-{tt:04x}', 4, tt, 0xffff, 'cegar', 60, 0, budget), expected
 
 
 def screen_jobs(exe, workload, limit, seconds, conflicts, modes, names=None, extra=None):

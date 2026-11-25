@@ -18,6 +18,12 @@
 //   --slack-two-residual memo|unate|phase|phase-cache : opt-in exact slack-two completion and cuts
 //   --slack-two-set-cuts : use position-independent pure cuts for distinct first-layer types
 //   --trace-slack-two : record slack-two candidates, including in the slack-one control
+//   --restriction-cuts trace|cut|all|rows : restriction (gate-elimination) certificates on every CEGAR model;
+//                    trace only measures, cut learns the cheapest core, all learns one per violating restriction
+//                    rows learns the cheapest core and still simulates the model and adds its CEGAR row
+//   --restriction-burst M : with cut/all, after M consecutive certificate cuts also simulate the next model
+//                    and add its CEGAR row (0, the default, never does)
+//   --capture-models PATH : write every CEGAR candidate model (chain) as JSON lines to a new file
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
@@ -42,6 +48,7 @@
 #include "slack_two_boundary.hpp"
 #include "slack_three_boundary.hpp"
 #include "reified_counter.hpp"
+#include "restriction_certificate.hpp"
 // Optional extra constraints need the SSV encoder's variable layout (svar_map, nr_svar_map, get_*_var), which Percy
 // keeps private; open it for this driver only.
 #define private public
@@ -101,6 +108,20 @@ struct Extra {
     synthesis::SlackThreePolicy slack_three_policy = synthesis::SlackThreePolicy::full;
     synthesis::ResidualFilterMode residual_filter = synthesis::ResidualFilterMode::off;
     synthesis::ResidualBackend residual_backend = synthesis::ResidualBackend::columns;
+    // Restriction certificates (restriction_certificate.hpp): 0 off, 1 trace, 2 cheapest core, 3 all cores.
+    int restriction_cuts = 0;
+    unsigned restriction_burst = 0;  // cut/all: after this many consecutive cuts the next model also gets its row (0 = never)
+    std::string capture_models;
+};
+
+// Per-budget restriction certificate counters.
+struct RestrictionStats {
+    unsigned models = 0, rejects = 0, cuts = 0, literals = 0, pair_only = 0, typed = 0, repeats = 0;
+    unsigned subsumed = 0, subsumes = 0, empty = 0, trace_rows = 0, trace_residual = 0;
+    std::array<unsigned, 17> width{};  // clause literals, 16 = 16 or more
+    double seconds = 0;
+    std::set<std::vector<int>> seen;
+    std::vector<std::vector<int>> stored;  // first 4096 distinct clauses, for subsumption counts
 };
 
 struct ClauseSink {
@@ -788,6 +809,16 @@ static int run_main(int argc, char** argv) {
             ex.decoder_phase = unsigned(v[0] - '0');
         }
         else if (a == "--slack-three-ms") ex.slack_three_ms = std::stoi(next());
+        else if (a == "--restriction-cuts") {
+            const auto mode = next();
+            if (mode == "trace") ex.restriction_cuts = 1;
+            else if (mode == "cut") ex.restriction_cuts = 2;
+            else if (mode == "all") ex.restriction_cuts = 3;
+            else if (mode == "rows") ex.restriction_cuts = 4;
+            else { fprintf(stderr, "expected --restriction-cuts trace, cut, all or rows\n"); return 2; }
+        }
+        else if (a == "--capture-models") ex.capture_models = next();
+        else if (a == "--restriction-burst") ex.restriction_burst = unsigned(std::stoul(next()));
         else if (a == "--slack-two-ms") ex.slack_two_ms = std::stoi(next());
         else if (a == "--slack-two-work") ex.slack_two_work = unsigned(std::stoul(next()));
         else if (a == "--slack-three-work") ex.slack_three_work = unsigned(std::stoul(next()));
@@ -890,6 +921,10 @@ static int run_main(int argc, char** argv) {
         fprintf(stderr, "--decoder-phase needs --slack-two-residual or --slack-three-residual with mode >= 1\n");
         return 2;
     }
+    if ((ex.restriction_cuts || !ex.capture_models.empty()) && (method != "cegar" || n < 2 || n > 6)) {
+        fprintf(stderr, "--restriction-cuts and --capture-models need CEGAR and 2-6 inputs\n");
+        return 2;
+    }
     if (ex.slack_two_ms <= 0 || ex.slack_two_work == 0) {
         fprintf(stderr, "--slack-two-ms and --slack-two-work must be positive\n");
         return 2;
@@ -987,6 +1022,20 @@ static int run_main(int argc, char** argv) {
         if (cegar) enc.reset_sim_tts(sp.nr_in);
         int lo = budget >= 0 ? budget : start, hi = budget >= 0 ? budget : maxk;
         synthesis::ResidualMemo three_memo;  // decided residual answers are budget independent
+        std::vector<restriction_certificate::Restriction> restrictions;
+        if (ex.restriction_cuts) {
+            uint64_t value = 0, care = 0;
+            for (int r = 0; r < (1 << n); ++r) {
+                value |= uint64_t(kitty::get_bit(tt, r)) << r;
+                care |= uint64_t(!kitty::get_bit(dc, r)) << r;
+            }
+            restrictions = restriction_certificate::restrictions(unsigned(n), value, care);
+        }
+        std::unique_ptr<FILE, int (*)(FILE*)> capture(nullptr, fclose);
+        if (!ex.capture_models.empty()) {
+            capture.reset(fopen(ex.capture_models.c_str(), "wx"));
+            if (!capture) { fprintf(stderr, "cannot create %s\n", ex.capture_models.c_str()); return 2; }
+        }
         for (int k = lo; k <= hi; k++) {
             g_current_k = k;
             auto tk = clk::now();
@@ -1021,6 +1070,8 @@ static int run_main(int argc, char** argv) {
             int extra_clauses = 0;
             double encoding_seconds = 0;
             int cegar_rows = 0;
+            RestrictionStats rstats;
+            unsigned restriction_run = 0;  // consecutive certificate cuts since the last CEGAR row
             std::vector<int> layer_features;
             std::vector<int> typed_steps, thresholds;
             const auto residual_start = clk::now();
@@ -1060,6 +1111,91 @@ static int run_main(int argc, char** argv) {
                         if (r == failure) { st = "UNSAT"; break; }
                         if (r != success) { st = "TIMEOUT"; break; }
                         if (out_of_time()) { st = "TIMEOUT"; reason = "wall_deadline"; break; }
+                        bool trace_rejected = false;
+                        if (ex.restriction_cuts || capture) {
+                            // Read the model's chain. Percy's normalized AIG ops keep their own output phase:
+                            // 8 a&b, 2 a&!b, 4 !a&b, 14 a|b = !(!a&!b) (inverted AND of complements).
+                            const auto rc_start = clk::now();
+                            std::vector<restriction_certificate::Gate> gates;
+                            std::vector<int> selected(k), ops(k);
+                            bool aig = true;
+                            for (int step = 0, offset = 0; step < k; ++step) {
+                                const int end = offset + enc.nr_svar_map[step];
+                                int s = offset;
+                                while (s < end && !solver->var_value(enc.get_sel_var(s))) ++s;
+                                offset = end;
+                                if (s == end) { aig = false; break; }
+                                int op = 0;
+                                for (int bit = 1; bit <= 3; ++bit)
+                                    op |= int(solver->var_value(enc.get_op_var(sp, step, bit))) << bit;
+                                selected[step] = s; ops[step] = op;
+                                const unsigned fa = unsigned(enc.svar_map[s][0]), fb = unsigned(enc.svar_map[s][1]);
+                                if (op == 8) gates.push_back({fa, fb, true, true, false});
+                                else if (op == 2) gates.push_back({fa, fb, true, false, false});
+                                else if (op == 4) gates.push_back({fa, fb, false, true, false});
+                                else if (op == 14) gates.push_back({fa, fb, false, false, true});
+                                else aig = false;
+                            }
+                            if (capture && aig) {
+                                fprintf(capture.get(), "{\"k\":%d,\"row\":%d,\"chain\":[", k, cegar_rows);
+                                for (int step = 0; step < k; ++step)
+                                    fprintf(capture.get(), "%s[%d,%d,%d]", step ? "," : "", ops[step],
+                                            enc.svar_map[selected[step]][0], enc.svar_map[selected[step]][1]);
+                                fprintf(capture.get(), "]}\n");
+                            }
+                            std::vector<restriction_certificate::Certificate> certs;
+                            if (ex.restriction_cuts && aig) {
+                                ++rstats.models;
+                                bool failed = false;
+                                certs = restriction_certificate::certify(restrictions, gates, ex.restriction_cuts != 3,
+                                                                         true, &failed);
+                                if (failed) {
+                                    fprintf(stderr, "restriction certificate self-check failed at k=%d\n", k);
+                                    std::exit(4);
+                                }
+                            }
+                            bool added_all = true;
+                            for (const auto& cert : certs) {
+                                std::vector<int> clause;
+                                for (int step = 0; step < k; ++step) {
+                                    const auto bit = restriction_certificate::Mask(1) << step;
+                                    if (!(cert.core.pairs & bit)) continue;
+                                    clause.push_back(pabc::Abc_Var2Lit(enc.get_sel_var(selected[step]), 1));
+                                    // Given the AIG primitive clauses, op bits 1 and 2 identify the operator.
+                                    if (cert.core.typed & bit)
+                                        for (int b = 1; b <= 2; ++b)
+                                            clause.push_back(pabc::Abc_Var2Lit(enc.get_op_var(sp, step, b), ops[step] >> b & 1));
+                                }
+                                std::sort(clause.begin(), clause.end());
+                                rstats.literals += unsigned(clause.size());
+                                rstats.pair_only += unsigned(std::popcount(cert.core.pairs & ~cert.core.typed));
+                                rstats.typed += unsigned(std::popcount(cert.core.typed));
+                                ++rstats.width[std::min<size_t>(clause.size(), 16)];
+                                rstats.empty += clause.empty();
+                                if (!rstats.seen.insert(clause).second) ++rstats.repeats;
+                                else {
+                                    for (const auto& old : rstats.stored) {
+                                        rstats.subsumed += std::includes(clause.begin(), clause.end(), old.begin(), old.end());
+                                        rstats.subsumes += old.size() > clause.size() &&
+                                            std::includes(old.begin(), old.end(), clause.begin(), clause.end());
+                                    }
+                                    if (rstats.stored.size() < 4096) rstats.stored.push_back(clause);
+                                }
+                                if (ex.restriction_cuts >= 2) {
+                                    ++rstats.cuts;
+                                    // An empty core means L(f o pi) > budget: the exact restricted cost alone refutes it.
+                                    if (clause.empty() || !solver->add_clause(clause.data(), clause.data() + clause.size()))
+                                        added_all = false;
+                                }
+                            }
+                            if (!certs.empty()) ++rstats.rejects;
+                            rstats.seconds += since(rc_start);
+                            if (!added_all) { st = "UNSAT"; break; }
+                            if ((ex.restriction_cuts == 2 || ex.restriction_cuts == 3) && !certs.empty() &&
+                                (!ex.restriction_burst || ++restriction_run <= ex.restriction_burst)) { iMint = 0; continue; }
+                            restriction_run = 0;
+                            trace_rejected = !certs.empty();
+                        }
                         if (residual) {
                             const auto check_start = clk::now();
                             auto cut = residual->exclusion(enc, sp, *solver, layer_features, typed_steps, ex);
@@ -1067,11 +1203,18 @@ static int run_main(int argc, char** argv) {
                             residual_seconds += since(check_start);
                             if (!retained) { st = "UNSAT"; break; }
                             if (!cut.empty()) {
+                                rstats.trace_residual += trace_rejected;
                                 iMint = 0;
                                 continue;
                             }
                         }
                         iMint = enc.simulate(sp);
+                        if (trace_rejected && iMint == -1) {
+                            // A certified model must fail: a correct B-gate circuit contradicts the certificate.
+                            fprintf(stderr, "restriction certificate rejected a correct circuit at k=%d\n", k);
+                            std::exit(4);
+                        }
+                        rstats.trace_rows += trace_rejected;
                         if (iMint == -1) { st = "SAT"; enc.cegar_extract_chain(sp, c); break; }
                     }
                 }
@@ -1131,6 +1274,12 @@ static int run_main(int argc, char** argv) {
                        static_cast<unsigned long long>(residual->two_phase.work),
                        static_cast<unsigned long long>(residual->two_phase.cache_hits),
                        static_cast<unsigned long long>(residual->two_phase.dominance_hits));
+            if (ex.restriction_cuts) {
+                printf(",\"restriction_models\":%u,\"restriction_rejects\":%u,\"restriction_cuts\":%u,\"restriction_literals\":%u,\"restriction_pair_only\":%u,\"restriction_typed\":%u,\"restriction_repeats\":%u,\"restriction_subsumed\":%u,\"restriction_subsumes\":%u,\"restriction_empty\":%u,\"restriction_trace_rows\":%u,\"restriction_trace_residual\":%u,\"restriction_seconds\":%.6f,\"restriction_width\":[",
+                       rstats.models, rstats.rejects, rstats.cuts, rstats.literals, rstats.pair_only, rstats.typed, rstats.repeats, rstats.subsumed, rstats.subsumes, rstats.empty, rstats.trace_rows, rstats.trace_residual, rstats.seconds);
+                for (size_t w = 0; w < rstats.width.size(); ++w) printf("%s%u", w ? "," : "", rstats.width[w]);
+                printf("]");
+            }
             if (slack_two && ex.decoder_phase)
                 printf(",\"two_decoder\":[%llu,%llu,%llu,%llu,%llu]",
                        static_cast<unsigned long long>(residual->two_decoder.screens),
