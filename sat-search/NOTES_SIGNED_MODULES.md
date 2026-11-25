@@ -1098,3 +1098,93 @@ python sat-search/experiments/regional_certificate_check.py --bench --dataset ro
 python sat-search/experiments/regional_certificate_check.py --bench --dataset layouts --seconds 4 --modes row-quotient certificate-cnf certificate-fallback root-portfolio --output fresh-cnf-layouts.jsonl
 python sat-search/experiments/regional_certificate_check.py --bench --dataset queries --case wide-8-1-1 --seconds 1 --modes certificate-absorption --output fresh-absorption.jsonl
 ```
+
+## Constructive regional padding
+
+The opt-in `padding-first` regional mode tries a smaller functional core, then
+restores all spare leaves with one AND/OR graft. The prepass returns a witness
+or unknown. The exact packed row-quotient solver decides the original query
+on a miss. No CDCL activation is needed. Inputs are exact regional slices in
+the monotone or free-NOT basis. The port multiplicities describe occurrences.
+
+### Graft characterization
+
+The root is sensitive on every specified row. A child's sensitivity mask is
+the parent's mask intersected with rows where its sibling has the gate's
+neutral value. At a subtree with value table `v`, an OR graft must supply zero
+on sensitive zero rows of `v`. An AND graft must supply one on sensitive one
+rows. The other rows permit either filler value.
+
+For positive literals, AND of all spare leaves is the smallest possible
+filler and OR the largest. These decide the zero and one requirements,
+respectively. For free NOT, each choice of occurrence phases has an all-true
+literal pattern and an all-false literal pattern. Every AND/OR tree evaluates
+to one and zero there. If the critical rows contain every raw occurrence
+pattern, the corresponding filler is impossible. If one pattern is absent,
+a signed conjunction true only there supplies the required zero, or a signed
+disjunction false only there supplies the required one. This counts raw
+occurrence bits even if some combinations are unrealizable due to repeated
+providers. At the root at most the smaller output side needs the corresponding
+constant, so `2^q > min(positive rows, negative rows)` guarantees a graft for
+`q` spare occurrences. The rows here include private assignments within slices.
+
+The core prepass can omit unused private coordinates. Provider masks impose
+necessary distinctions between observed slices, with raw difference in free
+NOT and directional difference in monotone mode. Core searches use at most
+six leaves, 24 solver trials, and 512 inspected allocations. Equal projected
+provider rows share a core obligation. On complete projected tables with
+distinct leaves, direct read-once recognition replaces recursive search.
+Every leaf of a read-once tree on independent coordinates is essential,
+since siblings can be set to their neutral values along its output path.
+Partial or repeated-provider cores keep a finite search-work cap. The graft
+test is exact for the given core and a single graft. The prepass can miss
+other core witnesses or solutions needing several grafts.
+
+The supplied `python regional_padding.py --bench --padded` replay replaced
+only the Unix timer with the Windows worker deadline. It reproduced 34/60
+versus 60/60 on deliberately surplus-heavy queries, with 7.984 versus 0.527 s.
+On the broader supplied root stress sample the prepass solved no additional
+queries in this replay. The integrated tests passed 1,400 exhaustive
+single-graft comparisons and checked returned witnesses against 300 small
+exact regional queries. Each returned construction is reevaluated on every
+specified assignment and checked for all allocated occurrences.
+
+### Matched integrated results
+
+| Workload | Packed row quotient | Padding first |
+| --- | --- | --- |
+| 60 generated surplus-heavy queries at 0.20 s each | 37 SAT in 6.416 s | 58 SAT in 0.589 s |
+| 12 captured queries plus signed `wide-8-1-1` at 1 s each | 12 UNSAT and one timeout in 1.982 s | 12 UNSAT and one SAT in 0.985 s |
+| Five whole-layout jobs at 4 s each | Four decisions in 10.398 s | Four decisions in 11.158 s |
+
+The generated cases explicitly have a padded witness and are favorable to
+the prepass. The final replay obtained 57 of its 58 witnesses by grafting.
+Peak working set for the generated workers fell from 61.2 to 40.3 MiB.
+The initial integration completed 53/60. Quotienting duplicate projected
+rows reduced setup cost and left the completion count at 53/60. Direct
+recognition on complete distinct-leaf cores and increasing the signed
+partial-core cap from 256 to 2,048 work events jointly brought it to 58/60.
+The two remaining misses were signed. One exhausted all nine bounded core
+trials. For the other, a diagnostic allocation cap of 4,096 reached nine
+trials and still found no witness within the core work limits. Further
+increasing caps has no demonstrated benefit on the frozen corpus.
+
+`wide-8-1-1` used one core trial and a verified graft in 5.6 ms without SAT.
+The 12 captured negative queries were decided by the exact fallback. The
+whole-layout replay showed no new exclusion or witness and no interval
+changed. The 13-gate `comparator-09` budget remains open. The costs of failed
+prepasses on these layouts support keeping `padding-first` opt-in.
+
+[Windows prototype replay](results/regional_padding_prototype.log) ·
+[Initial surplus replay](results/regional_padding_surplus.jsonl) ·
+[Projected row ablation](results/regional_padding_surplus_quotient.jsonl) ·
+[Final surplus replay](results/regional_padding_surplus_final.jsonl) ·
+[Captured queries](results/regional_padding_captures_final.jsonl) ·
+[Whole layouts](results/regional_padding_layouts_final.jsonl)
+
+```powershell
+python sat-search/experiments/regional_padding_check.py -v
+python sat-search/experiments/regional_padding_check.py --bench --output fresh-padding-surplus.jsonl
+python sat-search/experiments/regional_certificate_check.py --bench --dataset queries --seconds 1 --modes row-quotient padding-first --output fresh-padding-captures.jsonl
+python sat-search/experiments/regional_certificate_check.py --bench --dataset layouts --seconds 4 --modes row-quotient padding-first --output fresh-padding-layouts.jsonl
+```
