@@ -28,6 +28,7 @@
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -35,6 +36,7 @@
 #include "tight_residual.hpp"
 #include "slack_two_boundary.hpp"
 #include "slack_three_boundary.hpp"
+#include "reified_counter.hpp"
 // Optional extra constraints need the SSV encoder's variable layout (svar_map, nr_svar_map, get_*_var), which Percy
 // keeps private; open it for this driver only.
 #define private public
@@ -74,6 +76,9 @@ struct Extra {
     bool trace_slack_three = false;
     int slack_three_ms = 25;
     unsigned slack_three_work = 2000000;
+    // Lazy weighted slack-three cuts (slack_three_boundary.hpp). Non-full policies replace the
+    // boundary's one-way counter by a reified one and add its threshold literal to the clause.
+    synthesis::SlackThreePolicy slack_three_policy = synthesis::SlackThreePolicy::full;
     synthesis::ResidualFilterMode residual_filter = synthesis::ResidualFilterMode::off;
     synthesis::ResidualBackend residual_backend = synthesis::ResidualBackend::columns;
 };
@@ -130,7 +135,8 @@ struct FirstLayer {
     }
 
     std::vector<int> encode(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start,
-                            bool budget, bool slack_two, std::vector<int>& typed_steps) const {
+                            bool budget, bool slack_two, std::vector<int>& typed_steps,
+                            std::vector<int>* thresholds = nullptr) const {
         const int n = sp.get_nr_in(), k = sp.nr_steps;
         const auto fresh = [&] { return pabc::Abc_Var2Lit(cs.var(), 0); };
         std::vector<std::vector<int>> typed(gates.size()), mixed(n);
@@ -187,7 +193,11 @@ struct FirstLayer {
             equivalent_or(cs, features.back(), std::move(readers));
             if (budget) boundary.push_back(features.back());
         }
-        if (budget) cs.at_most(boundary, k + 1);
+        if (budget && thresholds)
+            *thresholds = synthesis::reified_at_most(boundary, k + 1, fresh,
+                                                     [&](std::vector<int> c) { cs.add(std::move(c)); });
+        else if (budget)
+            cs.at_most(boundary, k + 1);
         for (uint64_t mask : clauses) {
             std::vector<int> clause;
             for (; mask; mask &= mask - 1) clause.push_back(features[std::countr_zero(mask)]);
@@ -200,7 +210,7 @@ struct FirstLayer {
 // Returns false if the extra constraints make budget k infeasible outright; adds clauses to the solver otherwise.
 static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, const Extra& ex,
                       const FirstLayer& layer, int& extra_clauses, std::vector<int>& layer_features,
-                      std::vector<int>& typed_steps) {
+                      std::vector<int>& typed_steps, std::vector<int>& thresholds) {
     if (!ex.noreapply_full && ex.cof.empty() && ex.pairs == synthesis::PairScope::none && !ex.first_layer_budget)
         return true;
     const int n = sp.get_nr_in(), k = sp.nr_steps;
@@ -253,7 +263,9 @@ static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, 
     }
     if (ex.pairs != synthesis::PairScope::none || ex.first_layer_budget)
         layer_features = layer.encode(cs, enc, sp, start, ex.first_layer_budget,
-                                      ex.slack_two_mode >= 0 || ex.slack_three_mode >= 0, typed_steps);
+                                      ex.slack_two_mode >= 0 || ex.slack_three_mode >= 0, typed_steps,
+                                      ex.slack_three_policy != synthesis::SlackThreePolicy::full ? &thresholds
+                                                                                                : nullptr);
     solver.set_nr_vars(cs.next);
     extra_clauses = (int)cs.clauses.size();
     for (auto& cl : cs.clauses) {
@@ -290,6 +302,15 @@ struct TightResidual {
     uint64_t three_work = 0, three_slack_two_work = 0, three_tree_calls = 0;
     residual_slack_two::PhaseStats three_phase;
     double slack_three_seconds = 0;
+    // Lazy weighted cuts: thresholds[t] <=> boundary weight >= t; the memo outlives each budget.
+    const std::vector<int>* thresholds = nullptr;
+    synthesis::ResidualMemo* memo = nullptr;
+    std::array<unsigned, 5> three_lift{};
+    unsigned three_threshold_cuts = 0, three_covered = 0, three_exact_cached = 0;
+    unsigned three_memo_hits = 0, three_memo_inserts = 0, three_seed_inserts = 0;
+    uint64_t three_extension_total = 0, three_clause_literals = 0;
+    unsigned three_cuts = 0, three_repeats = 0;
+    std::set<std::vector<int>> three_visited;
 
     explicit TightResidual(const kitty::dynamic_truth_table& tt) {
         const int n = tt.num_vars();
@@ -324,6 +345,8 @@ struct TightResidual {
                 const uint64_t x = primaries[a], y = primaries[b];
                 gate_columns.insert(gate_columns.end(), {x & ~y, ~x & y, x & y, x | y});
             }
+        const bool seed = memo && ex.slack_three_policy == synthesis::SlackThreePolicy::adaptive;
+        const std::vector<uint64_t> seed_columns = seed ? columns : std::vector<uint64_t>{};
         const auto result = synthesis::slack_two_boundary(
             std::move(columns), unsigned(first.size()), std::span(primaries).first(n), mixed,
             gate_columns, target, care, 100000, start + std::chrono::milliseconds(25),
@@ -341,6 +364,12 @@ struct TightResidual {
         two_phase.cache_hits += result.exact.phase.cache_hits;
         two_phase.dominance_hits += result.exact.phase.dominance_hits;
         using Status = residual_directed::Status;
+        if (seed && result.exact.status != Status::unknown) {
+            // The same leaves at exact slack two are a cost-one extension of a slack-three query.
+            memo->bind(target, care);
+            three_seed_inserts += memo->insert(seed_columns, unsigned(first.size()), 2,
+                                               result.exact.status == Status::sat);
+        }
         if (result.exact.status == Status::unknown) ++slack_two_unknown;
         if (result.exact.status == Status::sat) ++slack_two_feasible;
         if (result.exact.status != Status::unsat) return {};
@@ -386,6 +415,12 @@ struct TightResidual {
                                     unsigned mixed, std::vector<int> cut, const Extra& ex) {
         const int n = sp.get_nr_in();
         ++slack_three_seen;
+        {
+            std::vector<int> visit(observed_types);
+            std::sort(visit.begin(), visit.end());
+            visit.push_back(-1 - int(mixed));
+            three_repeats += !three_visited.insert(std::move(visit)).second;
+        }
         if (ex.trace_slack_three) {
             printf("{\"event\":\"slack_three\",\"k\":%d,\"mixed\":%u,\"types\":[", sp.nr_steps, mixed);
             for (size_t i = 0; i < observed_types.size(); ++i)
@@ -404,7 +439,7 @@ struct TightResidual {
             std::move(columns), unsigned(first.size()), std::span(primaries).first(n), mixed,
             gate_columns, target, care, ex.slack_three_work,
             start + std::chrono::milliseconds(ex.slack_three_ms), unsigned(ex.slack_three_mode),
-            ex.slack_three_symmetric);
+            ex.slack_three_symmetric, ex.slack_three_policy, memo);
         slack_three_seconds += since(start);
         three_work += result.exact.work;
         three_tree_calls += result.exact.tree_calls;
@@ -417,6 +452,10 @@ struct TightResidual {
         if (result.exact.status == Status::unknown) ++slack_three_unknown;
         if (result.exact.status == Status::sat) ++slack_three_feasible;
         if (result.exact.status != Status::unsat) return {};
+        ++three_cuts;
+        three_extension_total += result.extension_total;
+        three_covered += result.covered;
+        ++three_lift[std::min(result.lift, 4u)];
         three_extension_feasible += result.feasible;
         three_extension_unknown += result.unknown;
         three_extension_excluded += result.excluded;
@@ -425,6 +464,15 @@ struct TightResidual {
         three_slack_one_calls += result.slack_one_calls;
         three_slack_two_calls += result.slack_two_calls;
         three_slack_two_work += result.slack_two_work;
+        three_memo_hits += result.memo_hits;
+        three_memo_inserts += result.memo_inserts;
+        three_exact_cached += result.exact_cached;
+        if (ex.slack_three_policy != synthesis::SlackThreePolicy::full) {
+            auto lazy = weighted_cut(sp, features, typed_steps, first, gate_columns.size(), observed_types,
+                                     mixed, std::move(cut), result, ex);
+            three_clause_literals += lazy.size();
+            return lazy;
+        }
         if (result.mixed_extensions || result.gate_extensions) {
             ++slack_three_conditional;
         } else {
@@ -449,6 +497,58 @@ struct TightResidual {
                 continue;
             for (uint64_t mask = result.gate_extensions; mask; mask &= mask - 1) {
                 const int literal = typed_steps[step * gate_columns.size() + std::countr_zero(mask)];
+                if (literal >= 0) cut.push_back(literal);
+            }
+        }
+        return cut;
+    }
+
+    // Lazy weighted clause NOT A OR (W >= w + d) OR R for an excluded slack-three boundary
+    // (w = k - 2). R lists the retained elements: a mixed primary's feature, and a retained gate
+    // type at every step outside the antecedent's first-layer steps. With distinct observed types
+    // and no retained gate among them, the set antecedent (types and mixed primaries present) is
+    // used and a retained gate type is its feature literal; otherwise the positional antecedent
+    // fixes the boundary's own steps, which covers repeated types.
+    std::vector<int> weighted_cut(const spec& sp, std::span<const int> features, std::span<const int> typed_steps,
+                                  const std::vector<std::pair<int, int>>& first, size_t gate_types,
+                                  const std::vector<int>& observed_types, unsigned mixed, std::vector<int> cut,
+                                  const synthesis::SlackThreeBoundary& result, const Extra& ex) {
+        const int n = sp.get_nr_in(), k = sp.nr_steps;
+        const unsigned d = result.lift;
+        uint64_t types = 0;
+        for (const int type : observed_types) types |= uint64_t{1} << type;
+        const bool set = ex.slack_three_set_cuts && size_t(std::popcount(types)) == observed_types.size() &&
+                         !(result.gate_extensions & types);
+        if (result.mixed_extensions || result.gate_extensions) ++slack_three_conditional;
+        else ++slack_three_pure;
+        if (set) {
+            cut.clear();
+            for (const int type : observed_types) cut.push_back(features[type] ^ 1);
+            for (unsigned mask = mixed; mask; mask &= mask - 1)
+                cut.push_back(features[features.size() - n + std::countr_zero(mask)] ^ 1);
+            ++three_set_cuts;
+        }
+        if (d <= 3) {
+            const int w = 2 * int(first.size()) + std::popcount(mixed);
+            if (!thresholds || w != k - 2 || size_t(w + d) >= thresholds->size()) {
+                fprintf(stderr, "slack-three weighted cut without a reified threshold\n");
+                std::abort();
+            }
+            cut.push_back((*thresholds)[w + d]);
+            ++three_threshold_cuts;
+        }
+        for (unsigned mask = result.mixed_extensions; mask; mask &= mask - 1)
+            cut.push_back(features[features.size() - n + std::countr_zero(mask)]);
+        if (set) {
+            for (uint64_t mask = result.gate_extensions; mask; mask &= mask - 1)
+                cut.push_back(features[std::countr_zero(mask)]);
+            return cut;
+        }
+        for (int step = 0; result.gate_extensions && step < k; ++step) {
+            if (std::any_of(first.begin(), first.end(), [step](const auto& entry) { return entry.first == step; }))
+                continue;
+            for (uint64_t mask = result.gate_extensions; mask; mask &= mask - 1) {
+                const int literal = typed_steps[step * gate_types + std::countr_zero(mask)];
                 if (literal >= 0) cut.push_back(literal);
             }
         }
@@ -630,6 +730,15 @@ int main(int argc, char** argv) {
         else if (a == "--slack-three-symmetric") ex.slack_three_symmetric = true;
         else if (a == "--slack-three-ms") ex.slack_three_ms = std::stoi(next());
         else if (a == "--slack-three-work") ex.slack_three_work = unsigned(std::stoul(next()));
+        else if (a == "--slack-three-policy") {
+            const auto policy = next();
+            using Policy = synthesis::SlackThreePolicy;
+            if (policy == "full") ex.slack_three_policy = Policy::full;
+            else if (policy == "exact") ex.slack_three_policy = Policy::exact;
+            else if (policy == "lift1") ex.slack_three_policy = Policy::lift1;
+            else if (policy == "adaptive") ex.slack_three_policy = Policy::adaptive;
+            else { fprintf(stderr, "expected --slack-three-policy full, exact, lift1 or adaptive\n"); return 2; }
+        }
         else if (a == "--slack-three-residual") {
             const auto mode = next();
             if (mode == "memo") ex.slack_three_mode = 2;
@@ -711,6 +820,11 @@ int main(int argc, char** argv) {
         fprintf(stderr, "--slack-three-set-cuts and --slack-three-symmetric need --slack-three-residual\n");
         return 2;
     }
+    if (ex.slack_three_policy != synthesis::SlackThreePolicy::full &&
+        (ex.slack_three_mode < 0 || !ex.first_layer_budget)) {
+        fprintf(stderr, "--slack-three-policy needs --slack-three-residual and --first-layer-budget\n");
+        return 2;
+    }
     if (ex.slack_three_ms <= 0 || ex.slack_three_work == 0) {
         fprintf(stderr, "--slack-three-ms and --slack-three-work must be positive\n");
         return 2;
@@ -766,6 +880,7 @@ int main(int argc, char** argv) {
     } else {
         if (cegar) enc.reset_sim_tts(sp.nr_in);
         int lo = budget >= 0 ? budget : start, hi = budget >= 0 ? budget : maxk;
+        synthesis::ResidualMemo three_memo;  // decided residual answers are budget independent
         for (int k = lo; k <= hi; k++) {
             auto tk = clk::now();
             sp.nr_steps = k;
@@ -789,14 +904,18 @@ int main(int argc, char** argv) {
             double encoding_seconds = 0;
             int cegar_rows = 0;
             std::vector<int> layer_features;
-            std::vector<int> typed_steps;
+            std::vector<int> typed_steps, thresholds;
             const auto residual_start = clk::now();
             std::optional<TightResidual> residual;
-            if (ex.tight_residual || ex.slack_one || slack_two || slack_three) residual.emplace(tt);
+            if (ex.tight_residual || ex.slack_one || slack_two || slack_three) {
+                residual.emplace(tt);
+                residual->thresholds = &thresholds;
+                residual->memo = &three_memo;
+            }
             double residual_seconds = residual ? since(residual_start) : 0;
             if (!cegar) {
                 const bool encoded = enc.encode(sp) &&
-                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features, typed_steps);
+                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features, typed_steps, thresholds);
                 encoding_seconds = since(tk);
                 if (!encoded) st = "UNSAT";
                 else {
@@ -806,7 +925,7 @@ int main(int argc, char** argv) {
                 }
             } else {
                 const bool encoded = enc.cegar_encode(sp) &&
-                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features, typed_steps);
+                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features, typed_steps, thresholds);
                 encoding_seconds = since(tk);
                 if (!encoded) st = "UNSAT";
                 else {
@@ -901,6 +1020,23 @@ int main(int argc, char** argv) {
                        static_cast<unsigned long long>(residual->three_phase.checks),
                        static_cast<unsigned long long>(residual->three_phase.rejects),
                        static_cast<unsigned long long>(residual->three_phase.work));
+            if (slack_three && ex.slack_three_policy != synthesis::SlackThreePolicy::full)
+                printf(",\"three_policy\":%u,\"three_cuts\":%u,\"three_lift\":[%u,%u,%u,%u],"
+                       "\"three_threshold_cuts\":%u,\"three_clause_literals\":%llu,\"three_covered\":%u,"
+                       "\"three_extension_total\":%llu,\"three_memo_hits\":%u,\"three_memo_inserts\":%u,"
+                       "\"three_seed_inserts\":%u,\"three_exact_cached\":%u,\"three_repeats\":%u,"
+                       "\"three_memo_size\":%zu",
+                       unsigned(ex.slack_three_policy), residual->three_cuts, residual->three_lift[1],
+                       residual->three_lift[2], residual->three_lift[3], residual->three_lift[4],
+                       residual->three_threshold_cuts,
+                       static_cast<unsigned long long>(residual->three_clause_literals), residual->three_covered,
+                       static_cast<unsigned long long>(residual->three_extension_total),
+                       residual->three_memo_hits, residual->three_memo_inserts, residual->three_seed_inserts,
+                       residual->three_exact_cached, residual->three_repeats, three_memo.decided.size());
+            else if (slack_three)
+                printf(",\"three_cuts\":%u,\"three_extension_total\":%llu,\"three_repeats\":%u",
+                       residual->three_cuts, static_cast<unsigned long long>(residual->three_extension_total),
+                       residual->three_repeats);
 #ifdef USE_SATOKO
             if (satoko_backend) {
                 const long propagations = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;

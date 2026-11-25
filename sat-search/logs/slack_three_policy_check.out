@@ -1,0 +1,5 @@
+{"oracle_comparisons": 14080, "duplicated_wire_checks": 60, "extension_and_limit_checks": 20, "argument_checks": 3, "policy_checks": {"policy0": 4, "policy1": 4, "policy2": 4, "policy3": 4, "adaptive_covered": 218, "memo_repeat": 4, "deadline_revert": 8, "unknown": 12, "no_free_exact": 2}}
+
+real	0m12.796s
+user	0m0.075s
+sys	0m0.122s

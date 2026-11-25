@@ -1,0 +1,36 @@
+| Mode | Size-7 excl | Size-8 SAT / UNSAT | Conflicts | Size-8 conflicts | Minima | Wall s | Peak MiB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| slack-two-phase-set | 40 | 1 / 0 | 1,930,363 | 1,628,679 | 1 | 38.9 | 18.3 |
+| slack-three-phase-set | 40 | 1 / 4 | 2,419,072 | 1,991,585 | 2 | 76.3 | 33.1 |
+| slack-three-phase-set-exact | 42 | 1 / 1 | 2,446,460 | 2,154,379 | 2 | 72.1 | 26.6 |
+| slack-three-phase-set-lift1 | 42 | 0 / 4 | 2,401,835 | 1,976,612 | 0 | 68.3 | 32.7 |
+| slack-three-phase-set-adaptive | 42 | 0 / 1 | 2,685,100 | 2,332,837 | 0 | 87.7 | 33.9 |
+| slack-three-phase-set-100ms | 40 | 0 / 8 | 2,610,766 | 1,985,287 | 0 | 94.7 | 49.8 |
+| slack-three-phase-set-exact-100ms | 42 | 1 / 1 | 2,446,460 | 2,154,379 | 2 | 71.7 | 26.5 |
+| slack-three-phase-set-adaptive-100ms | 42 | 0 / 8 | 2,826,850 | 2,170,969 | 0 | 93.8 | 33.3 |
+
+| Mode | Cuts | Repeats | Lift 1/2/3/4 | Literals/cut | Ext calls | Ext total | Avoided | Covered | Memo hits | Slack-three s |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| slack-three-phase-set | 485 | 15 | 0/0/0/0 | 0.0 | 8,720 | 13,881 | 5,161 | 0 | 0 | 11.8 |
+| slack-three-phase-set-exact | 561 | 4 | 46/515/0/0 | 5.9 | 0 | 15,680 | 15,680 | 0 | 0 | 4.6 |
+| slack-three-phase-set-lift1 | 566 | 6 | 0/566/0/0 | 5.9 | 95 | 16,000 | 15,905 | 0 | 0 | 4.7 |
+| slack-three-phase-set-adaptive | 572 | 7 | 0/470/0/102 | 5.7 | 9,447 | 15,969 | 6,522 | 0 | 2,354 | 13.6 |
+| slack-three-phase-set-100ms | 493 | 9 | 0/0/0/0 | 0.0 | 14,147 | 14,528 | 381 | 0 | 0 | 19.3 |
+| slack-three-phase-set-exact-100ms | 561 | 4 | 46/515/0/0 | 5.9 | 0 | 15,680 | 15,680 | 0 | 0 | 4.6 |
+| slack-three-phase-set-adaptive-100ms | 583 | 6 | 0/0/0/583 | 5.4 | 12,529 | 16,685 | 4,156 | 369 | 3,787 | 18.4 |
+
+slack-two-phase-set size-8 UNSAT: 
+slack-three-phase-set size-8 UNSAT: 1668 1669 177e 6996
+slack-three-phase-set-exact size-8 UNSAT: 0196
+slack-three-phase-set-lift1 size-8 UNSAT: 1668 1669 177e 6996
+slack-three-phase-set-adaptive size-8 UNSAT: 177e
+slack-three-phase-set-100ms size-8 UNSAT: 0116 1668 1669 1681 16a9 177e 19e1 6996
+slack-three-phase-set-exact-100ms size-8 UNSAT: 0196
+slack-three-phase-set-adaptive-100ms size-8 UNSAT: 0116 0661 1668 1669 166b 1681 177e 6996
+slack-three-phase-set minima vs slack-two-phase-set lost [] gained ['177e']
+slack-three-phase-set-exact minima vs slack-two-phase-set lost ['016a'] gained ['0196', '1699']
+slack-three-phase-set-lift1 minima vs slack-two-phase-set lost ['016a'] gained []
+slack-three-phase-set-adaptive minima vs slack-two-phase-set lost ['016a'] gained []
+slack-three-phase-set-100ms minima vs slack-two-phase-set lost ['016a'] gained []
+slack-three-phase-set-exact-100ms minima vs slack-two-phase-set lost ['016a'] gained ['0196', '1699']
+slack-three-phase-set-adaptive-100ms minima vs slack-two-phase-set lost ['016a'] gained []

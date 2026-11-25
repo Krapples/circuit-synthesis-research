@@ -324,11 +324,25 @@ PYBIND11_MODULE(_regional_native, mod) {
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 100000,
             py::arg("deadline_seconds") = 0.025, py::arg("mode") = 2);
+    py::class_<synthesis::ResidualMemo>(mod, "ResidualMemo",
+                                        "Decided residual answers keyed by leaves, first-layer count and slack"
+                                        " (adaptive slack-three policy).")
+        .def(py::init<>())
+        .def("__len__", [](const synthesis::ResidualMemo& memo) { return memo.decided.size(); })
+        .def_readonly("hits", &synthesis::ResidualMemo::hits)
+        .def_readonly("inserts", &synthesis::ResidualMemo::inserts)
+        .def("insert", [](synthesis::ResidualMemo& memo, uint64_t target, uint64_t care,
+                          const std::vector<uint64_t>& columns, unsigned first, unsigned slack, bool sat) {
+            memo.bind(target, care);
+            return memo.insert(columns, first, slack, sat);
+        });
     mod.def("slack_three_boundary",
             [](const std::vector<uint64_t>& columns, unsigned h, const std::vector<uint64_t>& primaries,
                unsigned mixed, const std::vector<uint64_t>& gate_columns, uint64_t target, uint64_t care,
-               unsigned work_limit, double seconds, unsigned mode, bool symmetric) {
+               unsigned work_limit, double seconds, unsigned mode, bool symmetric, unsigned policy,
+               synthesis::ResidualMemo* memo) {
                 if (mode > 5) throw py::value_error("slack-three mode must be 0 through 5");
+                if (policy > 3) throw py::value_error("slack-three policy must be 0 (full) through 3 (adaptive)");
                 using Clock = synthesis::residual_detail::Clock;
                 const auto deadline = seconds > 0
                     ? Clock::now() + std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(seconds))
@@ -337,7 +351,8 @@ PYBIND11_MODULE(_regional_native, mod) {
                 {
                     const py::gil_scoped_release release;
                     result = synthesis::slack_three_boundary(columns, h, primaries, mixed, gate_columns, target,
-                                                             care, work_limit, deadline, mode, symmetric);
+                                                             care, work_limit, deadline, mode, symmetric,
+                                                             synthesis::SlackThreePolicy(policy), memo);
                 }
                 const auto& exact = result.exact;
                 using Status = residual_directed::Status;
@@ -358,6 +373,12 @@ PYBIND11_MODULE(_regional_native, mod) {
                 metrics["slack_one_calls"] = result.slack_one_calls;
                 metrics["slack_two_calls"] = result.slack_two_calls;
                 metrics["slack_two_work"] = result.slack_two_work;
+                metrics["lift"] = result.lift;
+                metrics["extension_total"] = result.extension_total;
+                metrics["covered"] = result.covered;
+                metrics["memo_hits"] = result.memo_hits;
+                metrics["memo_inserts"] = result.memo_inserts;
+                metrics["exact_cached"] = result.exact_cached;
                 py::list regions;
                 for (const auto& region : exact.regions) {
                     py::list inputs;
@@ -370,6 +391,7 @@ PYBIND11_MODULE(_regional_native, mod) {
             }, py::arg("columns"), py::arg("first_layer"), py::arg("primaries"), py::arg("mixed_mask"),
             py::arg("gate_columns"), py::arg("target"), py::arg("care"), py::arg("work_limit") = 2000000,
             py::arg("deadline_seconds") = 0.025, py::arg("mode") = 5, py::arg("symmetric") = false,
+            py::arg("policy") = 0, py::arg("memo") = py::none(),
             "Slack-three boundary: exact Engine(.,3) answer plus retained extensions of cost <= 3"
             " (opt-in occurrence-symmetric tree solver).");
 }

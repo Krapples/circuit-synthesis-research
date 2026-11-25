@@ -51,6 +51,12 @@ for slack_three_filter in ('phase', 'phase-sym'):
         *RESIDUAL_MODES[f'slack-three-{slack_three_filter}'], '--slack-three-set-cuts')
     RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-100ms'] = (
         *RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set'], '--slack-three-ms', '100')
+    # Lazy weighted cuts: NOT A OR (W >= w + d) OR R with fewer or no extension checks.
+    for policy in ('exact', 'lift1', 'adaptive'):
+        RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-{policy}'] = (
+            *RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set'], '--slack-three-policy', policy)
+        RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-{policy}-100ms'] = (
+            *RESIDUAL_MODES[f'slack-three-{slack_three_filter}-set-{policy}'], '--slack-three-ms', '100')
 
 
 def exact_tables(n, steps):

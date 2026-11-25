@@ -1133,3 +1133,264 @@ python sat-search/experiments/slack_three_native_check.py --capture sat-search/r
 python sat-search/baselines/first_layer_check.py check sat-search/logs/slack_three_percy_check2.jsonl --workers 6 --modes slack-three-phase-set slack-three-phase-sym-set slack-three-phase-sym-set-100ms
 python sat-search/baselines/first_layer_check.py screen sat-search/logs/slack_three_screen.jsonl --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes slack-two-phase slack-two-phase-set slack-three-phase-set slack-three-phase-sym-set slack-three-phase-set-100ms slack-three-phase-sym-set-100ms
 ```
+
+## Lazy weighted slack-three cuts
+
+Source: `residual_lazy_cuts_native.zip` (SHA-256
+`ff8b3f1d8679aef592de91fee7a6d299cedf9f103e52a165bd5869e4b8ee096c`). It is a
+standalone C++20 prototype with its own boundary model. It is not linked into
+the production build; the rule was re-implemented in the native kernel and
+the Percy adapter.
+
+### Rule
+
+Let `W = 2h + m` be the actual boundary weight: first-layer occurrences
+counted twice plus distinct mixed primaries. Slack is `s = k + 1 - W`. A
+slack-three boundary has original weight `w = k - 2`.
+
+Let `A` be the antecedent "the actual boundary contains the original one":
+every original first-layer gate type occurs at least as often as in the
+original, and every original mixed primary is present. Under `A`, the actual
+boundary is the original plus an extension `E` with
+`W = w + cost(E)`, where an added occurrence costs 2 and an added mixed
+primary costs 1.
+
+**Claim (proved).** Suppose the exact boundary and every extension of cost
+`c < d` have been proved infeasible at their own slack `3 - c`, except
+extensions that add an element of a retained set `R`. Then every feasible
+circuit satisfies `NOT A OR (W >= w + d) OR R`.
+
+**Proof.** Take a feasible circuit with `A` true and `W < w + d`. Its boundary
+is the original plus some extension `E` of cost `c = W - w < d`, and the
+circuit realizes `E` at slack `3 - c >= 0`. Either `E` adds an element of `R`
+(so `R` holds) or `E` was proved infeasible, a contradiction. ∎
+
+Consequences:
+
+- `d = 1` needs no extension checks: under `A`, equality `W = w` forces the
+  excluded boundary itself.
+- `d = 4` gives `W >= k + 2`, which is impossible, so the clause is the
+  existing pure exclusion `NOT A OR R` and needs no threshold literal.
+- Cost levels: 1 = one free mixed primary (slack 2); 2 = two primaries or one
+  extra occurrence (slack 1); 3 = three primaries, or one occurrence plus one
+  primary (slack 0). Empty levels are skipped, so a boundary whose primaries
+  are all mixed already reaches `d = 2` with exact-only.
+
+The same restriction as before applies: the cut preserves the minimum only in
+the increasing search from a proved lower bound. It is not valid for
+exact-size or pinned-prefix claims.
+
+### Encoding
+
+- `native/src/reified_counter.hpp` adds `reified_at_most`, a Sinz sequential
+  counter with both directions, so `T_t <-> (count >= t)`.
+  `native/tests/reified_counter_check.cpp` checks every assignment of 27
+  counter shapes (574 assignments).
+- The first-layer weight counter uses the reified form only under a lazy
+  policy, and the clause reuses its threshold literal `T_{w+d}`. The full
+  policy keeps the original one-way counter as the control.
+- Antecedents: the set antecedent (gate-type features) when set cuts are on,
+  the observed types are distinct and no retained gate is among them.
+  Otherwise the positional antecedent over `typed_steps` is used, which covers
+  repeated first-layer types by position.
+- The cut aborts (assertion) if the threshold literal is missing or
+  `w != k - 2`.
+
+### Policies
+
+Percy flag `--slack-three-policy full|exact|lift1|adaptive` (requires
+`--slack-three-residual` and `--first-layer-budget`):
+
+- `full`: the existing behaviour (all extensions of cost <= 3; `d = 4`).
+- `exact`: no extension checks; `d = 1`, or 2 when no primary is free.
+- `lift1`: checks only the single free mixed primaries; `d = 2`.
+- `adaptive`: tests extensions level by level and skips one whose element is
+  already retained. A per-target `ResidualMemo` (keyed by target, care, the
+  leaf columns, `h` and slack; independent of `k`) is seeded from decided
+  slack-two answers and reused across boundaries. At the deadline, the first
+  incomplete level sets `d` and its partly retained elements are dropped.
+  Unknown answers returned before the deadline are retained, as in `full`.
+
+Unknown exact answers stay unknown under every policy (no clause).
+
+### Checks
+
+- [slack_three_native_check.py](experiments/slack_three_native_check.py)
+  `policy_checks`: four 5-input targets × four policies against an
+  independent DAG enumeration of all extensions; the clause's soundness
+  (every feasible extension cheaper than `d` meets `R`); exact-only makes no
+  calls; lift1 retains exactly the feasible singles; a repeated adaptive query
+  is fully answered from the memo; the deadline-revert path for seeded memos
+  (`d` = 1 and 2); unknown handling; non-adaptive policies ignore the memo;
+  all-mixed 4-input boundaries reach `d = 2`; out-of-range policy rejected.
+  [Log](logs/slack_three_policy_check.out).
+- Percy fixed budgets: 137 jobs, every policy plus `phase-sym-set-adaptive-100ms`,
+  including size-8 `0116` (UNSAT) and `016a` (SAT), agree with the expected
+  verdicts. [Records](results/baselines/slack_three_policy_percy_check.jsonl).
+- Bundle: `boundary_weight_check` passed (1,000 base cases, 425,701 checks,
+  451 multiplicity distributions). MSVC `extension_lift_bench 50 2`: exact
+  119.2 ms, lift1 254.7 ms, full 391.1 ms; `30 3`: 13.4 / 65.7 / 122.8 ms.
+  These are local recognizer costs only.
+
+### Captured boundaries
+
+The 168 distinct captured production boundaries
+([records](results/baselines/slack_three_percy_captured.jsonl)) were replayed
+under each policy. The replay used the same solver as `slack-three-phase-set`
+(Engine mode 4, directed trees). Adaptive shares one memo per target, in
+capture order, and the replay does no slack-two seeding.
+
+| Deadline | Policy | Wall s | Extension calls | `d` (boundaries) | Retained gates |
+| --- | --- | ---: | ---: | --- | ---: |
+| 25 ms | full | 3.83 | 4,643 | 4: 166 | 1,354 |
+| 25 ms | exact | 1.08 | 0 | 1: 38, 2: 128 | 0 |
+| 25 ms | lift1 | 1.12 | 74 | 2: 166 | 0 |
+| 25 ms | adaptive | 3.79 | 4,631 | 2: 128, 4: 38 | 0 |
+| 100 ms | full | 5.47 | 5,870 | 4: 166 | 0 |
+| 100 ms | exact | 1.07 | 0 | 1: 38, 2: 128 | 0 |
+| 100 ms | lift1 | 1.13 | 74 | 2: 166 | 0 |
+| 100 ms | adaptive | 5.23 | 5,676 | 4: 166 | 0 |
+
+- Every policy agrees on every exact decision: 166 UNSAT and 2 SAT. The
+  replay asserts that the lazy retained sets are subsets of full's.
+- At 25 ms, full keeps 1,354 unknown gate extensions in conditional clauses.
+  Adaptive instead reverts the 128 boundaries that hit the deadline to a pure
+  `d = 2` clause. At 100 ms, adaptive matches full's 166 pure exclusions.
+- 128 of the 168 boundaries are (1,4) shapes whose primaries are all already
+  mixed, so exact-only reaches `d = 2` on them without any checks. The other
+  38 reach `d = 2` with 74 single-primary checks, all infeasible.
+- Exact-only takes 28% of full's time at 25 ms and 20% at 100 ms. This is
+  close to the bundle's 82.5 / 330 ms ratio.
+
+[25 ms](results/baselines/slack_three_policy_captured_25ms.jsonl)
+· [100 ms](results/baselines/slack_three_policy_captured_100ms.jsonl)
+· [Totals](results/baselines/slack_three_policy_captured_summary.txt)
+
+### Matched 43-target screen
+
+Setup:
+
+- Satoko CEGAR on the 43 hard four-input targets.
+- Per budget: 8 s and 20,000 conflicts. Memory: 512 MiB. One worker per mode.
+- The eight modes ran as eight concurrent single-worker processes. Wall times
+  therefore include about 10-15% contention: full at 25 ms took 67.0 s alone
+  and 76.3 s here.
+
+| Mode | Size-7 excl | Size-8 SAT / UNSAT | Conflicts | Size-8 conflicts | Minima | Wall s | Peak MiB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| slack-two phase + set | 40 | 1 / 0 | 1,930,363 | 1,628,679 | 1 | 38.9 | 18.3 |
+| full, 25 ms | 40 | 1 / 4 | 2,419,072 | 1,991,585 | 2 | 76.3 | 33.1 |
+| exact | 42 | 1 / 1 | 2,446,460 | 2,154,379 | 2 | 72.1 | 26.6 |
+| lift1 | 42 | 0 / 4 | 2,401,835 | 1,976,612 | 0 | 68.3 | 32.7 |
+| adaptive, 25 ms | 42 | 0 / 1 | 2,685,100 | 2,332,837 | 0 | 87.7 | 33.9 |
+| full, 100 ms | 40 | 0 / 8 | 2,610,766 | 1,985,287 | 0 | 94.7 | 49.8 |
+| exact, 100 ms | 42 | 1 / 1 | 2,446,460 | 2,154,379 | 2 | 71.7 | 26.5 |
+| adaptive, 100 ms | 42 | 0 / 8 | 2,826,850 | 2,170,969 | 0 | 93.8 | 33.3 |
+
+Slack-three cut statistics, summed over all budgets:
+
+| Mode | Cuts | Repeat visits | `d` = 1/2/3/4 | Literals per lazy cut | Extension calls | Avoided | Memo hits | Slack-three s |
+| --- | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| full, 25 ms | 485 | 15 | — | — | 8,720 | 5,161 | — | 11.8 |
+| exact | 561 | 4 | 46/515/0/0 | 5.9 | 0 | 15,680 | — | 4.6 |
+| lift1 | 566 | 6 | 0/566/0/0 | 5.9 | 95 | 15,905 | — | 4.7 |
+| adaptive, 25 ms | 572 | 7 | 0/470/0/102 | 5.7 | 9,447 | 6,522 | 2,354 | 13.6 |
+| full, 100 ms | 493 | 9 | — | — | 14,147 | 381 | — | 19.3 |
+| exact, 100 ms | 561 | 4 | 46/515/0/0 | 5.9 | 0 | 15,680 | — | 4.6 |
+| adaptive, 100 ms | 583 | 6 | 0/0/0/583 | 5.4 | 12,529 | 4,156 | 3,787 | 18.4 |
+
+- "Avoided" is the number of extensions of cost at most 3 minus the number
+  actually decided. Full avoids some only by hitting the deadline, and it
+  retains those.
+- Literal counts cover the whole lazy clause: antecedent, threshold and
+  retained literals.
+
+Size-8 exclusions:
+
+- full, 25 ms and lift1: `1668`, `1669`, `177e`, `6996`.
+- exact (either deadline): `0196`.
+- adaptive, 25 ms: `177e`.
+- full, 100 ms: `0116`, `1668`, `1669`, `1681`, `16a9`, `177e`, `19e1`,
+  `6996`.
+- adaptive, 100 ms: `0116`, `0661`, `1668`, `1669`, `166b`, `1681`, `177e`,
+  `6996`.
+
+Verified minima:
+
+| Mode | Minima found |
+| --- | --- |
+| exact | `0196` = 9 (after its size-8 exclusion), `1699` = 8; no other mode reached either |
+| full, 25 ms | `016a` = 8, `177e` = 9 |
+| slack-two | `016a` = 8 |
+
+Every verdict and minimum agrees with
+[caps_hard_npn4.jsonl](results/baselines/caps_hard_npn4.jsonl): no
+disagreements, and no UNSAT beyond its known lower bounds. No new bound is
+claimed.
+
+Assessment:
+
+- **lift1 is the useful policy.** Compared with full at 25 ms:
+  - It keeps all four size-8 exclusions with 95 extension calls instead of
+    8,720.
+  - It cuts slack-three time from 11.8 s to 4.7 s and wall time from 76.3 s
+    to 68.3 s.
+  - It adds two size-7 exclusions and has fewer repeated boundary visits
+    (6 vs 15).
+- **exact-only** is the cheapest mode (4.6 s, peak 26.6 MiB). Its clauses
+  have `d <= 2`, and it proved only one size-8 exclusion. It reached two
+  minima that no other mode found; this is a trajectory effect, not a
+  stronger rule.
+- **adaptive** at 100 ms matches full's count of eight size-8 exclusions, at
+  the same wall time, with a different set: it adds `0661` and `166b` and
+  loses `16a9` and `19e1`. At 25 ms it is the slowest mode, because its pure
+  `d = 2` reverts are weaker than full's conditional clauses there.
+- Exact-only's deadline does not matter. The exact query always finished
+  within 25 ms, and the 25 ms and 100 ms runs have identical conflicts.
+- No slack-three policy beats slack-two phase + set on wall time, so all stay
+  opt-in. The lazy clauses remove the recognizer cost. What remains of the
+  slack-three cost is the exact query (`three_tree_calls` and phase checks)
+  and the CDCL time at size 8.
+
+[Matched records](results/baselines/slack_three_policy_screen.jsonl)
+· [Summary](results/baselines/slack_three_policy_screen_summary.txt)
+(from [slack_three_policy_summary.py](baselines/slack_three_policy_summary.py))
+
+Not verified:
+
+- UNSAT certificates for the size-8 exclusions.
+- Targets with more than four inputs.
+- The bundle's earlier 1,572-case counting test, which is missing from its
+  archive.
+
+The bundle's shared cross-query caches and grouped raw-primary relaxations
+remain unintegrated; both were slower in its generated comparison.
+
+### Flags, binding and commands
+
+- Percy: `--slack-three-policy full|exact|lift1|adaptive`.
+- Harness modes: `slack-three-{phase,phase-sym}-set-{exact,lift1,adaptive}[-100ms]`.
+- Binding: `_native.slack_three_boundary(..., symmetric=False, policy=0, memo=None)`,
+  where `policy` 0-3 means full, exact, lift1, adaptive, and `memo` takes a
+  `_native.ResidualMemo()`. New metrics: `lift`, `extension_total`,
+  `covered`, `memo_hits`, `memo_inserts`, `exact_cached`.
+- Percy JSON fields: `three_policy`, `three_cuts`, `three_lift`,
+  `three_threshold_cuts`, `three_clause_literals`, `three_covered`,
+  `three_extension_total`, `three_memo_hits`, `three_memo_inserts`,
+  `three_seed_inserts`, `three_exact_cached`, `three_repeats`,
+  `three_memo_size`.
+
+```powershell
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\residual_lazy_cuts_native.zip" -DestinationPath external/residual-lazy-cuts
+python -I external/residual-lazy-cuts/boundary_weight_check.py
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cd /d external\residual-lazy-cuts && cl /nologo /std:c++20 /O2 /EHsc extension_lift_bench.cpp && extension_lift_bench 50 2 && extension_lift_bench 30 3'
+cmd /d /c 'call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul && cl /nologo /std:c++20 /O2 /EHsc /Isat-search\native\src sat-search\native\tests\reified_counter_check.cpp && reified_counter_check'
+& sat-search/native/build_native.bat
+& sat-search/baselines/build/build_percy.bat
+python sat-search/experiments/slack_three_native_check.py
+python sat-search/baselines/first_layer_check.py check sat-search/logs/slack_three_policy_percy_check.jsonl --workers 8 --modes slack-three-phase-set-exact slack-three-phase-set-lift1 slack-three-phase-set-adaptive slack-three-phase-sym-set-adaptive-100ms
+python sat-search/experiments/slack_three_native_check.py --capture sat-search/results/baselines/slack_three_percy_captured.jsonl --output sat-search/logs/slack_three_policy_captured_25ms.jsonl --limit 200 --modes 4 --directed --policies --deadline 0.025
+python sat-search/experiments/slack_three_native_check.py --capture sat-search/results/baselines/slack_three_percy_captured.jsonl --output sat-search/logs/slack_three_policy_captured_100ms.jsonl --limit 200 --modes 4 --directed --policies --deadline 0.1
+foreach ($m in 'slack-two-phase-set','slack-three-phase-set','slack-three-phase-set-exact','slack-three-phase-set-lift1','slack-three-phase-set-adaptive','slack-three-phase-set-100ms','slack-three-phase-set-exact-100ms','slack-three-phase-set-adaptive-100ms') { Start-Process python -NoNewWindow -ArgumentList "sat-search/baselines/first_layer_check.py screen sat-search/logs/lazy_screen/$m.jsonl --workers 1 --memory-mib 512 --limit 43 --seconds 8 --conflicts 20000 --modes $m" }
+python sat-search/baselines/slack_three_policy_summary.py sat-search/results/baselines/slack_three_policy_screen.jsonl
+```

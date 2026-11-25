@@ -154,6 +154,124 @@ def expected_extensions(columns, h, primaries, mixed, gate_columns, target, care
     return kept_mixed, kept_gates, counts
 
 
+def all_extensions(columns, h, primaries, mixed, gate_columns):
+    """Every extension of cost <= 3 as (cost, mixed bits, gate bits, wires, first, exact slack)."""
+    free = [i for i in range(len(primaries)) if not mixed >> i & 1]
+
+    def with_gate(gate):
+        return [*columns[:h], gate_columns[gate], *columns[h:]]
+
+    out = [(1, 1 << i, 0, [*columns, primaries[i]], h, 2) for i in free]
+    out += [(2, 1 << a | 1 << b, 0, [*columns, primaries[a], primaries[b]], h, 1) for a, b in combinations(free, 2)]
+    out += [(2, 0, 1 << gate, with_gate(gate), h + 1, 1) for gate in range(len(gate_columns))]
+    out += [(3, 1 << a | 1 << b | 1 << c, 0, [*columns, primaries[a], primaries[b], primaries[c]], h, 0)
+            for a, b, c in combinations(free, 3)]
+    out += [(3, 1 << i, 1 << gate, [*with_gate(gate), primaries[i]], h + 1, 0)
+            for gate in range(len(gate_columns)) for i in free]
+    return out
+
+
+def lazy_sound(metrics, extensions, oracle):
+    """NOT A OR (W >= w + d) OR R: every feasible extension cheaper than d meets R."""
+    d, kept_mixed, kept_gates = metrics['lift'], metrics['mixed_extensions'], metrics['gate_extensions']
+    assert 1 <= d <= 4, metrics
+    for (cost, bits, gate_bits, *_), ok in zip(extensions, oracle):
+        if ok and cost < d:
+            assert bits & kept_mixed or gate_bits & kept_gates, (cost, bits, gate_bits, metrics)
+    # Retained elements come only from feasible (or unknown) extensions.
+    if metrics['extension_unknown'] == 0:
+        elements_mixed = elements_gates = 0
+        for (cost, bits, gate_bits, *_), ok in zip(extensions, oracle):
+            if ok:
+                elements_mixed |= bits
+                elements_gates |= gate_bits
+        assert kept_mixed & ~elements_mixed == 0 and kept_gates & ~elements_gates == 0, metrics
+
+
+def check_policies():
+    """Exact-only, cost-one lift and adaptive policies against the independent enumeration."""
+    a, b, c, d, e = primaries = independent_columns(5)
+    care = 0xffffffff
+    gate_columns = types(primaries)
+    columns, h, mixed = [a & b, c], 1, 4
+    extensions = all_extensions(columns, h, primaries, mixed, gate_columns)
+    counts = Counter()
+    for target in (a & b & c & d & e, (a & b & c) ^ d, (a & b) | (c & d & e), (a & b & c) ^ (d & e)):
+        oracle = [feasible(wires, first, target, care, slack) for _, _, _, wires, first, slack in extensions]
+
+        def call(policy, memo=None, deadline=0):
+            return _native.slack_three_boundary(columns, h, primaries, mixed, gate_columns, target, care,
+                                                2_000_000, deadline, 5, True, policy, memo)
+
+        for policy in (0, 1, 2, 3):
+            metrics, regions = call(policy)
+            assert metrics['status'] == 0 and not regions, metrics
+            lazy_sound(metrics, extensions, oracle)
+            assert metrics['extension_total'] == len(extensions), metrics
+            counts[f'policy{policy}'] += 1
+        exact, _ = call(1)
+        assert exact['lift'] == 1 and not exact['mixed_extensions'] and not exact['gate_extensions'], exact
+        assert exact['tight_calls'] == exact['slack_one_calls'] == exact['slack_two_calls'] == 0, exact
+        lift1, _ = call(2)
+        singles = sum(bits for (cost, bits, *_), ok in zip(extensions, oracle) if cost == 1 and ok)
+        assert lift1['lift'] == 2 and lift1['mixed_extensions'] == singles and not lift1['gate_extensions'], lift1
+        assert lift1['slack_two_calls'] == sum(cost == 1 for cost, *_ in extensions), lift1
+        adaptive, _ = call(3)
+        assert adaptive['lift'] == 4 and adaptive['extension_unknown'] == 0, adaptive
+        counts['adaptive_covered'] += adaptive['covered']
+        # A shared memo answers the repeated query without recomputation.
+        memo = _native.ResidualMemo()
+        first_run, _ = call(3, memo)
+        again, _ = call(3, memo)
+        assert again['exact_cached'] and again['memo_hits'] > 0 and again['memo_inserts'] == 0, again
+        assert again['tight_calls'] == again['slack_one_calls'] == again['slack_two_calls'] == 0, again
+        assert (again['mixed_extensions'], again['gate_extensions'], again['lift']) == (
+            first_run['mixed_extensions'], first_run['gate_extensions'], first_run['lift'])
+        lazy_sound(again, extensions, oracle)
+        counts['memo_repeat'] += 1
+        # Past the deadline only memo answers are decided: the first untested level sets d.
+        for seeded_levels, expected_lift in ((0, 1), (1, 2)):
+            memo = _native.ResidualMemo()
+            memo.insert(target, care, columns, h, 3, False)
+            for (cost, bits, gate_bits, wires, first, slack), ok in zip(extensions, oracle):
+                if cost <= seeded_levels:
+                    memo.insert(target, care, wires, first, slack, ok)
+            metrics, _ = call(3, memo, 1e-12)
+            assert metrics['status'] == 0 and metrics['exact_cached'], metrics
+            assert metrics['lift'] == expected_lift, (seeded_levels, metrics)
+            lazy_sound(metrics, extensions, oracle)
+            if expected_lift == 1:
+                assert not metrics['mixed_extensions'] and not metrics['gate_extensions'], metrics
+            counts['deadline_revert'] += 1
+        # Without the memo an expired deadline leaves the exact boundary unknown for every policy.
+        for policy in (1, 2, 3):
+            metrics, _ = call(policy, None, 1e-12)
+            assert metrics['status'] == 2 and metrics['lift'] == 0, metrics
+            counts['unknown'] += 1
+        # Non-adaptive policies ignore the memo.
+        memo = _native.ResidualMemo()
+        metrics, _ = call(1, memo)
+        assert len(memo) == 0 and metrics['memo_hits'] == 0
+    # With every primary already mixed no cost-one extension exists, so exact-only reaches d = 2.
+    p4 = independent_columns(4)
+    columns4 = [p4[0] & p4[1], *p4]
+    # 6996 and 0116 need nine gates (verified optima); this boundary allows 1 + 7 = 8.
+    for target, status in ((0x6996, 0), (0x0116, 0), (0x8000, 1)):
+        metrics, _ = _native.slack_three_boundary(columns4, 1, list(p4), 15, types(p4), target, 0xffff,
+                                                  2_000_000, 0, 5, True, 1)
+        assert metrics['status'] == status, (target, metrics)
+        if metrics['status'] == 0:
+            assert metrics['lift'] == 2 and metrics['extension_total'] == len(types(p4)), metrics
+            counts['no_free_exact'] += 1
+    assert counts['no_free_exact'] == 2
+    try:
+        _native.slack_three_boundary([a, b], 1, [], 0, [], a, care, policy=4)
+        raise AssertionError('policy 4 accepted')
+    except ValueError:
+        pass
+    return dict(counts)
+
+
 SETTINGS = [(mode, symmetric) for mode in (0, 2, 3, 4, 5) for symmetric in (False, True)]
 
 
@@ -229,7 +347,8 @@ def check():
         with_mode = True
     assert with_mode
     print(json.dumps({'oracle_comparisons': checks, 'duplicated_wire_checks': duplicated,
-                      'extension_and_limit_checks': extension_checks, 'argument_checks': 3}))
+                      'extension_and_limit_checks': extension_checks, 'argument_checks': 3,
+                      'policy_checks': check_policies()}))
 
 
 def replay(path, output, work_limit, deadline, limit, modes, repetitions):
@@ -268,6 +387,63 @@ def replay(path, output, work_limit, deadline, limit, modes, repetitions):
                       for (mode, sym, status), count in sorted(counts.items())}))
 
 
+POLICY_NAMES = ('full', 'exact', 'lift1', 'adaptive')
+
+
+def replay_policies(path, output, work_limit, deadline, limit, mode, symmetric):
+    """Replay captured boundaries under each lazy policy; adaptive shares one memo per target."""
+    reference = SimpleNamespace(independent_columns=independent_columns)
+    totals = {name: Counter() for name in POLICY_NAMES}
+    memos = {}
+    with output.open('x', encoding='utf-8') as out:
+        for name, record, first, mixed_ids, primaries, _, target, care in captured_boundaries(
+                reference, path, limit, event='slack_three'):
+            columns = [*first, *(primaries[i] for i in mixed_ids)]
+            gate_columns = types(primaries)
+            memo = memos.setdefault((name, target, care), _native.ResidualMemo())
+            results = {}
+            for policy, policy_name in enumerate(POLICY_NAMES):
+                start = perf_counter()
+                metrics, regions = _native.slack_three_boundary(
+                    columns, len(first), primaries, record['mixed'], gate_columns, target, care,
+                    work_limit, deadline, mode, symmetric, policy, memo if policy == 3 else None)
+                elapsed = perf_counter() - start
+                if metrics['status'] == 1:
+                    verify(columns, len(first), target, care, regions)
+                results[policy_name] = metrics
+                calls = metrics['tight_calls'] + metrics['slack_one_calls'] + metrics['slack_two_calls']
+                total = totals[policy_name]
+                total['boundaries'] += 1
+                total[f'status{metrics["status"]}'] += 1
+                total['wall_ms'] += 1000 * elapsed
+                total['extension_calls'] += calls
+                total['covered'] += metrics['covered']
+                total['memo_hits'] += metrics['memo_hits']
+                if metrics['status'] == 0:
+                    total[f'lift{metrics["lift"]}'] += 1
+                    total['retained_mixed_bits'] += bin(metrics['mixed_extensions']).count('1')
+                    total['retained_gate_bits'] += bin(metrics['gate_extensions']).count('1')
+                out.write(json.dumps(dict(record, **metrics, name=name, policy=policy_name, mode=mode,
+                                          symmetric=symmetric, wall_seconds=elapsed, deadline_seconds=deadline,
+                                          work_limit=work_limit, extension_calls=calls)) + '\n')
+            full = results['full']
+            decided = {m['status'] for m in results.values() if m['status'] != 2}
+            assert len(decided) <= 1, (name, record, results)
+            if full['status'] == 0 and full['extension_unknown'] == 0:
+                for policy_name in POLICY_NAMES[1:]:
+                    m = results[policy_name]
+                    if m['status'] == 0:
+                        # Lazy policies retain only elements of feasible extensions.
+                        assert m['mixed_extensions'] & ~full['mixed_extensions'] == 0, (name, policy_name, m)
+                        assert m['gate_extensions'] & ~full['gate_extensions'] == 0, (name, policy_name, m)
+                        if m['lift'] == 4 and m['extension_unknown'] == 0:
+                            totals[policy_name]['pure_equal_full'] += (
+                                (m['mixed_extensions'], m['gate_extensions'])
+                                == (full['mixed_extensions'], full['gate_extensions']))
+    print(json.dumps({name: {key: round(value, 1) if isinstance(value, float) else value
+                             for key, value in sorted(total.items())} for name, total in totals.items()}))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--capture', type=Path)
@@ -278,6 +454,9 @@ if __name__ == '__main__':
     parser.add_argument('--memory-mib', type=int, default=512)
     parser.add_argument('--modes', type=int, nargs='+', choices=range(6), default=[4, 5])
     parser.add_argument('--repetitions', type=int, default=1)
+    parser.add_argument('--policies', action='store_true',
+                        help='replay full/exact/lift1/adaptive policies with the first --modes entry')
+    parser.add_argument('--directed', action='store_true', help='with --policies, use directed trees')
     args = parser.parse_args()
     if args.repetitions < 1:
         parser.error('--repetitions must be positive')
@@ -285,6 +464,11 @@ if __name__ == '__main__':
     if args.capture:
         if not args.output:
             parser.error('--capture requires --output')
-        replay(args.capture, args.output, args.work_limit, args.deadline, args.limit, args.modes, args.repetitions)
+        if args.policies:
+            replay_policies(args.capture, args.output, args.work_limit, args.deadline, args.limit,
+                            args.modes[0], not args.directed)
+        else:
+            replay(args.capture, args.output, args.work_limit, args.deadline, args.limit, args.modes,
+                   args.repetitions)
     else:
         check()
