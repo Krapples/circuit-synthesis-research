@@ -26,7 +26,7 @@ from signed_bound_compare import cases, restrict_essential
 from two_sharing_core import ANY, local
 
 COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches',
-                    'port-first', 'witness-cover', 'port-first-witness')
+                    'port-first', 'witness-cover', 'port-first-witness', 'ordered-block')
 
 
 def check_tree(tree, m, ports, pats, targets, signed):
@@ -58,7 +58,7 @@ class RegionalCompletionChecks(unittest.TestCase):
     def test_independent_multislice_oracle(self):
         rng = Random(74228)
         cache = ObligationCache(solver=local_blocks, maxsize=512)
-        variants = tuple(make_completion(mode, cache_size=512) for mode in COMPLETION_MODES[-3:])
+        variants = tuple(make_completion(mode, cache_size=512) for mode in COMPLETION_MODES[-4:])
         verdicts = Counter()
         for _ in range(500):
             m = rng.randrange(3)

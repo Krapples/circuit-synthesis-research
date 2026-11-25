@@ -17,23 +17,27 @@ from regional_obligation_cache import ObligationCache
 ANY=-1
 
 
-def make_completion(mode='dominance-branches', *, cache_size=4096):
+def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory=None):
     if mode == 'reference':
         return local
     if mode == 'cached':
         return ObligationCache(maxsize=cache_size)
-    if mode == 'blocks':
-        return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, row_filter=False))
-    if mode == 'row-bounds':
-        return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, endpoint_branches=False))
-    if mode == 'endpoint-branches':
-        return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, dominance_branches=False))
-    if mode == 'dominance-branches':
-        return ObligationCache(maxsize=cache_size, solver=local_blocks)
-    if mode in ('port-first', 'witness-cover', 'port-first-witness'):
-        return ObligationCache(maxsize=cache_size, solver=partial(
-            local_blocks, port_first=mode != 'witness-cover', witness_cover=mode != 'port-first'))
-    raise ValueError(f'unknown completion mode {mode!r}')
+    modes = {
+        'blocks': dict(row_filter=False),
+        'row-bounds': dict(endpoint_branches=False),
+        'endpoint-branches': dict(dominance_branches=False),
+        'dominance-branches': {},
+        'port-first': dict(port_first=True),
+        'witness-cover': dict(witness_cover=True),
+        'port-first-witness': dict(port_first=True, witness_cover=True),
+        'ordered-block': dict(port_first=True, witness_cover=True, block_order=True),
+    }
+    if mode not in modes:
+        raise ValueError(f'unknown completion mode {mode!r}')
+    options = modes[mode]
+    if table_factory is not None:
+        options['table_factory'] = table_factory
+    return ObligationCache(maxsize=cache_size, solver=partial(local_blocks, **options))
 
 
 @lru_cache(None)

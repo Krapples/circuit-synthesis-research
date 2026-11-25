@@ -78,9 +78,9 @@ class Capture:
         return list(selected.values())
 
 
-def layout_job(work, mode, seconds, capture=False, input_symmetry=False):
+def layout_job(work, mode, seconds, capture=False, input_symmetry=False, table_factory=None):
     stats = Counter()
-    completion = make_completion(mode)
+    completion = make_completion(mode, table_factory=table_factory)
     if capture:
         completion = Capture(completion)
     job = partial(record_call, work, mode, completion, stats, input_symmetry=input_symmetry)
@@ -94,9 +94,9 @@ def layout_job(work, mode, seconds, capture=False, input_symmetry=False):
     return result
 
 
-def regional_job(query, mode, seconds):
+def regional_job(query, mode, seconds, table_factory=None):
     m, ports, pats, targets, signed = query
-    completion = make_completion(mode)
+    completion = make_completion(mode, table_factory=table_factory)
 
     def job():
         witness = completion(m, ports, pats, targets, signed)

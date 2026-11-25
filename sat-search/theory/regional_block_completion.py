@@ -4,7 +4,9 @@ from collections import Counter
 from functools import lru_cache
 from itertools import product
 
-from two_sharing_core import ANY, assignments, tree, vars
+from block_order_requirements import block_requirements
+from packed_regional_tables import PackedTables
+from two_sharing_core import ANY, tree
 
 
 def indices(mask):
@@ -16,14 +18,14 @@ def indices(mask):
 
 def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True, *,
                  row_filter=True, endpoint_branches=True, dominance_branches=True,
-                 port_first=False, witness_cover=False):
+                 port_first=False, witness_cover=False, block_order=False, table_factory=PackedTables):
     """Return a tree using every private leaf and allocated port occurrence."""
     if stats is not None:
         stats['local'] += 1
-    one = (1 << (1 << m)) - 1
+    tables = table_factory(m)
+    one = tables.one
     last = (one + 1) >> 1
-    full = (1 << m) - 1
-    columns = vars(m)
+    full, columns = tables.full, tables.columns
     counts = Counter(ports)
     providers = tuple(sorted(counts))
     all_rows = (1 << len(pats)) - 1
@@ -103,19 +105,38 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                 hits.add(required)
         return forbidden, tuple(sorted(hits))
 
+    @lru_cache(maxsize=512)
+    def order_demands(blocks, exact, is_and, live):
+        return block_requirements(blocks, exact, pats, project, is_and, signed, live)
+
+    @lru_cache(maxsize=1024)
+    def forbidden_blocks(blocks, demands, mask):
+        return sum(block for block, clauses in zip(blocks, demands) if any(not clause & mask for clause in clauses))
+
     def port_partitions(primary, available, op, obligations):
         blocks = components(primary, op)
         is_and = op == '&'
         absorbing = 0 if is_and else one
-        exact = tuple((row, support(t)) for row, t in enumerate(obligations) if t not in (ANY, absorbing))
+        exact_rows = tuple((row, t) for row, t in enumerate(obligations) if t not in (ANY, absorbing))
+        exact = tuple((row, support(t)) for row, t in exact_rows)
+        demands = order_demands(blocks, exact_rows, is_and, port_mask(available)) if block_order and blocks else ()
         port_anchor = next((i for i, count in enumerate(available) if count), -1) if not blocks else -1
         offered = tuple(range(int(i == port_anchor), count + 1) for i, count in enumerate(available))
         for taking in product(*offered):
             if stats is not None:
                 stats['port_allocations'] += 1
             remaining = tuple(a - b for a, b in zip(available, taking))
-            forbid_left, hits_left = support_demands(port_mask(taking), exact, is_and)
-            forbid_right, hits_right = support_demands(port_mask(remaining), exact, is_and)
+            left_mask, right_mask = port_mask(taking), port_mask(remaining)
+            forbid_left, hits_left = support_demands(left_mask, exact, is_and)
+            forbid_right, hits_right = support_demands(right_mask, exact, is_and)
+            if demands:
+                more_left = forbidden_blocks(blocks, demands, left_mask)
+                more_right = forbidden_blocks(blocks, demands, right_mask)
+                if stats is not None and any((more_left & block and not forbid_left & block)
+                                             or (more_right & block and not forbid_right & block) for block in blocks):
+                    stats['block_order_forces'] += 1
+                forbid_left |= more_left
+                forbid_right |= more_right
             # Fix child order using the first primary component, or a port occurrence.
             force_left = forbid_right | (blocks[0] if blocks else 0)
             free = []
@@ -142,39 +163,12 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
             if stats is not None:
                 stats['port_allocation_reject'] += 1
 
-    @lru_cache(maxsize=4096)
-    def support(table):
-        return sum(1 << i for i, column in enumerate(columns) if (table ^ (table << (1 << i))) & column)
-
-    @lru_cache(maxsize=4096)
-    def project(table, inside, is_and):
-        for i in indices(full ^ inside):
-            column = columns[i]
-            low, high = table & ~column, (table & column) >> (1 << i)
-            value = low | high if is_and else low & high
-            table = value | (value << (1 << i))
-        return table
+    support = lru_cache(maxsize=4096)(tables.support)
+    project = lru_cache(maxsize=4096)(tables.project)
 
     @lru_cache(maxsize=4096)
     def exposed(row, inside):
-        """The unique nonconstant cofactor a subtree may expose in this slice."""
-        target = targets[row]
-        if target in (ANY, 0, one):
-            return None
-        owned = assignments(tuple(indices(inside)))
-        outside = assignments(tuple(indices(full ^ inside)))
-        constant = (1 << len(owned)) - 1
-        found = None
-        for fixed in outside:
-            part = sum((target >> (a | fixed) & 1) << i for i, a in enumerate(owned))
-            if part in (0, constant):
-                continue
-            if found is not None and found != part:
-                return None
-            found = part
-        if found is None:
-            return None
-        return sum((found >> i & 1) << (a | fixed) for i, a in enumerate(owned) for fixed in outside)
+        return tables.exposed(targets[row], inside, project)
 
     @lru_cache(maxsize=256)
     def row_order(mask):
@@ -367,7 +361,8 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
     try:
         return complete(full, tuple(counts[i] for i in providers), tuple(targets))
     finally:
-        for cached in (components, support_demands, support, project, exposed, row_order, ordered_rows, endpoints, complete):
+        for cached in (components, support_demands, order_demands, forbidden_blocks, support, project, exposed,
+                       row_order, ordered_rows, endpoints, complete):
             cached.cache_clear()
 
 
