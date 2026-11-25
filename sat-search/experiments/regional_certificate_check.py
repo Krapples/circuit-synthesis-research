@@ -220,7 +220,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bench', action='store_true')
     parser.add_argument('--dataset', choices=('queries', 'roots', 'layouts'), required=True)
-    parser.add_argument('--modes', nargs='+', choices=(BASE, *CNF_MODES, ABSORPTION, *ROOT_MODES))
+    parser.add_argument('--modes', nargs='+', choices=(BASE, *CNF_MODES, ABSORPTION, *ROOT_MODES, 'padding-first'))
     parser.add_argument('--case', dest='cases', action='append')
     parser.add_argument('--source', action='append', type=Path)
     parser.add_argument('--seconds', type=float, required=True)

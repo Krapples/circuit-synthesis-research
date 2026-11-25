@@ -35,6 +35,18 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
     if mode == 'root-portfolio':
         root = partial(local_blocks, port_first=True, witness_cover=True, row_quotient=True, root_relaxation=True)
         return ObligationCache(maxsize=cache_size, solver=completion_portfolio(root, 'root'))
+    if mode == 'padding-first':
+        from regional_padding import fast_witness
+
+        def solve(m, ports, patterns, targets, signed, stats=None, module_filter=True):
+            if len(ports) >= 4 and m + len(ports) >= 7:
+                padded = fast_witness(m, ports, patterns, targets, signed, stats)
+                if padded is not None:
+                    return padded
+            return local_blocks(m, ports, patterns, targets, signed, stats, module_filter,
+                                port_first=True, witness_cover=True, row_quotient=True)
+
+        return ObligationCache(maxsize=cache_size, solver=solve)
     modes = {
         'blocks': dict(row_filter=False),
         'row-bounds': dict(endpoint_branches=False),

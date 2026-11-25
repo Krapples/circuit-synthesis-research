@@ -28,7 +28,7 @@ from two_sharing_core import ANY, local
 COMPLETION_MODES = ('reference', 'cached', 'blocks', 'row-bounds', 'endpoint-branches', 'dominance-branches',
                     'port-first', 'witness-cover', 'port-first-witness', 'ordered-block', 'row-quotient',
                     'root-relaxation', 'root-portfolio', 'certificate-cnf', 'certificate-lazy', 'certificate-rows', 'certificate-anchored',
-                    'certificate-absorption', 'certificate-fallback')
+                    'certificate-absorption', 'certificate-fallback', 'padding-first')
 
 
 def check_tree(tree, m, ports, pats, targets, signed):
