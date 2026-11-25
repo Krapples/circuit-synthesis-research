@@ -151,9 +151,10 @@ def main():
 
     frontier = [tuple(seed + [c]) for c in children(n, seed, colex_from)] if a.root_children or not seed else [tuple(seed)]
     t0 = time.time()
-    stats = dict(analytical=0, sat_unsat=0, open=0, expanded=0, witness=0)
+    stats = dict(analytical=0, sat_unsat=0, open=0, expanded=0, witness=0, probe_reused=0)
     for state in closed.values():
         stats[state.replace('-', '_')] += 1
+    prior_probes = {}
     with Pool(a.workers) as p:
         while frontier:
             # resume: walk through previously expanded nodes to their children; skip other closed nodes
@@ -163,7 +164,12 @@ def main():
                              if closed.get(P) == 'expanded' else [P])]
             todo = [P for P in frontier if P not in closed]
             frontier = []
-            res = p.map(analytical, [(n, masks, list(P), a.size) for P in todo])
+            pending = [P for P in todo if P not in prior_probes]
+            stats['probe_reused'] += len(todo) - len(pending)
+            fresh = p.map(analytical, [(n, masks, list(P), a.size) for P in pending])
+            prior_probes.update((tuple(result[0]), result) for result in fresh)
+            res = [prior_probes[P] for P in todo]
+            prior_probes.clear()
             survivors = []
             for prefix, rule, bound, dt in res:
                 P = tuple(prefix)
@@ -182,6 +188,9 @@ def main():
                     probe = p.map(analytical, [(n, masks, list(P) + [c], a.size) for c in kids[:min(len(kids), 40)]])
                     rate = sum(1 for _, rule, _, _ in probe if rule) / max(1, len(probe))
                     if rate >= a.min_reject:
+                        # These children appear in the next level under the
+                        # same target, gate budget and prefix scope.
+                        prior_probes.update((tuple(result[0]), result) for result in probe)
                         to_split.append(P); continue
                 to_sat.append(P)
             for P in to_split:

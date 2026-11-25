@@ -22,12 +22,22 @@ def bnb(n, terms, G, seed=(), workers=2):
     out = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT).stdout
     line = [l for l in out.splitlines() if l.startswith('RESULT')][-1]
     stats = eval(line.split('RESULT ')[1].split(' (')[0])
-    witnesses = [json.loads(l) for l in open(tree) if '"witness"' in l]
+    with open(tree, encoding='utf-8') as stream:
+        witnesses = [json.loads(l) for l in stream if '"witness"' in l]
     os.remove(tree)
     return stats, witnesses
 
 
 class BranchAndBound(unittest.TestCase):
+    def test_expanded_children_reuse_their_probe(self):
+        terms = (3, 6, 12)
+        truth = ref.truth_table(4, terms)
+        self.assertIsNotNone(ref.sat_exists(4, truth, 4, 'monotone')[0])
+        stats, witnesses = bnb(4, terms, 4, workers=1)
+        self.assertGreater(stats['probe_reused'], 0)
+        self.assertGreater(stats['witness'], 0)
+        self.assertTrue(all(ref.check_witness(4, truth, row['circuit']) for row in witnesses))
+
     def test_resume_scope_and_legacy_evidence(self):
         seed = ((1, 0, 1),)
         scope = tree_scope(4, (3, 6, 12), 4, seed, 1, True)
