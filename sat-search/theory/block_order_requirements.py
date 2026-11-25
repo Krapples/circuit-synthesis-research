@@ -3,6 +3,7 @@
 
 def block_requirements(blocks, rows, patterns, project, is_and, signed, portmask):
     """Return minimal provider masks that must each meet the block's child."""
+    rows = tuple(rows)
     pairs = []
     for i, (row, table) in enumerate(rows):
         for j in range(i + 1 if signed else 0, len(rows)):

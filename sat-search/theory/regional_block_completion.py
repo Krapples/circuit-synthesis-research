@@ -6,6 +6,7 @@ from itertools import product
 
 from block_order_requirements import block_requirements
 from packed_regional_tables import PackedTables
+from regional_row_quotient import quotient_rows
 from two_sharing_core import ANY, tree
 
 
@@ -18,7 +19,8 @@ def indices(mask):
 
 def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True, *,
                  row_filter=True, endpoint_branches=True, dominance_branches=True,
-                 port_first=False, witness_cover=False, block_order=False, table_factory=PackedTables):
+                 port_first=False, witness_cover=False, block_order=False, row_quotient=False,
+                 table_factory=PackedTables):
     """Return a tree using every private leaf and allocated port occurrence."""
     if stats is not None:
         stats['local'] += 1
@@ -241,12 +243,12 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                 visited.add(required)
             if stats is not None:
                 stats['cover_nodes'] += 1
-            a = complete(left, taking, require(a_fixed, required))
+            a = solve(left, taking, require(a_fixed, required))
             if a is None:
                 return None
             lo, hi = endpoints(a)
             uncovered = ambiguous & (hi if absorbing == 0 else ~lo)
-            b = complete(right, remaining, require(b_fixed, uncovered))
+            b = solve(right, remaining, require(b_fixed, uncovered))
             if b is not None:
                 return a, b
             # Any successful extension must take at least one of the right child's failed rows.
@@ -345,9 +347,9 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
                         continue
                     for selected in product(*options):
                         a_targets, b_targets = map(tuple, zip(*selected))
-                        a = complete(left, taking, a_targets)
+                        a = solve(left, taking, a_targets)
                         if a is not None:
-                            b = complete(right, remaining, b_targets)
+                            b = solve(right, remaining, b_targets)
                             if b is not None:
                                 return op, a, b
         return None
@@ -358,11 +360,30 @@ def local_blocks(m, ports, pats, targets, signed, stats=None, module_filter=True
         pattern &= mask
         return (pattern != 0 or not target & 1) and (pattern != mask or bool(target & last))
 
+    @lru_cache(maxsize=256)
+    def observed_patterns(mask):
+        return tuple(pattern & mask for pattern in pats)
+
+    @lru_cache(maxsize=4096)
+    def canonical(mask, obligations):
+        normalized = quotient_rows(observed_patterns(mask), obligations, signed, one)
+        if stats is not None:
+            if normalized is None:
+                stats['quotient_conflicts'] += 1
+            else:
+                stats['quotient_dropped'] += normalized.count(ANY) - obligations.count(ANY)
+        return normalized
+
+    def solve_quotiented(primary, available, obligations):
+        normalized = canonical(port_mask(available), obligations)
+        return None if normalized is None else complete(primary, available, normalized)
+
+    solve = solve_quotiented if row_quotient else complete
     try:
-        return complete(full, tuple(counts[i] for i in providers), tuple(targets))
+        return solve(full, tuple(counts[i] for i in providers), tuple(targets))
     finally:
         for cached in (components, support_demands, order_demands, forbidden_blocks, support, project, exposed,
-                       row_order, ordered_rows, endpoints, complete):
+                       row_order, ordered_rows, endpoints, complete, observed_patterns, canonical):
             cached.cache_clear()
 
 

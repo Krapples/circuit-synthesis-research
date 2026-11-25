@@ -17,6 +17,7 @@ from packed_regional_tables import PackedTables
 from port_certificates_check import bounded
 from regional_block_completion import indices
 from regional_cover_stress import corpus_work, layout_job, regional_job
+from regional_row_quotient import quotient_rows
 from two_sharing_core import ANY, assignments
 
 
@@ -107,11 +108,18 @@ class RegionalOrderChecks(unittest.TestCase):
         from layout_projection import search_exact
         from ordered_quotient_core import reconstruct
 
-        _, n, target, excess, signed, _ = next(work for work in corpus_work() if work[0] == 'comparator-02')
-        layout = search_exact(n, target, excess, signed, completion=make_completion('ordered-block'))
+        n, target, excess = 5, 0xe8a0a080, 5  # comparator-02
+        layout = search_exact(n, target, excess, completion=make_completion('ordered-block'))
         self.assertIsNotNone(layout)
         gates, _ = reconstruct(n, target, *layout, excess)
         self.assertEqual(len(gates), 9)
+
+    def test_row_quotient_keeps_extremal_monotone_obligations(self):
+        self.assertEqual(quotient_rows((0, 1, 2, 3, 3), (0, 0, 15, 15, 15), False, 15),
+                         (ANY, 0, 15, ANY, ANY))
+        self.assertEqual(quotient_rows((0, 1, 2, 3, 3), (0, 0, 15, 15, 15), True, 15),
+                         (0, 0, 15, 15, ANY))
+        self.assertIsNone(quotient_rows((3, 3), (10, 12), True, 15))
 
 
 def profile_call(function, args, enabled):
@@ -124,7 +132,7 @@ def profile_call(function, args, enabled):
         if name in ('support', 'project', 'exposed') and (
                 file.endswith('packed_regional_tables.py') or file.endswith('regional_order_check.py')):
             group = name
-        elif name == 'block_requirements':
+        elif name in ('block_requirements', 'quotient_rows'):
             group = name
         elif file.endswith('regional_block_completion.py') and name in ('port_partitions', 'complete', 'branch'):
             group = name
@@ -186,7 +194,7 @@ def run(args, emit):
         key = tuple(context.items())
         methods = ('packed',) if args.dataset == 'capture' else args.methods
         for method in methods:
-            mode = 'ordered-block' if method == 'ordered' else 'port-first-witness'
+            mode = {'ordered': 'ordered-block', 'quotient': 'row-quotient'}.get(method, 'port-first-witness')
             tables = LegacyTables if method == 'legacy' else None
             if args.dataset in ('capture', 'layout'):
                 function = layout_job
@@ -208,7 +216,7 @@ def main():
     parser.add_argument('--bench', action='store_true')
     parser.add_argument('--dataset', required=True, choices=('capture', 'captured', 'wide', 'layout'))
     parser.add_argument('--source', type=Path, action='append', default=[])
-    parser.add_argument('--methods', choices=METHODS, nargs='+', default=METHODS)
+    parser.add_argument('--methods', choices=(*METHODS, 'quotient'), nargs='+', default=METHODS)
     parser.add_argument('--profile', action='store_true')
     parser.add_argument('--seconds', type=float, required=True)
     parser.add_argument('--output', type=Path, required=True)

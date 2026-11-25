@@ -31,6 +31,7 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
         'witness-cover': dict(witness_cover=True),
         'port-first-witness': dict(port_first=True, witness_cover=True),
         'ordered-block': dict(port_first=True, witness_cover=True, block_order=True),
+        'row-quotient': dict(port_first=True, witness_cover=True, row_quotient=True),
     }
     if mode not in modes:
         raise ValueError(f'unknown completion mode {mode!r}')
