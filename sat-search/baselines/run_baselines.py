@@ -34,7 +34,9 @@ for d in ('', 'theory', 'experiments'):
 ALL_TOOLS = ['percy-std-bsat', 'percy-std-satoko', 'percy-std-bmcg', 'percy-cegar-bsat', 'percy-cegar-satoko',
              'percy-cegar-bmcg', 'abc-two', 'abc-two-g', 'abc-two-onu', 'abc-two-gonu', 'abc-all', 'abc-all-i',
              'cirbo-maplechrono', 'cirbo-cadical195', 'ours-sat', 'ours-hybrid']
-COMPLETE_ONLY = ('abc-', 'ours-hybrid')
+COMPLETE_ONLY = ('abc-', 'ours-hybrid', 'hpercy-', 'mpercy-')
+# hybrid-Percy (runners.py): our signed modules + lower bounds [+ ladder for hpercy], then percy_run.exe with the same
+# method/solver as the matching standalone percy-<method>-<solver> tool. Not in ALL_TOOLS; select with --tools.
 
 
 # ---------------------------------------------------------------- process control
@@ -193,7 +195,13 @@ def run_job(arg):
             r = json.loads(line)
             if 'k' in r:
                 rec['budgets'].append([r['k'], r['status'], r['seconds']])
+            elif r.get('stage') == 'preprocessed':
+                rec.update(core_n=r.get('core_n'), trace=r.get('trace'), bound=r.get('bound'), core_start=r.get('start'),
+                           pre_seconds=r.get('pre_seconds'))
             elif 'final' in r:
+                for key in ('pre_seconds', 'synth_seconds', 'core_n', 'trace', 'bound'):
+                    if key in r:
+                        rec[key] = r[key]
                 if r['final'] == 'SAT':
                     rec['size'] = r['steps']; rec['status'] = 'OPTIMAL'; rec['stage'] = r.get('stage')
                     if r.get('gates') is not None:

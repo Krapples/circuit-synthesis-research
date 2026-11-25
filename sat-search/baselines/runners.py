@@ -136,6 +136,87 @@ def run_hybrid(n, tt, care, start, kmax):
          seconds=round(time.perf_counter() - T0, 6))
 
 
+# ---------------------------------------------------------------- hybrid-Percy: our preprocessing, Percy on the core
+PERCY = os.path.join(ROOT, 'external', 'percy-build', 'percy_run.exe')
+
+
+def core_lower_bound(m, core):
+    """Proved lower bound on the free-NOT binary gate count (= AIG size) of a complete essential core:
+    max(n - 1, signed regional bound n - 1 + Bound.lower(), free-NOT first-gate bound (mode 1, n <= 9))."""
+    from signed_region_bounds import Bound
+    lb = max(m - 1, m - 1 + Bound(m, core).lower())
+    if m <= 9:
+        from first_gate_bound import lower as fg_lower
+        lb = max(lb, fg_lower(m, core, 1))
+    return lb
+
+
+def run_percy_core(m, core, start, method, solver, offset):
+    """percy_run.exe (SSV, set_primitive(AIG)) on the core from a proved lower bound; budgets re-emitted with offset."""
+    import subprocess
+    hx = format(core, f'0{max(1, (1 << m) // 4)}x')
+    t = time.perf_counter()
+    p = subprocess.run([PERCY, '--n', str(m), '--tt', hx, '--solver', solver, '--method', method, '--start', str(start)],
+                       capture_output=True, text=True)
+    final = None
+    for line in p.stdout.splitlines():
+        if not line.startswith('{'):
+            continue
+        r = json.loads(line)
+        if 'k' in r:
+            emit(k=r['k'] + offset, status=r['status'], seconds=r['seconds'])
+        elif 'final' in r:
+            final = r
+    return final, time.perf_counter() - t
+
+
+def run_hybrid_percy(tool, n, tt, care, kmax):
+    """hpercy-<method>-<solver>: signed modules -> lower bounds -> ladder (one-sharing, two-sharing, solve3) -> Percy.
+       mpercy-<method>-<solver>: signed modules -> lower bounds -> Percy (no ladder; ablation of the ladder)."""
+    full = (1 << (1 << n)) - 1
+    if care != full:
+        raise SystemExit(f'{tool}: complete functions only')
+    kind, method, solver = tool.split('-')
+    from module_contraction import simplify
+    m, core, tr = simplify(n, tt, True)
+    pre = dict(core_n=m, trace=len(tr))
+    if m <= 1:
+        emit(final='SAT', steps=len(tr), stage='trivial-core', verified_scope='internal', pre_seconds=round(time.perf_counter() - T0, 6),
+             seconds=round(time.perf_counter() - T0, 6), **pre)
+        return
+    lb = core_lower_bound(m, core); pre['bound'] = lb
+    stage = 'percy'
+    if kind == 'hpercy':
+        from one_sharing_core import solve_core
+        from two_sharing_core import solve as solve2
+        from ordered_quotient_core import solve3, make_completion
+        one = solve_core(m, core, True, False)
+        best = None
+        if one is not None:
+            best, stage = one[0], 'one-sharing'
+        elif solve2(m, core, True) is not None:
+            best, stage = m + 1, 'two-sharing'
+        elif solve3(m, core, True, completion=make_completion('phase-first')) is not None:
+            best, stage = m + 2, 'solve3'
+        if best is not None:
+            emit(final='SAT', steps=best + len(tr), stage=stage, verified_scope='internal',
+                 pre_seconds=round(time.perf_counter() - T0, 6), seconds=round(time.perf_counter() - T0, 6), **pre)
+            return
+        lb = max(lb, m + 3)                # ladder decided: no circuit with binary excess <= 3
+        stage = 'ladder+percy'
+    pre_seconds = time.perf_counter() - T0
+    emit(stage='preprocessed', start=lb, pre_seconds=round(pre_seconds, 6), **pre)
+    final, synth = run_percy_core(m, core, lb, method, solver, len(tr))
+    if final and final.get('final') == 'SAT':
+        gates = [[op, a, b] for op, a, b in final['chain']]
+        var, inv = final['out']
+        emit(final='SAT', steps=final['steps'] + len(tr), stage=stage, core_n=m, trace=len(tr), bound=lb,
+             verified_scope='core', core_tt=hex(core), core_gates=gates, core_out=[var - 1, inv],
+             pre_seconds=round(pre_seconds, 6), synth_seconds=round(synth, 6), seconds=round(time.perf_counter() - T0, 6))
+    else:
+        emit(final='UNSAT', steps=-1, stage=stage, pre_seconds=round(pre_seconds, 6), seconds=round(time.perf_counter() - T0, 6))
+
+
 if __name__ == '__main__':
     tool, n, tt = sys.argv[1], int(sys.argv[2]), int(sys.argv[3], 16)
     care = (1 << (1 << n)) - 1 if sys.argv[4] == '-' else int(sys.argv[4], 16)
@@ -148,5 +229,7 @@ if __name__ == '__main__':
              seconds=round(time.perf_counter() - T0, 6))
     elif tool == 'ours-hybrid':
         run_hybrid(n, tt, care, start, kmax)
+    elif tool.startswith(('hpercy-', 'mpercy-')):
+        run_hybrid_percy(tool, n, tt, care, kmax)
     else:
         raise SystemExit(f'unknown tool {tool}')
