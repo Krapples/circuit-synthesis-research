@@ -120,7 +120,7 @@ def cost1(n,f,signed):
     return None if r is None else r[0]+len(steps)
 
 
-def solve(n,f,signed=False,stats=None,gate_filter=True,check_contract=True):
+def solve(n,f,signed=False,stats=None,gate_filter=True,check_contract=True,*,completion=local):
     """Return a decomposition certificate if excess<=2, otherwise None.
     A certificate ('primary',R,tree) uses an explicit formula; ('module',T,Z,h,g)
     uses two <=1 synthesis problems; ('internal',x,S,Z,h,g) gives a two-region DAG.
@@ -142,7 +142,7 @@ def solve(n,f,signed=False,stats=None,gate_filter=True,check_contract=True):
         if not allowed(R) or any(degree[x]+(2 if len(R)==1 else 1)>2 for x in R):continue
         Z=tuple(i for i in allvars if i not in R)
         ts=slices(f,R,Z);ps=tuple(range(1<<len(R)))
-        t=local(len(Z),(0,0,0) if len(R)==1 else (0,0,1,1),ps,ts,signed,stats)
+        t=completion(len(Z),(0,0,0) if len(R)==1 else (0,0,1,1),ps,ts,signed,stats)
         if t is not None:
             out=map_tree(t,Z+R);assert ev(out,n)==f
             return ('primary',R,out)
@@ -202,7 +202,7 @@ def solve(n,f,signed=False,stats=None,gate_filter=True,check_contract=True):
                                 if not ok:break
                             if not ok:continue
                             pats=tuple(sorted(tab));targets=tuple(tab[p] for p in pats)
-                            gt=local(len(Z),(0,1,1),pats,targets,signed,stats)
+                            gt=completion(len(Z),(0,1,1),pats,targets,signed,stats)
                             if gt is not None:
                                 H=map_tree(htree,S+(x,));G=map_tree(gt,Z+(x,H))
                                 assert ev(G,n)==f

@@ -56,7 +56,7 @@ def signs(m,h):
         if ds:out[i]=next(iter(ds))
     return out
 
-def fixed(f,R,S,Z,din,dout,dH,signed=False,stats=None,prune=True):
+def fixed(f,R,S,Z,din,dout,dH,signed=False,stats=None,prune=True,*,completion=local):
     """Exact for a specified layout. R shared primaries; S provider-private;
     Z output-private. din,dout give occurrence counts per R in each region.
     dH is the number of occurrences of the one shared internal provider.
@@ -82,7 +82,7 @@ def fixed(f,R,S,Z,din,dout,dH,signed=False,stats=None,prune=True):
     @lru_cache(None)
     def check_local(side,pats,ts):
         stats['local_'+side]+=1
-        return local(len(S) if side=='h' else len(Z),pin if side=='h' else pout,pats,ts,signed)
+        return completion(len(S) if side=='h' else len(Z),pin if side=='h' else pout,pats,ts,signed)
     def rec(i):
         if i==len(order):
             stats['profiles']+=1
@@ -119,7 +119,7 @@ def fixed(f,R,S,Z,din,dout,dH,signed=False,stats=None,prune=True):
         return None
     return rec(0)
 
-def solve(n,f,e,signed=False,stats=None,min_excess=1,reduced_filter=False):
+def solve(n,f,e,signed=False,stats=None,min_excess=1,reduced_filter=False,*,completion=local):
     """Find a witness with <=e excess within the at-most-one-internal-share class."""
     if n<1 or not essential(n,f) or (not signed and not raw_monotone(n,f)):
         raise ValueError('requires essential complete target in selected basis')
@@ -153,7 +153,7 @@ def solve(n,f,e,signed=False,stats=None,min_excess=1,reduced_filter=False):
                     if not allowed(R,tuple(d+2 for d in c),s):stats['restriction_reject']+=1;continue
                     ports=tuple(i for i,d in enumerate(c) for _ in range(d+2))
                     stats['primary_local']+=1
-                    w=local(len(Z),ports,pats,ts,signed)
+                    w=completion(len(Z),ports,pats,ts,signed)
                     if w is not None:return ('primary',R,Z,w)
     # Exactly one shared internal wire. Enumerate its read count and the
     # excess allocated to repeated primaries, then distribute their reads.
@@ -174,7 +174,7 @@ def solve(n,f,e,signed=False,stats=None,min_excess=1,reduced_filter=False):
                             for din in product(*(range(d+1) for d in ds)):
                                 dout=tuple(d-a for d,a in zip(ds,din))
                                 if len(S)+sum(din)<2:continue
-                                w=fixed(f,R,S,Z,din,dout,dH,signed,stats)
+                                w=fixed(f,R,S,Z,din,dout,dH,signed,stats,completion=completion)
                                 if w is not None:return ('internal',R,S,Z,din,dout,dH,*w)
     return None
 

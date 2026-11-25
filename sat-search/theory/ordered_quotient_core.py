@@ -12,13 +12,26 @@ from module_contraction import vars, essential, raw_monotone, simplify, brute, c
 from conditional_provider import options, signs, consistent_monotone, compositions, solve as one_internal, reconstruct as reconstruct_one, formula_columns
 from two_sharing_core import assignments, slices, local, solve as two, reconstruct as reconstruct_two
 from restriction_excess import first_gate_candidates, lower
+from regional_block_completion import local_blocks
+from regional_obligation_cache import ObligationCache
 ANY=-1
+
+
+def make_completion(mode='blocks', *, cache_size=4096):
+    if mode == 'reference':
+        return local
+    if mode == 'cached':
+        return ObligationCache(maxsize=cache_size)
+    if mode == 'blocks':
+        return ObligationCache(maxsize=cache_size, solver=local_blocks)
+    raise ValueError(f'unknown completion mode {mode!r}')
+
 
 @lru_cache(None)
 def split_table(f,m,z):
     return tuple(sum((f>>(a|(b<<m))&1)<<b for b in range(1<<z)) for a in range(1<<m))
 
-def fixed(n,f,R,groups,ports,signed=False,stats=None,projection=True):
+def fixed(n,f,R,groups,ports,signed=False,stats=None,projection=True,*,completion=None):
     """R: repeated primary indices; groups: ordered tuple of disjoint private
     groups (last is output). ports[j]: global provider ids read in region j,
     including repeats; ids 0..len(R)-1 are primaries, len(R)+j earlier region
@@ -26,6 +39,7 @@ def fixed(n,f,R,groups,ports,signed=False,stats=None,projection=True):
     local trees or None. For fixed layout, exact, including serial providers.
     """
     if stats is None:stats=Counter()
+    if completion is None:completion=make_completion()
     r=len(R);k=len(groups)-1;W=tuple(i for S in groups for i in S)
     assert sorted(R+W)==list(range(n)) and len(ports)==len(groups)
     assert all(all(0<=p<r+j for p in P) for j,P in enumerate(ports))
@@ -44,7 +58,7 @@ def fixed(n,f,R,groups,ports,signed=False,stats=None,projection=True):
     def check(j,req):
         stats['local']+=1
         pats,ts=zip(*req) if req else ((0,),(ANY,))
-        return local(len(groups[j]),ports[j],pats,ts,signed)
+        return completion(len(groups[j]),ports[j],pats,ts,signed)
     @lru_cache(None)
     def go(j,state):
         stats['states']+=1
@@ -132,9 +146,10 @@ def reconstruct(n,f,R,groups,ports,trees,e):
     assert vals[out[0]]^(one if out[1] else 0)==f
     return G,out
 
-def two_internal(n,f,signed=False,stats=None):
+def two_internal(n,f,signed=False,stats=None,*,completion=None):
     """The two-internal-wire class at excess three, for reduced cores."""
     if stats is None:stats=Counter()
+    if completion is None:completion=make_completion()
     req=first_gate_candidates(n,f,3,signed)
     V=tuple(range(n))
     for x in V:
@@ -147,11 +162,11 @@ def two_internal(n,f,signed=False,stats=None):
                 for h in range(3):
                     P=((0,)*d[0],(0,)*d[1]+(1,)*h,(0,)*d[2]+(1,)*(2-h)+(2,)*2)
                     if not P[1] or len(groups[1])+len(P[1])<2:continue
-                    a=fixed(n,f,(x,),groups,P,signed,stats)
+                    a=fixed(n,f,(x,),groups,P,signed,stats,completion=completion)
                     if a is not None:return ('two_internal',(x,),groups,P,a)
     return None
 
-def solve3(n,f,signed=False,stats=None,check_contract=True,internal_first=False):
+def solve3(n,f,signed=False,stats=None,check_contract=True,internal_first=False,*,completion=None):
     """Exact <=3 excess decision on fully reduced essential complete cores.
     At excess three the only new class beyond <=1 shared internal wire is
     two shared internal wires plus one repeated primary, each read twice.
@@ -160,14 +175,15 @@ def solve3(n,f,signed=False,stats=None,check_contract=True,internal_first=False)
     if check_contract and (n<1 or not essential(n,f) or (not signed and not raw_monotone(n,f)) or simplify(n,f,signed)[0]!=n):
         raise ValueError('requires fully reduced essential complete core')
     if stats is None:stats=Counter()
-    a=two(n,f,signed,check_contract=False)
+    if completion is None:completion=make_completion()
+    a=two(n,f,signed,check_contract=False,completion=completion)
     if a is not None:return ('two',a)
     if internal_first:
-        a=two_internal(n,f,signed,stats)
+        a=two_internal(n,f,signed,stats,completion=completion)
         if a is not None:return a
-    a=one_internal(n,f,3,signed,stats,min_excess=3,reduced_filter=True)
+    a=one_internal(n,f,3,signed,stats,min_excess=3,reduced_filter=True,completion=completion)
     if a is not None:return ('one_internal',a)
-    if not internal_first:return two_internal(n,f,signed,stats)
+    if not internal_first:return two_internal(n,f,signed,stats,completion=completion)
     return None
 
 def materialize3(n,f,ans,signed=False):

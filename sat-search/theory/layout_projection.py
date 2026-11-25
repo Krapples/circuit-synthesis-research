@@ -6,7 +6,7 @@ from itertools import combinations, product
 
 from conditional_provider import compositions, options
 from module_contraction import essential, raw_monotone, simplify
-from ordered_quotient_core import fixed
+from ordered_quotient_core import fixed, make_completion
 from restriction_excess import first_gate_candidates, lower
 from signed_region_bounds import Bound
 from two_sharing_core import assignments, slices
@@ -93,7 +93,7 @@ def group_candidates(inputs):
 
 
 def search_exact(n, target, excess, signed=False, stats=None, *, projection=True, restrictions=True,
-                 support_filter=False, internal_first=False):
+                 support_filter=False, internal_first=False, completion=None):
     """Try one allocated excess. An empty result is provisional at higher excess."""
     if (n < 2 or not essential(n, target) or not signed and not raw_monotone(n, target)
             or simplify(n, target, signed)[0] != n):
@@ -101,6 +101,8 @@ def search_exact(n, target, excess, signed=False, stats=None, *, projection=True
     if excess < 1:
         raise ValueError('the provider-first stage expects positive allocated excess')
     stats = stats if stats is not None else Counter()
+    if completion is None:
+        completion = make_completion()
     vertices = tuple(range(n))
     first = first_gate_candidates(n, target, excess, signed) if restrictions else None
     if first is not None and not first:
@@ -167,7 +169,7 @@ def search_exact(n, target, excess, signed=False, stats=None, *, projection=True
                         extended = (*groups, primary)
                         if output:
                             stats['fixed_calls'] += 1
-                            trees = fixed(n, target, repeated, extended, ports, signed, stats)
+                            trees = fixed(n, target, repeated, extended, ports, signed, stats, completion=completion)
                             if trees is not None:
                                 return repeated, extended, ports, trees
                             continue
