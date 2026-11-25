@@ -1,0 +1,22 @@
+{"points": [0], "seed": 2218, "budget": 61, "fixed": 54, "elapsed_s": 15.95, "rows": 76, "models": 0, "result": "UNSAT"}
+{"points": [0], "seed": 2217, "budget": 61, "fixed": 54, "elapsed_s": 17.231, "rows": 75, "models": 0, "result": "UNSAT"}
+{"points": [0], "seed": 2216, "budget": 61, "fixed": 54, "elapsed_s": 19.765, "rows": 76, "models": 0, "result": "UNSAT"}
+{"points": [0, 2], "seed": 2216, "budget": 61, "fixed": 49, "elapsed_s": 48.848, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1], "seed": 2216, "budget": 61, "fixed": 49, "elapsed_s": 48.941, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1], "seed": 2217, "budget": 61, "fixed": 49, "elapsed_s": 48.955, "rows": 75, "models": 0, "result": "OPEN"}
+{"points": [0, 2], "seed": 2218, "budget": 61, "fixed": 49, "elapsed_s": 48.861, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1], "seed": 2218, "budget": 61, "fixed": 49, "elapsed_s": 48.91, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 2], "seed": 2217, "budget": 61, "fixed": 49, "elapsed_s": 48.983, "rows": 75, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 4], "seed": 2216, "budget": 61, "fixed": 44, "elapsed_s": 49.86, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 3], "seed": 2216, "budget": 61, "fixed": 44, "elapsed_s": 49.89, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 2], "seed": 2216, "budget": 61, "fixed": 44, "elapsed_s": 49.928, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 2], "seed": 2217, "budget": 61, "fixed": 44, "elapsed_s": 49.895, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 3], "seed": 2217, "budget": 61, "fixed": 44, "elapsed_s": 49.862, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 2, 8], "seed": 2216, "budget": 61, "fixed": 44, "elapsed_s": 49.943, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 2, 8], "seed": 2217, "budget": 61, "fixed": 44, "elapsed_s": 49.89, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 4], "seed": 2218, "budget": 61, "fixed": 44, "elapsed_s": 49.874, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 2, 8], "seed": 2218, "budget": 61, "fixed": 44, "elapsed_s": 49.922, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 4], "seed": 2217, "budget": 61, "fixed": 44, "elapsed_s": 49.984, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 3], "seed": 2218, "budget": 61, "fixed": 44, "elapsed_s": 49.96, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 2], "seed": 2218, "budget": 61, "fixed": 44, "elapsed_s": 50.041, "rows": 76, "models": 0, "result": "OPEN"}
+{"points": [0, 1, 2, 3], "seed": 2220, "budget": 61, "fixed": 39, "elapsed_s": 50.54, "rows": 76, "models": 0, "result": "OPEN"}

@@ -10,6 +10,10 @@ The one-hot bipartite representation probe L-meta-11869 has a computational lowe
 and a Lean-checked upper bound of 30 AND/OR gates. The requested budget of 20 remains open.
 [Representation probe](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md#one-hot-bipartite-representation)
 
+The deleted-point projective-plane probe L-meta-2216 has a Lean-checked 62-gate two-output
+construction and a matching 62-gate lower bound when the graph-output cone is single-level.
+The unrestricted budget of 61 remains open. [Witness, proof scope, and SAT records](sat-search/results/pg3_deleted_point_proxy_2216/README.md)
+
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
 to targeted verification of changed components, and 5% to documentation. The research targets are:
 
