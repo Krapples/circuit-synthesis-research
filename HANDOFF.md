@@ -122,11 +122,39 @@ The user's current research queue, in order:
 
 ## Jobs running at last update
 
-- `experiments/module_core_minima.py`: 6 of 11 cases left, working on random-monotone-10 (7-input core).
-- `experiments/certify_module_minima.py 6 900`: checked exclusions at M−1 and M−2 for the n ≤ 6 module
-  minima → `results/module_minima_certificates.jsonl`.
-- `experiments/module_fpt_bench.py 5 5`: FPT on the original vs on the core vs the reference →
-  `results/module_fpt_bench.jsonl`.
+- `experiments/certify_split.py 18 3600 8`: 34 exclusions (M−1, M−2 for every new minimum) split into 1,326
+  first-gate pieces, each with a RUP-checked proof → `results/certified_exclusions.jsonl`.
+- `experiments/module_core_minima.py`: parallel, appending; 3 cases left (random-monotone-10,
+  comparator-04, comparator-10).
+- `experiments/module_fpt_bench.py 5 5` → `results/module_fpt_bench.jsonl`.
+- `verify/differential.py --only firstgate,...` and `verify/cli_differential.py --only firstgate,...`:
+  targeted check of `--firstgate`, whose patch is staged and applied to the working tree. Commit after
+  the check, together with the inventory and allowlist.
+
+## Newest results (not yet committed)
+
+- **More exact minima from module cores**, each with a verified lifted witness: generated-08 = 6
+  (was [6, 10]), comparator-07 = 8 (was [7, 14]), generated-09 = 8 (was [7, 13]).
+- **random-monotone-03 = 7, certified** in both bases (RUP-checked proofs at 6 and 5).
+- **First-gate bound** (`theory/first_gate_bound.py`, `experiments/first_gate_compare.py`):
+  - beats the strongest production binary bound on 21 of 106 complete targets;
+  - raises the NOT-enabled lower endpoint on 20 (threshold-7-4: 12 → 14; threshold-8-5: 14 → 16;
+    parity-5: 11 → 14);
+  - resolves hypergraph-07 to 7;
+  - partial-09 rises 7 → 8 (monotone) and 6 → 8 (NOT-enabled);
+  - recursive combination beats taking the maximum in only 1 case; XOR stripping adds nothing extra;
+  - at most 0.94 s per target.
+  - Integrated as `cube_search --firstgate`: opt-in, adaptive, skipped above 9 inputs.
+- **XOR factors** (`theory/xor_factor.py`): C(x ⊕ h) = C(h) + 3 holds in 284 checks
+  (`verify/test_xor_factor.py`).
+- **Partial counted-NOT bound** (`theory/partial_counted_bound.py`): binary plus exact inversion count.
+  - Exact on 92% of 3-input and 76% of checked 4-input partial tables, against 23% and 8% for the binary
+    bound alone. No violations.
+  - The NOT term adds on 235 of 273 partial nonmonotone corpus labels.
+  - The inversion bound is provably 0 for monotone targets with input access, so it adds nothing in
+    `cube_search`.
+- **`theory/prefix_restriction_bound.py`:** kept for branch-and-bound. Depth 1 gains on 53 of 1,160
+  cases; depth 2 adds nothing.
 
 ## Lean: module-contraction proof plan (deferred)
 
