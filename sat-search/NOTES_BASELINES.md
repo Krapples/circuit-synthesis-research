@@ -154,6 +154,37 @@ First measured SAT benefit of the caps: -12% total, -19% UNSAT time and conflict
 with a larger encoding (cardinality networks). Percy already uses no-reapplication clauses, so the caps' 12-19% is the
 part that could transfer to Percy; adding them requires access to Percy's selection/operator variables in the driver.
 
+## Reapplication and reader caps inside Percy (2026-11-25)
+
+Percy disables its own no-reapplication clauses whenever a primitive set is used, so in AIG mode (`set_primitive(AIG)`)
+it has none. `percy_run.exe` gained two optional minimum-preserving flags (`baselines/percy_driver/percy_run.cpp`,
+`add_extra`; the driver opens the encoder's private variable layout with `#define private public`):
+- `--noreapply-full`: Percy's fanin-2 rule re-enabled: no step reads (g, x) with x a fanin of g.
+- `--cofactor-lb "L0,L1,nc0,nc1;..."`: reader caps per input and per budget k (at most k - max(L0, L1) readers; at
+  most k - L_a - 1 if some reader absorbs at x_i = a and f|x_i=a is nonconstant), Sinz sequential counters.
+Both are valid only in the increasing search from a proved lower bound (UNSAT = no minimum circuit of that size), never
+for exact-size or pinned-prefix claims. Runner variants: `hpercyr-` (hybrid + no-reapplication), `hpercyc-` (+ caps;
+cofactor bounds from `ssv_aig.sound_lower`).
+
+Matched run (CEGAR + satoko for all; same 20-worker pool; every witness verified; no size disagreements;
+`results/baselines/caps_npn4_e4.jsonl`, `caps_corpus.jsonl`, `caps_hard_npn4.jsonl`):
+
+| Workload | Percy | hpercy | hpercy + no-reapplication | + reader caps |
+| --- | --- | --- | --- | --- |
+| hard 4-input classes (43, 120 s) | 23 solved, PAR-2 138.4 s | 26, 121.2 s | **32**, **94.0 s** | 31, 102.9 s |
+| hard, 22 solved by all: median / total | 47.6 s / 1,049 s | 37.8 s / 862 s | **23.5 s / 700 s** | 32.5 s / 853 s |
+| corpus sample (32, 120 s) | 20, 94.1 s | 22, 75.2 s | **23**, **69.4 s** | 23, 70.2 s |
+| excess-4 classes (51, 60 s): Percy core time | - | 25.8 s | **14.3 s** | 16.0 s |
+
+- Restoring no-reapplication in AIG mode is the largest single gain measured against Percy: +6 hard classes over
+  hpercy (+9 over standalone Percy), median -38% on the matched hard set, Percy core time -45% at excess 4.
+- Reader caps give no further gain inside Percy (31 vs 32 hard; core time slightly higher), unlike in our Python SSV
+  encoder (-12%). Their cardinality networks cost about what they prune with Percy's CEGAR + satoko. Kept as an option.
+- Caveat: the hard-set run may have overlapped the start of another session's profiling (standalone Percy solved 23 here
+  vs 26 in the earlier run); all four tools shared the same pool, so the comparison stays matched.
+- Recommended configuration for free-NOT/AIG synthesis: `hpercyr-cegar-satoko` (modules, bounds, ladder, then Percy
+  with full no-reapplication).
+
 ## Reproduction
 
 ```

@@ -151,20 +151,34 @@ def core_lower_bound(m, core):
     return lb
 
 
-def run_percy_core(m, core, start, method, solver, offset):
-    """percy_run.exe (SSV, set_primitive(AIG)) on the core from a proved lower bound; budgets re-emitted with offset."""
+def cofactor_bounds(m, core):
+    """Per input: sound free-NOT lower bounds of both cofactors and whether each cofactor is nonconstant
+    (input for the minimum-preserving reader caps, theory/primary_reader_caps.py)."""
+    from module_contraction import cofactor1
+    from ssv_aig import sound_lower
+    full = (1 << (1 << (m - 1))) - 1; out = []
+    for i in range(m):
+        g = [cofactor1(m, core, i, a) for a in (0, 1)]
+        out.append(f'{sound_lower(m - 1, g[0])},{sound_lower(m - 1, g[1])},{int(g[0] not in (0, full))},{int(g[1] not in (0, full))}')
+    return ';'.join(out)
+
+
+def run_percy_core(m, core, start, method, solver, offset, extra=()):
+    """percy_run.exe (SSV, set_primitive(AIG)) on the core from a proved lower bound; budgets re-emitted with offset.
+    extra: optional minimum-preserving driver flags (--noreapply-full, --cofactor-lb ...), valid only because the search
+    increases from a proved lower bound."""
     import subprocess
     hx = format(core, f'0{max(1, (1 << m) // 4)}x')
     t = time.perf_counter()
-    p = subprocess.run([PERCY, '--n', str(m), '--tt', hx, '--solver', solver, '--method', method, '--start', str(start)],
-                       capture_output=True, text=True)
+    p = subprocess.run([PERCY, '--n', str(m), '--tt', hx, '--solver', solver, '--method', method, '--start', str(start),
+                        *extra], capture_output=True, text=True)
     final = None
     for line in p.stdout.splitlines():
         if not line.startswith('{'):
             continue
         r = json.loads(line)
         if 'k' in r:
-            emit(k=r['k'] + offset, status=r['status'], seconds=r['seconds'])
+            emit(k=r['k'] + offset, status=r['status'], seconds=r['seconds'], extra_clauses=r.get('extra_clauses', 0))
         elif 'final' in r:
             final = r
     return final, time.perf_counter() - t
@@ -186,7 +200,12 @@ def run_hybrid_percy(tool, n, tt, care, kmax):
         return
     lb = core_lower_bound(m, core); pre['bound'] = lb
     stage = 'percy'
-    if kind == 'hpercy':
+    extra = []
+    if kind in ('hpercyr', 'hpercyc'):                 # + full no-reapplication [+ reader caps]
+        extra.append('--noreapply-full')
+        if kind == 'hpercyc':
+            extra += ['--cofactor-lb', cofactor_bounds(m, core)]
+    if kind in ('hpercy', 'hpercyr', 'hpercyc'):
         from one_sharing_core import solve_core
         from two_sharing_core import solve as solve2
         from ordered_quotient_core import solve3, make_completion
@@ -206,7 +225,7 @@ def run_hybrid_percy(tool, n, tt, care, kmax):
         stage = 'ladder+percy'
     pre_seconds = time.perf_counter() - T0
     emit(stage='preprocessed', start=lb, pre_seconds=round(pre_seconds, 6), **pre)
-    final, synth = run_percy_core(m, core, lb, method, solver, len(tr))
+    final, synth = run_percy_core(m, core, lb, method, solver, len(tr), extra)
     if final and final.get('final') == 'SAT':
         gates = [[op, a, b] for op, a, b in final['chain']]
         var, inv = final['out']
@@ -229,7 +248,7 @@ if __name__ == '__main__':
              seconds=round(time.perf_counter() - T0, 6))
     elif tool == 'ours-hybrid':
         run_hybrid(n, tt, care, start, kmax)
-    elif tool.startswith(('hpercy-', 'mpercy-')):
+    elif tool.startswith(('hpercy-', 'mpercy-', 'hpercyr-', 'hpercyc-')):
         run_hybrid_percy(tool, n, tt, care, kmax)
     else:
         raise SystemExit(f'unknown tool {tool}')

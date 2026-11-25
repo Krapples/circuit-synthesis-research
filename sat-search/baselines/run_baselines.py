@@ -34,7 +34,7 @@ for d in ('', 'theory', 'experiments'):
 ALL_TOOLS = ['percy-std-bsat', 'percy-std-satoko', 'percy-std-bmcg', 'percy-cegar-bsat', 'percy-cegar-satoko',
              'percy-cegar-bmcg', 'abc-two', 'abc-two-g', 'abc-two-onu', 'abc-two-gonu', 'abc-all', 'abc-all-i',
              'cirbo-maplechrono', 'cirbo-cadical195', 'ours-sat', 'ours-hybrid']
-COMPLETE_ONLY = ('abc-', 'ours-hybrid', 'hpercy-', 'mpercy-')
+COMPLETE_ONLY = ('abc-', 'ours-hybrid', 'hpercy-', 'mpercy-', 'hpercyr-', 'hpercyc-')
 # hybrid-Percy (runners.py): our signed modules + lower bounds [+ ladder for hpercy], then percy_run.exe with the same
 # method/solver as the matching standalone percy-<method>-<solver> tool. Not in ALL_TOOLS; select with --tools.
 
