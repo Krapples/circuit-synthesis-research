@@ -1,0 +1,22 @@
+{"frozen": [13, 14, 15], "seed": 9063, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1910, "conflicts": 817725, "decisions": 1309886, "propagations": 161538821}, "witness": null}
+{"frozen": [13, 14, 17], "seed": 9065, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1932, "conflicts": 842908, "decisions": 1257104, "propagations": 166674389}, "witness": null}
+{"frozen": [13, 14, 18], "seed": 9066, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1638, "conflicts": 748547, "decisions": 1149812, "propagations": 172859682}, "witness": null}
+{"frozen": [13, 14, 16], "seed": 9064, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1886, "conflicts": 809226, "decisions": 1298543, "propagations": 156277975}, "witness": null}
+{"frozen": [13, 15, 17], "seed": 9068, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1707, "conflicts": 737908, "decisions": 1292127, "propagations": 160106720}, "witness": null}
+{"frozen": [13, 16, 17], "seed": 9070, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2212, "conflicts": 950916, "decisions": 1465866, "propagations": 210133947}, "witness": null}
+{"frozen": [13, 15, 18], "seed": 9069, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2205, "conflicts": 1089440, "decisions": 1529156, "propagations": 223713357}, "witness": null}
+{"frozen": [13, 16, 18], "seed": 9071, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1689, "conflicts": 700655, "decisions": 1169696, "propagations": 181218937}, "witness": null}
+{"frozen": [14, 16, 18], "seed": 9077, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2043, "conflicts": 904038, "decisions": 1355920, "propagations": 185651295}, "witness": null}
+{"frozen": [14, 15, 18], "seed": 9075, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2058, "conflicts": 883059, "decisions": 1273401, "propagations": 177791523}, "witness": null}
+{"frozen": [13, 17, 18], "seed": 9072, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2223, "conflicts": 1004998, "decisions": 1602403, "propagations": 208112341}, "witness": null}
+{"frozen": [14, 16, 17], "seed": 9076, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2227, "conflicts": 1146406, "decisions": 1752772, "propagations": 195169185}, "witness": null}
+{"frozen": [14, 15, 17], "seed": 9074, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1772, "conflicts": 769313, "decisions": 1210237, "propagations": 182759391}, "witness": null}
+{"frozen": [14, 17, 18], "seed": 9078, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2227, "conflicts": 964139, "decisions": 1419424, "propagations": 169947078}, "witness": null}
+{"frozen": [14, 15, 16], "seed": 9073, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2025, "conflicts": 885049, "decisions": 1377305, "propagations": 167455989}, "witness": null}
+{"frozen": [15, 16, 17], "seed": 9079, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2223, "conflicts": 939729, "decisions": 1460098, "propagations": 161075988}, "witness": null}
+{"frozen": [15, 17, 18], "seed": 9081, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2478, "conflicts": 1261757, "decisions": 1782846, "propagations": 233662756}, "witness": null}
+{"frozen": [15, 16, 18], "seed": 9080, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1826, "conflicts": 794376, "decisions": 1315664, "propagations": 184333725}, "witness": null}
+{"frozen": [16, 17, 18], "seed": 9082, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 2221, "conflicts": 976341, "decisions": 1419161, "propagations": 209979613}, "witness": null}
+{"frozen": [14, 17], "seed": 9084, "result": "OPEN", "rows": 30, "models": 0, "stats": {"restarts": 2234, "conflicts": 1078002, "decisions": 1848059, "propagations": 221649959}, "witness": null}
+{"frozen": [13, 15], "seed": 9083, "result": "OPEN", "rows": 30, "models": 0, "stats": {"restarts": 2219, "conflicts": 984930, "decisions": 1778685, "propagations": 193769976}, "witness": null}
+{"frozen": [13, 15, 16], "seed": 9067, "result": "OPEN", "rows": 26, "models": 0, "stats": {"restarts": 1699, "conflicts": 702119, "decisions": 1137850, "propagations": 154201694}, "witness": null}

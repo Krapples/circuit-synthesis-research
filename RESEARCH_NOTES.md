@@ -23,6 +23,11 @@ the required final AND and singleton constraints. A 28-gate lower bound applies 
 factorized star-cover form. The unrestricted budget of 27 remains open.
 [Proof, witness, and search coverage](sat-search/results/fano_final_and_4874/README.md)
 
+The order-three projective-plane step L-meta-9063 has a locally checked reduction
+to two six-line circuits with budgets 28 and 29. Lean checked the 29-gate witness.
+The 28-gate budget remains open. The reduction was sent in [PR #22166](https://github.com/open-goat/pequalnp-proofs/pull/22166).
+[Reduction, search coverage, and related accepted methods](sat-search/results/pg3_seeded_boundary_9063/README.md)
+
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
 to targeted verification of changed components, and 5% to documentation. The research targets are:
 
