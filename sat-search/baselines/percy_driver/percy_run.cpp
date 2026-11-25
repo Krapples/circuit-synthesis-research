@@ -7,6 +7,8 @@
 //   --tt   truth table, hex, most significant nibble first (kitty::create_from_hex_string convention)
 //   --dc   don't-care mask, same format (1 = don't care)
 //   --budget K : decide only "exactly K steps" (Percy's fixed-step semantics, all steps used)
+//   --first-layer edges|all : cared-pair distinction constraints, up to five inputs
+//   --first-layer-budget : optional trimmed boundary cardinality constraint
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
 // output: one JSON object per line: {"k":K,"status":"SAT|UNSAT|TIMEOUT","seconds":s} per budget, then a final line
 //   {"final":..., "steps":K, "seconds":total, "chain":[[op,f0,f1],...], "out":[var,inv], "aig":bool, "verified":bool}
@@ -19,6 +21,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "first_layer.hpp"
 // Optional extra constraints need the SSV encoder's variable layout (svar_map, nr_svar_map, get_*_var), which Percy
 // keeps private; open it for this driver only.
 #define private public
@@ -44,6 +47,8 @@ static double since(clk::time_point t0) {
 struct Extra {
     bool noreapply_full = false;
     std::vector<std::array<int, 4>> cof;   // per input: L0, L1, nonconst0, nonconst1 (empty = no caps)
+    synthesis::PairScope pairs = synthesis::PairScope::none;
+    bool first_layer_budget = false;
 };
 
 struct ClauseSink {
@@ -57,7 +62,8 @@ struct ClauseSink {
         int n = (int)x.size();
         auto G = [&](std::vector<int> c) { if (guard >= 0) c.insert(c.begin(), guard); add(c); };
         if (K >= n) return;
-        if (K <= 0) { for (int l : x) G({l ^ 1}); return; }
+        if (K < 0) { G({}); return; }
+        if (K == 0) { for (int l : x) G({l ^ 1}); return; }
         std::vector<std::vector<int>> sv(n - 1, std::vector<int>(K));
         for (auto& row : sv) for (auto& v : row) v = pabc::Abc_Var2Lit(var(), 0);
         G({x[0] ^ 1, sv[0][0]});
@@ -71,9 +77,99 @@ struct ClauseSink {
     }
 };
 
+static void equivalent_or(ClauseSink& cs, int output, std::vector<int> inputs) {
+    for (int input : inputs) cs.add({input ^ 1, output});
+    inputs.push_back(output ^ 1);
+    cs.add(std::move(inputs));
+}
+
+// Cache target-side clauses across budgets. These masks refer only to boundary features.
+struct FirstLayer {
+    static constexpr std::array<unsigned, 4> aigs{2, 4, 8, 14};
+    std::vector<synthesis::FirstLayerGate> gates;
+    std::vector<uint64_t> clauses;
+
+    FirstLayer(const kitty::dynamic_truth_table& target, const kitty::dynamic_truth_table& dc, const Extra& ex) {
+        if (ex.pairs == synthesis::PairScope::none) return;
+        const int n = target.num_vars();
+        for (int b = 1; b < n; ++b)
+            for (int a = 0; a < b; ++a)
+                for (unsigned op : aigs) gates.push_back({a, b, op});
+        std::vector<int> zeros, ones;
+        for (int row = 0; row < (1 << n); ++row)
+            if (!kitty::get_bit(dc, row))
+                (kitty::get_bit(target, row) ? ones : zeros).push_back(row);
+        clauses = synthesis::distinction_masks(gates, zeros, ones, ex.pairs);
+    }
+
+    void encode(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start, bool budget) const {
+        const int n = sp.get_nr_in(), k = sp.nr_steps;
+        const auto fresh = [&] { return pabc::Abc_Var2Lit(cs.var(), 0); };
+        std::vector<std::vector<int>> typed(gates.size()), mixed(n);
+        std::vector<int> boundary;
+        for (int step = 0; step < k; ++step) {
+            std::vector<int> primary_pairs;
+            std::array<int, 4> ops{};
+            if (!gates.empty()) {
+                for (size_t op = 0; op < aigs.size(); ++op) {
+                    ops[op] = fresh();
+                    std::vector<int> match{ops[op]};
+                    for (int bit = 1; bit <= 3; ++bit) {
+                        const int lit = pabc::Abc_Var2Lit(enc.get_op_var(sp, step, bit), !(aigs[op] >> bit & 1));
+                        cs.add({ops[op] ^ 1, lit});
+                        match.push_back(lit ^ 1);
+                    }
+                    cs.add(std::move(match));
+                }
+            }
+            for (int s = start[step]; s < start[step + 1]; ++s) {
+                const int a = enc.svar_map[s][0], b = enc.svar_map[s][1];
+                const int selected = pabc::Abc_Var2Lit(enc.get_sel_var(s), 0);
+                if (b < n) {
+                    if (budget) primary_pairs.push_back(selected);
+                    const int pair = b * (b - 1) / 2 + a;
+                    for (size_t op = 0; !gates.empty() && op < aigs.size(); ++op) {
+                        const int occurrence = fresh();
+                        cs.add({occurrence ^ 1, selected});
+                        cs.add({occurrence ^ 1, ops[op]});
+                        cs.add({occurrence, selected ^ 1, ops[op] ^ 1});
+                        typed[pair * aigs.size() + op].push_back(occurrence);
+                    }
+                } else if (a < n) {
+                    mixed[a].push_back(selected);
+                }
+            }
+            if (budget) {
+                const int is_first_layer = fresh();
+                equivalent_or(cs, is_first_layer, std::move(primary_pairs));
+                boundary.push_back(is_first_layer);
+                boundary.push_back(is_first_layer);  // weight two, including repeated typed gates
+            }
+        }
+        std::vector<int> features;
+        for (auto& occurrences : typed) {
+            features.push_back(fresh());
+            equivalent_or(cs, features.back(), std::move(occurrences));
+        }
+        for (auto& readers : mixed) {
+            features.push_back(fresh());
+            equivalent_or(cs, features.back(), std::move(readers));
+            if (budget) boundary.push_back(features.back());
+        }
+        if (budget) cs.at_most(boundary, k + 1);
+        for (uint64_t mask : clauses) {
+            std::vector<int> clause;
+            for (; mask; mask &= mask - 1) clause.push_back(features[std::countr_zero(mask)]);
+            cs.add(std::move(clause));
+        }
+    }
+};
+
 // Returns false if the extra constraints make budget k infeasible outright; adds clauses to the solver otherwise.
-static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, const Extra& ex, int& extra_clauses) {
-    if (!ex.noreapply_full && ex.cof.empty()) return true;
+static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, const Extra& ex,
+                      const FirstLayer& layer, int& extra_clauses) {
+    if (!ex.noreapply_full && ex.cof.empty() && ex.pairs == synthesis::PairScope::none && !ex.first_layer_budget)
+        return true;
     const int n = sp.get_nr_in(), k = sp.nr_steps;
     ClauseSink cs{solver, enc.total_nr_vars, {}};
     std::vector<int> start(k + 1, 0);
@@ -122,12 +218,15 @@ static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, 
             cs.at_most(read, cap, flag ^ 1);
         }
     }
+    if (ex.pairs != synthesis::PairScope::none || ex.first_layer_budget)
+        layer.encode(cs, enc, sp, start, ex.first_layer_budget);
     solver.set_nr_vars(cs.next);
+    extra_clauses = (int)cs.clauses.size();
     for (auto& cl : cs.clauses) {
+        if (cl.empty()) return false;
         std::vector<pabc::lit> lits(cl.begin(), cl.end());
         if (!solver.add_clause(lits.data(), lits.data() + lits.size())) return false;
     }
-    extra_clauses = (int)cs.clauses.size();
     return true;
 }
 
@@ -150,6 +249,13 @@ int main(int argc, char** argv) {
         else if (a == "--conflicts") conflicts = std::stoi(next());
         else if (a == "--nosym") nosym = true;
         else if (a == "--noreapply-full") ex.noreapply_full = true;
+        else if (a == "--first-layer-budget") ex.first_layer_budget = true;
+        else if (a == "--first-layer") {
+            const auto scope = next();
+            if (scope == "edges") ex.pairs = synthesis::PairScope::edges;
+            else if (scope == "all") ex.pairs = synthesis::PairScope::all;
+            else { fprintf(stderr, "expected --first-layer edges or all\n"); return 2; }
+        }
         else if (a == "--cofactor-lb") {          // "L0,L1,nc0,nc1;..." per input, x0 first (minimum-preserving caps)
             std::stringstream ss(next()); std::string item;
             while (std::getline(ss, item, ';')) {
@@ -160,9 +266,18 @@ int main(int argc, char** argv) {
         }
         else { fprintf(stderr, "unknown argument %s\n", a.c_str()); return 2; }
     }
+    if ((ex.pairs != synthesis::PairScope::none || ex.first_layer_budget) &&
+        (n < 2 || n > 5 || (ex.first_layer_budget && nosym) || (!dc_hex.empty() && method == "cegar"))) {
+        fprintf(stderr, "first-layer options need 2-5 inputs, alonce for the budget bound, and std for partial tables\n");
+        return 2;
+    }
     kitty::dynamic_truth_table tt(n), dc(n);
     kitty::create_from_hex_string(tt, tt_hex);
     if (!dc_hex.empty()) kitty::create_from_hex_string(dc, dc_hex);
+    if ((ex.pairs != synthesis::PairScope::none || ex.first_layer_budget) && kitty::get_bit(dc, 0)) {
+        fprintf(stderr, "first-layer partial tables must label row zero (Percy normalizes to that row)\n");
+        return 2;
+    }
 
     spec sp;
     sp.set_primitive(AIG);
@@ -186,6 +301,8 @@ int main(int argc, char** argv) {
     const bool cegar = method == "cegar";
 
     auto t0 = clk::now();
+    const FirstLayer layer(tt, dc, ex);
+    const double target_constraints_seconds = since(t0);
     sp.preprocess();
     std::string final_status = "UNSAT";
     int found = -1;
@@ -200,22 +317,46 @@ int main(int argc, char** argv) {
             auto tk = clk::now();
             sp.nr_steps = k;
             solver->restart();
+            const int conflicts_before = solver->nr_conflicts();
+            long decisions = 0, propagations_before = 0;
+#ifdef USE_SATOKO
+            const auto satoko_backend = dynamic_cast<satoko_wrapper*>(solver.get());
+            if (satoko_backend)
+                propagations_before = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;
+#endif
+            const auto solve = [&] {
+                const auto result = solver->solve(sp.conflict_limit);
+#ifdef USE_SATOKO
+                if (satoko_backend) decisions += satoko::satoko_stats(satoko_backend->solver)->n_decisions;
+#endif
+                return result;
+            };
             std::string st;
             int extra_clauses = 0;
+            double encoding_seconds = 0;
+            int cegar_rows = 0;
             if (!cegar) {
-                if (!enc.encode(sp) || !add_extra(enc, sp, *solver, ex, extra_clauses)) st = "UNSAT";
+                const bool encoded = enc.encode(sp) && add_extra(enc, sp, *solver, ex, layer, extra_clauses);
+                encoding_seconds = since(tk);
+                if (!encoded) st = "UNSAT";
                 else {
-                    auto r = solver->solve(sp.conflict_limit);
+                    auto r = solve();
                     st = r == success ? "SAT" : r == failure ? "UNSAT" : "TIMEOUT";
                     if (r == success) enc.extract_chain(sp, c);
                 }
             } else {
-                if (!enc.cegar_encode(sp) || !add_extra(enc, sp, *solver, ex, extra_clauses)) st = "UNSAT";
+                const bool encoded = enc.cegar_encode(sp) && add_extra(enc, sp, *solver, ex, layer, extra_clauses);
+                encoding_seconds = since(tk);
+                if (!encoded) st = "UNSAT";
                 else {
                     int iMint = 1; st = "UNSAT";
                     while (true) {
-                        if (!enc.create_tt_clauses(sp, iMint - 1)) { st = "UNSAT"; break; }
-                        auto r = solver->solve(sp.conflict_limit);
+                        const auto row_start = clk::now();
+                        ++cegar_rows;
+                        const bool row_encoded = enc.create_tt_clauses(sp, iMint - 1);
+                        encoding_seconds += since(row_start);
+                        if (!row_encoded) { st = "UNSAT"; break; }
+                        auto r = solve();
                         if (r == failure) { st = "UNSAT"; break; }
                         if (r != success) { st = "TIMEOUT"; break; }
                         iMint = enc.simulate(sp);
@@ -223,14 +364,25 @@ int main(int argc, char** argv) {
                     }
                 }
             }
-            printf("{\"k\":%d,\"status\":\"%s\",\"seconds\":%.6f,\"extra_clauses\":%d}\n", k, st.c_str(), since(tk), extra_clauses);
+            printf("{\"k\":%d,\"status\":\"%s\",\"seconds\":%.6f,\"extra_clauses\":%d,"
+                   "\"encoding_seconds\":%.6f,\"cegar_rows\":%d,\"conflicts\":%d,\"vars\":%d,\"clauses\":%d",
+                   k, st.c_str(), since(tk), extra_clauses, encoding_seconds, cegar_rows,
+                   solver->nr_conflicts() - conflicts_before, solver->nr_vars(), solver->nr_clauses());
+#ifdef USE_SATOKO
+            if (satoko_backend) {
+                const long propagations = satoko::satoko_stats(satoko_backend->solver)->n_propagations_all;
+                printf(",\"decisions\":%ld,\"propagations\":%ld", decisions, propagations - propagations_before);
+            }
+#endif
+            printf("}\n");
             fflush(stdout);
             if (st == "SAT") { final_status = "SAT"; found = k; break; }
             if (st == "TIMEOUT") { final_status = "TIMEOUT"; break; }
         }
     }
     double total = since(t0);
-    printf("{\"final\":\"%s\",\"steps\":%d,\"seconds\":%.6f", final_status.c_str(), found, total);
+    printf("{\"final\":\"%s\",\"steps\":%d,\"seconds\":%.6f,\"target_constraints_seconds\":%.6f,"
+           "\"distinction_clauses\":%zu", final_status.c_str(), found, total, target_constraints_seconds, layer.clauses.size());
     if (found >= 0) {
         auto sim = c.simulate()[0];
         bool ok = dc_hex.empty() ? sim == tt : ((sim ^ tt) & ~dc) == kitty::create<kitty::dynamic_truth_table>(n);
