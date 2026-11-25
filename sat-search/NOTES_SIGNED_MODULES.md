@@ -467,6 +467,52 @@ witnesses checked, all decisions agree). Captured queries are the distinct signe
 Singleton-port promotion (`theory/regional_axis_lift.py`) is kept as an optional cheap reduction: it alone changed
 no decision, and with phase-first it added one (phase-extra 34 vs 33).
 
+### Bounded-multiplicity regional completion (opt-in, `theory/regional_bounded_multiplicity.py`)
+
+Optional-leaf solver: each leaf may be used up to its allocated multiplicity (at least one leaf overall), with phase
+feasibility as an early rejection, projected-row compatibility, forced absorbing-row ownership, witness-guided
+branching and canonical row quotienting. Soundness contract of the exact wrapper (`exact` / `completion`):
+optional UNSAT proves exact-occurrence UNSAT (exact formulas are optional formulas); a witness padded to the exact
+allocation by `regional_padding.graft` proves SAT; a failed graft is never read as UNSAT and falls back to the exact
+adaptive phase-first solver.
+
+- Capacity-reduction theorem (mixed labels: a provider's optional capacity can be capped by the number of
+  positive-negative row pairs it distinguishes; a reduced signed solution pads to the original allocation):
+  `bounded_multiplicity_bench.capacity_checks` passes, 323 cases checked, 128 with a reduced capacity, 41 exact
+  equivalences. Not yet used for pruning.
+- Prototype benches reproduced on Windows (`experiments/win_deadline_run.py`): original 66 signed queries 64 vs 50
+  decided for phase-first (`logs/bounded_mult_bench.log`); fresh 80 queries 75 vs 63, 62 matched 0.40 s vs 2.04 s
+  (`logs/bounded_mult_fresh.log`). Note that these are mostly satisfiable queries.
+- Repo adaptation: production `columns`/`combine`/`graft`/`evaluate`, production `check_tree`; bounded memo
+  (`MEMO = 2**15` per query); `lazy_splits` generates the bipartitions lazily (same unordered pairs as the prototype's
+  sorted list on 3,000 capacity vectors; orientation may differ). Exact fallback = `regional_phase_first.adaptive_completion`.
+  Oracles pass in the repo version: `checks(600)`, `extra_checks(800)`, `capacity_checks(500)`. Mode
+  `make_completion('bounded-multiplicity')`, added to the multislice oracle test in `regional_completion_check.py`.
+
+Production comparison against the integrated `phase-first` mode (decisions agree everywhere; witnesses checked):
+
+| Workload | phase-first | bounded-multiplicity |
+| --- | --- | --- |
+| held-out captured queries (547, 0.5 s) | 546 decided, 13.5 s | 527 decided, 36.9 s (lost 20, gained 1) |
+| dev captured queries (896, 0.5 s) | 896 decided, 8.4 s | 879 decided, 26.5 s (lost 17) |
+| free-NOT `search_exact` excess 4, 48 cores, 120 s | 48 finished; 23.8 s on the 45 shared | 45 finished (3 stopped-worse); 33.0 s |
+| free-NOT `search_exact` excess 5, 48 cores, 120 s | 36 finished; 96.8 s on the 32 shared | 32 finished (3 stopped-worse, 1 timeout); 105.6 s |
+
+(`results/bounded_multiplicity_replay.jsonl`, `results/phase_first_layout_e4_bounded-multiplicity.jsonl`,
+`results/phase_first_layout_e5_bounded-multiplicity.jsonl`.)
+
+Why it loses: captured layout queries are exclusion-dominated. On the 1,289 optional-UNSAT queries bounded takes
+42.7 s against 10.3 s for phase-first; on the 51 padded-witness (SAT) queries it takes 1.3 s against 3.9 s. All 37
+lost queries have 16-row tables with 3-5 repeated providers. No row-count activation threshold beats phase-first on
+either the held-out or the dev set. In whole searches it is faster on some witness searches at excess 5
+(graph-03 1.58 s -> 0.17 s, comparator-02 3.7 s -> 1.5 s) but loses exclusions (hypergraph-04 finishes only with
+phase-first, 100 s).
+
+Verdict: keep opt-in; not an adaptive default. It is a construction-side tool: worth trying for upper-bound
+(witness) searches. Twelve excess-5 free-NOT searches time out at 120 s in both modes (comparator-04, -08,
+complete-5, -6, hypergraph-05, -09, -10, -15, -20, petersen-10, random-monotone-05, threshold-5-3); those are the
+remaining higher-excess targets. Empty excess-4/5 results are provisional under `search_exact`'s contract.
+
 ### Optional-occurrence lemma (repeated providers)
 
 Proved: for a regional formula over leaf occurrences, if the query is completable with each repeated provider p used

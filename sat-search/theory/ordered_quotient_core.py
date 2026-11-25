@@ -47,6 +47,10 @@ def make_completion(mode='dominance-branches', *, cache_size=4096, table_factory
                                 port_first=True, witness_cover=True, row_quotient=True)
 
         return ObligationCache(maxsize=cache_size, solver=solve)
+    if mode == 'bounded-multiplicity':
+        from regional_bounded_multiplicity import completion   # opt-in: optional leaves, graft padding, exact fallback
+
+        return ObligationCache(maxsize=cache_size, solver=completion)
     if mode == 'phase-first':
         from regional_phase_first import adaptive_completion   # opt-in: signed polarity classes, then monotone
 
