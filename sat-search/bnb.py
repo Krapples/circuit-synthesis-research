@@ -14,7 +14,7 @@ of its children closed analytically is at least --min-reject and the feature cou
 bound's limit; otherwise give it to SAT; a SAT timeout is split once more if possible, else left open.
 The tree is appended to a JSONL file (one record per node event) and resumes from it.
 Usage: python bnb.py --n N --edges ... --size G [--seed-prefix op,l,r;...] [--colex-from K] [--workers 20]"""
-import argparse, json, os, sys, time
+import argparse, hashlib, json, os, sys, time
 from multiprocessing import Pool
 import cube_search as cs
 
@@ -74,12 +74,41 @@ def sat(args):
         _, st, circ, dt, info = cs.run_cube((n, list(masks), G, 'maplechrono', tuple(prefix[0]), False, False, fl))
     finally:
         timer.cancel()
+        timer.join()
         if os.path.exists(stop):
             os.remove(stop)
     ok = None
     if st == 'WITNESS':
         ok = all(cs.evaluate(n, circ, x) == any(x & m == m for m in masks) for x in range(1 << n))
     return prefix, st, circ, ok, round(dt, 2), str(info)[:200]
+
+
+def tree_scope(n, masks, size, seed, colex_from, root_children):
+    return dict(n=n, masks=list(masks), size=size, seed=[list(gate) for gate in seed],
+                colex_from=colex_from, root_children=bool(root_children or not seed))
+
+
+def read_tree(path, scope):
+    """Reuse evidence only from a segment with the same mathematical scope."""
+    closed = {}
+    scoped = False
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as stream:
+            for line in stream:
+                record = json.loads(line)
+                if record.get('kind') == 'scope':
+                    if record.get('scope') != scope:
+                        raise ValueError('resume file belongs to a different target, budget, or prefix scope')
+                    scoped = True
+                    continue
+                if not scoped:
+                    continue
+                if record.get('G') != scope['size']:
+                    raise ValueError('resume record has a different gate budget')
+                status = record.get('status')
+                if status in ('analytical', 'sat-unsat', 'expanded') or status == 'witness' and record.get('verified'):
+                    closed[tuple(map(tuple, record['prefix']))] = status
+    return closed, scoped
 
 
 def main():
@@ -104,15 +133,18 @@ def main():
                                                     'recursivebounds', 'notbypass', 'recclosure', 'identifybounds',
                                                     'fanoutelim', 'pairro', 'colorbounds', 'sharecolor',
                                                     'colorbudget', 'partialordered', 'partialrepeat')}, 'recdepth': 2}
+    scope = tree_scope(n, masks, a.size, seed, colex_from, a.root_children)
+    fingerprint = hashlib.sha256(json.dumps(scope, sort_keys=True).encode()).hexdigest()[:12]
     tree_path = a.tree or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results',
-                                       f'bnb_n{n}_G{a.size}.jsonl')
-    closed = {}
-    if os.path.exists(tree_path):
-        for line in open(tree_path, encoding='utf-8'):
-            r = json.loads(line)
-            if r.get('status') in ('analytical', 'sat-unsat', 'expanded', 'witness'):
-                closed[tuple(map(tuple, r['prefix']))] = r['status']
+                                       f'bnb_n{n}_G{a.size}_{fingerprint}.jsonl')
+    try:
+        closed, scoped = read_tree(tree_path, scope)
+    except ValueError as error:
+        ap.error(str(error))
     tree = open(tree_path, 'a', encoding='utf-8')
+    if not scoped:
+        tree.write(json.dumps(dict(kind='scope', scope=scope)) + '\n')
+        tree.flush()
 
     def record(prefix, **kw):
         tree.write(json.dumps(dict(prefix=[list(g) for g in prefix], G=a.size, **kw)) + '\n'); tree.flush()
@@ -120,6 +152,8 @@ def main():
     frontier = [tuple(seed + [c]) for c in children(n, seed, colex_from)] if a.root_children or not seed else [tuple(seed)]
     t0 = time.time()
     stats = dict(analytical=0, sat_unsat=0, open=0, expanded=0, witness=0)
+    for state in closed.values():
+        stats[state.replace('-', '_')] += 1
     with Pool(a.workers) as p:
         while frontier:
             # resume: walk through previously expanded nodes to their children; skip other closed nodes
@@ -160,7 +194,7 @@ def main():
                     if st == 'UNSAT':
                         record(P, status='sat-unsat', seconds=dt, info=info); closed[P] = 'sat-unsat'
                         stats['sat_unsat'] += 1
-                    elif st == 'WITNESS':
+                    elif st == 'WITNESS' and ok:
                         record(P, status='witness', circuit=circ, verified=ok); closed[P] = 'witness'
                         stats['witness'] += 1
                         print(f'WITNESS under prefix {P}: verified={ok}', flush=True)
@@ -168,6 +202,7 @@ def main():
                         record(P, status='open', seconds=dt); stats['open'] += 1
             print(f'[{time.time() - t0:.0f}s] {stats}', flush=True)
     print(f'RESULT {stats} ({time.time() - t0:.0f}s)', flush=True)
+    tree.close()
 
 
 if __name__ == '__main__':

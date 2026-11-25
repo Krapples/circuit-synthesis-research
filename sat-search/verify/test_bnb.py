@@ -6,6 +6,8 @@ import json, os, random, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+sys.path.insert(0, ROOT)
+from bnb import read_tree, tree_scope
 import reference as ref
 import differential as dif
 
@@ -26,6 +28,24 @@ def bnb(n, terms, G, seed=(), workers=2):
 
 
 class BranchAndBound(unittest.TestCase):
+    def test_resume_scope_and_legacy_evidence(self):
+        seed = ((1, 0, 1),)
+        scope = tree_scope(4, (3, 6, 12), 4, seed, 1, True)
+        other = tree_scope(4, (3, 5, 9), 4, seed, 1, True)
+        first = dict(prefix=[[1, 0, 1]], status='sat-unsat', G=4)
+        second = dict(prefix=[[1, 0, 1], [0, 2, 4]], status='expanded', G=4)
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, 'tree.jsonl')
+            with open(path, 'w', encoding='utf-8') as stream:
+                stream.write(json.dumps(first) + '\n')
+            self.assertEqual(read_tree(path, scope), ({}, False))
+            with open(path, 'a', encoding='utf-8') as stream:
+                stream.write(json.dumps(dict(kind='scope', scope=scope)) + '\n')
+                stream.write(json.dumps(second) + '\n')
+            self.assertEqual(read_tree(path, scope), ({(*seed, (0, 2, 4)): 'expanded'}, True))
+            with self.assertRaisesRegex(ValueError, 'different target'):
+                read_tree(path, other)
+
     def test_whole_function(self):
         cache = dif.load_ref_cache()
         graphs = [(n, t) for kind, n, t in dif.instances(True) if kind == 'graph' and n >= 4]
