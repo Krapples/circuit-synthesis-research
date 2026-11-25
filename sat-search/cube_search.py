@@ -23,9 +23,10 @@ from pysat.solvers import Solver, SolverNames
 from pysat.card import CardEnc
 from partial_ordered import projected_suffix_bounds, suffix_projections
 from monotone_interface import matching_cuts, pinned_interface_excess
-from port_certificates import (PORT_CERTIFICATE_LEVELS, incompatible_primary_pairs, incoming_port_bound,
+from port_certificates import (PORT_CERTIFICATE_LEVELS, certificate_type_costs, incompatible_primary_pairs, incoming_port_bound,
                                minimal_zero_certificates)
 from provider_certificates import required_distinctions
+from provider_capacity import ALLOCATION_LEVELS, ordered_allocation_excess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STOP = os.path.join(HERE, 'STOP')
@@ -1110,10 +1111,11 @@ def separation_clique(ctx, limit=12):
 
 class PortCosts(dict):
     """Port-cost table with monotone-only and output-region metadata."""
-    def __init__(self, d, mono=False, pout=None, provider_eligibility=False):
+    def __init__(self, d, mono=False, pout=None, provider_eligibility=False, type_rank=False):
         super().__init__(d)
         self.mono, self.pout = mono, pout
         self.provider_eligibility = provider_eligibility
+        self.type_rank = type_rank
 
 
 def port_cost_key(costs):
@@ -1122,7 +1124,7 @@ def port_cost_key(costs):
     pout = getattr(costs, 'pout', None)
     return (tuple(sorted(costs.items())), bool(getattr(costs, 'mono', False)),
             tuple(sorted(pout.items())) if pout is not None else None,
-            bool(getattr(costs, 'provider_eligibility', False)))
+            bool(getattr(costs, 'provider_eligibility', False)), bool(getattr(costs, 'type_rank', False)))
 
 
 _FZERO, _FONE, _FINF = (), (0,), 10 ** 6
@@ -1286,16 +1288,16 @@ def profile_ports(terms, Smask, ctx):
 
 
 def port_costs(terms, mono=False, separation=False, profile=False, formula=False, output=False, polarity=False,
-               certificate_level=None, certificate_output=False, provider_eligibility=False):
+               certificate_level=None, certificate_output=False, provider_eligibility=False, type_rank=False):
     """For every set S of inputs that is independent in the incompatibility graph J: p(S) = ceil(log2 q*(S)),
     q*(S) = number of distinct non-constant functions of S obtained by fixing all other inputs. Only outside
     neighbours of S matter (other outside inputs either make f constant 1 or do nothing)."""
-    if (certificate_level is not None or provider_eligibility) and not mono:
+    if (certificate_level is not None or provider_eligibility or type_rank) and not mono:
         raise ValueError('certificate port costs require a complete monotone target')
     if certificate_output and certificate_level not in PORT_CERTIFICATE_LEVELS:
         raise ValueError('output certificate costs require a rank, clique, or exact level')
     terms = tuple(terms)
-    zero_certificates = minimal_zero_certificates(terms) if certificate_level is not None else ()
+    zero_certificates = minimal_zero_certificates(terms) if certificate_level is not None or type_rank else ()
     sup = rterms_support(terms)
     J = [(1 << x) | (1 << y) for x, y in incompatible_pairs(terms)]
     if certificate_level is not None:
@@ -1338,6 +1340,9 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
                 cost = max(cost, _sperner_min(w), chain_distinct(ctx) - 1)
                 if separation:
                     cost = max(cost, separation_clique(ctx))
+            if type_rank:
+                typed = certificate_type_costs(terms, zero_certificates, Smask)
+                cost = max(cost, sum(typed) - Smask.bit_count() + 1)
             costs[Smask] = max(cost, certificate_cost)
         Smask = (Smask - 1) & sup
     pout = None
@@ -1352,8 +1357,14 @@ def port_costs(terms, mono=False, separation=False, profile=False, formula=False
         for Sm, cost in costs.items():
             lower = incoming_port_bound(terms, zero_certificates, Sm, certificate_level, output=True)
             pout[Sm] = max(pout.get(Sm, cost), lower)
+    if type_rank:
+        if pout is None:
+            pout = {}
+        for Sm, cost in costs.items():
+            typed = certificate_type_costs(terms, zero_certificates, Sm, output=True)
+            pout[Sm] = max(pout.get(Sm, cost), sum(typed) - Sm.bit_count() + 1)
     return PortCosts(costs, mono=bool(mono or (formula and not polarity)), pout=pout,
-                     provider_eligibility=provider_eligibility)
+                     provider_eligibility=provider_eligibility, type_rank=type_rank)
 
 
 _ord_cache = {}
@@ -1364,6 +1375,8 @@ def port_binary_lb(terms, costs, H=0):
         key = (terms, H, port_cost_key(costs))
         if key not in _ord_cache:
             _ord_cache[key] = max(_port_binary_lb_unordered(terms, costs, H), ordered_port_lb(terms, costs, H))
+            if getattr(costs, 'type_rank', False):
+                _ord_cache[key] = max(_ord_cache[key], ordered_type_bounds(terms, costs, H)[2])
         return _ord_cache[key]
     return _port_binary_lb_unordered(terms, costs, H)
 
@@ -1441,18 +1454,8 @@ def multi_gate_lb(masks, gates, depth, port=None):
     return L
 
 
-def ordered_port_lb(terms, costs, H=0, *, stats=None):
-    """Ordered terminal groups. Sort the groups by their terminals: an input of a later group cannot reach an
-    earlier terminal (its unique path ends at its own terminal first), so group S's terminal depends only on
-    S and the inputs P of earlier groups. Hence two outside assignments agreeing on P give the same
-    non-constant restriction of f to S (target monotone; NOT gates allowed). Search ordered sequences of
-    eligible groups with sum p(S_j) <= e + k - 1, k <= e + 1; B = e + n - 1 for the smallest feasible e."""
-    if terms == RTRUE or not terms:
-        return 0
-    sup = rterms_support(terms)
-    n = bin(sup).count('1')
-    cst = {S: c for S, c in costs.items() if not (S & H) or bin(S).count('1') == 1}
-    ctxs = {S: port_contexts(terms, S) for S in cst}
+def _ordered_eligible(terms, costs, groups, stats=None):
+    ctxs = {S: port_contexts(terms, S) for S in groups}
     zeros = minimal_zero_certificates(tuple(terms)) if getattr(costs, 'provider_eligibility', False) else None
     elig_cache = {}
 
@@ -1478,6 +1481,54 @@ def ordered_port_lb(terms, costs, H=0, *, stats=None):
                 stats['provider_rejected'] += int(not ok)
         elig_cache[key] = ok
         return ok
+    return eligible
+
+
+def ordered_type_bounds(terms, costs, H=0):
+    """Optimize each typed objective over the same ordered primary groups."""
+    if terms == RTRUE or not terms:
+        return 0, 0, 0
+    terms = tuple(terms)
+    sup = rterms_support(terms)
+    zeros = minimal_zero_certificates(terms)
+    groups = {S for S in costs if not S & H or S.bit_count() == 1}
+    eligible = _ordered_eligible(terms, costs, groups)
+    local = {S: certificate_type_costs(terms, zeros, S) for S in groups}
+    output = {S: certificate_type_costs(terms, zeros, S, output=True) for S in groups}
+
+    @lru_cache(maxsize=None)
+    def best(previous):
+        if previous == sup:
+            return 0, 0, 1  # Empty output region has at least one binary gate.
+        minima = [sup.bit_count() * 3] * 3
+        left = sup ^ previous
+        subset = left
+        while subset:
+            if subset in groups and eligible(subset, previous):
+                a, o = local[subset]
+                sa, so, both = best(previous | subset)
+                candidates = [a + sa, o + so, a + o + both]
+                if subset == left:
+                    out_a, out_o = output[subset]
+                    candidates = [min(x, y) for x, y in zip(candidates, (out_a, out_o, out_a + out_o))]
+                minima = [min(x, y) for x, y in zip(minima, candidates)]
+            subset = (subset - 1) & left
+        return tuple(minima)
+
+    a, o, both = best(0)
+    a = max(a, (len(zeros) - 1).bit_length())
+    o = max(o, (len(terms) - 1).bit_length())
+    return a, o, max(a + o, both)
+
+
+def ordered_port_lb(terms, costs, H=0, *, stats=None):
+    """Minimize incoming connections across ordered nonempty primary groups."""
+    if terms == RTRUE or not terms:
+        return 0
+    sup = rterms_support(terms)
+    n = sup.bit_count()
+    cst = {S: c for S, c in costs.items() if not (S & H) or S.bit_count() == 1}
+    eligible = _ordered_eligible(terms, costs, cst, stats)
     INF = 10 ** 9
     memo = {}
 
@@ -2046,10 +2097,10 @@ def run_cube(args):
                  tuple(sorted((k, repr(v)) for k, v in flags.items() if k not in ('fixgates', 'portcosts'))),
                  prefix, port_cost_key(flags.get('portcosts'))) if reuse else None
     cached = _SCACHE.get(rkey) if reuse else None
-    Lc = n - 1
+    Lc = max(n - 1, flags.get('allocation_floor', 0))
     if flags.get('recursivebounds'):
-        Lc = cube_binary_lb(masks, cube, flags.get('recdepth', 2), identify=flags.get('identifybounds', False),
-                            port=flags.get('portcosts'))
+        Lc = max(Lc, cube_binary_lb(masks, cube, flags.get('recdepth', 2),
+                                   identify=flags.get('identifybounds', False), port=flags.get('portcosts')))
         pinned = [cube] + [(fop, fl, fr) for off, fop, fl, fr in fixed if fl < n and fr < n]
         if len(pinned) > 1:
             Lc = max(Lc, multi_gate_lb(masks, pinned, flags.get('recdepth', 2), port=flags.get('portcosts')))
@@ -2120,13 +2171,14 @@ def run_cube(args):
             add_matching_interface(n, output, pool, ops, select, clauses, interfaces)
         if flags.get('nonot'):                  # monotone search: no NOT gates
             clauses.extend([[-ops[j][2]] for j in ops])
-            if flags.get('typed'):
+            if flags.get('typed') or flags.get('certificate_type_counts'):
                 # Zero certificates pick one false input per AND gate: #maximal independent sets <= 2^#AND;
                 # dually #edges (minimal true sets) <= 2^#OR.
                 _, zeros = boundary_rows(n, tuple(masks))
                 nmis = len(zeros)
-                for lits, need in (([ops[j][0] for j in ops], (nmis - 1).bit_length()),
-                                   ([ops[j][1] for j in ops], (len(masks) - 1).bit_length())):
+                typed = flags.get('certificate_type_counts') or (0, 0)
+                for lits, need in (([ops[j][0] for j in ops], max(typed[0], (nmis - 1).bit_length())),
+                                   ([ops[j][1] for j in ops], max(typed[1], (len(masks) - 1).bit_length()))):
                     if need > len(lits):
                         clauses.append([])
                     elif need > 0:
@@ -2541,6 +2593,9 @@ def main():
                     help='with --portcertrank: include all certificates in the output-region bound')
     ap.add_argument('--portproviders', action='store_true',
                     help='require residual pairs to have an eligible earlier provider (monotone)')
+    ap.add_argument('--capacityallocation', nargs='?', const='packing', choices=ALLOCATION_LEVELS,
+                    help='cap-aware ordered regional layout bounds (monotone)')
+    ap.add_argument('--certtyperank', action='store_true', help='use typed certificate affine ranks (monotone)')
     ap.add_argument('--irreducible', action='store_true',
                     help='with --readonce, pair-irreducible targets: a gate on two inputs shares one of them')
     ap.add_argument('--firstgate', action='store_true',
@@ -2557,7 +2612,7 @@ def main():
     a = ap.parse_args()
     if a.portcertoutput and a.portcertrank not in PORT_CERTIFICATE_LEVELS:
         ap.error('--portcertoutput requires a rank, clique, or exact port certificate level')
-    if a.portcertrank is not None or a.portproviders:
+    if a.portcertrank is not None or a.portproviders or a.capacityallocation or a.certtyperank:
         if not a.nonot:
             ap.error('certificate port and provider bounds require --monotone')
         a.portbounds = a.monoports = a.orderedports = a.recursivebounds = True
@@ -2673,15 +2728,29 @@ def main():
         say('RESULT: ' + ('dry run' if cubes else 'ALL UNSAT (nothing left)')); return
     t0 = time.time()
     done = 0; times = []; result = 'ALL UNSAT'
-    costs = (port_costs(_anti(masks), mono=a.monoports, formula=a.formulaports, polarity=not a.monoports,
+    terms = _anti(masks)
+    costs = (port_costs(terms, mono=a.monoports, formula=a.formulaports, polarity=not a.monoports,
                         certificate_level=a.portcertrank, certificate_output=a.portcertoutput,
-                        provider_eligibility=a.portproviders)
+                        provider_eligibility=a.portproviders, type_rank=a.certtyperank)
              if a.portbounds else None)
+    allocation_floor = 0
+    type_counts = ordered_type_bounds(terms, costs)[:2] if a.certtyperank else ()
+    if a.capacityallocation and terms:
+        support = rterms_support(terms)
+        base = support.bit_count() - 1
+        lower = ordered_port_lb(terms, costs) - base
+        allocation_floor = base + ordered_allocation_excess(terms, minimal_zero_certificates(terms), costs,
+                                                             costs.pout or {}, support, lower, a.size - base,
+                                                             a.capacityallocation)
+        say(f'capacity allocation ({a.capacityallocation}) lower bound {allocation_floor}')
+    if type_counts:
+        say(f'certificate type counts: AND >= {type_counts[0]}, OR >= {type_counts[1]}')
     records = []
     with Pool(a.workers) as p:
         for cube, status, circ, dt, stats in p.imap_unordered(
                 run_cube, [(n, masks, a.size, a.solver, c, a.fanout, a.readonce,
                             dict(sens=a.sens, units=a.units, reuse=a.reuse, nonot=a.nonot, cert=a.cert,
+                                 allocation_floor=allocation_floor, certificate_type_counts=type_counts,
                                  frontier=a.frontier, partialordered=a.partialordered, partialrepeat=a.partialrepeat,
                                  partialmultiplicity=a.partialmultiplicity, partialempty=a.partialempty,
                                  coupledprojections=a.coupledprojections,

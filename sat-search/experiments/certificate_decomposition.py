@@ -5,6 +5,7 @@ from functools import lru_cache
 from itertools import combinations, product
 from typing import NamedTuple
 
+from affine_completion import complete_affine
 from certificate_compatibility import (compatible_tree, indices, obstruction_clause, restrict_certificates,
                                        tree_leaves)
 from certificate_rank import coexistence_color_bound, intersection_matrix, modular_rank, one_share_support
@@ -340,7 +341,7 @@ def _provider_model_cuts(topology, readers, model, certificates, level):
     return None, ()
 
 
-def _lazy_formulas(topology, model):
+def _lazy_formulas(topology, model, affine_completion=None, stats=None):
     owners, _, memberships, _ = topology
     leaves = [0] * len(memberships)
     for i, choices in enumerate(owners):
@@ -350,20 +351,29 @@ def _lazy_formulas(topology, model):
     for support, membership in zip(leaves, memberships):
         positive, negative = (tuple(sum(1 << i for i, lit in enumerate(row) if lit in model) for row in axis)
                               for axis in membership)
+        if affine_completion is not None:
+            tree, deficit, status = complete_affine(support, (p for p in positive if p),
+                                                    (z for z in negative if z), max_deficit=affine_completion)
+            stats[f'affine_{status}'] += 1
+            if tree is not None:
+                stats['affine_zero_deficit'] += deficit == 0
+                formulas.append((tree, positive, negative, True))
+                continue
         tree, obstruction = compatible_tree(support, positive, negative)
         if obstruction is not None:
             cut = obstruction_clause(obstruction, membership)
             if not all(-lit in model for lit in cut):
                 raise RuntimeError('obstruction clause does not exclude the candidate')
             cuts.add(cut)
-        formulas.append((tree, positive, negative))
+        formulas.append((tree, positive, negative, False))
     if cuts:
         return None, sorted(cuts)
     # Either local constraints enforce intersection, or the matrix equality counts
     # one common terminal per common region and compatibility allows at most one.
-    if any(not p & n for _, positive, negative in formulas for p in positive if p for n in negative if n):
+    if any(not p & n for _, positive, negative, _ in formulas for p in positive if p for n in negative if n):
         raise RuntimeError('compatible model violated cross-intersection')
-    return [restrict_certificates(tree, positive, negative) for tree, positive, negative in formulas], ()
+    return [tree if exact else restrict_certificates(tree, positive, negative)
+            for tree, positive, negative, exact in formulas], ()
 
 
 def _decode_lazy(formulas, atoms, readers):
@@ -494,7 +504,7 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
 def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cells=400, conflicts=2000,
                          verify_unsat=None, certificates=None, on_sat=None, backend='complete-terminal', stats=None,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
-                         provider_capacity=None):
+                         provider_capacity=None, affine_completion=None):
     """Return SAT, UNSAT, or UNKNOWN for the relaxation at an at-most excess budget."""
     matrix = tuple(map(tuple, matrix))
     if excess < 0 or any(value < 0 for row in matrix for value in row):
@@ -513,6 +523,8 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
         raise ValueError('provider bounds require a valid level and the lazy backend')
     if provider_capacity is not None and (not lazy or provider_capacity not in CAPACITY_LEVELS):
         raise ValueError('provider capacity requires a valid level and the lazy backend')
+    if affine_completion is not None and (not lazy or not 0 <= affine_completion <= 5):
+        raise ValueError('affine completion requires a deficit cap from zero to five and the lazy backend')
     if portcertrank is not None or provider_level is not None or provider_capacity is not None:
         minterms, zero_certificates = certificates = tuple(map(tuple, certificates))
         if (not minterms or not zero_certificates or any(term <= 0 for term in minterms + zero_certificates)
@@ -615,7 +627,7 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                         if cuts:
                             stats[f'provider_{reason}_cuts'] += len(cuts)
                     if not cuts:
-                        formulas, cuts = _lazy_formulas(topology, model)
+                        formulas, cuts = _lazy_formulas(topology, model, affine_completion, stats)
                     if not cuts:
                         if on_sat is not None:
                             on_sat(used, _decode_lazy(formulas, topology.atoms, readers))

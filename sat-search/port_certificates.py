@@ -68,6 +68,26 @@ def modular_rank(matrix, prime):
     return len(basis)
 
 
+@lru_cache(maxsize=4096)
+def affine_rank(masks):
+    """A certified affine incidence rank, using two finite fields."""
+    if len(masks) < 2:
+        return 0
+    columns = sorted({i for mask in masks for i in range(mask.bit_length()) if mask >> i & 1})
+    matrix = tuple((1, *(mask >> i & 1 for i in columns)) for mask in masks)
+    return max(modular_rank(matrix, prime) for prime in (2, 101)) - 1
+
+
+def certificate_type_costs(positives, zeros, primary, *, output=False, visits=None):
+    """Lower bounds on regional AND and OR gates from known visits."""
+    families = []
+    for axis, rows in enumerate((zeros, positives)):
+        known = () if visits is None else visits[1 - axis]
+        projected = {row & primary for row in rows if output or row & primary or row in known}
+        families.append(affine_rank(tuple(sorted(projected))))
+    return tuple(families)
+
+
 def rectangle_clique(matrix, *, max_cells=96):
     """Greedily find a clique of ones that cannot share an all-one rectangle."""
     cells = [(i, j) for i, row in enumerate(matrix) for j, value in enumerate(row) if value]

@@ -147,7 +147,7 @@ class LazyCertificateChecks(unittest.TestCase):
                         self.assertTrue(proofs)
 
 
-def job(name, budget, mode, conflicts, proof, provider_capacity=None):
+def job(name, budget, mode, conflicts, proof, provider_capacity=None, affine_completion=None):
     case = load_cases(RESULTS / 'synthesis_cases.json')[name]
     if case.known != full_rows(case.n):
         raise ValueError('the backend expects complete certificates')
@@ -167,6 +167,7 @@ def job(name, budget, mode, conflicts, proof, provider_capacity=None):
     before = perf_counter()
     status = complete_status(p, z, excess, conflicts=conflicts, stats=stats, on_sat=witness,
                              verify_unsat=verified if proof else None, provider_capacity=provider_capacity,
+                             affine_completion=affine_completion,
                              **options(mode))
     print(json.dumps(dict(name=name, budget=budget, mode=mode, status=status, seconds=round(perf_counter() - before, 4),
                           stats=stats, gates=gates, checked=proofs, provider_capacity=provider_capacity)), flush=True)
@@ -184,6 +185,8 @@ def main():
     parser.add_argument('--proof', action='store_true')
     parser.add_argument('--providercapacity', nargs='?', const='subsets', choices=CAPACITY_LEVELS,
                         help='prescreen lazy regional layouts with shared outgoing capacities')
+    parser.add_argument('--affinecompletion', nargs='?', const=3, type=int, choices=range(6),
+                        help='try fixed-certificate affine reconstruction up to this deficit')
     args = parser.parse_args()
     if not args.seconds > 0 or args.conflicts < 1 or args.rounds < 1:
         parser.error('seconds, conflicts, and rounds must be positive')
@@ -191,9 +194,9 @@ def main():
         name, budget, mode = args.job
         if mode not in MODES:
             parser.error(f'expected a backend in {MODES}')
-        if args.providercapacity and mode == MODES[0]:
-            parser.error('--providercapacity requires a lazy backend')
-        job(name, int(budget), mode, args.conflicts, args.proof, args.providercapacity)
+        if (args.providercapacity or args.affinecompletion is not None) and mode == MODES[0]:
+            parser.error('capacity and affine options require a lazy backend')
+        job(name, int(budget), mode, args.conflicts, args.proof, args.providercapacity, args.affinecompletion)
     else:
         for name, budget in FRONTIER_JOBS if args.frontier else JOBS:
             for mode in MODES[-1:] if args.frontier else MODES:
@@ -205,6 +208,8 @@ def main():
                         command.append('--proof')
                     if args.providercapacity and mode != MODES[0]:
                         command.extend(('--providercapacity', args.providercapacity))
+                    if args.affinecompletion is not None and mode != MODES[0]:
+                        command.extend(('--affinecompletion', str(args.affinecompletion)))
                     try:
                         child = run(command, timeout=args.seconds, capture_output=True, text=True)
                         if child.returncode:

@@ -9,6 +9,7 @@ from provider_certificates import (allocate_rectangles, incompatibility_cliques,
 
 
 CAPACITY_LEVELS = ('singletons', 'subsets', 'exact')
+ALLOCATION_LEVELS = ('deficit', 'packing', 'exact')
 
 
 @dataclass(frozen=True)
@@ -176,3 +177,112 @@ def capacity_obstruction(layout, level='subsets'):
     if level == 'exact' and global_rectangle_allocation(layout) is False:
         return CapacityObstruction('allocation')
     return None
+
+
+def compulsory_demands(layout):
+    """Certified F(T) for every subset of a small ordered provider set."""
+    count = len(layout.capacities)
+    if count > 6:
+        raise ValueError('full subset demand is limited to six providers')
+    demands = [0] * (1 << count)
+    for subset in range(1, len(demands)):
+        demands[subset] = sum(max(map(len, incompatibility_cliques(region.eligibility, subset)), default=0)
+                              for region in layout.regions)
+    return tuple(demands)
+
+
+def allocation_excess(demands, budget, level='deficit'):
+    """Conditional excess bound from F(T), capped at an exact budget exclusion."""
+    if level not in ALLOCATION_LEVELS or not demands or len(demands) & (len(demands) - 1):
+        raise ValueError('expected a power-of-two subset table and a valid allocation level')
+    count = len(demands).bit_length() - 1
+    deficits = tuple(max(0, demand - 2 * subset.bit_count()) for subset, demand in enumerate(demands))
+    lower = max(deficits)
+    if level == 'deficit' or count + lower > budget:
+        return count + lower
+    packing = [0] * len(demands)
+    for subset in range(1, len(demands)):
+        low_bit = subset & -subset
+        best = packing[subset ^ low_bit]
+        block = subset
+        while block:
+            if block & low_bit and deficits[block]:
+                best = max(best, deficits[block] + packing[subset ^ block])
+            block = (block - 1) & subset
+        packing[subset] = best
+    lower = packing[-1]
+    if level == 'packing' or count + lower > budget or count == 0:
+        return count + lower
+
+    constraints = tuple((tuple(indices(subset)), demand) for subset, demand in enumerate(deficits) if demand)
+    required = tuple(deficits[1 << i] for i in range(count))
+
+    def feasible(assignment, remaining):
+        n = len(assignment)
+        if any(sum(assignment[i] for i in selected if i < n)
+               + (remaining if selected[-1] >= n else 0) < demand for selected, demand in constraints):
+            return False
+        if n == count:
+            return True
+        return any(feasible((*assignment, extra), remaining - extra)
+                   for extra in range(required[n], remaining - sum(required[n + 1:]) + 1))
+
+    for extra in range(lower, budget - count + 1):
+        if feasible((), extra):
+            return count + extra
+    return budget + 1
+
+
+def ordered_allocation_excess(positives, zeros, costs, output_costs, support, lower, upper, level,
+                              *, max_layouts=6_000, stats=None):
+    """Raise a whole-target bound only after ruling out every layout at a budget."""
+    if support.bit_count() > 6:
+        return lower
+    examined = 0
+
+    class LayoutLimit(Exception):
+        pass
+
+    def permits(groups, left, readers, budget, port_sum):
+        nonlocal examined
+        if len(groups) == readers:
+            if (left and left not in costs) or port_sum + (output_costs.get(left, costs.get(left, 2))
+                                                            if left else 2) > budget + readers:
+                return False
+            if examined >= max_layouts:
+                raise LayoutLimit
+            examined += 1
+            if stats is not None:
+                stats['layouts'] += 1
+            layout, failure = prepare_capacity_layout(positives, zeros, (*groups, left), (2,) * readers)
+            if failure is not None:
+                if stats is not None:
+                    stats['structural_exclusions'] += 1
+                return False
+            if level is None:
+                return True
+            demands = compulsory_demands(layout)
+            excluded = allocation_excess(demands, budget, level) > budget
+            if stats is not None:
+                stats['allocation_exclusions'] += excluded
+            return not excluded
+        part = left
+        while True:
+            cost = costs.get(part) if part else 2
+            if cost is not None and (part or groups) and port_sum + cost <= budget + readers:
+                if permits((*groups, part), left ^ part, readers, budget, port_sum + cost):
+                    return True
+            if not part:
+                return False
+            part = (part - 1) & left
+
+    for budget in range(max(0, lower), min(upper, 5) + 1):
+        try:
+            if any(permits((), support, readers, budget, 0) for readers in range(budget + 1)):
+                return budget
+        except LayoutLimit:
+            if stats is not None:
+                stats['capped'] += 1
+            return budget
+        lower = budget + 1
+    return lower
