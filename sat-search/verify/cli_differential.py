@@ -68,6 +68,8 @@ FLAGSETS = {
     'minimal': ('--minimal', 'both'),
     'signedregions': ('--signedregions', 'both'),
     'fast+signedregions': (f'{FAST} --signedregions', 'both'),
+    'firstgate': ('--firstgate', 'both'),
+    'fast+firstgate': (f'{FAST} --firstgate', 'both'),
 }
 
 

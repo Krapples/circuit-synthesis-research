@@ -1,8 +1,10 @@
 {
  "files": [
   "results\\differential\\cli-all-n4-20261124.jsonl",
+  "results\\differential\\cli-firstgate-20261124.jsonl",
   "results\\differential\\cli-mainonly-n5-20261124.jsonl",
   "results\\differential\\cli-signed-20261124.jsonl",
+  "results\\differential\\firstgate-20261124.jsonl",
   "results\\differential\\full-20261124.jsonl",
   "results\\differential\\mono_shard_check.jsonl",
   "results\\differential\\padded-20261124.jsonl",
@@ -114,6 +116,22 @@
     "git": "61bdcf0",
     "dirty": true,
     "sources_sha256": "b3394c23ec3ddb42"
+   }
+  ],
+  [
+   "firstgate-20261124.jsonl",
+   {
+    "git": "a5b791b",
+    "dirty": true,
+    "sources_sha256": "e863679f96d40ecb"
+   }
+  ],
+  [
+   "cli-firstgate-20261124.jsonl",
+   {
+    "git": "729202c",
+    "dirty": true,
+    "sources_sha256": "e863679f96d40ecb"
    }
   ]
  ],
@@ -1105,6 +1123,41 @@
    "contract_rejections": 399,
    "missing": []
   },
+  "fast+firstgate": {
+   "status": "unresolved",
+   "classes": {
+    "whole-min": [
+     120,
+     0,
+     0
+    ],
+    "whole-exact": [
+     60,
+     0,
+     0
+    ],
+    "prefix-min": [
+     400,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    168,
+    0,
+    0
+   ],
+   "nongraph": 32,
+   "contract_rejections": 323,
+   "missing": [
+    "prefix-exact"
+   ]
+  },
   "fast+frontier": {
    "status": "tested",
    "classes": {
@@ -1638,6 +1691,41 @@
    "nongraph": 22,
    "contract_rejections": 197,
    "missing": []
+  },
+  "firstgate": {
+   "status": "unresolved",
+   "classes": {
+    "whole-min": [
+     196,
+     0,
+     0
+    ],
+    "whole-exact": [
+     96,
+     0,
+     2
+    ],
+    "prefix-min": [
+     609,
+     0,
+     0
+    ],
+    "prefix-exact": [
+     0,
+     0,
+     0
+    ]
+   },
+   "cli": [
+    168,
+    0,
+    0
+   ],
+   "nongraph": 355,
+   "contract_rejections": 0,
+   "missing": [
+    "prefix-exact"
+   ]
   },
   "formulaports": {
    "status": "tested",

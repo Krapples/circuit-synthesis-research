@@ -2,8 +2,10 @@
  "generated_by": "verify/make_allowlist.py",
  "inventory_files": [
   "results\\differential\\cli-all-n4-20261124.jsonl",
+  "results\\differential\\cli-firstgate-20261124.jsonl",
   "results\\differential\\cli-mainonly-n5-20261124.jsonl",
   "results\\differential\\cli-signed-20261124.jsonl",
+  "results\\differential\\firstgate-20261124.jsonl",
   "results\\differential\\full-20261124.jsonl",
   "results\\differential\\mono_shard_check.jsonl",
   "results\\differential\\padded-20261124.jsonl",
@@ -976,6 +978,61 @@
    }
   },
   {
+   "name": "fast+firstgate",
+   "basis": "monotone",
+   "rules": [
+    "bypass",
+    "colorbounds",
+    "colorbudget",
+    "elim",
+    "elimclosure",
+    "fanout",
+    "fanoutelim",
+    "firstgate",
+    "identifybounds",
+    "notbypass",
+    "pairro",
+    "readonce",
+    "recclosure",
+    "recursivebounds",
+    "sens",
+    "sharecolor",
+    "signeddom",
+    "symmetry",
+    "units",
+    "usens"
+   ],
+   "evidence": {
+    "cli": [
+     168,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      120,
+      0,
+      0
+     ],
+     "whole-exact": [
+      60,
+      0,
+      0
+     ],
+     "prefix-min": [
+      400,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
    "name": "fast+partialordered",
    "basis": "monotone",
    "rules": [
@@ -1193,6 +1250,42 @@
      ],
      "prefix-exact": [
       274,
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "name": "firstgate",
+   "basis": "monotone",
+   "rules": [
+    "firstgate"
+   ],
+   "evidence": {
+    "cli": [
+     168,
+     0,
+     0
+    ],
+    "classes": {
+     "whole-min": [
+      196,
+      0,
+      0
+     ],
+     "whole-exact": [
+      96,
+      0,
+      2
+     ],
+     "prefix-min": [
+      609,
+      0,
+      0
+     ],
+     "prefix-exact": [
+      0,
       0,
       0
      ]

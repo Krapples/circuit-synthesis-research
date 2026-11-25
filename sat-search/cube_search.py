@@ -1960,6 +1960,28 @@ def signed_region_lb(n, masks):
     return len(ess) - 1 + bound.lower(), bound.not_lower()
 
 
+FIRST_GATE_MAX_INPUTS = 9   # adaptive invocation: the restriction recursion grows quickly with n
+
+
+@lru_cache(maxsize=64)
+def first_gate_lb(n, masks, monotone):
+    """First-gate elimination bound (theory/first_gate_bound.py) on the essential restriction: binary gates
+    of any circuit for the target (monotone basis: mono_lower; general basis: free-NOT lower, mode 1,
+    affine identification off). Returns 0 above FIRST_GATE_MAX_INPUTS essential inputs. Provisional."""
+    theory = os.path.join(HERE, 'theory')
+    if theory not in sys.path:
+        sys.path.append(theory)
+    from first_gate_bound import lower as fg_lower, mono_lower
+    f = sum(1 << x for x in range(1 << n) if any(x & m == m for m in masks))
+    ess = [i for i in range(n) if any((f >> a & 1) != (f >> (a ^ (1 << i)) & 1) for a in range(1 << n))]
+    if len(ess) < 2 or len(ess) > FIRST_GATE_MAX_INPUTS:
+        return max(0, len(ess) - 1) if len(ess) < 2 else 0
+    g = 0
+    for b in range(1 << len(ess)):
+        g |= (f >> sum(1 << ess[k] for k in range(len(ess)) if b >> k & 1) & 1) << b
+    return mono_lower(len(ess), g) if monotone else fg_lower(len(ess), g, 1)
+
+
 def run_cube(args):
     n, masks, G, solver_name, cube, fanout, readonce = args[:7]
     flags = args[7] if len(args) > 7 else {}
@@ -2052,6 +2074,11 @@ def run_cube(args):
         if bound > G:
             return cube, 'UNSAT', None, time.time() - t0, f'analytical: frontier binary-gate bound {bound} > {G}'
         Lc = max(Lc, bound)
+    if flags.get('firstgate'):
+        fb = first_gate_lb(n, tuple(sorted(masks)), bool(flags.get('nonot')))
+        if fb > G:
+            return cube, 'UNSAT', None, time.time() - t0, f'analytical: first-gate bound {fb} > {G}'
+        Lc = max(Lc, fb)
     if flags.get('signedregions'):
         sb, sn = signed_region_lb(n, tuple(sorted(masks)))
         need = sb + (0 if flags.get('nonot') else sn)
@@ -2485,6 +2512,8 @@ def main():
                     help='with --portcertrank: include all certificates in the output-region bound')
     ap.add_argument('--portproviders', action='store_true',
                     help='require residual pairs to have an eligible earlier provider (monotone)')
+    ap.add_argument('--firstgate', action='store_true',
+                    help='first-gate elimination lower bound (restrictions and first-gate absorption; n <= 9)')
     ap.add_argument('--signedregions', action='store_true',
                     help='signed regional lower bound (pattern incompatibility, output unateness, cofactor diversity)')
     ap.add_argument('--formulaports', action='store_true',
@@ -2638,7 +2667,7 @@ def main():
                                  colorbounds=a.colorbounds, colorbudget=a.colorbudget, sharecolor=a.sharecolor,
                                  lostreader=a.lostreader, activecolor=a.activecolor, colorzero=a.colorzero,
                                  isolatedcolor=a.isolatedcolor,
-                                 orderedports=a.orderedports, signedregions=a.signedregions,
+                                 orderedports=a.orderedports, signedregions=a.signedregions, firstgate=a.firstgate,
                                  portcosts=costs))
                 for c in cubes]):
             done += 1; times.append(dt)

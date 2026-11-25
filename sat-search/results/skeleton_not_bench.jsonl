@@ -1,0 +1,486 @@
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-01", "basis": "not", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-03", "basis": "mono", "n": 6, "gates_before": 16, "binary": 16, "not_before": 0, "not_after": 0, "total_after": 16, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 15}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-03", "basis": "mono", "n": 6, "gates_before": 15, "binary": 15, "not_before": 0, "not_after": 0, "total_after": 15, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 15}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-04", "basis": "mono", "n": 7, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-04", "basis": "mono", "n": 7, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-04", "basis": "mono", "n": 7, "gates_before": 21, "binary": 21, "not_before": 0, "not_after": 0, "total_after": 21, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-05", "basis": "mono", "n": 8, "gates_before": 20, "binary": 20, "not_before": 0, "not_after": 0, "total_after": 20, "mode": "mincut", "verified": true, "seconds": 0.0015, "upper": 19}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-05", "basis": "mono", "n": 8, "gates_before": 20, "binary": 20, "not_before": 0, "not_after": 0, "total_after": 20, "mode": "mincut", "verified": true, "seconds": 0.0353, "upper": 19}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-05", "basis": "mono", "n": 8, "gates_before": 19, "binary": 19, "not_before": 0, "not_after": 0, "total_after": 19, "mode": "mincut", "verified": true, "seconds": 0.0017, "upper": 19}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-07", "basis": "mono", "n": 5, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-07", "basis": "mono", "n": 5, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-07", "basis": "mono", "n": 5, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-07", "basis": "mono", "n": 5, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-08", "basis": "mono", "n": 6, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-08", "basis": "mono", "n": 6, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-08", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-09", "basis": "mono", "n": 7, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0009, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-09", "basis": "mono", "n": 7, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-09", "basis": "mono", "n": 7, "gates_before": 21, "binary": 21, "not_before": 0, "not_after": 0, "total_after": 21, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-10", "basis": "mono", "n": 8, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0015, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-10", "basis": "mono", "n": 8, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0015, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-10", "basis": "mono", "n": 8, "gates_before": 21, "binary": 21, "not_before": 0, "not_after": 0, "total_after": 21, "mode": "mincut", "verified": true, "seconds": 0.0015, "upper": 21}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-11", "basis": "mono", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-11", "basis": "mono", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-11", "basis": "mono", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-11", "basis": "not", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-12", "basis": "mono", "n": 5, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 11}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-12", "basis": "mono", "n": 5, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 11}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-12", "basis": "mono", "n": 5, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 11}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-13", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-13", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-13", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-13", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-14", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-14", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-14", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-15", "basis": "mono", "n": 8, "gates_before": 23, "binary": 23, "not_before": 0, "not_after": 0, "total_after": 23, "mode": "mincut", "verified": true, "seconds": 0.0016, "upper": 23}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-15", "basis": "mono", "n": 8, "gates_before": 23, "binary": 23, "not_before": 0, "not_after": 0, "total_after": 23, "mode": "mincut", "verified": true, "seconds": 0.0016, "upper": 23}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-16", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-16", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-17", "basis": "mono", "n": 5, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-17", "basis": "mono", "n": 5, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-17", "basis": "mono", "n": 5, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-18", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-18", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-18", "basis": "mono", "n": 6, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-19", "basis": "mono", "n": 7, "gates_before": 18, "binary": 18, "not_before": 0, "not_after": 0, "total_after": 18, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 18}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-19", "basis": "mono", "n": 7, "gates_before": 18, "binary": 18, "not_before": 0, "not_after": 0, "total_after": 18, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 18}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-20", "basis": "mono", "n": 8, "gates_before": 25, "binary": 25, "not_before": 0, "not_after": 0, "total_after": 25, "mode": "mincut", "verified": true, "seconds": 0.0016, "upper": 25}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-20", "basis": "mono", "n": 8, "gates_before": 26, "binary": 26, "not_before": 0, "not_after": 0, "total_after": 26, "mode": "mincut", "verified": true, "seconds": 0.0017, "upper": 25}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-20", "basis": "mono", "n": 8, "gates_before": 25, "binary": 25, "not_before": 0, "not_after": 0, "total_after": 25, "mode": "mincut", "verified": true, "seconds": 0.0387, "upper": 25}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-21", "basis": "mono", "n": 5, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-22", "basis": "mono", "n": 6, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 8}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-22", "basis": "mono", "n": 6, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 8}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-23", "basis": "mono", "n": 7, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-23", "basis": "mono", "n": 7, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0009, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-23", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-24", "basis": "mono", "n": 8, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 10}
+{"source": "synthesis_ablation.jsonl", "case": "hypergraph-24", "basis": "mono", "n": 8, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 10}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-4-3", "basis": "mono", "n": 4, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-4-3", "basis": "mono", "n": 4, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-4-4", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-4-4", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-4-4", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-4-4", "basis": "not", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-5-5", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-5-5", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-5-5", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-5-5", "basis": "not", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-6-6", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-6-6", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-6-6", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-7-7", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-7-7", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-8-8", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "threshold-8-8", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "complete-4", "basis": "mono", "n": 4, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "complete-4", "basis": "mono", "n": 4, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "complete-4", "basis": "mono", "n": 4, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-2-2", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-2-3", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-2-3", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-2-3", "basis": "not", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-3-3", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-3-3", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-3-3", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-4-4", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "bipartite-4-4", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "graph-01", "basis": "mono", "n": 5, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "graph-01", "basis": "mono", "n": 5, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "graph-01", "basis": "mono", "n": 5, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "graph-01", "basis": "mono", "n": 5, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "graph-02", "basis": "mono", "n": 6, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "graph-02", "basis": "mono", "n": 6, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "graph-03", "basis": "mono", "n": 7, "gates_before": 15, "binary": 15, "not_before": 0, "not_after": 0, "total_after": 15, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 15}
+{"source": "synthesis_ablation.jsonl", "case": "graph-03", "basis": "mono", "n": 7, "gates_before": 15, "binary": 15, "not_before": 0, "not_after": 0, "total_after": 15, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 15}
+{"source": "synthesis_ablation.jsonl", "case": "graph-03", "basis": "mono", "n": 7, "gates_before": 15, "binary": 15, "not_before": 0, "not_after": 0, "total_after": 15, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 15}
+{"source": "synthesis_ablation.jsonl", "case": "path-4", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "path-4", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "cycle-5", "basis": "mono", "n": 5, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "cycle-5", "basis": "mono", "n": 5, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "cycle-5", "basis": "mono", "n": 5, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-01", "basis": "not", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-03", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-03", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-03", "basis": "mono", "n": 6, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0024, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-04", "basis": "mono", "n": 7, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0104, "upper": 11}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-04", "basis": "mono", "n": 7, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": 11}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-04", "basis": "mono", "n": 7, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 11}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-05", "basis": "mono", "n": 8, "gates_before": 24, "binary": 24, "not_before": 0, "not_after": 0, "total_after": 24, "mode": "mincut", "verified": true, "seconds": 0.0018, "upper": 23}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-05", "basis": "mono", "n": 8, "gates_before": 24, "binary": 24, "not_before": 0, "not_after": 0, "total_after": 24, "mode": "mincut", "verified": true, "seconds": 0.0019, "upper": 23}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-05", "basis": "mono", "n": 8, "gates_before": 23, "binary": 23, "not_before": 0, "not_after": 0, "total_after": 23, "mode": "mincut", "verified": true, "seconds": 0.0017, "upper": 23}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-06", "basis": "mono", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-06", "basis": "mono", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-06", "basis": "mono", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-06", "basis": "not", "n": 4, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-07", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-07", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-07", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-08", "basis": "mono", "n": 6, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-08", "basis": "mono", "n": 6, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-08", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-09", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-09", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-09", "basis": "mono", "n": 7, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-10", "basis": "mono", "n": 8, "gates_before": 18, "binary": 18, "not_before": 0, "not_after": 0, "total_after": 18, "mode": "mincut", "verified": true, "seconds": 0.0014, "upper": 17}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-10", "basis": "mono", "n": 8, "gates_before": 18, "binary": 18, "not_before": 0, "not_after": 0, "total_after": 18, "mode": "mincut", "verified": true, "seconds": 0.0013, "upper": 17}
+{"source": "synthesis_ablation.jsonl", "case": "random-monotone-10", "basis": "mono", "n": 8, "gates_before": 17, "binary": 17, "not_before": 0, "not_after": 0, "total_after": 17, "mode": "mincut", "verified": true, "seconds": 0.0013, "upper": 17}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-01", "basis": "not", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-02", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-02", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-02", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-04", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-04", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-04", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-05", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-05", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-06", "basis": "not", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-08", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-08", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-08", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-09", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-09", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0195, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-09", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-10", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0017, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "read-once-10", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "generated-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-03", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-04", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "generated-04", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "generated-04", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "generated-04", "basis": "mono", "n": 7, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 6}
+{"source": "synthesis_ablation.jsonl", "case": "generated-05", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-05", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-05", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-05", "basis": "mono", "n": 8, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0014, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-06", "basis": "mono", "n": 4, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-06", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-06", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-06", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-06", "basis": "not", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-07", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-07", "basis": "not", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-08", "basis": "mono", "n": 6, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 10}
+{"source": "synthesis_ablation.jsonl", "case": "generated-08", "basis": "mono", "n": 6, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 10}
+{"source": "synthesis_ablation.jsonl", "case": "generated-09", "basis": "mono", "n": 7, "gates_before": 13, "binary": 13, "not_before": 0, "not_after": 0, "total_after": 13, "mode": "mincut", "verified": true, "seconds": 0.0006, "upper": 13}
+{"source": "synthesis_ablation.jsonl", "case": "generated-10", "basis": "mono", "n": 8, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-10", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-10", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0018, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-10", "basis": "mono", "n": 8, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0016, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-10", "basis": "mono", "n": 8, "gates_before": 11, "binary": 11, "not_before": 0, "not_after": 0, "total_after": 11, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-10", "basis": "mono", "n": 8, "gates_before": 10, "binary": 10, "not_before": 0, "not_after": 0, "total_after": 10, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 7}
+{"source": "synthesis_ablation.jsonl", "case": "generated-11", "basis": "mono", "n": 5, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-11", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-11", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-11", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 4}
+{"source": "synthesis_ablation.jsonl", "case": "generated-12", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-12", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-12", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "generated-12", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-02", "basis": "mono", "n": 5, "gates_before": 18, "binary": 18, "not_before": 0, "not_after": 0, "total_after": 18, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 17}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-02", "basis": "mono", "n": 5, "gates_before": 18, "binary": 18, "not_before": 0, "not_after": 0, "total_after": 18, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 17}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-02", "basis": "mono", "n": 5, "gates_before": 17, "binary": 17, "not_before": 0, "not_after": 0, "total_after": 17, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 17}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-03", "basis": "mono", "n": 6, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 5}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-04", "basis": "mono", "n": 7, "gates_before": 28, "binary": 28, "not_before": 0, "not_after": 0, "total_after": 28, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 28}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-06", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-06", "basis": "not", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": 3}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-07", "basis": "mono", "n": 5, "gates_before": 14, "binary": 14, "not_before": 0, "not_after": 0, "total_after": 14, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 14}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-08", "basis": "mono", "n": 6, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 22}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-09", "basis": "mono", "n": 7, "gates_before": 28, "binary": 28, "not_before": 0, "not_after": 0, "total_after": 28, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 28}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-09", "basis": "mono", "n": 7, "gates_before": 28, "binary": 28, "not_before": 0, "not_after": 0, "total_after": 28, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 28}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-09", "basis": "mono", "n": 7, "gates_before": 28, "binary": 28, "not_before": 0, "not_after": 0, "total_after": 28, "mode": "mincut", "verified": true, "seconds": 0.0009, "upper": 28}
+{"source": "synthesis_ablation.jsonl", "case": "comparator-10", "basis": "mono", "n": 8, "gates_before": 12, "binary": 12, "not_before": 0, "not_after": 0, "total_after": 12, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 12}
+{"source": "synthesis_ablation.jsonl", "case": "partial-01", "basis": "mono", "n": 4, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-01", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-02", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-02", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-02", "basis": "mono", "n": 5, "gates_before": 4, "binary": 4, "not_before": 0, "not_after": 0, "total_after": 4, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-04", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-04", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-04", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-04", "basis": "mono", "n": 7, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-05", "basis": "mono", "n": 8, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0016, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-05", "basis": "mono", "n": 8, "gates_before": 22, "binary": 22, "not_before": 0, "not_after": 0, "total_after": 22, "mode": "mincut", "verified": true, "seconds": 0.0016, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-05", "basis": "mono", "n": 8, "gates_before": 21, "binary": 21, "not_before": 0, "not_after": 0, "total_after": 21, "mode": "mincut", "verified": true, "seconds": 0.0015, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-06", "basis": "mono", "n": 4, "gates_before": 3, "binary": 3, "not_before": 0, "not_after": 0, "total_after": 3, "mode": "mincut", "verified": true, "seconds": 0.0001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-07", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-07", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-07", "basis": "mono", "n": 5, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-08", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-09", "basis": "mono", "n": 7, "gates_before": 20, "binary": 20, "not_before": 0, "not_after": 0, "total_after": 20, "mode": "mincut", "verified": true, "seconds": 0.0008, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-10", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": null}
+{"source": "synthesis_ablation.jsonl", "case": "partial-10", "basis": "mono", "n": 8, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": null}
+{"source": "synthesis_endpoints.jsonl", "case": "comparator-10", "basis": "mono", "n": 8, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "comparator-10", "basis": "mono", "n": 8, "gates_before": 9, "binary": 9, "not_before": 0, "not_after": 0, "total_after": 9, "mode": "mincut", "verified": true, "seconds": 0.0011, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "cycle-5", "basis": "mono", "n": 5, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_endpoints.jsonl", "case": "cycle-5", "basis": "mono", "n": 5, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_endpoints.jsonl", "case": "generated-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 10}
+{"source": "synthesis_endpoints.jsonl", "case": "generated-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 10}
+{"source": "synthesis_endpoints.jsonl", "case": "generated-08", "basis": "mono", "n": 6, "gates_before": 6, "binary": 6, "not_before": 0, "not_after": 0, "total_after": 6, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 10}
+{"source": "synthesis_endpoints.jsonl", "case": "generated-09", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0009, "upper": 13}
+{"source": "synthesis_endpoints.jsonl", "case": "generated-09", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0007, "upper": 13}
+{"source": "synthesis_endpoints.jsonl", "case": "random-monotone-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0004, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "random-monotone-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "random-monotone-03", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "random-monotone-09", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0005, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "random-monotone-09", "basis": "mono", "n": 7, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0014, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "graph-01", "basis": "mono", "n": 5, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_endpoints.jsonl", "case": "graph-01", "basis": "mono", "n": 5, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 9}
+{"source": "synthesis_endpoints.jsonl", "case": "graph-02", "basis": "mono", "n": 6, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "graph-02", "basis": "mono", "n": 6, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 12}
+{"source": "synthesis_endpoints.jsonl", "case": "hypergraph-22", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 8}
+{"source": "synthesis_endpoints.jsonl", "case": "hypergraph-22", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 8}
+{"source": "synthesis_endpoints.jsonl", "case": "hypergraph-22", "basis": "mono", "n": 6, "gates_before": 7, "binary": 7, "not_before": 0, "not_after": 0, "total_after": 7, "mode": "mincut", "verified": true, "seconds": 0.0003, "upper": 8}
+{"source": "synthesis_endpoints.jsonl", "case": "hypergraph-24", "basis": "mono", "n": 8, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.0012, "upper": 10}
+{"source": "synthesis_endpoints.jsonl", "case": "hypergraph-24", "basis": "mono", "n": 8, "gates_before": 8, "binary": 8, "not_before": 0, "not_after": 0, "total_after": 8, "mode": "mincut", "verified": true, "seconds": 0.001, "upper": 10}
+{"source": "synthesis_serial.jsonl", "case": "hypergraph-02", "basis": "not", "n": 5, "gates_before": 5, "binary": 5, "not_before": 0, "not_after": 0, "total_after": 5, "mode": "mincut", "verified": true, "seconds": 0.0002, "upper": 5}
+{"part": "B", "f": 1, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 2, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 4, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 6, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 7, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 8, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 9, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 11, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 13, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 14, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 16, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 18, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 19, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 20, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 21, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 23, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 25, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 26, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 27, "free_binary": 3, "skeleton_not": 2, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 28, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 29, "free_binary": 3, "skeleton_not": 2, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 30, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 31, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 32, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 33, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 35, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 37, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 38, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 39, "free_binary": 3, "skeleton_not": 2, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 40, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 42, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 43, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 44, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 45, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 46, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 47, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 49, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 50, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 52, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 53, "free_binary": 3, "skeleton_not": 2, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 54, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 55, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 56, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 57, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 58, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 59, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 61, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 62, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 64, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 65, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 67, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 69, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 70, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 71, "free_binary": 3, "skeleton_not": 2, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 72, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 74, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 75, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 76, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 77, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 78, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 79, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 81, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 82, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 83, "free_binary": 3, "skeleton_not": 2, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 84, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 86, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 87, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 88, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 89, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 91, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 92, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 93, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 94, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 96, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 98, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 99, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 100, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 101, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 103, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 106, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 108, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 110, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 111, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 112, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 113, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 114, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 115, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 116, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 117, "free_binary": 2, "skeleton_not": 2, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 118, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 120, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 122, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 123, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 124, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 125, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 127, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 128, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 130, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 131, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 132, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 133, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 135, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 137, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 138, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 139, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 140, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 141, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 142, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 143, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 144, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 145, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 147, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 149, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 152, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 154, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 155, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 156, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 157, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 159, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 161, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 162, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 163, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 164, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 166, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 167, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 168, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 169, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 171, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 172, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 173, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 174, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 176, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 177, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 178, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 179, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 180, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 181, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 183, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 184, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 185, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 186, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 188, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 190, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 191, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 193, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 194, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 196, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 197, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 198, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 199, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 200, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 201, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 202, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 203, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 205, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 206, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 208, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 209, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 210, "free_binary": 4, "skeleton_not": 2, "two_stage": 6, "counted_min": 6}
+{"part": "B", "f": 211, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 212, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 213, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 215, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 216, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 217, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 218, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 220, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 222, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 223, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 224, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 225, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 226, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 227, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 228, "free_binary": 3, "skeleton_not": 1, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 229, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 230, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 232, "free_binary": 4, "skeleton_not": 0, "two_stage": 4, "counted_min": 4}
+{"part": "B", "f": 234, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 235, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 236, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 237, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 239, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 241, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 242, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 244, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 246, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 247, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 248, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
+{"part": "B", "f": 249, "free_binary": 4, "skeleton_not": 1, "two_stage": 5, "counted_min": 5}
+{"part": "B", "f": 251, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 253, "free_binary": 2, "skeleton_not": 1, "two_stage": 3, "counted_min": 3}
+{"part": "B", "f": 254, "free_binary": 2, "skeleton_not": 0, "two_stage": 2, "counted_min": 2}
