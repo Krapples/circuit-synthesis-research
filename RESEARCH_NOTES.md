@@ -6,6 +6,12 @@ The project uses exact synthesis and analytical lower bounds to study small Bool
 latest cross-family benchmark shows that frontier bounds transfer beyond graph functions, including
 to 3-uniform hypergraphs. The main open shard is L-meta-1343 at size 19.
 
+For the eleven-vertex top-form graph in L-meta-4081, Lean checked the edge-charge inequality
+with at most four uncovered edges. It also checked that one mixing OR with support of size
+at least two forces all uncovered edges to share a vertex when there are no centreless tops.
+Structural SAT excluded counterexamples through 12 gates and timed out at sizes 13–21.
+[Routing proofs and search records](sat-search/results/top_form_4081/README.md)
+
 The one-hot bipartite representation probe L-meta-11869 has a computational lower bound of 17
 and a Lean-checked upper bound of 30 AND/OR gates. The requested budget of 20 remains open.
 [Representation probe](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md#one-hot-bipartite-representation)
