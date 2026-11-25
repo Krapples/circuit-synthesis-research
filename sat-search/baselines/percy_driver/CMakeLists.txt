@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.10)
+project(percy_driver LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(PERCY_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(PERCY_TEST OFF CACHE BOOL "" FORCE)
+# Percy checkout lives in external/percy (git-ignored); see ../VERSIONS.md for the exact commit.
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../external/percy ${CMAKE_BINARY_DIR}/percy)
+add_executable(percy_run percy_run.cpp)
+target_link_libraries(percy_run PRIVATE percy)
+if (MSVC)
+  target_compile_options(percy_run PRIVATE /O2 /bigobj /W0 /EHsc)
+  target_compile_definitions(percy_run PRIVATE NOMINMAX _CRT_SECURE_NO_WARNINGS)
+endif()

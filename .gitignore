@@ -18,3 +18,7 @@ pequalnp-proofs/
 sat-search/STOP
 sat-search/STOP_FILLER
 !sat-search/results/*.jsonl
+!sat-search/results/**/*.jsonl
+
+# External baseline tools (cloned; exact commits recorded in sat-search/baselines/VERSIONS.md)
+external/
