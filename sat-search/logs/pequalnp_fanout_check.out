@@ -1,0 +1,49 @@
+m3: 248 functions with min <= 7 (6.5s)
+m4: 2374 functions with min <= 5 (1.3s)
+n=4: soundness violations 0 (over 2374 exact minima); L107 applicable to 58838/65536, beats support on 57026
+n=4 L107 bound histogram (applicable functions): {3: 1938, 4: 7546, 5: 16534, 6: 16535, 7: 10026, 8: 5755, 9: 428, 10: 59, 11: 17}
+  hypergraph-02          n=5 support-1=4 L107_ok=False chain_lb=4
+  hypergraph-03          n=6 support-1=5 L107_ok=True chain_lb=6
+  hypergraph-07          n=5 support-1=4 L107_ok=True chain_lb=5
+  hypergraph-08          n=6 support-1=5 L107_ok=True chain_lb=5
+  hypergraph-12          n=5 support-1=4 L107_ok=True chain_lb=5
+  hypergraph-13          n=6 support-1=5 L107_ok=False chain_lb=5
+  hypergraph-17          n=5 support-1=4 L107_ok=False chain_lb=4
+  hypergraph-18          n=6 support-1=5 L107_ok=False chain_lb=5
+  hypergraph-21          n=5 support-1=4 L107_ok=True chain_lb=6
+  hypergraph-22          n=6 support-1=5 L107_ok=True chain_lb=5
+  threshold-5-3          n=5 support-1=4 L107_ok=True chain_lb=8
+  threshold-5-5          n=5 support-1=4 L107_ok=False chain_lb=4
+  threshold-6-4          n=6 support-1=5 L107_ok=True chain_lb=9
+  threshold-6-6          n=6 support-1=5 L107_ok=False chain_lb=5
+  complete-5             n=5 support-1=4 L107_ok=True chain_lb=7
+  complete-6             n=6 support-1=5 L107_ok=True chain_lb=8
+  bipartite-2-3          n=5 support-1=4 L107_ok=False chain_lb=4
+  bipartite-3-3          n=6 support-1=5 L107_ok=False chain_lb=5
+  graph-01               n=5 support-1=4 L107_ok=True chain_lb=6
+  graph-02               n=6 support-1=5 L107_ok=True chain_lb=6
+  cycle-5                n=5 support-1=4 L107_ok=True chain_lb=7
+  random-monotone-02     n=5 support-1=4 L107_ok=True chain_lb=4
+  random-monotone-03     n=6 support-1=5 L107_ok=False chain_lb=5
+  random-monotone-07     n=5 support-1=4 L107_ok=False chain_lb=4
+  random-monotone-08     n=6 support-1=5 L107_ok=False chain_lb=5
+  read-once-02           n=5 support-1=4 L107_ok=False chain_lb=4
+  read-once-03           n=6 support-1=5 L107_ok=False chain_lb=5
+  read-once-07           n=5 support-1=4 L107_ok=False chain_lb=4
+  read-once-08           n=6 support-1=5 L107_ok=False chain_lb=5
+  generated-02           n=5 support-1=4 L107_ok=False chain_lb=4
+  generated-03           n=6 support-1=5 L107_ok=False chain_lb=5
+  generated-07           n=5 support-1=4 L107_ok=False chain_lb=4
+  generated-08           n=6 support-1=5 L107_ok=False chain_lb=5
+  generated-11           n=5 support-1=4 L107_ok=False chain_lb=4
+  generated-12           n=6 support-1=5 L107_ok=False chain_lb=5
+  comparator-02          n=5 support-1=4 L107_ok=True chain_lb=6
+  comparator-03          n=6 support-1=5 L107_ok=False chain_lb=5
+  comparator-07          n=5 support-1=4 L107_ok=False chain_lb=4
+  comparator-08          n=6 support-1=5 L107_ok=True chain_lb=7
+  parity-5               n=5 support-1=4 L107_ok=True chain_lb=14
+  mux-and-or             n=5 support-1=4 L107_ok=False chain_lb=4
+  mux-4-to-1             n=6 support-1=5 L107_ok=True chain_lb=6
+  exactly-2-of-5         n=5 support-1=4 L107_ok=True chain_lb=11
+  exactly-3-of-6         n=6 support-1=5 L107_ok=True chain_lb=11
+  signed-branches-5      n=5 support-1=4 L107_ok=False chain_lb=4
