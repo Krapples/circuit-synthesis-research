@@ -1,0 +1,9 @@
+Frozen handoff reference
+semantic checks {'exhaustive': 22760, 'random': 3500}
+statistics {'forks': 40464, 'genuine': 2220, 'no_genuine': 24283, 'uncovered': 19719, 'budget_reject': 7085, 'simplified': 24911}
+core AIG evaluations 52480 distinct circuit parameter pairs 26
+sample constructed core sizes (w=10): [(1, 136), (2, 682), (3, 1690), (4, 3283), (5, 5743), (6, 9706), (7, 16588), (8, 29509), (9, 55285), (10, 108700)]
+
+fork-mode-core-fixed-point, seed 261126
+{"copies": 34293, "empty_clause": 1, "exhaustive": 256, "random": 400, "satisfiable": 364}
+research-batch/1 job status command_ok, process exit 0, 0.859904 s, wall cap 20 s

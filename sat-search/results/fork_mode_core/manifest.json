@@ -1,0 +1,22 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check that variable splitting preserves assignments while producing linear fork mode CNFs that survive the matching contraction, dominance, pure-literal and unit reductions.",
+  "jobs": [
+    {
+      "id": "fork-mode-core-fixed-point",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/fork_fixed_point_check.py"],
+      "query": {
+        "scope": "256 exhaustive two-variable formulas, 400 seeded formulas with at most six source variables, one empty-clause case",
+        "seed": 261126,
+        "basis": "Boolean CNF semantics and independent transversal incidence",
+        "gate_budget": null,
+        "expected": "Exact model correspondence and unchanged fully genuine mode CNF"
+      },
+      "inputs": ["sat-search/experiments/fork_fixed_point_check.py"],
+      "workers": 1,
+      "memory_mib": 128,
+      "timeout": {"initial": 20, "maximum": 20}
+    }
+  ]
+}

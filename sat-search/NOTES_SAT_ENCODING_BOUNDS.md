@@ -500,6 +500,17 @@ circuit lower bound is known for any explicit NP language.
     condition, so no superlinear bound follows.
   - The formula bound `Omega(n^2/log n)` holds only in the formula model.
 
+## Sparse conflict templates and fork mode CNFs
+
+The exact fork kernel reduces each deficient matching component to one clause, with at
+most one positive and two negative occurrences per mode variable. The handoff gives the
+additive circuit upper bound in terms of the maximum genuine fork count over input
+assignments. A linear-size parsimonious reduction from width-at-most-three CNF shows that
+feasibility remains NP-hard for supplied templates even when both matching contractions,
+dominated-mode removal, pure-literal elimination and unit propagation leave the entire
+linear width-two/three core intact. A residual core whose clauses all have at least three
+distinct variables is satisfiable by Hall's theorem. [Proof, scope, and replay](results/fork_mode_core/README.md)
+
 ## Reproduction
 
 ```powershell

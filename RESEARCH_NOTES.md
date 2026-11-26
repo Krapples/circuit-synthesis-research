@@ -94,6 +94,12 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+For sparse SAT conflict templates, the exact fork kernel has at most three occurrences
+per mode variable. A linear-size parsimonious reduction gives fully genuine, linear
+width-two/three mode cores that survive matching contraction and pure-literal or unit
+reduction. All residual clauses of width at least three instead admit a satisfying
+assignment by Hall's theorem. [Proofs and independent replay](sat-search/results/fork_mode_core/README.md)
+
 | Topic | Result |
 | --- | --- |
 | Signed bounds, modules, fast FPT | The signed regional and first-gate bounds raise the best NOT-enabled lower bound on 26 and 20 of 106 complete targets (for example threshold-8-5: 14 → 16). Exact module preprocessing reduces 57 targets, and solving their cores exactly closes open intervals. Ten NOT-enabled intervals close in total (for example random-monotone-03 = 7, certified; comparator-10 = 9). The partial counted-NOT bound is exact on 92% of 3-input partial tables. Cotree NOT costs speed up FPT 3.3×. Skeleton NOT optimization matches the counted optimum on every checked 3-input function. The exact low-excess ladder (modules, then one-sharing, then two-sharing) finds 50 monotone and 58 free-NOT minima without SAT, matching SAT on all 16 cores checked at about 400× lower runtime; it closes no new intervals because every open target has excess above 2. An excess-three stage (ordered quotient reconstruction) closes hypergraph-14 = 9 and hypergraph-23 = 9 (monotone and NOT-enabled) and, with SAT confirmation, complete-4 = 7 and threshold-4-3 = 7 (NOT-enabled). The module reduction (raw pair and peel steps) is proved in Lean. Lower bounds that rely on uncertified core minima stay provisional unless marked certified. [Results and statuses](sat-search/NOTES_SIGNED_MODULES.md) |
