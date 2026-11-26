@@ -399,7 +399,114 @@ struct Audit {
   int root_splits = 0, root_pass = 0, root_unknown = 0;
 };
 
+// cost_aware.py Marginal: synthesize a partial Y-table from a list of available signals (features), scoring every
+// candidate by its marginal cost |cone(h) \ cone(a)| = cost({a, h}) - cost1(a) over an already-paid first encoder a.
+// Features are deduplicated by Y-column modulo complement (cheaper marginal cost kept, first-seen order kept);
+// constant columns are dropped. cheap() is an exact search over at most two new gates on the signed features;
+// solve() is a feature-split recursion (complement normalized by the lowest cared row, memoized) joining with mux
+// and keeping the best of the top `branch` splits by marginal cost. Any returned literal agrees with p on c.
+class Marginal {
+ public:
+  Marginal(AIG& aig, int a, const std::vector<int>& avail, const std::vector<TT>& cols, const TT& full, int branch)
+      : aig_(aig), a_(a), ka_(aig.cost1(a)), full_(full), branch_(branch) {
+    std::map<TT, std::size_t> pos;
+    for (std::size_t i = 0; i < avail.size(); ++i) {
+      int h = avail[i];
+      TT q = cols[i];
+      if (q.get(0)) { h ^= 1; q = q ^ full; }
+      auto it = pos.find(q);
+      if (it == pos.end()) { pos.emplace(q, feat_.size()); feat_.push_back({h, q}); }
+      else if (cost(h) < cost(feat_[it->second].first)) feat_[it->second].first = h;
+    }
+    std::vector<std::pair<int, TT>> kept;
+    for (auto& f : feat_) if (f.second.any()) kept.push_back(f);
+    feat_ = std::move(kept);
+    for (auto& [h, q] : feat_) { sgn_.push_back({h, q}); sgn_.push_back({h ^ 1, q ^ full}); }
+  }
+  int cost(int h) { return aig_.cost({a_, h}) - ka_; }
+  int calls() const { return calls_; }
+  // Exact search over at most maxg marginal gates (signed root); -1 when none is found.
+  int cheap(TT p, const TT& c, int maxg = 2) {
+    p = p & c;
+    if (!p.any()) return 0;
+    if (p == c) return 1;
+    for (auto& [h, q] : sgn_) if ((q & c) == p) return h;
+    if (maxg == 0) return -1;
+    for (int s = 0; s < 2; ++s) {
+      TT T = s ? c ^ p : p, N = c ^ T;
+      std::vector<std::pair<int, TT>> good;
+      for (auto& f : sgn_) if ((f.second & T) == T) good.push_back(f);
+      for (std::size_t i = 0; i < good.size(); ++i)
+        for (std::size_t j = i; j < good.size(); ++j)
+          if (!(good[i].second & good[j].second & N).any()) return aig_.AND(good[i].first, good[j].first) ^ s;
+    }
+    if (maxg == 1) return -1;
+    for (int s = 0; s < 2; ++s) {
+      TT T = s ? c ^ p : p, N = c ^ T;
+      std::vector<std::pair<int, TT>> good;
+      for (auto& f : sgn_) if ((f.second & T) == T) good.push_back(f);
+      for (std::size_t i = 0; i < sgn_.size(); ++i)
+        for (std::size_t j = i; j < sgn_.size(); ++j) {
+          TT z = sgn_[i].second & sgn_[j].second;
+          for (int neg = 0; neg < 2; ++neg) {
+            TT zz = neg ? z ^ full_ : z;
+            if ((zz & T) != T) continue;
+            for (auto& [k, w] : good)
+              if (!(zz & w & N).any()) return aig_.AND(aig_.AND(sgn_[i].first, sgn_[j].first) ^ neg, k) ^ s;
+          }
+        }
+    }
+    return -1;
+  }
+  int solve(TT p, const TT& c) {
+    p = p & c;
+    if (!p.any()) return 0;
+    if (p == c) return 1;
+    int low = 0;
+    while (!c.get(low)) ++low;
+    if (p.get(low)) return solve(c ^ p, c) ^ 1;
+    auto key = std::make_pair(p, c);
+    if (auto it = cache_.find(key); it != cache_.end()) return it->second;
+    ++calls_;
+    for (auto& [h, q] : sgn_)
+      if ((q & c) == p) { cache_.emplace(key, h); return h; }
+    using Opt = std::tuple<int, int, int, TT, TT>;
+    std::vector<Opt> opts;
+    for (auto& [h, q] : feat_) {
+      TT c1 = c & q, c0 = c ^ c1;
+      if (!c0.any() || !c1.any()) continue;
+      int a = (p & c0).count(), b = (p & c1).count(), d = c0.count() - a, e = c1.count() - b;
+      opts.push_back({std::min(a, d) + std::min(b, e), std::max(c0.count(), c1.count()), h, c0, c1});
+    }
+    if (opts.empty()) throw std::logic_error("inconsistent feature obligations");
+    std::sort(opts.begin(), opts.end());
+    int best = -1, bc = INT_MAX;
+    for (std::size_t i = 0; i < opts.size() && int(i) < branch_; ++i) {
+      auto& [sc, mx, h, c0, c1] = opts[i];
+      int u = solve(p & c0, c0), v = solve(p & c1, c1), z = aig_.mux(h, u, v), k = cost(z);
+      if (k < bc) { best = z; bc = k; }
+    }
+    cache_.emplace(key, best);
+    return best;
+  }
+
+ private:
+  AIG& aig_;
+  int a_, ka_;
+  TT full_;
+  int branch_;
+  std::vector<std::pair<int, TT>> feat_, sgn_;
+  std::map<std::pair<TT, TT>, int> cache_;
+  int calls_ = 0;
+};
+
 struct Options {
+  // Opt-in cost-aware second encoders (cost_aware.py): 0 off; 1 = the reference construction (mode 0: Marginal over
+  // Y + a, mode 1: Marginal over Y + a + every node of a's cone; first encoders with cost(a) >= cost(fallback)
+  // skipped; native b and reuse not built); 2 = portfolio (native modes unchanged, plus both Marginal candidates in
+  // a third decoded pool that feeds the reuse result).
+  int cost_aware = 0;
+  int ca_branch = 2;
   int first_cap = 6;      // feasible first encoders tested per (partition, context)
   int pair_cap = 8;       // decoded (a, b) pairs per mode per (partition, context)
   bool reuse = true;      // also build b with a as an extra input
@@ -421,11 +528,15 @@ struct Options {
 
 struct Stats {
   long first = 0, feasible = 0, orientations = 0, reuse = 0, decoded = 0, partial_calls = 0, partial_wins = 0;
+  // cost-aware: Marginal obligations, cheap hits / solve calls per Marginal mode, mode-1 better / worse than mode 0
+  long ca_obligations = 0, ca_skipped = 0, ca_cheap[2] = {0, 0}, ca_calls[2] = {0, 0}, ca_better = 0, ca_worse = 0,
+       ca_savings = 0;
 };
 
 struct Result {
   Witness fallback, orient, reuse;  // fallback import; best orientation (mode 0); best incl. reuse portfolio
   int fallback_size = 0, orient_size = 0, reuse_size = 0;
+  int mode1_size = 0;  // best of decoded pools 1 and 2 alone (before taking the minimum with mode 0)
   Stats stats;
   std::string win;  // description of the last improving candidate
 };
@@ -544,7 +655,7 @@ inline Result search(const TT& t, int n, const Witness& fallback, const Options&
             return std::tie(x.cost, x.nobs, x.a) < std::tie(y.cost, y.nobs, y.a);
           });
           using Cand = std::tuple<int, int, int, TT, TT>;  // cost(a, b), a, b, qa, qb
-          std::array<std::map<std::pair<int, int>, Cand>, 2> opts;
+          std::array<std::map<std::pair<int, int>, Cand>, 3> opts;
           for (std::size_t f = 0; f < feasible.size() && int(f) < opt.first_cap; ++f) {
             const Feas& F = feasible[f];
             std::vector<std::pair<TT, TT>> kept_obs = F.obs;
@@ -589,8 +700,41 @@ inline Result search(const TT& t, int n, const Witness& fallback, const Options&
               if (opt.min_support_orient || opt.support_project) { kept_obs = keep; kept_z = keep_z; }
               au.kept = int(kept_obs.size());
             }
+            // Cost-aware Marginal solvers over Y + a (mode 0) and Y + a + cone(a) (mode 1).
+            std::vector<Marginal> ca;
+            if (opt.cost_aware && aig.cost1(F.a) < aig.cost1(fb)) {
+              std::vector<int> av0 = yv;
+              if (std::find(av0.begin(), av0.end(), F.a) == av0.end()) av0.push_back(F.a);
+              std::vector<int> av1 = av0;
+              for (int j : aig.cone(F.a))
+                if (std::find(av1.begin(), av1.end(), 2 * j) == av1.end()) av1.push_back(2 * j);
+              for (auto* av : {&av0, &av1}) {
+                std::vector<TT> cols;
+                for (int h : *av) cols.push_back(projected(h));
+                ca.emplace_back(aig, F.a, *av, cols, full, opt.ca_branch);
+              }
+            } else if (opt.cost_aware) {
+              ++res.stats.ca_skipped;
+            }
             for (std::size_t oi = 0; oi < kept_obs.size(); ++oi) {
               const auto& [p, c] = kept_obs[oi];
+              if (!ca.empty()) {
+                ++res.stats.ca_obligations;
+                int k[2];
+                for (int md = 0; md < 2; ++md) {
+                  int b = ca[md].cheap(p, c, 2);
+                  if (b >= 0) ++res.stats.ca_cheap[md];
+                  else b = ca[md].solve(p, c);
+                  TT qb = projected(b);
+                  if (((p ^ qb) & c).any()) throw std::logic_error("cost-aware b violates its obligation");
+                  k[md] = aig.cost({F.a, b});
+                  int pool = opt.cost_aware == 1 ? md : 2;
+                  opts[pool][{F.a, b}] = Cand{k[md], F.a, b, F.qa, qb};
+                }
+                if (k[1] < k[0]) { ++res.stats.ca_better; res.stats.ca_savings += k[0] - k[1]; }
+                if (k[1] > k[0]) ++res.stats.ca_worse;
+              }
+              if (opt.cost_aware == 1) continue;
               ++res.stats.orientations;
               int b;
               if (opt.support_project && kept_z[oi] != fq::u64((1u << ky) - 1)) {
@@ -640,8 +784,12 @@ inline Result search(const TT& t, int n, const Witness& fallback, const Options&
               }
             }
             if (opt.audit) opt.audit(au);
+            for (auto& m2 : ca) {
+              std::size_t md = std::size_t(&m2 - ca.data());
+              res.stats.ca_calls[md] += m2.calls();
+            }
           }
-          for (int mode = 0; mode < 2; ++mode) {
+          for (int mode = 0; mode < 3; ++mode) {
             std::vector<Cand> cs;
             for (auto& [k, v] : opts[mode]) cs.push_back(v);
             std::sort(cs.begin(), cs.end());
@@ -667,8 +815,9 @@ inline Result search(const TT& t, int n, const Witness& fallback, const Options&
               dv.push_back(b);
               int out = synth(4, P, C, dv);
               if (aig.truth(out) != t) throw std::logic_error("decoded candidate differs from the target");
-              if (aig.cost1(out) < aig.cost1(best[mode])) {
-                best[mode] = out;
+              int slot = mode == 2 ? 1 : mode;
+              if (aig.cost1(out) < aig.cost1(best[slot])) {
+                best[slot] = out;
                 res.win = "X=" + std::to_string(X[0]) + (nx > 1 ? "," + std::to_string(X[1]) : "") +
                           " R=" + (hasr ? std::to_string(Y[r]) : "none") + " mode=" + std::to_string(mode);
               }
@@ -683,6 +832,7 @@ inline Result search(const TT& t, int n, const Witness& fallback, const Options&
       for (int j = i + 1; j < nx; ++j) sel[j] = sel[j - 1] + 1;
     }
   }
+  res.mode1_size = aig.cost1(best[1]);
   if (aig.cost1(best[0]) < aig.cost1(best[1])) best[1] = best[0];
   res.orient = aig.export_cone(best[0]);
   res.reuse = aig.export_cone(best[1]);

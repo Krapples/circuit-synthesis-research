@@ -5,7 +5,8 @@ evaluator independent of the C++ code). Modes:
 
   replay  --input FILE.jsonl --reference REF.jsonl : targets and fallback witnesses from the research bundle input
           (d['witnesses'][-1]), native fallback disabled; compare [orient, reuse] sizes with the Python replay
-          sizes (a faithful port should match exactly; any mismatch is reported, not hidden).
+          sizes (a faithful port should match exactly; any mismatch is reported, not hidden). A cost_aware.py
+          reference (three sizes) is compared with --exe-args '--cost-aware 1 --first-cap 3 --pair-cap 5'.
   bench   --input FILE.jsonl | --random N:COUNT:SEED : native cofactor witness (n <= 6) or supplied/Shannon fallback,
           then the orientation stages; records sizes and stage times.
 """
@@ -100,12 +101,16 @@ def main():
             if ref is not None:
                 r['python_sizes'] = ref['sizes']
                 r['python_seconds'] = ref.get('seconds')
-                if ref['sizes'] != [r['orient_size'], r['reuse_size']]:
+                # orientation.py records [orient, reuse]; cost_aware.py records [archived, mode 0, mode 1], compared
+                # with --cost-aware 1 as [fallback, orient, mode1] (mode 1 before the minimum with mode 0).
+                got = ([r['fallback_size'], r['orient_size'], r.get('mode1_size')] if len(ref['sizes']) == 3
+                       else [r['orient_size'], r['reuse_size']])
+                if ref['sizes'] != got:
                     mismatch += 1
             f.write(json.dumps(r) + '\n')
     summary = {'cases': len(recs), 'wall_seconds': round(wall, 2),
                'fallback': sum(r['fallback_size'] for r in recs), 'orient': sum(r['orient_size'] for r in recs),
-               'reuse': sum(r['reuse_size'] for r in recs),
+               'reuse': sum(r['reuse_size'] for r in recs), 'mode1': sum(r.get('mode1_size', 0) for r in recs),
                'native_seconds': round(sum(r['native_seconds'] for r in recs), 3),
                'orient_seconds': round(sum(r['orient_seconds'] for r in recs), 3),
                'strict_improvements': sum(r['reuse_size'] < r['fallback_size'] for r in recs),

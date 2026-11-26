@@ -12,6 +12,9 @@
 //                   (bitmask: 1 first-encoder bank, 2 second encoder b, 4 decoder; default 0 = off)
 //   --min-support-orient  build b only for orientations attaining the orientation-free minimum Y-support
 //   --support-project  build each kept b over its own minimum Y-support only (implies --min-support-orient)
+//   --cost-aware M  cost-aware second encoders (cost_aware.py Marginal with full-cone reuse): 1 = reference
+//                   construction only (mode 0 / mode 1 replace native b and reuse), 2 = portfolio added to the native
+//                   modes (default 0 = off); --ca-branch K splits explored per Marginal.solve node (default 2)
 //   --audit         per target, aggregate the feature-quotient audit of every tested first encoder ("audit" key)
 // Fallback: the smaller of FALLBACK_SPEC (verified) and the native witness (lifted for n > 6); partial Shannon if
 // neither. Every emitted witness is evaluated row by row against the target before it is printed. Native,
@@ -33,7 +36,8 @@ using Clock = std::chrono::steady_clock;
 static double since(Clock::time_point t) { return std::chrono::duration<double>(Clock::now() - t).count(); }
 
 int main(int argc, char** argv) {
-  int first_cap = -1, pair_cap = 8, reuse = -1, root_slack = 2, depth = 7, partial_sites = 0;
+  int first_cap = -1, pair_cap = 8, reuse = -1, root_slack = 2, depth = 7, partial_sites = 0, cost_aware = 0,
+      ca_branch = 2;
   bool native = true, from_stdin = false, min_support_orient = false, support_project = false, audit = false;
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
@@ -48,6 +52,8 @@ int main(int argc, char** argv) {
     else if (a == "--min-support-orient") min_support_orient = true;
     else if (a == "--support-project") support_project = true;
     else if (a == "--audit") audit = true;
+    else if (a == "--cost-aware" && i + 1 < argc) cost_aware = std::stoi(argv[++i]);
+    else if (a == "--ca-branch" && i + 1 < argc) ca_branch = std::stoi(argv[++i]);
     else if (a == "--stdin") from_stdin = true;
     else { std::cerr << "unknown option " << a << "\n"; return 2; }
   }
@@ -124,6 +130,8 @@ int main(int argc, char** argv) {
       partial_seconds = 0;
       opt.min_support_orient = min_support_orient;
       opt.support_project = support_project;
+      opt.cost_aware = cost_aware;
+      opt.ca_branch = ca_branch;
       // Audit aggregates: encoders, free status counts, sum s*, sum pair, parity gaps, orientations, kept,
       // min-cost b below s*-1 (must stay 0), marginal below s*-1, support below s* (must stay 0), learned walks.
       long au_n = 0, au_feasible = 0, au_unknown = 0, au_s = 0, au_pair = 0, au_gap = 0, au_or = 0, au_kept = 0,
@@ -157,7 +165,11 @@ int main(int argc, char** argv) {
                 << ",\"feasible\":" << r.stats.feasible << ",\"orientations\":" << r.stats.orientations
                 << ",\"reuse\":" << r.stats.reuse << ",\"decoded\":" << r.stats.decoded
                 << ",\"partial_calls\":" << r.stats.partial_calls << ",\"partial_wins\":" << r.stats.partial_wins
-                << "},\"partial_sites\":" << partial_sites << ",\"partial_seconds\":" << partial_seconds
+                << ",\"ca_obligations\":" << r.stats.ca_obligations << ",\"ca_skipped\":" << r.stats.ca_skipped
+                << ",\"ca_cheap\":[" << r.stats.ca_cheap[0] << "," << r.stats.ca_cheap[1] << "],\"ca_calls\":["
+                << r.stats.ca_calls[0] << "," << r.stats.ca_calls[1] << "],\"ca_better\":" << r.stats.ca_better
+                << ",\"ca_worse\":" << r.stats.ca_worse << ",\"ca_savings\":" << r.stats.ca_savings
+                << "},\"cost_aware\":" << cost_aware << ",\"mode1_size\":" << r.mode1_size << ",\"partial_sites\":" << partial_sites << ",\"partial_seconds\":" << partial_seconds
                 << ",\"min_support_orient\":" << (min_support_orient ? "true" : "false")
                 << ",\"support_project\":" << (support_project ? "true" : "false");
       if (audit)

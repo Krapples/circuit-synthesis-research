@@ -206,6 +206,64 @@ provider-partition screening stays off by default, as before.
 **Rule 5 (parity-aware support bounds for backend selection)** is implemented as `--support-project`, above. It routes
 each b to an oracle/Shannon instance on s* inputs.
 
+## Phase 4: cost-aware second encoders with full-cone reuse (essential-synthesis handoff, 2026-11-26)
+
+Source: `cost_aware.py` from the essential-synthesis handoff. Its `orientation.py`, `quotient.py` and root-partition
+modules are byte-identical to the bundles above, so priorities 2 and 3 (root partition and parity-aware support)
+were already integrated.
+
+The construction builds b with `Marginal`. Its features are the Y literals, a, and in mode 1 every node of a's cone.
+Features are deduplicated by Y-column modulo complement and scored by marginal cost |cone(h) \ cone(a)|. The
+construction runs an exact search over at most two new gates, then a feature-split recursion: complement normalized
+by the lowest cared row, memoized, best of the top `branch` = 2 splits by marginal cost. First encoders with
+cost(a) >= cost(fallback) are skipped.
+
+**Native port.** `orient::Marginal` in `native/src/orientation_witness.hpp`. It is opt-in and off by default:
+
+* `--cost-aware 1` is the reference construction. Mode 0 and mode 1 replace the native b and reuse.
+* `--cost-aware 2` is the portfolio. The native modes are unchanged, and both Marginal candidates go into a third
+  decoded pool that feeds the reuse result.
+* `--ca-branch K` sets the branch width.
+
+The fallback stays the floor in both modes. Every b is checked against its obligation, every decoded candidate
+against the target, and every emitted chain is evaluated independently by `orientation_check.py`.
+
+**Differential (checked, exact).** Setup: `replay --exe-args "--cost-aware 1 --first-cap 3 --pair-cap 5 --reuse"`,
+bundle witness as fallback, native constructor off. Result: [fallback, mode 0, mode 1] sizes equal the Python
+`cost_aware.py` output on all 36 bundle cases (34 distinct targets), with 0 mismatches. Totals are 1023 -> 1002
+(orientations) -> 954 (full-cone reuse). The historical 875 -> 849 -> 812 in the handoff README is over a different
+target list. Records: `results/orientation/replay_cost_aware_{native,python}.jsonl`.
+
+**Benchmarks against the native fallback (verified upper bounds; matched sets and seeds, total gates).**
+
+| Set | p0 (default) | ca2 | p7 (`--native-partial 7`) | ca2 + p7 |
+| --- | --- | --- | --- | --- |
+| n5 random (60) | 856, 5.9 s | 851, 7.0 s | 806, 259 s | **804**, 261 s |
+| n6 random (40) | 1171, 10.3 s | **1168**, 14.6 s | (too slow) | not run |
+| n7 random (12) | 683, 4.2 s | 683, 15.0 s | 655, 335 s | 655, 329 s |
+| n8 random (6) | 679, 10.4 s | 679, 33.1 s | 679, 11.4 s | 679, 37.2 s |
+| n6 bundle (15) | 239, 2.7 s | **237**, 3.9 s | 226, 789 s | not run |
+| n7 bundle (15) | 379, 3.1 s | 376, 9.0 s | 357, 157 s | **355**, 162 s |
+| n8 bundle (6) | 282, 4.9 s | 282, 14.2 s | 280, 36.2 s | 280, 46.1 s |
+
+How to read the table:
+
+* Times are orientation-stage (construction) seconds. Native fallback time is unchanged and reported separately in
+  the records.
+* There are no losses (the fallback floor).
+* Against p7: the portfolio wins on 2/60 n5 targets and 1/15 n7-bundle targets.
+
+Inside the portfolio, Marginal mode 1 beats mode 0 on most obligations. Over all five p7 sets it was better on 37k
+and worse on 6k of 140k obligations. Even so, the decoded totals of Marginal alone (`mode1_size` with p7: n7 random
+670, n7 bundle 369) stay above the oracle-backed native b. So the gain at the strongest configuration comes from the
+portfolio, not from replacing b. Against the much stronger native fallback, the large standalone savings seen over
+archived witnesses (-48 over 1023) shrink to -2..-5 per set.
+
+Not applicable: this stage produces no residual exclusions and no proof steps, so there is no end-to-end proof time
+to report. These are upper bounds only.
+
+Records: `results/orientation/bench_*_{ca2,ca2p7}.jsonl` and `logs/orientation/bench_*_{ca2,ca2p7}.out`.
+
 ## Limits and open questions
 
 * The partial oracle covers only 3..6 inputs, so the n = 8 b and bank stages (7 inputs) need a 7-input partial
@@ -224,6 +282,8 @@ python -B sat-search/experiments/orientation_check.py replay OUT --input <td>/in
 python -B sat-search/experiments/orientation_check.py bench OUT --random 5:60:5101 --exe-args="--native-partial 7 --support-project"
 python -B sat-search/experiments/orientation_check.py bench OUT --input <td>/input_pilot.jsonl <td>/input_heldout.jsonl --min-n 7 --max-n 7 --with-spec --exe-args="--native-partial 7"
 python -B sat-search/experiments/orientation_check.py replay OUT --input ... --exe-args="--audit"
+python -B sat-search/experiments/orientation_check.py replay OUT --input <td>/input_pilot.jsonl <td>/input_heldout.jsonl <td>/eight_generated.jsonl --reference <ca outputs> --exe-args="--cost-aware 1 --first-cap 3 --pair-cap 5 --reuse"
+python -B sat-search/experiments/orientation_check.py bench OUT --random 5:60:5101 --exe-args="--cost-aware 2 --native-partial 7"
 ```
 
 Random seeds: 5101 / 6101 / 7101 / 8101 for n = 5 / 6 / 7 / 8.
