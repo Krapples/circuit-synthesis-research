@@ -1,0 +1,1 @@
+{"recurrence_agreement": 1177, "four_input": {"functions": 65535, "exact4_decided": 3589, "sat_cache": 61946, "unchecked_bound_ge6": 0, "tight": 6422, "max_gap": 0}, "products": {"queries": 151928, "exact_hits": 9459, "tight_hits": 9459, "excluded": 142469}, "composition_checks": 20784, "ok": true}

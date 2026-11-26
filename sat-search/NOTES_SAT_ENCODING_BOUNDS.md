@@ -82,8 +82,8 @@ The external project was read at open-goat/pequalnp-proofs `d9f1ea2` (2026-11-25
   statement and not a statement about other encodings.
 - **Composition search.** `sat_gadget_composition.py --search` was not run; Addendum 2 deprioritized
   further exhaustive searches.
-- **Additive weights.** The additive-weight theorem `C(AND f_j) >= sum w(f_j) - 1` (Addendum 1) was not
-  reviewed in full here. The six-bit route does not need it.
+- **Additive weights.** The additive-weight theorem `C(AND f_j) >= sum w(f_j) - 1` was reviewed on paper on
+  2026-11-26 (see "Additive weight theorem" below). It is not Lean-checked. The six-bit route does not need it.
 - **Lean status.**
   - The external Lean library has string-witness infrastructure: `SatSlice`, `SatFive`, and L037 for
     full support at 6q.
@@ -190,6 +190,148 @@ is what beats 4n/3. Using the T sub-restriction only gives 4q - 1.
 until the additivity is proved. No novelty claim.
 
 Reproduce: `python -B sat-search/experiments/sat_gadget_exact.py OUT.jsonl --max-len 14 --top 300`.
+
+## Additive weight theorem and B(SAT_(12q+6)) >= 17q+5 (handoff 2026-11-26, reviewed)
+
+**Status.**
+- Paper proof: reviewed here, no gap found.
+- Finite premises: reproduced independently.
+- Not Lean-checked. Not a 5n/3 bound. No novelty claim.
+- It does not claim `w(f) = C(f) + 1`, and it does not settle exact additivity for e8e4.
+
+**Weight.** Define w on nonzero functions after removing inessential inputs (reference implementation:
+`experiments/additive_sat_weight.py`, the handoff code verbatim):
+- w(1) = 0, and w(literal) = 1.
+- If some cofactor f|x_i=1-a is 0 (a literal factor), w(f) = 1 + w(f|x_i=a).
+- Otherwise w(f) is the minimum of:
+  - `max(3 + w(f|x_i=1-a), 2 + w(f|x_i=a))` over i and a, and
+  - `1 + w(g)` over signed-AND modules f = g([x_i=a] AND [x_j=b], rest).
+
+**Theorem.** For nonzero factors f_1..f_k on pairwise disjoint input sets (all inputs essential),
+the free-NOT AIG count satisfies `C(AND_j f_j) >= sum_j w(f_j) - 1`.
+
+**Proof review.** The proof is strong induction on the number of essential inputs, followed by a case
+split on a first gate h = [x_i=a] AND [x_j=b] of a minimum circuit. Literal factors are peeled first,
+which costs one gate each, using literal extension.
+
+- **(A) i and j are read only by h, and lie in the same factor.**
+  - h is a two-input function of the two inputs, with no other reader.
+  - Replacing h by a fresh input y gives a circuit for the product with f_t replaced by its quotient g.
+  - Such a quotient exists exactly when f_t factors through h. The fibre condition is that the three rows
+    other than (a,b) of each slice agree.
+  - It has one fewer gate. The induction gives `C >= 1 + (sum - w(f_t) + w(g)) - 1`, which matches the module term.
+- **(B) i and j are read only by h, but lie in different factors.**
+  - Fixing x_i to its absorbing value 1-a makes h = 0.
+  - After that, x_j is read by nothing, yet x_j is essential in its own factor. Factor values on disjoint
+    inputs are independent and every factor is nonzero, so x_j is essential in the product.
+  - This is a contradiction, so the case cannot occur.
+- **(C) one of i and j (say i) has a second reader.**
+  - Neutral value x_i = a: h becomes the literal [x_j=b], and the second reader of x_i folds, which removes
+    two gates. The remaining product has f_t replaced by f_t|x_i=a.
+  - Absorbing value x_i = 1-a: h = 0 and the other reader folds. A third gate is removed through h's
+    successor, which receives a constant.
+  - If h's successor is the other reader itself, or the output, the canalizing replacement applies. Then
+    f = [x_i=a] AND ..., which is a literal factor and was already peeled, or the circuit was not minimum.
+  - I checked this replacement in the minimum-circuit setting: the successor of a constant-0 input is
+    constant 0 or an alias, so a third distinct gate disappears unless the circuit had a removable gate.
+  - This gives the R(f,i,a) term `max(3 + ..., 2 + ...)`: the bound must hold for both values, so the
+    better of the two lower bounds cannot be used.
+- **Restriction and accounting.** These follow the reviewed `restrict_eliminates` and `literal_extension`
+  pattern from the three-gate absorbing elimination above. Cross-factor first gates need no gate separation,
+  because case (C) restricts only the one factor containing x_i.
+
+**Bound.**
+- Block `11a1bcd1efg1` with tail `110100` gives f = `0xedc4ed00edc400c4edc4000000c40000` on 7 inputs (a is
+  bit 0). Every input is essential, w(f) = 12, and there is no top-level signed-AND module.
+- For q copies: n = 12q+6, m = 7q, and L037 gives full support because n = 6(2q+1).
+- The excess inequality (reviewed above) and the theorem give
+
+  `B(SAT_(12q+6)) >= (12q+6 - 7q) + (12q - 1) = 17q + 5`,
+
+  compared with the previous `floor(4n/3) - 3 = 16q + 5` at the same n. The coefficient is 17/12, about
+  1.417n. It transfers to the Lean counted size in the lower-bound direction only.
+- Smaller block `11a1bcd1` with f = `edc4` and w = 7 has coefficient 11/8 on 8q+6. It needs full support, which
+  L037 gives only when 8q+6 is a multiple of 6, i.e. q divisible by 3.
+- Block `11abcd` (e8e4) has w = 6, not 8, so this method gives only 4n/3 for it. That does not show additivity
+  fails, only that this method is weaker there.
+- Consistency: w(e8e4) + w(XNOR) - 1 = 9 agrees with the open probe range 9 <= C(e8e4 AND XNOR) <= 11.
+- The handoff's bounded template search (L = 6..12) reports best (w-m)/L of 1/3, 3/8, 3/10 and 5/12. That is
+  the best in that search, not a universal optimum. It was not rerun here.
+
+**Independent finite checks** (`experiments/additive_weight_check.py`, log `logs/additive_weight_check.out`):
+
+- Recurrence agreement: the handoff `weight` matches an independent tuple recurrence on 1,177 functions. These are all nonzero tables on 1..3 inputs plus seeded 4..6-input samples and the gadgets.
+- `w - 1 <= C` on all 65,535 nonzero 4-input functions (max gap 0, 6,422 tight). Each C or lower bound comes from one of two sources:
+  - native exact <=4 projection (3,589 functions, exact or excluded with w-1 <= 5);
+  - the per-NPN-class Percy exact-AIG ladder `results/sat_gadget/npn4_exact_aig_all.json` (61,946 functions). Classes 1681 and 1683 timed out at budgets 10 and 9. Every smaller budget is UNSAT, so those budgets serve only as lower bounds.
+- Products of two disjoint factors: of 151,928 queries, 9,459 hit an exactly known C, all tight with the theorem. The other 142,469 were excluded as unknown, with no claim made.
+- 20,784 composition-certificate transitions were rechecked, and both gadget certificates reproduce (7 states; 112 and 896 transitions).
+- Solver verdicts above are maplechrono/Percy UNSAT, not checked proofs. They support the finite premises only. The structural induction is the paper argument.
+
+**Lean.**
+- Not formalized.
+- Reusable pieces: `restrict_eliminates`, `literal_extension` and `bypass_many` in
+  `sat-search/lean/CircuitLemmas/GateElim.lean`.
+- New obligations:
+  - first-gate accounting for cases A-C, including the canalizing replacement;
+  - the module quotient;
+  - induction over disjoint factors;
+  - the excess inequality (cycle rank), which is still unformalized for the six-bit route too.
+
+Reproduce:
+
+```powershell
+python -I sat-search/experiments/additive_sat_weight.py
+python -I sat-search/experiments/additive_weight_check.py --exact4-exe sat-search/native/preduce_check.exe
+```
+
+## Every even length: B(SAT_n) >= floor(17n/12) - 4 for even n >= 16 (handoff README(3), reviewed 2026-11-26)
+
+**Status:**
+- This is a paper consequence of the additive-weight theorem and the cycle-rank excess inequality.
+- Its finite premises were reproduced here. It is not Lean-checked.
+- It is not a new leading coefficient and makes no novelty claim. 5/3 additivity stays open.
+- It drops the restriction to lengths 12q+6. That residue keeps the sharper 17q+5.
+
+**Mixed blocks.** All four templates share the tail `110100`:
+
+| L | template | m | truth table | weight | w-m |
+|---:|---|---:|---|---:|---:|
+| 6 | `11a10b` | 2 | `9` | 4 | 2 |
+| 8 | `11a1bcd1` | 4 | `edc4` | 7 | 3 |
+| 10 | `11abcde1fg` | 7 | `e8e4e040...` | 10 | 3 |
+| 12 | `11a1bcd1efg1` | 7 | `edc4ed00...` | 12 | 5 |
+
+- Separate per-block certificates do not imply that mixed sequences compose. The joint certificate closes the reachable boundary states under all four types at once: 11 states, 3,036 transitions and 11 tail checks.
+- Reviewed: each transition is either a definite rejection, exactly when the table entry is 0, or a move to a certified state. No transition is UNCERTIFIED, and the tail returns every state to START.
+- By induction on the block sequence, any finite sequence of blocks with independent free bits plus the tail decides exactly the AND of the block functions.
+
+**Full support at every even n >= 16.** Write U = `100100`, the clause (not x0).
+- Base witnesses at lengths 12, 16 and 20 cover every position i with SAT(w) = SAT(wU) = 1 and SAT(flip(w,i)) = SAT(flip(w,i)U) = 0.
+- Padding lemma, reviewed:
+  - A complete prefix U resets the parser. It cannot repair a syntax error, and it only adds a clause.
+  - A word ending in token `00` is either complete or already irreparably malformed. So when flip(w,i)U is rejected, appending more U's keeps it rejected.
+  - Acceptance with x0 = 0 survives any padding.
+- Choose b = 12, 20 or 16 for n mod 6 = 0, 2 or 4. Then the windows U^p w U^(k-p) cover all n positions, so every input is essential.
+- Audit:
+  - My first exhaustive check dropped the hypothesis SAT(w) = 1 and found 30 "violations". Each was an incomplete w whose open clause U completes, so the hypothesis is needed.
+  - With the stated hypotheses, all 87,381 even words of length <= 16 satisfy three properties: prefix monotonicity, the 00-suffix property and acceptance padding.
+
+**Arithmetic.** Let n = 12k+r. Use k-1 twelve-bit blocks (k when r = 6) plus the extras 6 / 8 / 10 / none / 6,8 / 8,8. This gives bounds 17k-4 / 17k-1 / 17k+1 / 17k+5 / 17k+7 / 17k+10, so B >= floor(17n/12)-4. That is at least floor(4n/3)-3 throughout, and strictly greater for n >= 18. I re-derived the table independently for n < 200, and the script checks it for n <= 10,000.
+
+**Checks** (`experiments/mixed_sat_bound.py`, handoff reference): all PASS.
+- 3,036 transitions;
+- 212 base checks;
+- 3,604 padded sensitivities (n = 16..120);
+- 76,176 block pairs, checked against an independent token parser plus a SAT evaluator;
+- 5,000 seeded mixed sequences.
+
+**Lean obligations** beyond those of the 12q+6 route:
+- a mixed-block automaton induction;
+- the padding lemma over the `wfD` automaton or parser;
+- an even-n full-support theorem replacing L037's 6q.
+
+Reproduce: `python -I sat-search/experiments/mixed_sat_bound.py`.
 
 ## Reproduction
 
