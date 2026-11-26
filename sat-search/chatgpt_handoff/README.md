@@ -1,3 +1,57 @@
+# Research handoff — synthesis of barriers and shared-witness compatibility
+
+Updated 2026-11-26. Base handoff [d376f3e](https://github.com/Krapples/circuit-synthesis-research/commit/d376f3e8cb7fc794454c13a1bd2628d4a0608daa). **L-clb-036 remains open.** This round reviews the accumulated research and literature, updates native-agent status, and combines our strongest formula/path theorem with a global witness-compatibility negative control. It proposes a shift toward multi-context distinct-gate accounting. No unrestricted superlinear gate-count lower bound, no new Lean theorem, no novelty claim.
+
+## Native status correction
+
+The native agent has independently audited the deterministic quadratic sparse routing circuit bound and checked signed-AIG rank/routing primitives. The full asymptotic circuit remains mathematical, not a synthesized end-to-end AIG. The native agent also replayed the actual cubic paired grammar (48 cases, 664 pinned checks each original/padded/balanced, 96 coordinate probes), and Lean checked local packed source-position invariance. See [quadratic witness results](../results/quadratic_witness/README.md) and [sparse routing and cubic cover results](../results/sparse_quadratic_routing/README.md). Earlier instructions treating these tasks as outstanding are superseded. The native unsupplied marginal cubic cover bound is O((n+3^h+2^(h+t)) polylog n). Native near-2n robust SAT lower bound at multiples of six is Lean checked in the external counted model; it is linear, and general all-even tails remain separate.
+
+## Current synthesis and new result
+
+- Single-address witness maps have a logarithmic output bottleneck (k=log_2 M, with M table bits already in the input). The affine, quadratic, and structured cubic compression results exploit this budget. Arbitrarily many shared one-bit quadratic constraints can already express 3-CNF with unique witness extensions, as the native quadratic witness note proves. Global compatibility of a common witness is a more informative research object than degree or local image complexity alone.
+- **New combined negative control:** replace the packed Andreev output assertion by a variable a=h[address], then use a as the first charge of a connected cycle of r=Theta(M/k) parity constraints. Other charges are variable unit polarities c. Each edge bit is x XOR yz with three free witnesses and uniform multiplicity. SAT iff a XOR parity(c)=0. The entire variable-permutation/data/charge promise has O(n log^2 n) AIG circuits, but retains the near-cubic De Morgan formula bound and the delta-free Omega(n) high-path gate obligations by fixing parity(c)=1.
+- For each fixed charge vector b, the r-dimensional residual image is its parity coset, each point with multiplicity 2^(3e-r+1), where e is the number of edges. Every proper subset S of the r outputs has the identical uniform histogram with count 2^(3e-|S|) per address, independently of b. Thus even ALL exact proper-subset marginal histograms fail to distinguish a SAT/UNSAT pair. The paired encoding is linear length, with invariant source coordinates and opposite-charge words differing by one polarity bit. Positive instances have exponentially many witnesses. The construction is based on classical Tseitin parity, combined with our earlier packed control; proof complexity of Tseitin is not a circuit decision lower bound.
+- **Interpretation:** even combining near-cubic formula complexity, distributed path multiplicity, nonlinear coupled witness variables and maximal-order marginal blindness is insufficient as a universal superlinear gate-count proxy. The problem is to identify representations and sharing costs, not simply increase the number of locally invisible correlations.
+
+## Research priorities
+
+1. Exact boundary relations R(u)=exists y F(u,y), and the cost of changing contexts: a summary sufficient for arbitrary pinning contexts distinguishes all 2^(2^b) relations on b boundary bits. This is an ordinary one-way residual argument, not an unrestricted size lower bound. Earlier universal residual saturation controls rule out naive counting. Use native orientation and mandatory query interfaces to study marginal gate-cone unions.
+2. **Multi-context gate-role ledger:** record stable original gate IDs, restriction-deletion sets and surviving cones, and context-specific boundary/derivative obligations. Seek a proved per-gate capacity lemma supporting fractional packing of obligations, rather than summing overlapping cones or unfolded path counts. This is a proposed investigation, not a proved capacity inequality. Falsify candidate rules on the new combined control and earlier compressible families before attempting Lean integration.
+3. Distinguish a hard SAT instance/refutation from a hard family of deciding circuits. Study variable-incidence conjunctions of shared constraints, not merely one larger lookup. Karchmer-Wigderson/DAG communication and Williams's algorithmic lower-bound framework are relevant perspectives, but their hypotheses do not directly follow from our structured-input upper bounds. Literature and precise caveats in the new synthesis.
+
+## Current files and replay
+
+| File | Scope |
+|---|---|
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md) | Full research synthesis, literature, combined negative-control theorem, proposed next milestone |
+| [joint_witness_control_check.js](joint_witness_control_check.js), [replay](joint_witness_control_replay.txt) | Actual packed grammar, opposite-charge and exact proper-marginal checks |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md), [cluster checker](cubic_cluster_check.js), [hub checker](cubic_hub_check.js) | Prior exact cluster series, common hub kernel, batched Walsh query |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md), [checker](cubic_neighborhood_check.js) | Connected coordinate kernel and Fourier marginal lifting |
+| [cubic_component_handoff.md](cubic_component_handoff.md), [checker](cubic_component_check.js) | Cubic counting obstruction and component compression |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md), [checker](deterministic_quadratic_check.py) | Deterministic quadratic compression, native routing audit linked above |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md), [checker](quadratic_witness_check.py) | Quadratic grammar, random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md), [checker](affine_witness_check.py) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md), [checker](permutable_andreev_check.py) | Delta-free path theorem |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Historical draft; see native verified local layout source in the quadratic witness results |
+
+Run from this directory:
+
+```sh
+node joint_witness_control_check.js
+```
+
+Seed 870015: 48 packed cases, 96 pinned original + 96 padded + 96 balanced decisions, 48 single-bit opposite-charge comparisons, 96 source-coordinate probes, 1,016 full marginal checks, 28,495 proper-marginal count comparisons, 3 exhaustive nonlinear histograms and 1,016 effective edge assignments. Largest word 115,464 bits; largest graph 64 vertices. All assertions passed. Pinned negative decisions do not by themselves prove unpinned UNSAT; the parity theorem supplies that implication. No new full AIG synthesis or Lean verification.
+
+## Native-agent priority
+
+Read [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md) before the archive. Independently audit the new combined control and replay. Prioritize a small falsifiable multi-context gate-role experiment with stable gate IDs, using existing native restriction counters and orientation/mandatory-interface tools where appropriate. Compare matched easy controls and variable-incidence shared quadratic 3-CNF constraints; do not assert a per-gate capacity without a proof or promote a heuristic to pruning. Reuse the already completed quadratic routing and cubic grammar work. No production solver or verified Lean library modifications. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and status statements refer to their own revisions.
+
 # Research handoff — cubic cluster series and simultaneous high-degree hub compression
 
 Updated 2026-11-26. Base [540e540](https://github.com/Krapples/circuit-synthesis-research/commit/540e540d239e881d2eb39695d94234ef95efb0fc). **L-clb-036 remains open.** This round strengthens the exact connected cubic kernel with a deterministic single-exponential marginal algorithm, a common kernel for high-degree hubs, and one batched Walsh acceptance-table transform. All asymptotic circuit bounds are paper arguments supported by finite algebraic checks, not synthesized AIG counts or Lean-checked results.
