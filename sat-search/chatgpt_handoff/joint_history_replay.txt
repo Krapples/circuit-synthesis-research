@@ -1,0 +1,143 @@
+{
+  "randomCircuits": 249,
+  "lookupCircuits": 36,
+  "formalHistoryCases": 1693,
+  "copyEvaluations": 10234,
+  "jointCutChecks": 1187,
+  "actualReconstructions": 36072,
+  "strictJointVsLocal": 270,
+  "strictLiftedVsOld": 0,
+  "strictSharedSourceVsSummed": 913,
+  "fullChargeChecks": 67,
+  "examples": [
+    {
+      "k": 1,
+      "r": 2,
+      "data": 4,
+      "oldExactCapacityFlow": 4,
+      "liftedFlow": 3,
+      "jointAffineRank": 3,
+      "gates": 17
+    },
+    {
+      "k": 1,
+      "r": 4,
+      "data": 8,
+      "oldExactCapacityFlow": 8,
+      "liftedFlow": 8,
+      "jointAffineRank": 5,
+      "gates": 61
+    },
+    {
+      "k": 1,
+      "r": 8,
+      "data": 16,
+      "oldExactCapacityFlow": 16,
+      "liftedFlow": 16,
+      "jointAffineRank": 9,
+      "gates": 221
+    },
+    {
+      "k": 2,
+      "r": 2,
+      "data": 8,
+      "oldExactCapacityFlow": 8,
+      "liftedFlow": 5,
+      "jointAffineRank": 5,
+      "gates": 30
+    },
+    {
+      "k": 2,
+      "r": 4,
+      "data": 16,
+      "oldExactCapacityFlow": 16,
+      "liftedFlow": 16,
+      "jointAffineRank": 7,
+      "gates": 86
+    },
+    {
+      "k": 2,
+      "r": 8,
+      "data": 32,
+      "oldExactCapacityFlow": 32,
+      "liftedFlow": 32,
+      "jointAffineRank": 11,
+      "gates": 270
+    },
+    {
+      "k": 3,
+      "r": 2,
+      "data": 16,
+      "oldExactCapacityFlow": 16,
+      "liftedFlow": 9,
+      "jointAffineRank": 9,
+      "gates": 55
+    },
+    {
+      "k": 3,
+      "r": 4,
+      "data": 32,
+      "oldExactCapacityFlow": 32,
+      "liftedFlow": 32,
+      "jointAffineRank": 11,
+      "gates": 135
+    },
+    {
+      "k": 3,
+      "r": 8,
+      "data": 64,
+      "oldExactCapacityFlow": 64,
+      "liftedFlow": 64,
+      "jointAffineRank": 15,
+      "gates": 367
+    }
+  ],
+  "affineExamples": [
+    {
+      "k": 1,
+      "r": 2,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 1,
+      "r": 4,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 1,
+      "r": 8,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 2,
+      "r": 2,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 2,
+      "r": 4,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 2,
+      "r": 8,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 3,
+      "r": 2,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 3,
+      "r": 4,
+      "assignmentChecks": 80
+    },
+    {
+      "k": 3,
+      "r": 8,
+      "assignmentChecks": 80
+    }
+  ]
+}
+all assertions passed
