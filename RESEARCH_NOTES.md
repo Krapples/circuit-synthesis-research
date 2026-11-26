@@ -18,6 +18,13 @@ fixed prefix needs at least nine further gates before the final OR.
 The unrestricted 53-gate budget remains open.
 [Projection, lower bound, and search records](sat-search/results/c4free_9791/README.md)
 
+For the two-output quadrangle separator L-meta-5258, a source-count
+bound and induced-path restrictions exclude the posted budget within
+all same-side pinned prefixes leaving two or three stars. Lean checked
+a gate-criticality condition for minimum-size realizations.
+The unrestricted sub-63-gate case remains open.
+[Quadrangle tests, scoped bounds, and search records](sat-search/results/pg3_quadrangles_5258/README.md)
+
 For the eleven-vertex top-form graph in L-meta-4081, Lean checked the edge-charge inequality
 with at most four uncovered edges. It also checked that one mixing OR with support of size
 at least two forces all uncovered edges to share a vertex when there are no centreless tops.
