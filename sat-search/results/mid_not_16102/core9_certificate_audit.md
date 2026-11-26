@@ -85,7 +85,19 @@ The Mission 3 pruning (reader caps, pair caps and NOT boundary clauses) was **no
 
 ## 4. Lean status (Mission 4)
 
-No Lean proof was written or submitted. Because the posted statement is existential and false according to this evidence, no
+**Partial Lean check (2026-11-26).** [`sat-search/lean/SatBridge/Meta16102.lean`](../../lean/SatBridge/Meta16102.lean) is
+stated for the upstream model (`PEqualNP.CircuitLowerBounds`, imported from `PEqualNP.Defs`) and builds with
+`research.py lean sat-search/lean --module SatBridge.Meta16102`. Its axioms are only `propext`, `Classical.choice` and `Quot.sound`. It checks:
+`sandwich`, which says that for an AND/OR/NOT circuit with at most one NOT gate, overriding the NOT output by a bit `y` gives a function
+`G x y` monotone in both arguments with `C.eval x = G x v` for some `v`, hence `G x false ≤ C.eval x ≤ G x true`;
+`f16102_mono`, which says the posted table is monotone in every input; and `fb_certificates`, the minimal positive and maximal negative certificates.
+These are the first premises of the structural route below. They do **not** prove the negation.
+
+Kernel-budget estimate for a direct search. Enumerating 8-gate prefixes and looking up the final gate leaves about
+2·10^10 canonical prefixes per NOT placement, about 2·10^11 in all, against a kernel budget of roughly 10^8 reductions in 20 minutes. A brute-force
+`decide` refutation of even the core is therefore infeasible, and so is any search that does not first use the structural reduction.
+
+No Lean proof of the full statement or its negation was written or submitted. Because the posted statement is existential and false according to this evidence, no
 proof of it exists. A refutation could only be submitted against a posted negated twin, and none exists. A Lean proof of the
 negation would need the following:
 

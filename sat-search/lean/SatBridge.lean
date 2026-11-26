@@ -10,3 +10,4 @@ import SatBridge.LookupProjection
 import SatBridge.ParityLookup
 import SatBridge.PackedAndreevLemmas
 import SatBridge.CubicPairWitness
+import SatBridge.Meta16102
