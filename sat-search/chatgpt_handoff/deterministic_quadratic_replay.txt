@@ -1,0 +1,2 @@
+{'rank_certificates': 1000, 'maps': 232, 'brute': 228, 'image_bits': 3300, 'high_rank': 57, 'compressed': 128, 'mixed': 4, 'max_q': 180, 'max_d': 83, 'max_removed': 97, 'packed_maps': 48}
+all assertions passed
