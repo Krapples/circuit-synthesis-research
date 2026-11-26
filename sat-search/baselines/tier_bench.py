@@ -14,7 +14,9 @@ import sys
 HERE = Path(__file__).resolve().parent
 TARGETS = ('npn4-016a', 'npn4-1699', 'npn4-0116', 'npn4-6996', 'npn4-0196', 'npn4-16a9', 'npn4-1668',
            'npn4-1686', 'npn4-1669', 'npn4-166b')
-MODES = ('base', 'slack-two-phase-set', 'slack-three-phase-set', 'slack-three-phase-set-lift1')
+# lift1 runs with eager constant restriction counters by default (NOTES_FIRST_LAYER.md, eager counters);
+# plain 'slack-three-phase-set-lift1' stays selectable with --modes as the archived control.
+MODES = ('base', 'slack-two-phase-set', 'slack-three-phase-set', 'slack-three-phase-set-lift1-count-const')
 
 
 def main():

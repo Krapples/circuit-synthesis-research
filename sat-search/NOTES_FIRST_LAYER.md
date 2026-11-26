@@ -1935,7 +1935,9 @@ archived idle-machine `tier_extended` controls.
 ### Status and next questions
 
 - **Status.** `--restriction-counters const` is the first restriction rule with a demonstrated
-  end-to-end gain. It stays opt-in pending a decision on defaults.
+  end-to-end gain. `percy_run` keeps it opt-in. Since 2026-11-25, `tier_bench.py` runs lift1 as
+  `slack-three-phase-set-lift1-count-const` by default; pass `--modes slack-three-phase-set-lift1`
+  for the plain control.
 - **Identification counters.** Alias flags for `x_j := x_i ^ b` would cover the last 0.3% of
   models. That is low value given the replay.
 - **More inputs.** For n > 4 the `kCost3` bound must be replaced by certified restricted costs;
