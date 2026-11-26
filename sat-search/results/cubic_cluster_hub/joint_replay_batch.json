@@ -1,0 +1,14 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Reproduce the joint-witness control published during the cubic audit.",
+  "jobs": [
+    {
+      "id": "joint-witness-handoff-replay",
+      "kind": "command",
+      "argv": ["node", "joint_witness_control_check.js"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "paired Andreev and Tseitin charge control at 2f69df4", "basis": "paired SAT and GF(2)"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    }
+  ]
+}

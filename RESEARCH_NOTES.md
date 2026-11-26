@@ -118,6 +118,17 @@ balancing and invariant source positions. Unrestricted SAT distinct-gate
 accounting remains open.
 [Routing proof, gate counts, cubic bound and grammar replay](sat-search/results/sparse_quadratic_routing/README.md)
 
+The cubic cluster and simultaneous hub arguments passed independent audit.
+An explicit signed AIG verified exact batched Walsh scores, with direct
+decoding smaller at every tested positive marginal dimension. A separate
+packed cubic control needs the full linear marginal and every essential
+witness under coordinate restrictions, yet has a linear-size AIG at fixed
+metadata. Its exact Andreev projection gives a signed De Morgan formula
+lower bound `Omega(n^(20/7)/((log n)^2 log log n))` using Tal's theorem.
+This complements the joint Andreev–Tseitin charge control. The remaining
+lower-bound target concerns gate roles across multiple legal contexts.
+[Audit, proofs, AIG counts and replays](sat-search/results/cubic_cluster_hub/README.md)
+
 The audited Andreev projection gives a near-cubic De Morgan formula lower
 bound for paired SAT at all sufficiently large even lengths, using Tal's
 published shrinkage theorem. A linear-size AIG for that exact restriction

@@ -1,0 +1,2 @@
+{"maps": 9, "masks_checked": 13512, "period_shifts_checked": 939, "coordinate_kernel_checks": 13512, "cover_checks": 751, "packed_pins": 473, "affine_restriction_rows": 948}
+{"maps": 4, "witness_assignments": 648, "image_shifts": 960, "small_covers": 49, "code_isolations": 960, "packed_contexts": 32, "packed_pins": 256}

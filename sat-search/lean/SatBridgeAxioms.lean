@@ -34,3 +34,6 @@ import CircuitLemmas.Unfold
 #print axioms SatBridge.PackedAndreev.chunk_block_length
 #print axioms SatBridge.PackedAndreev.gapChain_sum
 #print axioms SatBridge.PackedAndreev.reader_above_of_degree_cap
+#print axioms SatBridge.CubicPairWitness.exists_evaluate_iff
+#print axioms SatBridge.CubicPairWitness.surjective_of_all_allowed
+#print axioms SatBridge.CubicPairWitness.trivial_period

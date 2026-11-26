@@ -1,0 +1,36 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Reproduce exact cubic cluster series and the simultaneous hub kernel against their independent enumeration and path-DP references.",
+  "jobs": [
+    {
+      "id": "cubic-cluster-handoff-replay",
+      "kind": "command",
+      "argv": ["node", "cubic_cluster_check.js"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "exact weight/address counts and local formal-series cancellation at d376f3e", "basis": "GF(2) and exact integer arithmetic"},
+      "workers": 1, "memory_mib": 384, "timeout": {"initial": 60, "maximum": 60}
+    },
+    {
+      "id": "cubic-hub-handoff-replay",
+      "kind": "command",
+      "argv": ["node", "cubic_hub_check.js"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "common kernel and batched acceptance-table Walsh identity at d376f3e", "basis": "GF(2) and exact integer arithmetic"},
+      "workers": 1, "memory_mib": 384, "timeout": {"initial": 60, "maximum": 60}
+    },
+    {
+      "id": "cubic-pair-negative-control",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/cubic_cluster_hub_check.py", "controls"],
+      "query": {"scope": "paired cubic image, zero kernels, covers and actual packed pins", "basis": "GF(2) and paired SAT"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 60, "maximum": 60}
+    },
+    {
+      "id": "cubic-hub-walsh-table-aig",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/cubic_cluster_hub_check.py", "table"],
+      "query": {"scope": "exact branch table scores with dynamic projections against direct decoding", "basis": "free-complement signed AIG"},
+      "workers": 1, "memory_mib": 384, "timeout": {"initial": 60, "maximum": 60}
+    }
+  ]
+}

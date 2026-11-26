@@ -1,0 +1,21 @@
+{
+  "maps": 112,
+  "hub_branches": 264,
+  "joint_image_checks": 108,
+  "branch_image_checks": 264,
+  "marginal_lift_checks": 1212,
+  "walsh_table_queries": 792,
+  "long_maps": 4,
+  "detected_hub_sets": 4,
+  "strict_joint_reductions": 32,
+  "max_original_variables": 3002,
+  "max_retained": 1794,
+  "max_discard": 2552,
+  "largest_reduction": {
+    "hubs": 2,
+    "address_bits": 1,
+    "original": 3002,
+    "retained": 450
+  }
+}
+all assertions passed

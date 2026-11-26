@@ -1,0 +1,15 @@
+{
+  "packed_cases": 48,
+  "pinned_original": 96,
+  "pinned_padded": 96,
+  "pinned_balanced": 96,
+  "charge_flips": 48,
+  "coordinate_checks": 96,
+  "full_marginal_checks": 1016,
+  "proper_marginal_checks": 28495,
+  "nonlinear_histograms": 3,
+  "edge_assignments": 1016,
+  "max_word": 115464,
+  "max_vertices": 64
+}
+all assertions passed

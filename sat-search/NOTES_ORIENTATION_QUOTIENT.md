@@ -497,3 +497,14 @@ cover of a `t`-bit residual marginal and solving the quadratic branches
 costs `O((3^h+2^(h+t)) poly(log n))` gates beyond the quasi-linear kernel
 and final table join. The distinct-gate question for full SAT remains open.
 [Independent routing audit, cubic proof and replays](results/sparse_quadratic_routing/README.md)
+
+The cubic cluster and common hub replays pass. A signed AIG verifies the
+scored Walsh table join with rank-deficient projections and dynamic keys.
+A distinct fixed-metadata cubic control has an image with no nonzero
+translation period and no proper image-preserving coordinate restriction.
+Its exact Andreev projection gives a Tal-dependent `n^(20/7)` formula
+bound up to logarithms, and the same promise has a linear AIG. It is a
+falsification case for turning those structural or formula parameters
+into a charge to distinct gates. The joint Andreev–Tseitin handoff replay
+also passed as a separate compatibility control.
+[Cluster and hub audit, negative controls and formal scope](results/cubic_cluster_hub/README.md)

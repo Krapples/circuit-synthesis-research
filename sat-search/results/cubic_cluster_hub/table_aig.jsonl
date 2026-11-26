@@ -1,0 +1,5 @@
+{"k": 1, "t": 0, "branches": 2, "inputs": 16, "direct_ands": 12, "walsh_ands": 8}
+{"k": 2, "t": 1, "branches": 2, "inputs": 4096, "direct_ands": 80, "walsh_ands": 2449}
+{"k": 2, "t": 2, "branches": 3, "inputs": 516, "direct_ands": 183, "walsh_ands": 15145}
+{"k": 3, "t": 2, "branches": 4, "inputs": 516, "direct_ands": 824, "walsh_ands": 33442}
+{"k": 4, "t": 3, "branches": 4, "inputs": 516, "direct_ands": 3276, "walsh_ands": 126787}
