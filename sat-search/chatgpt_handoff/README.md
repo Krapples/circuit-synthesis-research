@@ -1,3 +1,285 @@
+# Research handoff — near-cubic formula lower bound and circuit-sharing obligations at every large even SAT length
+
+Processed agent revision: bb010ab9dd1c72682a3d4db9c0e78a04c95b13e3. The prior parity handoff is still pending independent agent review. The user manually requested continuation; no new agent note changes were present. Autonomous task: ignore handoff-only commits.
+
+## 0. Scope and requested independent agent task
+
+Both requested notes read before and after research: RESEARCH_NOTES.md blob 6a73e0ace8bd773c2fd3e1267d2cd2ea2495358a; sat-search/NOTES_ORIENTATION_QUOTIENT.md blob d8074cd1b06eab80558a705bc949658d41998f5a. Previous slice construction and encoding convention are as in sat-search/results/sat_weight_slice/README.md.
+
+**Ready for the agent to test.** Audit and independently replay the new exact Andreev projection, padding lemma, and circuit unfolding identity. If useful, formalize the exact grammar/length/weight and path-count identities in Lean, with the classical formula shrinkage theorem explicitly treated as an external paper premise (do NOT add an axiom to claim an axiom-free proof). The asymptotic proof below imports Tal's standard theorem; it is not a new proof of that theorem, a novelty claim, or a solution to L-clb-036. Do not prioritize a C++ solver feature based on it. This replaces the previous quadratic formula benchmark with a stronger near-cubic benchmark, and imposes a necessary condition on actual unrestricted circuits. It does not establish a superlinear unrestricted gate-count bound. The constructive promise separator is deliberately easy for general DAGs.
+
+## 1. Theorems and model
+
+Let L(f) be minimum binary De Morgan formula leaf count, signed input literals and constants allowed. Let C(f) be minimum unrestricted free-complement AIG size, counting binary ANDs. Binary AND/OR circuits with arbitrary free complements are equivalent at the gate-count and binary-depth level. Define
+
+    H(n) = n^3 / ((log_2 n)^5 (log_2 log_2 n)^3).
+
+For every sufficiently large EVEN n, the actual SAT_n satisfies L(SAT_n)=Omega(H(n)). The same bound holds for any binary formula (even with negations) correct on the weight-2n+5 layer of length N=3n+12 for the agent's G_n; equivalently Omega(H(N)). The result for SAT_n is the central transfer; the layer is not required for it.
+
+For any binary circuit computing SAT_n, or deciding G_n on its promised layer, write s for its number of binary gates (after contracting unary NOTs to signed edges), d for its maximum binary gate depth, and p(g) for the number of directed operand-occurrence paths from internal gate g to the output, including the length-zero path for an output gate. A duplicated operand counts twice. For the layer case replace n by N. Then
+
+    1 + sum_g p(g) >= L(target) >= c H(n)
+    2^d >= c H(n)
+    s * max_g p(g) >= c H(n) - 1.
+
+Here L(target) means full formula complexity for SAT and formula complexity on the layer for G. Hence d >= 3 log_2 n - 5 log_2 log_2 n - 3 log_2 log_2 log_2 n - O(1). A hypothetical O(n^1.01)-gate SAT circuit must contain a binary gate reused on Omega(n^1.99/((log n)^5(log log n)^3)) distinct output paths. This is a genuine necessary structural condition on unrestricted circuits, NOT a lower bound of that magnitude on the number of distinct gates or edges.
+
+If the binary fanout (counting operand occurrences) is at most a fixed D>=2 and every gate-to-output path passes through at most R internal branching vertices of fanout >=2 (including its source), then p(g)<=D^R and hence s >= (c H(n)-1)/D^R. In particular for s=O(n^1.01), R >= (1.99 log_2 n - 5 log_2 log_2 n - 3 log_2 log_2 log_2 n - O(1))/log_2 D. Count only internal branching vertices; input fanout is not bounded by this statement. This rules out certain low-sharing DAG models, not arbitrary AIGs. Avoid treating exponential path multiplicity as exponential physical gate cost.
+
+## 2. Universal parity-addressed lookup
+
+For integer k>=1, let M=2^k, r=floor(M/k), d0=M+kr. Input consists of M data bits h_a indexed by a in {0,...,M-1}, and k rows X_j of r selector bits each. Let a_j=parity(X_j) and a=sum_j 2^j a_j. The function A_k(h,X)=h_a is the classical Andreev construction. This parameterization avoids divisibility assumptions. d0=Theta(M), r=Theta(M/k). It has a linear-size free-NOT AIG: k(r-1) XORs plus a binary multiplexer tree with M-1 nodes, each using three ANDs. In particular AIG size <=3(k(r-1)+M-1)<6M.
+
+Proof of its formula bound, explicitly importing shrinkage. The external theorem of Avishay Tal (2014, revised 2016) states that for a p-random restriction rho (each variable independently retained with probability p, otherwise fixed to a fair bit) a Boolean function f obeys
+
+    E[L(f|rho)] <= K (p^2 L(f) + 1)
+
+for an absolute K. This form includes the additive constant and follows also from the often-stated O(p^2 L + p sqrt(L)) form by AM-GM. See [Tal, Shrinkage of De Morgan Formulae by Spectral Techniques, ECCC TR14-048 revision 1](https://eccc.weizmann.ac.il/report/2014/048/), and [SAT Algorithms from Shrinkage](https://eccc.weizmann.ac.il/report/2015/062/) for the standard additive-constant formulation (the argument requires only this classical shrinkage bound). The older Håstad theorem would also yield a near-cubic exponent, with additional polylog losses. No reliance on a new shrinkage theorem for circuits.
+
+By counting formulas with <=l leaves on k variables, at most (l+1)[16(k+1)]^l truth tables are represented. For each leaf count j, there are <=4^(j-1) ordered full binary trees, 2^(j-1) AND/OR label choices and (2k+2)^j leaf labels; overcounting is safe. Choosing l=floor(M/(4 log_2(16(k+1)))) gives fewer than 2^M formulas for all sufficiently large k. Thus there exists a table h with L(h)>=l+1=Omega(M/log k). Fix that table in A_k. This is only a proof device; the projected A_k itself has all data bits free and is explicit.
+
+Apply the independent restriction to the kr selector bits of this fixed-table function, with p=ln(2k)/r for sufficiently large k (p<1). Probability that some row has no surviving bit is at most k(1-p)^r<=k exp(-pr)=1/2. On the event all rows survive, additionally fix all but one surviving variable per row. The resulting function is h on k variables, with each argument possibly complemented by a fixed parity offset. Its minimum signed formula size is exactly L(h), because those input complements are free substitutions in either direction. Further constant restriction cannot increase formula leaf count. Therefore E[L(A_k(h,.)|rho)] >= L(h)/2. Combining with the stated external theorem and L(A_k(h,.))<=L(A_k) gives
+
+    L(A_k) = Omega(M / (p^2 log k))
+           = Omega(M^3 / (k^2 (log k)^3)).
+
+The additive +1 is absorbed as M/log k tends to infinity. This proof works for every sufficiently large integer k. It is an elementary adaptation of the classical Andreev argument with Tal's shrinkage premise, not a new general formula lower-bound method.
+
+## 3. Exact SAT coordinate restriction (and monotone slice projection)
+
+Create ordinary variables for the d0 data/selector bits. Use k(r-1) XOR auxiliary variables in row chains, then M-1 mux auxiliary variables in a binary tree selecting adjacent data entries by a_0 first, then a_1, etc. All identifiers are consecutive starting at zero. Pin all ordinary variables by one unit each; only the signs of those units are free. Add the output positive unit. For XOR z=a XOR b, use the four width-three clauses excluding exactly the four forbidden triples. For z=(a?c:b), use
+
+    (a OR NOT b OR z), (a OR b OR NOT z),
+    (NOT a OR NOT c OR z), (NOT a OR c OR NOT z).
+
+For fixed inputs each XOR/mux is uniquely forced; evaluating in topological order gives a unique assignment to the gate variables. Thus the entire CNF is SAT iff A_k=1. Pin units first, then gate clauses, then output unit; there are no tautologies in these gate constraints and every source has a pin. There are exactly d0+1+12q literal occurrences and d0+1+4q clauses, q=k(r-1)+M-1<2M, and <4M variable IDs. The actual word encodes each literal by [1,sign], then pairs [1,digit] for canonical LSB-first ID bits, then [0,1]; after each clause append [0,0]. Consequently the exact encoded length n_k is even and O(Mk). It is also Omega(Mk) from the M pin units for the data variables alone (at least M/2 of their identifiers have k bits). Length independent of all input bits. All source coordinates are used exactly once as unit signs and every other coordinate is fixed. This is a coordinate restriction of SAT_{n_k}, not merely a general polynomial-time reduction. Formula leaf count cannot increase under this substitution. Consequently L(SAT_{n_k})>=L(A_k)=Omega(H(n_k)).
+
+For the guarded layer G_{n_k}, apply the agent's balancing projection (all constructed words already end in 00). Its image contains both a positive and negative rail of each source bit, with all other coordinates constant. Substitution in an arbitrary formula correct on the layer gives a signed formula for A_k, with no increase in leaf count; hence the same lower bound for formula complexity on the layer, including monotone formulas. On the promise image itself there is a monotone separator with <=6q gates: keep both phases of every XOR and mux, implementing each output phase with two ANDs and one OR on the paired operand rails. This is O(M)=O(n_k/log n_k) despite the near-cubic formula lower bound. Do not infer an unrestricted circuit lower bound on the full slice from the formula lower bound on this promise.
+
+## 4. Padding to every sufficiently large even length
+
+Append tautological clauses on IDs 0 and 1. The clause (x0 OR NOT x0) has encoded length 10 (two 4-bit literal encodings plus the clause terminator); (x1 OR NOT x1) has length 14. Each preserves SAT for every input. For every even delta>=48, write delta=10u+14v, u,v nonnegative: choose v in {0,1,2,3,4} such that 14v=delta mod 10 (unique); for delta>=56 the remainder is nonnegative, and the four edge cases 48,50,52,54 have respective v=2,0,3,1. Thus the representation works. For sufficiently large even n choose largest k with n_k<=n-48. Such k exists and is finite since n_k=Theta(k2^k). Then n_{k+1}>n-48, and n_{k+1}/n_k is bounded by an absolute constant from these asymptotic estimates. Hence n_k=Theta(n). No monotonicity assumption on the exact n_k is needed. Append the two tautology types to reach exactly n. The free signs remain a coordinate restriction and all words remain valid. The agent's balancing projection then gives length N=3n+12 and weight 2n+5. Both transfers now hold at every sufficiently large even n, rather than on a sparse subsequence. No claim for odd lengths, which are constant false.
+
+## 5. Unfolding and multiplicity proof
+
+For a single-output binary DAG with s gates, count operand occurrences as directed edges from the operand wire to the consumer. Contract unary negations into signed edges; an OR can be represented as a signed AND. If the output is a primary/constant the unfolded formula has one leaf and all internal counts are zero. Otherwise initialize p(out)=1, others 0. Traverse gates backwards in topological order, adding p(g) to each of its two operand sources (twice if identical). This gives exactly the number of directed paths with operand occurrence multiplicity to the output, since every nontrivial path first takes an edge to some consumer. It gives zero for unused gates.
+
+Unfold the DAG from the output, replicating each gate once per path, pushing signed-edge negations through AND/OR by De Morgan. Its formula is a full binary tree, with sum_g p(g) internal nodes and one more leaf than internal nodes. A separate proof is the edge-count identity: total operand-edge count of the unfolded tree is twice its internal-node count and also total nodes minus one. Every leaf is a primary or constant; allowing unused duplicates only enlarges this valid formula. Thus L<=1+sum_g p(g)<=1+s max_g p(g). Its depth is at most the original binary depth, so L<=2^d. Substituting the lower bound of sections 2–4 proves every displayed structural consequence in section 1. For the fanout corollary, follow the directed paths from a gate to the output in the live DAG: unary branches do not split, every branching vertex offers at most D choices, and a path encounters at most R such vertices. A branching tree of at most R branching levels with arity <=D has at most D^R leaves (induction); hence p(g)<=D^R.
+
+This identity can be formalized without Tal. The resource is explicit and inexpensive to calculate (reverse dynamic program on a circuit, arbitrary-precision or saturating integers); the actual unrestricted obstruction is to prove SAT cannot exploit sufficiently high path multiplicity. There is no generic upper bound polynomial in s on p(g). For example, iterated reconvergent binary gates can have exponentially many paths even if a particular circuit admits simplification. The existence of the O(M) Andreev promise separator proves that a near-cubic formula lower bound cannot on its own force a near-cubic gate lower bound.
+
+## 6. Executed finite verification and limitations
+
+The first replay failed in the CHECKER, not the theorem: its unit-propagation verifier required even the unused identifier from the balancing tautology to be assigned. It was fixed by deleting tautological clauses before propagation. A subsequent run passed k<=6 then hit the 200s runtime cap (no verdict for unfinished cases). The main bottleneck was quadratic-time assembly of the long identifier as a Python integer. The final exact script below uses binary-string conversion and a smaller high-k sample. It ran in 7.05s on the current runtime (single run; not a solver benchmark). Seed 906371.
+
+| k | r | source bits | XOR/mux nodes | n_k | balanced N | tested inputs |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 2 | 4 | 2 | 266 | 810 | 16 |
+| 2 | 2 | 8 | 5 | 780 | 2352 | 256 |
+| 3 | 2 | 14 | 10 | 1738 | 5226 | 256 |
+| 4 | 4 | 32 | 27 | 5552 | 16668 | 256 |
+| 5 | 6 | 62 | 56 | 12902 | 38718 | 256 |
+| 6 | 10 | 124 | 117 | 29956 | 89880 | 64 |
+| 7 | 18 | 254 | 246 | 69442 | 208338 | 64 |
+
+All final assertions passed: 1,168 inputs each checked on original and balanced encodings (2,336 SAT-semantic evaluations), 1,168 direct paired-rail circuit evaluations, 16,256 restricted-table rows over 448 contexts, 532 padding checks including 56 SAT evaluations on padded-and-balanced inputs, 2,000 exact unfolding path identities on randomized small DAGs including dead gates and repeated operands. All inputs exhaustive at k=1,2, sampled at k>=3. The parser is separate from the encoder; independent literal-occurrence propagation verifies each noncontradictory result via a total satisfying assignment of all non-tautological variables. It is specialized to these fully pinned gate CNFs, NOT a general SAT solver. The formula lower bound is paper math using a published external theorem; finite checks only certify encoding, restriction identities and arithmetic. No Lean verification, no production C++ improvement, no exact circuit minima or unrestricted superlinear size lower bound claimed.
+
+## 7. Reference script (executed, byte-for-byte)
+
+Extract the first Python fenced block to andreev_slice_check.py; run python -B andreev_slice_check.py. ASCII length 6918, FNV-1a 32-bit checksum 6b03f877.
+
+```python
+from itertools import product
+from random import Random
+from math import log,log2
+from collections import defaultdict,deque
+
+def enc(F):
+    w=[]
+    for C in F:
+        for l in C:
+            v=abs(l)-1;w.extend((1,int(l>0)))
+            while v:w.extend((1,v&1));v>>=1
+            w.extend((0,1))
+        w.extend((0,0))
+    return tuple(w)
+
+def parse(w):
+    assert len(w)%2==0
+    F=[];C=[];i=0
+    while i<len(w):
+        a,b=w[i:i+2];i+=2
+        if (a,b)==(0,0):F.append(C);C=[];continue
+        assert a==1
+        sign=b;d=[]
+        while w[i]==1:d.append(w[i+1]);i+=2
+        assert w[i:i+2]==(0,1) and (not d or d[-1]);i+=2
+        v=1+int(''.join(map(str,reversed(d))) or '0',2);C.append(v if sign else -v)
+    assert not C
+    return F
+
+def balance(w):
+    assert w[-2:]==(0,0)
+    return w+(1,0,0,1,1,1,0,1,1,0)+tuple(b for x in w[:-2] for b in (1,1-x))+(1,1,0,1,0,0)
+
+def build(k):
+    M=1<<k;r=M//k;d=M+k*r
+    gates=[];nextid=d+1
+    addr=[]
+    for j in range(k):
+        v=M+j*r+1
+        for i in range(1,r):
+            gates.append(('xor',nextid,v,M+j*r+i+1));v=nextid;nextid+=1
+        addr.append(v)
+    layer=list(range(1,M+1))
+    for a in addr:
+        nl=[]
+        for i in range(0,len(layer),2):
+            gates.append(('mux',nextid,a,layer[i],layer[i+1]));nl.append(nextid);nextid+=1
+        layer=nl
+    assert len(layer)==1 and nextid-1==d+k*(r-1)+M-1
+    F=[]
+    for gate in gates:
+        op,z,*vs=gate
+        if op=='xor':
+            a,b=vs
+            for x,y,c in product((0,1),repeat=3):
+                if c!=x^y:F.append(tuple(-v if t else v for v,t in zip((a,b,z),(x,y,c))))
+        else:
+            a,b,c=vs
+            F.extend(((a,-b,z),(a,b,-z),(-a,-c,z),(-a,c,-z)))
+    return d,r,gates,F,layer[0]
+
+def unit(F,x):
+    return [(i+1 if b else -i-1,) for i,b in enumerate(x)]+F
+
+def sat_propagate(F):
+    # Independent literal-occurrence unit propagation, followed by a semantic check.
+    # All tested CNFs are acyclic gate constraints plus fully pinned inputs, so
+    # a consistent fixed point must assign all variables and satisfy all clauses.
+    F=[C for C in F if not any(-l in C for l in C)]
+    occ=defaultdict(list);sz=[];sat=[False]*len(F);Q=deque();val={};used=set()
+    for i,C0 in enumerate(F):
+        C=set(C0);sz.append(len(C));used.update(map(abs,C))
+        if not C:return False
+        if len(C)==1:Q.append(next(iter(C)))
+        for l in C:occ[l].append(i)
+    while Q:
+        l=Q.popleft();v=abs(l);b=l>0
+        if v in val:
+            if val[v]!=b:return False
+            continue
+        val[v]=b
+        for i in occ[l]:sat[i]=True
+        for i in occ[-l]:
+            if sat[i]:continue
+            sz[i]-=1
+            if sz[i]==0:return False
+            if sz[i]==1:
+                live=[a for a in set(F[i]) if abs(a) not in val]
+                assert len(live)==1
+                Q.append(live[0])
+    assert used<=val.keys(), 'incomplete propagation'
+    assert all(any(val[abs(l)]==(l>0) for l in C) for C in F)
+    return True
+
+def direct(x,k,r):
+    M=1<<k;addr=sum((sum(x[M+j*r:M+(j+1)*r])%2)<<j for j in range(k))
+    return x[addr]
+
+def both_phases(x,gates,out):
+    # explicit paired-rail monotone circuit: xor and mux use six gates each
+    w={i+1:(b,1-b) for i,b in enumerate(x)}
+    for op,z,*vs in gates:
+        a,na=w[vs[0]];b,nb=w[vs[1]]
+        if op=='xor':p=(a&nb)|(na&b);q=(a&b)|(na&nb)
+        else:
+            c,nc=w[vs[2]];p=(na&b)|(a&c);q=(na&nb)|(a&nc)
+        assert p^q==1;w[z]=(p,q)
+    return w[out][0]
+
+def pad(delta):
+    assert delta%2==0 and delta>=48
+    b=next(i for i in range(5) if (delta-14*i)%10==0)
+    a=(delta-14*b)//10;assert a>=0
+    return [(1,-1)]*a+[(2,-2)]*b
+
+def path_checks(rng):
+    # No truth-function assumptions: include repeated operands and dead gates.
+    checks=0
+    for _ in range(2000):
+        n=rng.randrange(1,7);s=rng.randrange(1,16)
+        edges=[(rng.randrange(n+j),rng.randrange(n+j)) for j in range(s)]
+        out=rng.randrange(n+s);p=[0]*(n+s);p[out]=1
+        for j in reversed(range(s)):
+            a,b=edges[j];p[a]+=p[n+j];p[b]+=p[n+j]
+        def unfold(v):
+            if v<n:return 1,0
+            a,b=edges[v-n];l,i=unfold(a);m,j=unfold(b);return l+m,i+j+1
+        L,I=unfold(out)
+        assert L==sum(p[:n])==1+sum(p[n:]) and I==sum(p[n:])
+        assert L<=1+s*max(p[n:])
+        depth=[0]*n
+        for a,b in edges:depth.append(1+max(depth[a],depth[b]))
+        assert L<=1<<depth[out];checks+=1
+    return checks
+
+def main():
+    rng=Random(906371);rows=0;restr=0;contexts=0;pads=0
+    for k in range(1,8):
+        M=1<<k;d,r,gates,F,out=build(k)
+        assert len(F)==4*(k*(r-1)+M-1)
+        gen=product((0,1),repeat=d) if k<=2 else (tuple(rng.randrange(2) for _ in range(d)) for _ in range(64 if k>=6 else 256))
+        base=None;local=0
+        for x in gen:
+            cnf=unit(F,x)+[(out,)];w=enc(cnf);y=balance(w)
+            if base is None:
+                base=w;n=len(w);N=len(y);t=sum(y)
+                signloc=[];off=0
+                for i in range(d):
+                    signloc.append(off+1);off+=len(enc([(i+1,)]))
+                signset=set(signloc);railset=signset|{n+11+2*i for i in signset}
+            assert len(w)==n and len(y)==3*n+12 and sum(y)==2*n+5
+            # The balancing digit is at offset n+10+2*i+1.
+            assert all(y[j]==b and y[n+11+2*j]==1-b for j,b in zip(signloc,x))
+            assert all(a==b for i,(a,b) in enumerate(zip(w,base)) if i not in signset)
+            want=direct(x,k,r)
+            assert sat_propagate(parse(w))==want
+            assert sat_propagate(parse(y))==want
+            assert both_phases(x,gates,out)==want
+            if local<8:
+                extra=48+2*local;pp=pad(extra);z=enc(cnf+pp)
+                assert len(z)==n+extra and sat_propagate(parse(balance(z)))==want
+                pads+=1
+            rows+=1;local+=1
+        for _ in range(64):
+            h=tuple(rng.randrange(2) for _ in range(M));x=[rng.randrange(2) for _ in range(k*r)];surv=[rng.randrange(r) for _ in range(k)]
+            c=0
+            for j in range(k):
+                x[j*r+surv[j]]=0;c|=(sum(x[j*r:(j+1)*r])%2)<<j
+            for a in range(M):
+                z=x[:]
+                for j in range(k):z[j*r+surv[j]]=(a>>j)&1
+                assert direct(h+tuple(z),k,r)==h[a^c];restr+=1
+            contexts+=1
+        print('k',k,'r',r,'inputs',d,'gates',len(gates),'encoded',n,'balanced',N,'rows',local,flush=True)
+    for delta in range(48,1000,2):assert len(enc(pad(delta)))==delta;pads+=1
+    for k in (8,12,16,20,32):
+        M=1<<k;r=M//k;p=min(1,log(2*k)/r)
+        assert k*(1-p)**r <= 0.50000000001
+        q=int(M/(4*log2(16*(k+1))));assert log2(q+1)+q*log2(16*(k+1))<M
+    print('encoded assignments',rows,'restricted table rows',restr,'contexts',contexts,'padding checks',pads,'path identities',path_checks(rng),flush=True)
+if __name__=='__main__':main()
+```
+
+## 8. Concrete next directions
+
+Agent: independently audit and reproduce sections 3–5, preferably formalizing the projection and unfolding identity using the existing SatBridge circuit/grammar libraries. Keep imported shrinkage as a paper theorem, not an unproved Lean axiom. Check whether any earlier Lean result already formalizes the path count identity. For L-clb-036, prioritize a genuinely SAT-specific constraint on high-multiplicity sharing; do not try to turn path count alone into a gate count. A possible finite diagnostic is to measure p(g) and branching depth on verified low-size SAT-restriction circuits, compare to the easy Andreev promise control, and test whether proposed structural constraints distinguish them. No native search integration is requested absent an actual safe pruning bound. Notify the user of substantive results, errors or blockers rather than routine replays.
+
+---
+
+# Historical research archive — previous handoffs (do not repeat already completed work)
+
 # Research handoff — parity distributions on the actual SAT Hamming slice
 
 Processed agent revision: bb010ab9dd1c72682a3d4db9c0e78a04c95b13e3 (master). Autonomous task checkpoint: ignore the handoff-only commit when looking for new agent work.
