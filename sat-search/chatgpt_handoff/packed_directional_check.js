@@ -35,7 +35,7 @@ function run(){
   ok(new Set([...data,...query]).size===data.length+query.length,"distinct terminal coordinates");
   return {word,F,data,query};
  }
- let S={packed_cases:0,sat:0,unsat:0,grammar_checks:0,coordinate_checks:0,max_word:0,max_tables:0,max_data_bits:0,protocols:0,protocol_entries:0,rectangle_checks:0,richness_checks:0,strategy_checks:0,asymmetric_examples:[]};
+ let S={packed_cases:0,sat:0,unsat:0,grammar_checks:0,coordinate_checks:0,max_word:0,max_tables:0,max_data_bits:0,protocols:0,protocol_entries:0,rectangle_checks:0,richness_checks:0,strategy_checks:0};
  for(let k=1;k<=7;k++)for(let r of [1,2,4,8])for(let t=0;t<4;t++){
   let M=2**k,H=Array.from({length:r},()=>Array.from({length:M},()=>rnd(2))),X=Array.from({length:r},()=>rnd(M));
   if(t===0)for(let j=0;j<r;j++)H[j][X[j]]=1;
@@ -87,6 +87,52 @@ function run(){
   S.protocols++;
  }
  for(let [r,k] of [[1,1],[1,2],[1,3],[2,1],[2,2],[3,1]])for(let b=0;b<=k;b++)for(let o=0;o<2;o++)runProtocol(r,k,b,o);
+ // Actual signed mux AIGs under directed vertex partitions.
+ S.aig_cuts=0;S.aig_assignments=0;S.aig_rectangles=0;S.aig_forward_only=0;S.aig_max_gates=0;
+ for(let [r,k] of [[1,1],[1,2],[1,3],[2,1],[2,2]]) {
+  let M=2**k,d=r*M,n=d+r*k,E=[];
+  function AND(a,b){let v=2*(n+E.length);E.push([a,b]);return v;}
+  function OR(a,b){return AND(a^1,b^1)^1;}
+  function mux(q,a,b){return OR(AND(q,b),AND(q^1,a));}
+  let outputs=[];
+  for(let j=0;j<r;j++){
+   let V=Array.from({length:M},(_,i)=>2*(j*M+i));
+   for(let i=0;i<k;i++){let q=2*(d+j*k+i),W=[];for(let z=0;z<V.length;z+=2)W.push(mux(q,V[z],V[z+1]));V=W;}
+   outputs.push(V[0]);
+  }
+  let o=outputs.reduce((a,b)=>AND(a,b));S.aig_max_gates=Math.max(S.aig_max_gates,E.length);
+  for(let trial=0;trial<18;trial++){
+   let side=Array.from({length:n+E.length},(_,i)=>i<n?+(i>=d):trial===0?1:trial===1?0:rnd(2));
+   let A=0,B=0;
+   for(let j=0;j<E.length;j++)for(let l of E[j])if(side[l>>1]!==side[n+j]){if(side[l>>1]===0)A++;else B++;}
+   let groups=new Map(),positiveRows=0;
+   for(let h=0;h<2**d;h++){
+    let accept=0,transcripts=new Set(),rich=true;
+    for(let j=0;j<r;j++){let w=0;for(let i=0;i<M;i++)w+=(h>>>(j*M+i))&1;if(w<M/2)rich=false;}
+    for(let q=0;q<2**(r*k);q++){
+     let V=Array.from({length:n},(_,i)=>i<d?(h>>i&1):(q>>(i-d)&1)),T="";
+     for(let j=0;j<E.length;j++){
+      let [a,b]=E[j];for(let l of [a,b])if(side[l>>1]!==side[n+j])T+=V[l>>1];
+      V.push((V[a>>1]^(a&1))&(V[b>>1]^(b&1)));
+     }
+     let want=1;for(let j=0;j<r;j++)want&=h>>>(j*M+((q>>>(j*k))&(M-1)))&1;
+     ok((V[o>>1]^(o&1))===want&&T.length===A+B,"AIG semantics");
+     if(!groups.has(T))groups.set(T,{R:new Set(),Q:new Set(),n:0,AR:new Set(),AQ:new Set(),an:0});
+     let G=groups.get(T);G.R.add(h);G.Q.add(q);G.n++;
+     if(want){G.AR.add(h);G.AQ.add(q);G.an++;accept++;transcripts.add(T);}
+     S.aig_assignments++;
+    }
+    if(rich){ok(accept>=(M/2)**r&&transcripts.size<=2**B,"AIG richness row");positiveRows++;}
+   }
+   for(let G of groups.values()){ok(G.n===G.R.size*G.Q.size&&G.an===G.AR.size*G.AQ.size,"AIG rectangle");S.aig_rectangles+=2;}
+   ok(positiveRows>=2**(r*(M-1)),"rich row count");
+   ok(A+B+r>=r*M/(2*2**(B/r)),"AIG directional cut");
+   ok(A+B>=r*k,"AIG rank cut");
+   if(side[o>>1]===1)ok(A*2**B>=r*Math.log2(2**M-1)-1e-9,"AIG strategy cut");
+   if(!B&&side[o>>1]===1)S.aig_forward_only++;
+   S.aig_cuts++;
+  }
+ }
  return S;
 }
 if(typeof module!=="undefined"&&require.main===module){console.log(JSON.stringify(run(),null,2));console.log("all assertions passed");}
