@@ -104,10 +104,11 @@ express 3-CNF with unique witness extension per satisfying assignment.
 Lean checks the local packed layout and its source-position invariance.
 The affine compression handoff replay also reproduced the rare-fiber
 misses and the fixed-sketch obstruction. The input-dependent deterministic
-checker passed its finite image tests. A distinct-gate circuit bound for
-variable incidence remains the next analysis target.
+checker passed its finite image tests. The follow-up gives a paper
+quasi-linear upper bound for the variable-incidence quadratic promise.
+The sparse routing cost needs an independent audit. A lower bound on
+distinct gates for unrestricted SAT remains open.
 [Proofs, controls, and matched experiments](sat-search/results/quadratic_witness/README.md)
-
 
 The audited Andreev projection gives a near-cubic De Morgan formula lower
 bound for paired SAT at all sufficiently large even lengths, using Tal's

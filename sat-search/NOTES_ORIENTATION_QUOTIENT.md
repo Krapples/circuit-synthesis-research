@@ -482,5 +482,8 @@ switches joint satisfiability at the same word length. This gives a test
 for cross-context accounting while leaving the distinct-gate charge open.
 Lean checks the local source layout when auxiliary and tag widths stay
 fixed. The affine compression replay reproduced both the rare-fiber
-misses and the obstruction to a fixed sketch list.
+misses and the obstruction to a fixed sketch list. The deterministic
+orthogonal-block follow-up passed the finite replay and gives a paper
+quasi-linear upper bound for the quadratic promise. Its sparse routing
+cost and the distinct-gate question for full SAT are separate obligations.
 [Proofs, benchmark data, and paired SAT replay](results/quadratic_witness/README.md)

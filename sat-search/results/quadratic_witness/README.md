@@ -187,9 +187,21 @@ orthogonal blocks to find an input-dependent subspace. It passed 1,000
 truncated rank-certificate checks, 3,300 image-bit checks on 232 maps,
 and 57 high-rank checks on compressed maps. The subspace was strictly
 smaller on 128 maps. The benchmark above tests rank-truncated inversion
-independently of this construction. Evaluating deterministic compression
-as a circuit requires accounting for how it finds the subspace from
-variable-incidence input data.
+independently of this construction.
+
+The [deterministic follow-up](../../chatgpt_handoff/deterministic_quadratic_handoff.md)
+also gives a paper construction of a quasi-linear promise circuit for
+varying incidence. Its support argument applies the high-rank bound to
+both the original and compressed maps. The selected pairs from distinct
+rounds are orthogonal for every scalar polar form. A character outside
+the final annihilator has a nonsingular pair in each round, so the pairs
+certify rank at least `4k` on the compressed subspace. Inside the
+annihilator, the projected polar form vanishes on the final orthogonal
+complement. The signature is therefore linear there, and preserving its
+range preserves the projected image. The high-rank marginal lemma lifts
+this equality to equality of the full supports. The replay checks this
+algebra on finite inputs. The fixed-record circuit implementation and
+its size bound remain paper results pending an independent routing audit.
 
 [Deterministic checker](../../chatgpt_handoff/deterministic_quadratic_check.py) · [Replay output](deterministic_replay.txt)
 
