@@ -1,0 +1,50 @@
+# Multi-baseline transversal intersections and invariant ingress partitions
+
+Date: 2026-11-26. Extends [baseline differential gate accounting](baseline_differential_handoff.md). Starting head observed 2ea702b957e21406a509a44600d2015c8052ccef. Paper proofs and exact finite replay, not independently audited or Lean checked. No priority claim. L-clb-036 remains open.
+
+## 1. Same response span for every baseline
+
+Keep the earlier XOR-AND model, common query domain, semantic classification of AND outputs and original stable topological gate IDs. For baseline b, let A_i^b,B_i^b denote the two actual operand functions of mixed gate i at that query. Let V_b be the GF(2) span of all products selecting at most one factor from each pair (1,A_i^b,B_i^b). Define W_b=span_q{F(.,q)+F(.,b)}.
+
+W_c=W_b: F_q+F_c=(F_q+F_b)+(F_c+F_b), and interchange b,c. By the preceding transversal theorem W_b is contained in V_b. Thus the common W is contained in the intersection of V_b over ANY nonempty set of baselines, and in particular over all queries. This also holds for a common span over multiple scalar outputs. The degree bound is the maximum degree among the intersection's basis functions (degree of a sum never exceeds the maximum). Each baseline uses the same original gates; there is no independent budget per context. For explicitly represented functions use GF(2) basis intersections, e.g. solve A u=B v and take images. Truth tables and full ANFs may be exponential. Intersection over a finite subset is a sound relaxation; no efficient way to obtain all useful baselines claimed.
+
+## 2. Strict degree and dimension separation, with actual circuit
+
+Data a,b,c,d; queries p,q,r. Pure AND h=cd, mixed g1=(a+p)(b+q), mixed g2=r(h+g1). Output g2, both mixed gates live. Generalize h to any nonconstant Boolean function on disjoint data z, of degree D>=1. Set T=h+ab. At query (p,q,r) the first pair is a+p,b+q; the second is r,T+qa+pb+pq (order irrelevant).
+
+The first pair spans 1,a,b, and the second pair contributes 1,A with A=T+qa+pb+pq (r is constant at baseline). Thus V_(p,q,r)=span{1,a,b,A,aA,bA}. Let K=span{1,a,b,T}. Each V contains K. Modulo K the remaining two generators are X+pZ and Y+qZ where X=aT, Y=bT, Z=ab denote cosets. These three cosets are independent: a*h and b*h have disjoint supports involving nonempty z monomials, which cannot be canceled by any K polynomial or ab; ab itself is not in K since T includes a nonconstant h. K has dimension 4 and each V has dimension 6. Intersect the quotient planes for (p,q)=(0,0),(1,0),(0,1): the first plane has zero Z coefficient, the second imposes zero X coefficient, the third zero Y coefficient. Hence the full intersection equals K. Already these three baselines suffice, with arbitrary r. Taking r=0 for the output baseline and all r=1 queries, actual response span is exactly K (differences extract a,b,1). Every individual V has max degree max(2,D+1)=D+1; K has max degree max(2,D). For D>=2 this gives strict degree improvement by one. With h=cd, all eight baselines have dimension 6 and degree cap 3; intersection and actual W both dimension 4 and degree 2. The circuit has three ANDs, of which two are mixed. This rejects a candidate for degree-three target responses even when every individual baseline degree cap passes, but is not a lower bound over all possible circuits.
+
+Tensor amplification: k independent blocks with h=c, disjoint data and query coordinates, output XOR of block outputs. There are 2k live mixed ANDs, no pure ANDs, and O(k) total binary gates. For each baseline tuple, transversal space equals tensor product of the block spaces under the canonical isomorphism of function spaces on disjoint data domains. All individual dimensions are 6^k. Intersection over the Cartesian product of baselines is the tensor product of the block intersections, dimension 4^k. Proof: for finite dimensional spaces over GF(2), (U tensor E) intersect (V tensor E)=(U intersect V) tensor E by expanding in a fixed basis of E. For independent factors, (U tensor E) intersect (D tensor V)=U tensor V, by extending bases of U,V to D,E. For each fixed factor first impose the intersection on that factor with all other factors unrestricted, then combine; reverse inclusion immediate. Thus ratio (3/2)^k, exponential in mixed gate count. Actual XOR output span can be much smaller than 4^k; do not confuse capacity with realized rank. For k=2 exhaustive replay gives 36 -> 16, actual rank 7. This is a certificate separation, not a minimum circuit-size lower bound.
+
+## 3. Negative theorem: changing baseline cannot improve exact operand information
+
+There is a stronger structural normal form. Contract affine wiring so each mixed gate operand is an affine combination of primary inputs and earlier AND outputs. Classify the pure gates by actual semantic functions, assigning constants to either side consistently. For a mixed gate i, collect all raw data and data-only gate terms into functions U_i(x), V_i(x), independent of query. Collect raw query, query-only gate and constant terms into functions P_i(q),Q_i(q). The remaining terms are fixed GF(2) linear combinations of earlier mixed outputs. Thus
+
+    u_i(x,q)=U_i(x)+P_i(q)+sum_(j<i) alpha_ij g_j(x,q)
+    v_i(x,q)=V_i(x)+Q_i(q)+sum_(j<i) beta_ij g_j(x,q)
+    g_i=u_i v_i.
+
+This is an identity, not a change to gate count. Semantic pure gates may have mixed ancestors syntactically; treat their known pure functions as available here, not as free in the original size model.
+
+Define the common data ingress vector L(x)=(U_i(x),V_i(x))_i of length 2t. At fixed q=b, the baseline operand vector M_b=(A_i^b,B_i^b)_i is an invertible triangular Boolean transformation of L: add fixed P_i(b),Q_i(b) and fixed linear combinations of products A_j^b B_j^b for earlier j. On the whole formal 2t-bit cube the inverse subtracts (XORs) these same expressions, successively or directly using earlier baseline pairs. Hence M_b(x)=M_b(y) iff L(x)=L(y) for every x,y and every b.
+
+Consequences:
+- Exact image size is identical for all baselines.
+- The fiber equivalence relation is identical for all baselines, not just its number of classes.
+- The translation-period subspace is identical for all baselines, since being a period is defined solely by fiber equalities. The rank of the minimal sufficient LINEAR encoder is identical.
+- The complete Boolean algebra of functions of the baseline operand vector is identical. Intersections of full algebras, or transitive closure of their fiber equivalences, give no extra capacity restriction.
+- The transpose statement holds for the query ingress vector on fixing data baselines. Pure output terms can contribute a data-only baseline value or query-only constant; the mixed part depends only on the two ingress vectors. Do not infer an additive lower bound on mixed gates from separate directional capacities.
+
+This explains the strict distinction between Sections 1-2 (transversal spaces are restricted products, not full algebras) and the exact operand information invariant. In the h=cd example each of eight baselines has exactly 8 distinct operand values and the same partition. With h=c and independent blocks, all 2^(3k) data vectors are distinguishable by the baseline operand map despite strict transversal intersection. Nonlinear coordinate changes can change polynomial span/degree; they cannot change fibers. Computing the semantic ingress vector may itself be difficult. No efficient classification of arbitrary circuits asserted.
+
+## 4. Application and remaining obstacle
+
+For the packed shared-witness SAT restriction F(H,S,Q), the previously proved rank R=1+(2^m-1)(2^ell-1) and degree m*ell are valid simultaneous requirements on the intersection of transversal spaces for all selected baselines, since an empty witness mask makes the baseline output constant. For any fixed candidate, failure of intersection dimension >=R, inclusion of the actual target response space, or max degree >=m*ell excludes the candidate. These are stronger tests than separate baseline tests. But we do not have a topology-independent upper bound on intersection dimension that grows slowly enough in t to give a superlinear lower bound. In particular shared-witness restriction itself has linear size. Do not infer a superlinear bound from the exponential separation, or add demands over independent candidate baselines. No new SAT grammar or Lean replay.
+
+Next direction: derive local invariants of the restricted product spaces under triangular transformations. Look for stable-gate subsets whose baseline changes force an intersection loss, while counting any pure-side precomputed nonlinear functions only once. Investigate whether the data/query ingress vector can be combined with earlier cut reconstruction and distinct-gate ledgers; first test with paired inner-product and programmable permutation negative controls. Formalize the earlier simple transversal theorem and triangular inverse before pursuing high-degree intersections. L-clb-036 remains open.
+
+## 5. Replay
+
+Run node multi_baseline_transversal_check.js (no dependencies). Checker body executed in JavaScript tool runtime, not a separate Node process. Seed 870030, 220 pseudorandom XOR-AND circuits plus two explicit controls: 222 circuits, 1038 baselines, 4323 pairwise intersections checked against the dimension identity and containment, 3446 triangular forward gate checks, 1038 individual span checks, 187420 exact pairwise fiber equality comparisons. Joint containment checked for every circuit. Six strict dimension improvements (including explicit controls), one strict degree improvement. Exact bitset truth tables for all small data and query assignments; intersection via tagged GF(2) elimination. All assertions passed. Explicit two-block control has 64 baselines; each operand image 64, individual dimension 36, joint 16, actual rank 7. A preliminary search encountered a dead-gate example; discarded in favor of the explicit live circuits above. No production code changed or upstream proof submitted.
+
+Checker commit: 4f98da1fade886b8cd12372fa67ae4803e9e6637.
