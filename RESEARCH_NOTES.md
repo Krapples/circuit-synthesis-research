@@ -10,6 +10,13 @@ For the cubic-graph case L-meta-5020, Lean checked that a false restriction at t
 designated two-reader input saves four gates or leaves one of two local reader
 patterns. An exclusive internal operand of the AND reader also yields a
 four-gate saving. [Reader analysis and proof scope](sat-search/results/cubic_gate_elimination_5020/README.md)
+[Submitted reduction](https://github.com/open-goat/pequalnp-proofs/pull/22538)
+
+For the 24-vertex bipartite graph in L-meta-9791, Lean checked a 54-gate
+witness, also evaluated on the complete monotone boundary. The two-star suffix of any nine-star
+fixed prefix needs at least nine further gates before the final OR.
+The unrestricted 53-gate budget remains open.
+[Projection, lower bound, and search records](sat-search/results/c4free_9791/README.md)
 
 For the eleven-vertex top-form graph in L-meta-4081, Lean checked the edge-charge inequality
 with at most four uncovered edges. It also checked that one mixing OR with support of size
