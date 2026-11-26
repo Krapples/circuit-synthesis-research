@@ -1,0 +1,9 @@
+r 8 d_union 6 d_readme 7
+r 12 d_union 7 d_readme 8
+r 16 d_union 7 d_readme 8
+r 20 d_union 8 d_readme 9
+r 24 d_union 8 d_readme 9
+r 28 d_union 8 d_readme 9
+r 32 d_union 8 d_readme 9
+union first power of two beating floor(17n/12)-4: 2^32
+readme first power of two beating floor(17n/12)-4: 2^35

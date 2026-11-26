@@ -21,3 +21,8 @@ open CircuitLemmas
 #print axioms CircuitLemmas.GateElim.card_le_degCount
 #print axioms CircuitLemmas.GateElim.excess_restriction
 #print axioms CircuitLemmas.GateElim.xnorConj_restriction_lower
+#print axioms CircuitLemmas.GateElim.three_step
+#print axioms CircuitLemmas.GateElim.potential_lower
+#print axioms CircuitLemmas.GateElim.potential_restriction_lower
+#print axioms CircuitLemmas.GateElim.block_product_lower
+#print axioms CircuitLemmas.GateElim.block_restriction_lower

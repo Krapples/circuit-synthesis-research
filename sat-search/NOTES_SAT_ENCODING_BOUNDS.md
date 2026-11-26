@@ -128,6 +128,8 @@ It does not use the external project's `Circuit`. Comparing the two models (item
 | `xnorConj_lower`, `xnorConj_std_lower` (XnorConj.lean) | Every circuit for the AND of `x_a == x_b` over `q` disjoint pairs has at least `4q - 1` gates. With pairs `(2j, 2j+1)` this is `C(F_q) >= 4q - 1` (claim 5). |
 | `card_le_degCount`, `excess_restriction` (Excess.lean) | If every input of `F` is essential for `f` and `f` with `F` fixed is nonconstant, then `C(f restricted) <= C(f) - |F|`. This is claim 6 in the form the SAT argument uses (`|F| = n - m`). |
 | `xnorConj_restriction_lower` (Composition.lean) | If fixing a set `F` of essential inputs leaves the XNOR conjunction of `q >= 1` disjoint pairs, then `C(f) >= |F| + 4q - 1`. With the six-bit fragments (`|F| = 4q + 6` at `n = 6q + 6`) this is the `8q + 5` step of claim 11, given the string identity and full support. |
+| `three_step`, `potential_lower`, `potential_restriction_lower` (Robust.lean) | Strong pair sensitivity on a set `S` (for distinct `u, v` in `S` and either value of `x_u`, `x_v` still matters) gives `C(f) >= 3 + C(f|x_z=c)` for some `z` in `S`. A potential that drops by at most one per such restriction then gives `C >= 3*mu`, or `C(f) >= |F| + 3*mu` after an essential restriction. |
+| `block_product_lower`, `block_restriction_lower` (BlockProduct.lean) | If `f` is the AND of `k` functions on disjoint blocks `V_j`, each `PS_d` (Strong on the free inputs under every partial assignment leaving at least `d >= 2` of them free) and each with `|V_j| >= d`, then `C(f) >= 3 * sum_j (|V_j| - d + 1)`, and `C(f) >= |F| + 3 * sum_j (|V_j| - d + 1)` when an essential restriction of `F` leaves that product. Non-vacuity check: parity on `r` inputs is `PS_2`, giving `3(r-1)`, which is tight. |
 
 **XNOR proof (audited 2026-11-26).** Strong induction on circuit size, then on `q`. A degenerate first
 gate, a first gate on an input outside the pairs, or a dead first gate gives a smaller circuit. Otherwise
@@ -152,7 +154,7 @@ and it is excluded only because the restriction is constant. **Finite check:**
 inputs with a nonconstant result, using the exact NPN sizes in `results/sat_gadget/npn4_exact_aig_all.json`:
 2,920,992 cases, 0 violations, 0 undecided (`logs/excess_restriction_check.out`).
 
-**Verification status.** `lake build` passes (18,264 jobs). `AxiomsCheck.lean` reports only `propext`,
+**Verification status.** `lake build` passes (18,268 jobs, with Robust.lean and BlockProduct.lean, 2026-11-26). `AxiomsCheck.lean` reports only `propext`,
 `Classical.choice` and `Quot.sound` for every theorem above. There is no `sorry` and no `native_decide`.
 The new files have no string literals, no `#` commands and no `set_option`. They do define their own types
 (the GateElim model), so external submission would need a model transfer and human review (below).
@@ -171,6 +173,9 @@ The new files have no string literals, no `#` commands and no `set_option`. They
   backed by exact-synthesis certificates that would need checkable proofs), the 11-state mixed-block
   certificate and the padding lemma. None is formalized. The weight theorem is the largest piece: its
   recursion uses the exact minima of 4-input cofactors, which would have to come from checked certificates.
+
+- the 2n-o(n) route (below): existence of a `PS_d` table by counting, the unit-clause helper identity,
+  and the explicit finite inequality. The gate-elimination part is `block_restriction_lower`.
 
 The claim-2/3 route (funnel lemma, absorbing elimination, canalizing replacement) is no longer needed for
 claim 5. The tails still need their own case analysis.
@@ -375,6 +380,82 @@ inequality they rely on is now `excess_restriction`):
 - an even-n full-support theorem replacing L037's 6q.
 
 Reproduce: `python -I sat-search/experiments/mixed_sat_bound.py`.
+
+## Robust identifier tests: B(SAT_n) >= 2n - O(n log log n / log n) (README(7), reviewed 2026-11-26)
+
+**Construction (README(7) section "robust identifier tests").** Take `g` on `r` inputs with the
+following robustness property: under every restriction that leaves `>= d` inputs free, the four cofactors
+on any free pair are distinct. Fixed negative unit clauses `U(2^r + a, false)` for the `h <= 2^r` zeros of
+`g` are followed by `q` positive unit clauses `U(2^r + x_j, true)` with `r` free identifier bits each. Each
+word is `L = 2r + 8` bits. The SAT value is then `AND_j g(x_j)`, and padding uses unit clauses of length
+6/8/10 on variables 0-2. Paper bound: `B(SAT_n) >= n - 1 + q(2r - 3d + 3)` with
+`q = floor(n/L) - 2^r - 1`.
+
+**Audit (paper, no gap found):**
+- Helper identity: a positive unit clause is inconsistent exactly when its identifier is forced false.
+  The words are legal for every free valuation.
+- Essentiality of the `qr` free bits: `g` is nonconstant and every other copy can be satisfied.
+- The union bound: it suffices to check exactly `d` free inputs.
+- The weight recursion.
+
+**Weight-free route (formally checked).** The README routes the per-copy cost through the additive-weight
+theorem, which is not formalized. That theorem is not needed. Robustness implies `PS_d`: two distinct
+cofactors on `x_v`, given `x_u = c`, mean `x_v` still matters. `block_restriction_lower` then gives
+`B(SAT_n) >= (n - qr) + 3q(r - d + 1) = n + q(2r - 3d + 3)` directly, which is one gate better than the
+README's form. Only the gate elimination is Lean-checked. The SAT-side premises are not (see the gaps list).
+
+**Weaker existence condition.** `PS_d` needs only `4 * C(d,2)` inequalities per `d`-dimensional
+subcube, not robustness's 6 per pair. The exact union bound `C(r,d) 2^(r-d) * 2d(d-1) * 2^(-2^(d-2)) < 1`
+gives a smaller `d`: for example `d = 7` at `r = 16` and `d = 8` at `r = 24`, against `d = 8, 9` from
+`ceil(log2(4r)) + 2`.
+
+**Finite threshold.** `experiments/ps_block_threshold.py` (`logs/ps_block_threshold.out`) maximizes the
+explicit bound over `r`. It first beats `floor(17n/12) - 4` at `n = 2^32` with the union-bound `d`, and at
+`2^35` with the README `d`. Below that, 17n/12 remains the best proved bound. The coefficient tends to 2
+only like `1 - O(log log n / log n)`.
+
+**Obstacles toward L-clb-036 (superlinear, `n^1.01`).**
+- README(7) gives a sorting-network circuit of size `O(n log^2 n)` for the whole unit-clause restriction,
+  with arbitrary signs. The restriction is therefore never superlinear-hard, and no lower bound on it can
+  exceed that. The argument was checked on paper, and the bundle replay reports 9,624 evaluations.
+- Bounded treewidth: with free disable bits and template treewidth `t`, SAT has circuits of size
+  `(2m + v) 2^t`. Families with `t <= 0.01 log2 n` are `O(n^1.01)`.
+- The joint residual cut `P_J <= 2^|C|` is sound, but superconcentrator topologies satisfy it, so it
+  only excludes specific structures.
+- The clique activation family embeds `CLIQUE_(V,k)` with length `Theta(V^2 log V)`. A lower bound
+  through it would need an unrestricted `Omega(V^(2.02+eps))` circuit bound for clique, which is open.
+- Golovnev et al. show that bounded-step gate elimination has linear barriers. Every result here is
+  linear: `2n - o(n)` is the limit of this restriction family.
+
+No route to L-clb-036 was found. The family-independent statement remains open, and no superlinear
+circuit lower bound is known for any explicit NP language.
+
+## Encoder-cost and semantic-sharing theorems (README(7) sections 1-4 and later, reviewed 2026-11-26)
+
+- **Exact common-encoder minimum (correct on paper).**
+  - Setting: `q` five-cycle side-information copies, encoder width `k`, `3q <= k <= 5q`.
+  - Slot count `g >= 2m - k - t`: an unexported independent source needs two readers.
+  - Capacity: `2^(k-t) * alpha_T >= 2^(m-t)`.
+  - The `C5` table `alpha_T^2 <= 2^(5-t)` was checked for every `t`, and the disjunctive-product
+    independence number is multiplicative.
+  - Together these give `t <= 2k - 5q` and `g >= 3(5q - k)`, with equality from adjacent-pair XORs plus a
+    raw bit.
+  - The bundle's 4,368 five-subset check is consistent with `alpha = 5`.
+  - The result concerns a fixed encoder interface only. It is not a SAT or whole-circuit bound.
+- **Joint residual cut:** sound (the cut values determine all terminals). In the bundle's sample it gives
+  only 2 extra exclusions out of 1,200, so it is **not implemented**: no demonstrated benefit.
+- **Boundary-sensitive sharing:**
+  - `G >= max_i(L_i + Q_i)`, because unary and merge gates are charged disjointly.
+  - `sum b_i + H <= K(G + m) - m`, counted over nonoutput wires.
+  - `2L + Q <= K(G + m) - m`.
+  - The paper derivations check, and the multiplexer `r = 3` row gives 11.
+  - The topology counts (paths, covers, components, forests) are audit tools without an end-to-end
+    benefit, so they are **not implemented**.
+- **Global sharing (Nechiporuk-style):**
+  - `M_i = r_i + e_i - 1` and `N_i <= 3^(2M_i + 1)` are standard.
+  - For list-disjointness the bound forces `Omega(m)` wide gates, but sorting circuits meet every
+    condition, so no superlinear bound follows.
+  - The formula bound `Omega(n^2/log n)` holds only in the formula model.
 
 ## Reproduction
 
