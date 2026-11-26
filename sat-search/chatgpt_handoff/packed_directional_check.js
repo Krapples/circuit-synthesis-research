@@ -88,7 +88,7 @@ function run(){
  }
  for(let [r,k] of [[1,1],[1,2],[1,3],[2,1],[2,2],[3,1]])for(let b=0;b<=k;b++)for(let o=0;o<2;o++)runProtocol(r,k,b,o);
  // Actual signed mux AIGs under directed vertex partitions.
- S.aig_cuts=0;S.aig_assignments=0;S.aig_rectangles=0;S.aig_forward_only=0;S.aig_max_gates=0;
+ S.aig_cuts=0;S.aig_port_cuts=0;S.aig_port_rectangles=0;S.aig_port_savings=0;S.aig_max_port_saving=0;S.aig_assignments=0;S.aig_rectangles=0;S.aig_forward_only=0;S.aig_max_gates=0;
  for(let [r,k] of [[1,1],[1,2],[1,3],[2,1],[2,2]]) {
   let M=2**k,d=r*M,n=d+r*k,E=[];
   function AND(a,b){let v=2*(n+E.length);E.push([a,b]);return v;}
@@ -103,9 +103,11 @@ function run(){
   let o=outputs.reduce((a,b)=>AND(a,b));S.aig_max_gates=Math.max(S.aig_max_gates,E.length);
   for(let trial=0;trial<18;trial++){
    let side=Array.from({length:n+E.length},(_,i)=>i<n?+(i>=d):trial===0?1:trial===1?0:rnd(2));
-   let A=0,B=0;
-   for(let j=0;j<E.length;j++)for(let l of E[j])if(side[l>>1]!==side[n+j]){if(side[l>>1]===0)A++;else B++;}
-   let groups=new Map(),positiveRows=0;
+   let A=0,B=0,ports=new Set();
+   for(let j=0;j<E.length;j++)for(let l of E[j])if(side[l>>1]!==side[n+j]){ports.add(l>>1);if(side[l>>1]===0)A++;else B++;}
+   let order=[...ports].sort((a,b)=>a-b),pa=order.filter(v=>side[v]===0).length,pb=order.length-pa,saving=A+B-pa-pb;
+   if(saving>0)S.aig_port_savings++;S.aig_max_port_saving=Math.max(S.aig_max_port_saving,saving);
+   let groups=new Map(),pgroups=new Map(),positiveRows=0;
    for(let h=0;h<2**d;h++){
     let accept=0,transcripts=new Set(),rich=true;
     for(let j=0;j<r;j++){let w=0;for(let i=0;i<M;i++)w+=(h>>>(j*M+i))&1;if(w<M/2)rich=false;}
@@ -120,6 +122,9 @@ function run(){
      if(!groups.has(T))groups.set(T,{R:new Set(),Q:new Set(),n:0,AR:new Set(),AQ:new Set(),an:0});
      let G=groups.get(T);G.R.add(h);G.Q.add(q);G.n++;
      if(want){G.AR.add(h);G.AQ.add(q);G.an++;accept++;transcripts.add(T);}
+     let PT=order.map(v=>V[v]).join('');ok(PT.length===pa+pb,'port schedule');
+     if(!pgroups.has(PT))pgroups.set(PT,{R:new Set(),Q:new Set(),n:0,AR:new Set(),AQ:new Set(),an:0});
+     let P=pgroups.get(PT);P.R.add(h);P.Q.add(q);P.n++;if(want){P.AR.add(h);P.AQ.add(q);P.an++;}
      S.aig_assignments++;
     }
     if(rich){ok(accept>=(M/2)**r&&transcripts.size<=2**B,"AIG richness row");positiveRows++;}
@@ -130,7 +135,10 @@ function run(){
    ok(A+B>=r*k,"AIG rank cut");
    if(side[o>>1]===1)ok(A*2**B>=r*Math.log2(2**M-1)-1e-9,"AIG strategy cut");
    if(!B&&side[o>>1]===1)S.aig_forward_only++;
-   S.aig_cuts++;
+   for(let G of pgroups.values()){ok(G.n===G.R.size*G.Q.size&&G.an===G.AR.size*G.AQ.size,'port rectangle');S.aig_port_rectangles+=2;}
+   ok(pa+pb+r>=r*M/(2*2**(pb/r)),'port richness');ok(pa+pb>=r*k,'port rank');
+   if(side[o>>1]===1)ok(pa*2**pb+1e-9>=Math.log2(1+(2**M-1)**r),'exact port strategy');
+   S.aig_port_cuts++;S.aig_cuts++;
   }
  }
  return S;
