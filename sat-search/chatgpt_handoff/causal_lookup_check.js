@@ -38,7 +38,7 @@ function run(){
  function perm(n){let p=Array.from({length:n},(_,i)=>i);for(let i=n-1;i>0;i--){let j=rnd(i+1);[p[i],p[j]]=[p[j],p[i]];}return p;}
  function want(H,X,E,pi,B,ell){return E.every((e,j)=>!e||H[pi.indexOf(j*B+Math.floor(X[j]/ell))*ell+X[j]%ell]);}
  function check(a,want){let F=parse(a.word);ok(JSON.stringify(F)===JSON.stringify(a.F),"parse");ok(unitProp(F)===want,"semantics");}
- let S={cases:0,sat:0,unsat:0,coordinate_checks:0,permutation_layout_checks:0,individual_data_retrievals:0,distinct_residuals:0,residual_entries:0,max_word:0,max_data_bits:0};
+ let S={cases:0,sat:0,unsat:0,coordinate_checks:0,permutation_layout_checks:0,individual_data_retrievals:0,distinct_residuals:0,residual_entries:0,max_word:0,max_data_bits:0,one_active_group_retrievals:0,one_group_residuals:0,one_group_residual_entries:0};
  for(let k=1;k<=6;k++)for(let r of [1,2,4])for(let t=0;t<4;t++){
   let M=2**k,ell=2**Math.floor(Math.log2(Math.max(1,Math.floor(k/2)))),B=M/ell,H=Array.from({length:r*M},()=>rnd(2)),X=Array.from({length:r},()=>rnd(M)),E=Array.from({length:r},()=>rnd(2)),pi=perm(r*B);
   if(t===0)E.fill(0);if(t===1){E.fill(1);H[pi.indexOf(Math.floor(X[0]/ell))*ell+X[0]%ell]=0;}
@@ -55,6 +55,18 @@ function run(){
    let logical=pi[Math.floor(i/ell)],j=Math.floor(logical/B),x=X.slice(),e=E.map(()=>0);x[j]=(logical%B)*ell+i%ell;e[j]=1;
    let c=packed(k,r,H,x,e,pi);check(c,!!H[i]);S.individual_data_retrievals++;
   }
+  // Same fixed active group, only its low address and programmable metadata vary.
+  let x0=Array(r).fill(0),e0=Array(r).fill(0);e0[0]=1;
+  let base=packed(k,r,H,x0,e0,pi);
+  for(let i of [0,r*M-1,rnd(r*M)]){
+   let p=pi.slice(),j=Math.floor(i/ell),z=p.indexOf(0);[p[j],p[z]]=[p[z],p[j]];
+   let x=x0.slice();x[0]=i%ell;let c=packed(k,r,H,x,e0,p);
+   check(c,!!H[i]);
+   ok(c.data.every((v,j)=>base.word[v]===c.word[v]&&c.word[v]===H[j]),"data fixed");
+   ok(c.enable.every(v=>base.word[v]===c.word[v]),"enable fixed");
+   ok(c.query.every((v,j)=>j<Math.log2(ell)||base.word[v]===c.word[v]),"only active low query changes");
+   S.one_active_group_retrievals++;
+  }
   S.cases++;S.max_word=Math.max(S.max_word,a.word.length);S.max_data_bits=Math.max(S.max_data_bits,H.length);
  }
  for(let [k,r] of [[1,2],[2,2],[1,3]]){
@@ -66,6 +78,15 @@ function run(){
     let a=packed(k,r,H,X,E,pi),v=unitProp(parse(a.word));ok(v===!!H[i],"exact residual");sig+=+v;S.residual_entries++;
    }res.add(sig);
   }ok(res.size===2**N,"injective all data");S.distinct_residuals+=res.size;
+  let res0=new Set();
+  for(let h=0;h<2**N;h++){
+   let H=Array.from({length:N},(_,i)=>h>>i&1),sig="";
+   for(let i=0;i<N;i++){
+    let p=pi.slice(),j=Math.floor(i/ell),z=p.indexOf(0);[p[j],p[z]]=[p[z],p[j]];
+    let X=Array(r).fill(0),E=Array(r).fill(0);X[0]=i%ell;E[0]=1;
+    let a=packed(k,r,H,X,E,p),v=unitProp(parse(a.word));ok(v===!!H[i],"one-group joint residual");sig+=+v;S.one_group_residual_entries++;
+   }res0.add(sig);
+  }ok(res0.size===2**N,"one-group joint injection");S.one_group_residuals+=res0.size;
  }
  return S;
 }
