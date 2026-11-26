@@ -1,0 +1,846 @@
+{
+ "schema": "research-batch/1",
+ "decision": "Certify the remaining 21 first-gate shards of the nine-gate core with checked DRUP proofs.",
+ "jobs": [
+  {
+   "id": "l16102-core9-shard-01",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-01",
+    "--job",
+    "1",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 1 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-02",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-02",
+    "--job",
+    "2",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 2 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-03",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-03",
+    "--job",
+    "3",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 3 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-04",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-04",
+    "--job",
+    "4",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 4 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-05",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-05",
+    "--job",
+    "5",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 5 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-06",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-06",
+    "--job",
+    "6",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 6 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-07",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-07",
+    "--job",
+    "7",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 7 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-08",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-08",
+    "--job",
+    "8",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 8 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-09",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-09",
+    "--job",
+    "9",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 9 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-10",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-10",
+    "--job",
+    "10",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 10 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-11",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-11",
+    "--job",
+    "11",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 11 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-12",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-12",
+    "--job",
+    "12",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 12 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-13",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-13",
+    "--job",
+    "13",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 13 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-14",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-14",
+    "--job",
+    "14",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 14 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-15",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-15",
+    "--job",
+    "15",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 15 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-16",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-16",
+    "--job",
+    "16",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 16 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-17",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-17",
+    "--job",
+    "17",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 17 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-18",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-18",
+    "--job",
+    "18",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 18 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-19",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-19",
+    "--job",
+    "19",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 19 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-20",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-20",
+    "--job",
+    "20",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 20 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  },
+  {
+   "id": "l16102-core9-shard-21",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-21",
+    "--job",
+    "21",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 21 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  }
+ ]
+}

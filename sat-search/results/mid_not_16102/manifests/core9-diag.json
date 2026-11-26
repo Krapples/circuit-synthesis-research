@@ -1,0 +1,46 @@
+{
+ "schema": "research-batch/1",
+ "decision": "Measure glucose4 solve time, DRUP size and drat-trim time on one shard before launching the rest.",
+ "jobs": [
+  {
+   "id": "l16102-core9-shard-00",
+   "kind": "command",
+   "cwd": "sat-search/results/mid_not_16102",
+   "argv": [
+    "python",
+    "-B",
+    "certify-nine-gate.py",
+    "--out",
+    "../../logs/16102-proof-shards/job-00",
+    "--job",
+    "0",
+    "--solver",
+    "glucose4",
+    "--timeout",
+    "300",
+    "--check-timeout",
+    "1500",
+    "--proof-checker",
+    "../../../external/drat-trim/drat-trim.exe"
+   ],
+   "query": {
+    "target": "L-meta-16102 table 18445899635892944896",
+    "basis": "AND/OR/NOT fan-in<=2 (posted syntax)",
+    "scope": "nine-gate core: 8 binary AND/OR + 1 internal non-output NOT, bypass paths; first-gate representative 0 of 22",
+    "premise": "two_fork_handoff.md paper reduction"
+   },
+   "cache": true,
+   "inputs": [
+    "sat-search/results/mid_not_16102/certify-nine-gate.py",
+    "sat-search/results/mid_not_16102/search-16102-full.py",
+    "sat-search/cube_search.py"
+   ],
+   "workers": 1,
+   "memory_mib": 4096,
+   "timeout": {
+    "initial": 2100,
+    "maximum": 4200
+   }
+  }
+ ]
+}

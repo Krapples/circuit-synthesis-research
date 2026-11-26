@@ -95,3 +95,7 @@ The runner supports repeated `--job 0` through `--job 21` in separate fresh outp
 ## Optional additional pruning (2026-11-26)
 
 [Proof and cofactor reader bounds](cofactor_reader_handoff.md), [checker](cofactor_reader_check.js), [replay](cofactor_reader_replay.json). Exact zero/one-fork classifier on 728 nonempty restrictions. Four primary reader caps 2, other two 3; five pair-union caps 3. Single-NOT monotone replacement theorem excludes five raw-pair operands and gives two boundary witness clauses for every NOT operand. Paper proofs and finite replay, not Lean checked; not integrated into the 22-shard runner. Use only with audited/formalized reduction. No upstream closure.
+
+## Certified nine-gate core (2026-11-26)
+
+All 22 first-gate shards of the nine-gate core are UNSAT, each with a DRUP proof checked by drat-trim (one also through LRAT and lrat-check). The run took 4.06M conflicts in total, with the longest solve at 21.7 s. The paper reduction was independently audited and no gap was found. The posted statement is existential, so this evidence refutes it. It has no refute twin and is off the desk board, so no upstream PR was opened. Scope, blockers and the Mission 5 comparison are in [core9_certificate_audit.md](core9_certificate_audit.md), with per-shard hashes in [core9_certificates.json](core9_certificates.json).

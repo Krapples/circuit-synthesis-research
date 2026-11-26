@@ -1,0 +1,651 @@
+{
+ "target": "L-meta-16102, little-endian table 18445899635892944896",
+ "scope": "nine-gate core after the two_fork_handoff.md reduction: exactly 8 proper binary AND/OR gates with distinct operands, one internal non-output NOT with first operand a prior gate and no second operand, posted reader/no-NOT-on-NOT/internal-NOT syntax, every primary has a NOT-avoiding path to output; all 22 first-gate representatives under the input automorphism group {id,(1 2)}",
+ "premise": "two_fork_handoff.md paper reduction (independently audited 2026-11-26, no gap found; not Lean checked)",
+ "grade": "CNF UNSAT independently checked per shard by drat-trim (DRUP); not a Lean encoding-soundness theorem",
+ "date": "2026-11-26",
+ "solver": "glucose4 via python-sat 1.9.dev25, 300 s cap (none reached)",
+ "checker": {
+  "tool": "drat-trim (marijnheule/drat-trim 2e3b2dc0ecf938addbd779d42877b6ed69d9a985, MSVC build, sys/time.h shim)",
+  "exe_sha256": "98a2eea37d92e8bf693fd9be14df39f7f97287ce67d2b49ac719f800000d4e1c",
+  "lrat_cross_check": {
+   "shard": 9,
+   "drat_trim_lrat": "s VERIFIED",
+   "lrat_check": "c VERIFIED",
+   "lrat_sha256": "2f7cf7192f890851c7011ac4a4b596af3afb84724cd138c1a322ddf8183a884b"
+  }
+ },
+ "runner_sha256": "cd6225b16fc39035768113781109901771919b58b79c260857beae6630ebdb67",
+ "archive_sha256": "db7b6c889a7b9c25d44ed5bf0a0b9aadd75bedd115602b56a4e2018731c61cb0",
+ "workflow_batches": [
+  ".research/batches/1795735486925822000-39152 (shard 0)",
+  ".research/batches/1795735571742473100-1924 (shards 1-21, 11 workers, 110 s wall)"
+ ],
+ "totals": {
+  "shards": 22,
+  "unsat": 22,
+  "verified": 22,
+  "max_solve_s": 21.651,
+  "conflicts": 4057882,
+  "proof_bytes": 792059075
+ },
+ "raw_location": "sat-search/logs/16102-proof-shards/job-XX (CNF, DRUP, verifier logs; not committed, 0.79 GB)",
+ "shards": [
+  {
+   "job": 0,
+   "first": [
+    0,
+    [
+     0,
+     1
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "8a454dba31f40091d8a4ee542df6755fc7a3e9cefc451eff2a2138e35c103143",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 15.799,
+   "solver_stats": {
+    "restarts": 499,
+    "conflicts": 334497,
+    "decisions": 410846,
+    "propagations": 95012652
+   },
+   "proof_sha256": "f8efaae76709ff354e7995fd5cdb4606e1badf4976e0256b1ceb7c416c49d8d6",
+   "proof_bytes": 68045907,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "b4e45e3eabe26896e98bf11db1615e5b6f39280581939770a7a76452e10303ab",
+   "independently_verified": true
+  },
+  {
+   "job": 1,
+   "first": [
+    0,
+    [
+     0,
+     3
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "e1bb81ff7857b75a2837a91f00ff57c8b541a21f6e5f4494920fdf5845903d27",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 9.987,
+   "solver_stats": {
+    "restarts": 339,
+    "conflicts": 199273,
+    "decisions": 254080,
+    "propagations": 48296567
+   },
+   "proof_sha256": "f1a940b92e72fcc018d2ae22f377463e9cb74e66a503ca75492a8ac106b20c1b",
+   "proof_bytes": 38819900,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "8a97547131d5b38cf9712ec3309d121b7b06cefa2527423bca95aad28fc0a0f1",
+   "independently_verified": true
+  },
+  {
+   "job": 2,
+   "first": [
+    0,
+    [
+     0,
+     4
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "b3ca7fd580889d4d4f8db54ef61921f1b409532cbedc5b6e78dbc01fbb9ed019",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 15.249,
+   "solver_stats": {
+    "restarts": 371,
+    "conflicts": 245921,
+    "decisions": 302991,
+    "propagations": 69226880
+   },
+   "proof_sha256": "0d54296364177b314dba3d3023066bab5d5995f1ed84d82c874d68d7e2a539ce",
+   "proof_bytes": 49598552,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "7d3c3b0fa3585d82faa0835fb17e2215f1f047a5da842dbb8a305d9fb19c1050",
+   "independently_verified": true
+  },
+  {
+   "job": 3,
+   "first": [
+    0,
+    [
+     0,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "cd172150985812a7c5afcf5a9cb9aae89fd7cc65a96ca356f2d8b4b1609b5b30",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 3.483,
+   "solver_stats": {
+    "restarts": 138,
+    "conflicts": 88810,
+    "decisions": 115554,
+    "propagations": 22465506
+   },
+   "proof_sha256": "5ae1a4333ae9b9cdae2fe94178e7c7589c7929e74edbffa733d8b3e09069610b",
+   "proof_bytes": 16411039,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "63a18fc8ffff86ace6f1fa638c0514c16b708c85a9ab63d5669fada6118e293d",
+   "independently_verified": true
+  },
+  {
+   "job": 4,
+   "first": [
+    0,
+    [
+     1,
+     2
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "a63bcb1abd682e07d4ea11f41669b2c2b68355156dd15ff6afc1ab89711f506f",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 18.769,
+   "solver_stats": {
+    "restarts": 427,
+    "conflicts": 293148,
+    "decisions": 357427,
+    "propagations": 79365613
+   },
+   "proof_sha256": "8795d75232f552149ac18f6f92a7dddd739c59a62953b718ae89e50e7f96d11c",
+   "proof_bytes": 58544674,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "5d77f2784648daa4d50c853d71ef94606701b8637c9737ff5166efe3e5799e69",
+   "independently_verified": true
+  },
+  {
+   "job": 5,
+   "first": [
+    0,
+    [
+     1,
+     3
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "d2d1e29c8cea6fb9150eb7d4cd8f47129d2e74d19d376dc4a29961affe0911c4",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 13.315,
+   "solver_stats": {
+    "restarts": 308,
+    "conflicts": 241319,
+    "decisions": 296156,
+    "propagations": 60110951
+   },
+   "proof_sha256": "4d2739322dff7bf14817da3c00badb5ad93220504d395e10685d46a8f5a51d42",
+   "proof_bytes": 46684838,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "e0909e7b7923c786a596af0c0cb0d70bba8d95c677a891470056354733042e25",
+   "independently_verified": true
+  },
+  {
+   "job": 6,
+   "first": [
+    0,
+    [
+     1,
+     4
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "9c4e0b29c9c3a1be875769d546db955dc7d7d7d75dd6dcb44bd18ee5b53d1e4f",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 6.593,
+   "solver_stats": {
+    "restarts": 178,
+    "conflicts": 130523,
+    "decisions": 169223,
+    "propagations": 33555046
+   },
+   "proof_sha256": "cae7af1e3b3bb17dfe2de1481383d9df9fed8c2f656e4269ac48a98140adc162",
+   "proof_bytes": 25966523,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "5dd6ab495e530185d511a703707e1e1eaa35a858674dc7ea2d433fb98390d6fd",
+   "independently_verified": true
+  },
+  {
+   "job": 7,
+   "first": [
+    0,
+    [
+     1,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "854c1e61980adbcc97e87647229c9a779a7cf6eaf3a2848205ac77fd39c20fe4",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 7.387,
+   "solver_stats": {
+    "restarts": 279,
+    "conflicts": 155604,
+    "decisions": 191277,
+    "propagations": 42576881
+   },
+   "proof_sha256": "8abde23df9961273c54563fc17f7b8ed1f9e9743a49c2038a603c3d733a74d20",
+   "proof_bytes": 28878755,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "d2564885c7d7600da1100e090f788912ed93fd50a5f4c756f84ff12c54906d0f",
+   "independently_verified": true
+  },
+  {
+   "job": 8,
+   "first": [
+    0,
+    [
+     3,
+     4
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "35291f9243a2c0b8bb348a9bac40a0901c147c1e02ee2c229318f6eb7ac35b47",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 5.457,
+   "solver_stats": {
+    "restarts": 152,
+    "conflicts": 129078,
+    "decisions": 163409,
+    "propagations": 29657923
+   },
+   "proof_sha256": "44ff10e3f680ec342299fb1b86b575b2a6ded7de5464c01c8c7d5dfae81eb9b2",
+   "proof_bytes": 24220596,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "df639e7cfca413dba905c802c92af1bede767cfe8aa278aa29cf3a6817932a8d",
+   "independently_verified": true
+  },
+  {
+   "job": 9,
+   "first": [
+    0,
+    [
+     3,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "b0a9bc784306900aeb0df503966d8a749b96e58eb7c86a019dbba7ea227379b2",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 2.372,
+   "solver_stats": {
+    "restarts": 119,
+    "conflicts": 67947,
+    "decisions": 90438,
+    "propagations": 17426661
+   },
+   "proof_sha256": "547e4586631c1700ca904ea3f870fc077db4b33af424d18bcb9574b383658257",
+   "proof_bytes": 11578741,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "535fd5e056b05c8a906a9f65ec5b341cd7b6577a5f08e75a07a5de52399b2724",
+   "independently_verified": true
+  },
+  {
+   "job": 10,
+   "first": [
+    0,
+    [
+     4,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "c6b669bd3016c8c294fa68d6b3b5b56b1f855510a8d640dcf5117b67d5d7159c",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 2.422,
+   "solver_stats": {
+    "restarts": 70,
+    "conflicts": 72252,
+    "decisions": 95934,
+    "propagations": 18528672
+   },
+   "proof_sha256": "8b3ce98139a789aaefed9b52f89bd09d5ef24804068d18d6d1414074ebcab384",
+   "proof_bytes": 13145286,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "9d597b2c4aba1a8595b6f4b6fbc2298e0bc123972da8bc151f123010c36ace4f",
+   "independently_verified": true
+  },
+  {
+   "job": 11,
+   "first": [
+    1,
+    [
+     0,
+     1
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "11ce493a744b42d8fd84be93e52adbbf2a286520939799e34e7e76f7473d8e16",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 12.184,
+   "solver_stats": {
+    "restarts": 618,
+    "conflicts": 233256,
+    "decisions": 301989,
+    "propagations": 57075156
+   },
+   "proof_sha256": "d91272429922ef492053515bc1301f4de9174f5d12779b82e85f7a9d6c144435",
+   "proof_bytes": 51557544,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "6654f6bbef5872305a0cf649d84caee3b0a1ae895baa142a7f82025faab62c89",
+   "independently_verified": true
+  },
+  {
+   "job": 12,
+   "first": [
+    1,
+    [
+     0,
+     3
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "de99330e79290c82105b28c344e50cfe16b4a051bb85b7fc421d86a7fbef3dec",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 21.651,
+   "solver_stats": {
+    "restarts": 773,
+    "conflicts": 347092,
+    "decisions": 428510,
+    "propagations": 94948427
+   },
+   "proof_sha256": "e8f031e5307bae3d5b9600583aa3818832f076450ad0ea2e26910826e8889f29",
+   "proof_bytes": 70962082,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "2a47502f0941921a1a5dfa08e64dca4d3edc02399e0eefeec5be037d42650c8a",
+   "independently_verified": true
+  },
+  {
+   "job": 13,
+   "first": [
+    1,
+    [
+     0,
+     4
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "1a0c090ac191897563b31dc6f47480229fc9afa7a768f8f9e270ca23d1fcc905",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 5.506,
+   "solver_stats": {
+    "restarts": 195,
+    "conflicts": 128820,
+    "decisions": 163505,
+    "propagations": 32307625
+   },
+   "proof_sha256": "8b8153f87fcf9a0acde0397a731ad25dd91e49fdecf9c2f26d70d85b85e1a537",
+   "proof_bytes": 24206306,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "4b5fa681b6e42dbafbc2432ff284f5a253580fca4ea62e2d12ac646fefcf1bf4",
+   "independently_verified": true
+  },
+  {
+   "job": 14,
+   "first": [
+    1,
+    [
+     0,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "f5567f0278b43d2f344fce33c453cea24a15a38020cb286a026c7efe23ef4acf",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 9.473,
+   "solver_stats": {
+    "restarts": 419,
+    "conflicts": 190679,
+    "decisions": 233283,
+    "propagations": 53483213
+   },
+   "proof_sha256": "8e0681a2c78c1c872de8be91157b870976a998f689fa70d74e5708fe56cb7e50",
+   "proof_bytes": 33561063,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "1e09a60ea4cfaffc467cef0941a75d42beb60307a129c76d51e77dc04c92b50d",
+   "independently_verified": true
+  },
+  {
+   "job": 15,
+   "first": [
+    1,
+    [
+     1,
+     2
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "3fea52dffbd1e6d4c8885fb6f589ef2128590d9ec26a01a160cf671ef51db23f",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 12.725,
+   "solver_stats": {
+    "restarts": 411,
+    "conflicts": 244203,
+    "decisions": 307307,
+    "propagations": 58186615
+   },
+   "proof_sha256": "085441e6fd6bdd5a0b0a7186b2945fddfb2c29bcc9ae6b85ae03ca14248834a4",
+   "proof_bytes": 49847414,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "56fee1ae59b6e6ad3785c60f767fdbb7cfde70aad16f43610702426e25699b61",
+   "independently_verified": true
+  },
+  {
+   "job": 16,
+   "first": [
+    1,
+    [
+     1,
+     3
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "58f6a14883fd68bbf415fd9e3d69af73feb28feffd4b414934151b5a83cecad3",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 17.452,
+   "solver_stats": {
+    "restarts": 563,
+    "conflicts": 307161,
+    "decisions": 374654,
+    "propagations": 80469450
+   },
+   "proof_sha256": "c4fae60d7d540e0c171a7ed4745d61f33578ffbef46972822782f6b0caf2182d",
+   "proof_bytes": 59654294,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "15b0abf96b04edd7b99b81beb48c7bde2fc15bb6eea5ef3245879554b8acc0fd",
+   "independently_verified": true
+  },
+  {
+   "job": 17,
+   "first": [
+    1,
+    [
+     1,
+     4
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "031fe220d37b31bd29c2cf3247b132728ffb9ab705c9be3f5d354909da029789",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 7.268,
+   "solver_stats": {
+    "restarts": 287,
+    "conflicts": 160926,
+    "decisions": 207200,
+    "propagations": 40744336
+   },
+   "proof_sha256": "eef6a2044dfa9da647588cf4b132e5a806986ec5d887121b446fcc6f68187155",
+   "proof_bytes": 32470734,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "ad472e6dd378de75e50c94763ae3b5cefd0c899d51117ffdaa89cee43aa7dc81",
+   "independently_verified": true
+  },
+  {
+   "job": 18,
+   "first": [
+    1,
+    [
+     1,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "e639d009b77bc6df7ef043d3bff403d6bf9db06064b24f876615f4c169e0d1df",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 3.174,
+   "solver_stats": {
+    "restarts": 153,
+    "conflicts": 85165,
+    "decisions": 112246,
+    "propagations": 20599154
+   },
+   "proof_sha256": "ebd8cd22b56e4e96a108d7a75836e2642e75ed45d7124b01a6cda35efce4ccab",
+   "proof_bytes": 14186139,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "69b4c56ed52ea94765919e63aa132fcc3a9913fbcb0103fdf4f462dffc65c1ea",
+   "independently_verified": true
+  },
+  {
+   "job": 19,
+   "first": [
+    1,
+    [
+     3,
+     4
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "e007029a08548b82ed34630c1e6578e64645549eb6b3f1618ca55c1182c17296",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 7.726,
+   "solver_stats": {
+    "restarts": 306,
+    "conflicts": 157979,
+    "decisions": 199640,
+    "propagations": 40533899
+   },
+   "proof_sha256": "1f4502160cbcf524cca0e619f02bffb3cf9b81c2bef0489c644703fdeb093737",
+   "proof_bytes": 29769884,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "9fe7103ec85bd599a8a44648054d8bda17f548650a27e182c9238fcc1d4b9578",
+   "independently_verified": true
+  },
+  {
+   "job": 20,
+   "first": [
+    1,
+    [
+     3,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "368355edd25ff5bab33a11ef313b9e7df1c78ea73d93a956879c6773b288965f",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 2.851,
+   "solver_stats": {
+    "restarts": 142,
+    "conflicts": 76026,
+    "decisions": 102693,
+    "propagations": 18615688
+   },
+   "proof_sha256": "06f51f9ff036f4b686526924ce9010d064690dbf49b13b1634bdc565d7645a76",
+   "proof_bytes": 13085265,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "033aee816e265291f65ae774ec887271a380948ebef9604216461d68e531e0af",
+   "independently_verified": true
+  },
+  {
+   "job": 21,
+   "first": [
+    1,
+    [
+     4,
+     5
+    ]
+   ],
+   "variables": 2927,
+   "clauses": 34000,
+   "cnf_sha256": "593f02f214daee917a1eae3a92dd05417fa4c998af2f81f0ec2ac9bc781c691a",
+   "solver": "glucose4",
+   "encoding": "archived direct syntax + eight-binary reduction",
+   "result": "UNSAT",
+   "elapsed_s": 8.287,
+   "solver_stats": {
+    "restarts": 414,
+    "conflicts": 168203,
+    "decisions": 209674,
+    "propagations": 43697565
+   },
+   "proof_sha256": "d6938de7c6d277d24940124c68d65f224658f59bb34b80673158f5ee228859e8",
+   "proof_bytes": 30863539,
+   "verifier_returncode": 0,
+   "verifier_log_sha256": "10775cca643ef48e159a07a9496322f34ff6bb8a4b9331f826433f92cf4529d0",
+   "independently_verified": true
+  }
+ ]
+}

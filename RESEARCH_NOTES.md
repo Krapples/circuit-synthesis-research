@@ -64,6 +64,7 @@ The unrestricted budget of 61 remains open. [Witness, proof scope, and SAT recor
 For the six-input table in L-meta-16102, Lean checked an eight-gate monotone construction.
 Two synthesis encodings exclude the requested nine-gate circuit with a NOT reading a gate.
 The exclusion is computational evidence. [Exact syntax, coverage, and replay](sat-search/results/mid_not_16102/README.md)
+Update (2026-11-26): a paper reduction (audited, not Lean checked) shows at least 8 binary gates are needed even with free NOTs. It leaves only the nine-gate excess-3 core, and all 22 first-gate shards of that core have drat-trim-checked DRUP UNSAT proofs. The posted statement is existential and, on this evidence, false. It has no refute twin and is no longer on the desk board, so no upstream PR is possible. [Audit and certificates](sat-search/results/mid_not_16102/core9_certificate_audit.md)
 
 For the Fano incidence function in L-meta-4874, Lean checked a 28-gate circuit with
 the required final AND and singleton constraints. A 28-gate lower bound applies to a
