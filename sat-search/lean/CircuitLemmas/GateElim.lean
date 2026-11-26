@@ -21,6 +21,9 @@ Proved here:
   the circuit (`Lit`), so fixing `z := b` gives `|C| - #readers(z) ≥ M(f|_{z=b}, H)` for every set `H` of
   `z`-independent functions computed in `C` (multi-output cost with free phases, `RealizesWith`). This is
   the soundness of the forward conditional restriction counters (singleton and full-mask forms).
+* `cascade_restriction`, `conditional_counter_cascade`: the same with the full cascade count, i.e. every
+  gate with an operand that is constant under `z := b` (readers of `z`, then readers of gates the restriction
+  forces constant, and so on) is deleted; `readers_le_cascade` shows this contains the first level.
 
 The other foundations of the six-bit SAT bound (three-gate absorbing elimination, excess monotonicity,
 `C(F_q) = 4q - 1`, the string identities) are not formalized yet.
@@ -641,5 +644,124 @@ theorem literal_extension {n s z : ℕ} (hz : z < n) (g : (ℕ → Bool) → Boo
       simp only [hindep, hx1, upd_same, Bool.and_true, Bool.and_false] at e1 e0
       rw [e1] at e0
       exact absurd e0 (by decide)
+
+/-! ## Cascaded constant deletions -/
+
+/-- Wire `w` of `rgs` is constant once input `z` is fixed to `b`. Input `z` is such a wire, and so is every
+gate whose value the restriction forces. -/
+def ConstUnder (n z : ℕ) (b : Bool) (rgs : List Gate) (w : ℕ) : Prop :=
+  ∃ c, ∀ x, val n (upd x z b) rgs w = c
+
+/-- The operand reads a wire that is constant under `z := b`. -/
+def Ref.ReadsConst (n z : ℕ) (b : Bool) (rgs : List Gate) : Ref → Prop
+  | .const _ => False
+  | .wire w _ => ConstUnder n z b rgs w
+
+open Classical in
+/-- Gates (latest first) with an operand that is constant under `z := b`: the readers of `z` and, in
+cascade, the readers of gates that the restriction forces constant. -/
+noncomputable def cascade (n z : ℕ) (b : Bool) : List Gate → ℕ
+  | [] => 0
+  | g :: rgs => (if g.a.ReadsConst n z b rgs ∨ g.b.ReadsConst n z b rgs then 1 else 0) + cascade n z b rgs
+
+theorem restrict_gate_eval (n z : ℕ) (b : Bool) (hz : z < n) (x : ℕ → Bool) (rgs : List Gate) (g : Gate) :
+    (g.restrict z b).eval (val n x (rgs.map (Gate.restrict z b))) = g.eval (val n (upd x z b) rgs) := by
+  simp only [Gate.eval, Gate.restrict]
+  rw [restrict_ref n x z b hz rgs (restrict_val n x z b hz rgs) g.a,
+    restrict_ref n x z b hz rgs (restrict_val n x z b hz rgs) g.b]
+
+/-- A gate with an operand that is constant under the restriction becomes a literal. -/
+theorem degenerate_of_readsConst (n z : ℕ) (b : Bool) (hz : z < n) (rgs : List Gate) (g : Gate)
+    (h : g.a.ReadsConst n z b rgs ∨ g.b.ReadsConst n z b rgs) :
+    Degenerate n (g.restrict z b) (rgs.map (Gate.restrict z b)) := by
+  have hR := fun x => restrict_ref n x z b hz rgs (restrict_val n x z b hz rgs)
+  obtain ⟨a, bb⟩ := g
+  rcases h with ha | hb
+  · cases a with
+    | const c => simp [Ref.ReadsConst] at ha
+    | wire w neg =>
+        obtain ⟨c, hc⟩ := ha
+        refine ⟨if Bool.xor c neg then bb.restrict z b else .const false, fun x => ?_⟩
+        rw [restrict_gate_eval n z b hz x rgs]
+        cases hcn : Bool.xor c neg
+        · simp [Gate.eval, Ref.eval, hc, hcn]
+        · simp only [hcn, ↓reduceIte]
+          rw [hR x bb]
+          simp [Gate.eval, Ref.eval, hc, hcn]
+  · cases bb with
+    | const c => simp [Ref.ReadsConst] at hb
+    | wire w neg =>
+        obtain ⟨c, hc⟩ := hb
+        refine ⟨if Bool.xor c neg then a.restrict z b else .const false, fun x => ?_⟩
+        rw [restrict_gate_eval n z b hz x rgs]
+        cases hcn : Bool.xor c neg
+        · simp [Gate.eval, Ref.eval, hc, hcn]
+        · simp only [hcn, ↓reduceIte]
+          rw [hR x a]
+          simp [Gate.eval, Ref.eval, hc, hcn]
+
+theorem degCount_cascade (n z : ℕ) (b : Bool) (hz : z < n) :
+    ∀ rgs : List Gate, cascade n z b rgs ≤ degCount n (rgs.map (Gate.restrict z b))
+  | [] => by simp [cascade, degCount]
+  | g :: rgs => by
+      have ih := degCount_cascade n z b hz rgs
+      by_cases hr : g.a.ReadsConst n z b rgs ∨ g.b.ReadsConst n z b rgs
+      · have hd := degenerate_of_readsConst n z b hz rgs g hr
+        simp only [cascade, if_pos hr, List.map_cons, degCount, if_pos hd]
+        omega
+      · simp only [cascade, if_neg hr, List.map_cons, degCount]
+        split_ifs <;> omega
+
+/-- The cascade count contains every reader of `z`. -/
+theorem readers_le_cascade (n z : ℕ) (b : Bool) (hz : z < n) :
+    ∀ rgs : List Gate, readers z rgs ≤ cascade n z b rgs
+  | [] => by simp [readers, cascade]
+  | g :: rgs => by
+      have ih := readers_le_cascade n z b hz rgs
+      have key : ∀ r : Ref, r.Reads z → r.ReadsConst n z b rgs := by
+        intro r hr
+        cases r with
+        | const c => simp [Ref.Reads] at hr
+        | wire w neg =>
+            simp only [Ref.Reads] at hr; subst hr
+            exact ⟨b, fun x => by rw [val_input n _ rgs w hz, upd_same]⟩
+      by_cases hr : g.a.Reads z ∨ g.b.Reads z
+      · have hc : g.a.ReadsConst n z b rgs ∨ g.b.ReadsConst n z b rgs := hr.imp (key _) (key _)
+        simp only [readers, List.filter_cons, hr, decide_true, if_true, List.length_cons] at ih ⊢
+        simp only [cascade, if_pos hc]
+        omega
+      · simp only [readers, List.filter_cons, hr, decide_false] at ih ⊢
+        simp only [cascade]
+        split_ifs <;> simp only [Bool.false_eq_true] at * <;> omega
+
+/-- **Cascaded constant deletions.** Fixing `z := b` deletes every gate with an operand that is constant under
+the restriction: the readers of `z`, the readers of gates that the restriction forces constant, and so on.
+Every function computed inside the circuit survives, restricted. This is the full cascade count `D` of the
+conditional restriction counters; `conditional_restriction` is the first level. -/
+theorem cascade_restriction (C : Circuit) (z : ℕ) (b : Bool) (hz : z < C.n) :
+    ∃ C' : Circuit, C'.n = C.n ∧ C'.size + cascade C.n z b C.rgates ≤ C.size ∧
+      (∀ x, C'.eval x = C.eval (upd x z b)) ∧
+      ∀ h, Lit C.n C.rgates h → Lit C.n C'.rgates (fun x => h (upd x z b)) := by
+  obtain ⟨C', hn, hs, he, hlit⟩ :=
+    bypass_many C.n (C.rgates.map (Gate.restrict z b)) [] (C.out.restrict z b)
+  refine ⟨C', hn, ?_, fun x => ?_, fun h hl => hlit _ (by simpa using lit_restrict C.n z b hz C.rgates h hl)⟩
+  · have := degCount_cascade C.n z b hz C.rgates
+    simp only [List.nil_append, List.length_map, Circuit.size] at hs ⊢
+    omega
+  · rw [he x, ← Circuit.eval_restrict C z b hz]
+    rfl
+
+/-- **Cascaded conditional counter.** As `conditional_counter`, with the full cascade count:
+`|C| - cascade(z := b) ≥ M(f|_{z=b}, H)`. -/
+theorem conditional_counter_cascade {n : ℕ} {f : (ℕ → Bool) → Bool} (C : Circuit) (hn : C.n = n)
+    (hf : ∀ x, C.eval x = f x) (z : ℕ) (b : Bool) (hz : z < n) (H : Set ((ℕ → Bool) → Bool))
+    (hH : ∀ h ∈ H, Lit n C.rgates h) (hindep : ∀ h ∈ H, ∀ x c, h (upd x z c) = h x) :
+    RealizesWith n (fun x => f (upd x z b)) H (C.size - cascade n z b C.rgates) := by
+  subst hn
+  obtain ⟨C', hn', hs, he, hlit⟩ := cascade_restriction C z b hz
+  refine ⟨C', hn', by omega, fun x => by rw [he, hf], fun h hh => ?_⟩
+  have hl := hlit h (hH h hh)
+  have e : (fun x => h (upd x z b)) = h := funext fun x => hindep h hh x b
+  rwa [e] at hl
 
 end CircuitLemmas.GateElim

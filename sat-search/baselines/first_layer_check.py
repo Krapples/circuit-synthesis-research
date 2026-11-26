@@ -151,7 +151,7 @@ def incomplete_record(rows):
 
 
 def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, start=None,
-        conflict_scope='call', driver_deadline=True, memory_capped=False):
+        conflict_scope='call', driver_deadline=True, memory_capped=False, upper_witness=None):
     full = (1 << (1 << n)) - 1
     cmd = [exe, '--n', str(n), '--tt', hexstr(n, tt), '--method', method, '--solver', 'satoko',
            '--conflicts', str(conflicts), '--conflict-scope', conflict_scope, *(MODES | RESIDUAL_MODES | COUNTER_MODES)[mode]]
@@ -160,6 +160,8 @@ def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, s
     if care != full:
         cmd += ['--dc', hexstr(n, full ^ care)]
     cmd += ['--budget', str(budget)] if budget is not None else ['--start', str(start), '--max', '12']
+    if upper_witness:  # external verified upper bound (experiments/witness_import.py spec)
+        cmd += ['--upper-witness', upper_witness]
     started = perf_counter()
     with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as child:
         timed_out = False

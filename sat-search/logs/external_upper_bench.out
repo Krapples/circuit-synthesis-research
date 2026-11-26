@@ -1,0 +1,64 @@
+0116 const 0 SAT U 9 result 9 open None 0.1s 2888 k8:U:2886
+0116 const 1 SAT U 9 result 9 open None 0.1s 2888 k8:U:2886
+0116 const 2 SAT U 9 result 9 open None 0.1s 2888 k8:U:2886
+0116 const-cond 0 SAT U 9 result 9 open None 0.1s 1445 k8:U:1443
+0116 const-cond 1 SAT U 9 result 9 open None 0.1s 1445 k8:U:1443
+0116 const-cond 2 SAT U 9 result 9 open None 0.1s 1445 k8:U:1443
+0116 const-liveall-ess-cond 0 SAT U 9 result 9 open None 0.1s 1767 k8:U:1767
+0116 const-liveall-ess-cond 1 SAT U 9 result 9 open None 0.1s 1767 k8:U:1767
+0116 const-liveall-ess-cond 2 SAT U 9 result 9 open None 0.1s 1767 k8:U:1767
+1668 const 0 SAT U 11 result 9 open None 2.1s 66547 k9:S:66059
+1668 const 1 SAT U 11 result 9 open None 2.1s 66547 k9:S:66059
+1668 const 2 SAT U 11 result 9 open None 2.1s 66547 k9:S:66059
+1668 const-cond 0 SAT U 11 result 9 open None 2.1s 55277 k9:S:54899
+1668 const-cond 1 SAT U 11 result 9 open None 2.1s 55277 k9:S:54899
+1668 const-cond 2 SAT U 11 result 9 open None 2.0s 55277 k9:S:54899
+1668 const-liveall-ess-cond 0 SAT U 11 result 9 open None 0.3s 11133 k9:S:10963
+1668 const-liveall-ess-cond 1 SAT U 11 result 9 open None 0.3s 11133 k9:S:10963
+1668 const-liveall-ess-cond 2 SAT U 11 result 9 open None 0.3s 11133 k9:S:10963
+1669 const 0 SAT U 10 result 10 open None 2.1s 61102 k9:U:60666
+1669 const 1 SAT U 10 result 10 open None 2.1s 61102 k9:U:60666
+1669 const 2 SAT U 10 result 10 open None 2.0s 61102 k9:U:60666
+1669 const-cond 0 SAT U 10 result 10 open None 2.0s 61867 k9:U:61183
+1669 const-cond 1 SAT U 10 result 10 open None 1.9s 61867 k9:U:61183
+1669 const-cond 2 SAT U 10 result 10 open None 1.9s 61867 k9:U:61183
+1669 const-liveall-ess-cond 0 SAT U 10 result 10 open None 0.7s 21546 k9:U:21333
+1669 const-liveall-ess-cond 1 SAT U 10 result 10 open None 0.7s 21546 k9:U:21333
+1669 const-liveall-ess-cond 2 SAT U 10 result 10 open None 0.7s 21546 k9:U:21333
+1686 const 0 SAT U 9 result 9 open None 11.8s 254432 k7:U:1233 k8:U:253199
+1686 const 1 SAT U 9 result 9 open None 11.7s 254432 k7:U:1233 k8:U:253199
+1686 const 2 SAT U 9 result 9 open None 12.2s 254432 k7:U:1233 k8:U:253199
+1686 const-cond 0 SAT U 9 result 9 open None 2.1s 68315 k7:U:1262 k8:U:67053
+1686 const-cond 1 SAT U 9 result 9 open None 2.1s 68315 k7:U:1262 k8:U:67053
+1686 const-cond 2 SAT U 9 result 9 open None 2.1s 68315 k7:U:1262 k8:U:67053
+1686 const-liveall-ess-cond 0 SAT U 9 result 9 open None 1.6s 51639 k8:U:51514
+1686 const-liveall-ess-cond 1 SAT U 9 result 9 open None 1.6s 51639 k8:U:51514
+1686 const-liveall-ess-cond 2 SAT U 9 result 9 open None 1.6s 51639 k8:U:51514
+166b const 0 SAT U 10 result 10 open None 15.9s 308536 k9:U:308029
+166b const 1 SAT U 10 result 10 open None 16.3s 308536 k9:U:308029
+166b const 2 SAT U 10 result 10 open None 15.7s 308536 k9:U:308029
+166b const-cond 0 SAT U 10 result 10 open None 5.1s 138702 k9:U:138178
+166b const-cond 1 SAT U 10 result 10 open None 5.1s 138702 k9:U:138178
+166b const-cond 2 SAT U 10 result 10 open None 5.1s 138702 k9:U:138178
+166b const-liveall-ess-cond 0 SAT U 10 result 10 open None 1.8s 50631 k9:U:50253
+166b const-liveall-ess-cond 1 SAT U 10 result 10 open None 1.7s 50631 k9:U:50253
+166b const-liveall-ess-cond 2 SAT U 10 result 10 open None 1.7s 50631 k9:U:50253
+1699 const 0 SAT U 8 result 8 open None 0.0s 1330 k7:U:1330
+1699 const 1 SAT U 8 result 8 open None 0.0s 1330 k7:U:1330
+1699 const 2 SAT U 8 result 8 open None 0.1s 1330 k7:U:1330
+1699 const-cond 0 SAT U 8 result 8 open None 0.0s 856 
+1699 const-cond 1 SAT U 8 result 8 open None 0.0s 856 
+1699 const-cond 2 SAT U 8 result 8 open None 0.0s 856 
+1699 const-liveall-ess-cond 0 SAT U 8 result 8 open None 0.0s 563 
+1699 const-liveall-ess-cond 1 SAT U 8 result 8 open None 0.0s 563 
+1699 const-liveall-ess-cond 2 SAT U 8 result 8 open None 0.0s 563 
+016a const 0 SAT U 8 result 8 open None 0.1s 4151 k7:U:3930
+016a const 1 SAT U 8 result 8 open None 0.1s 4151 k7:U:3930
+016a const 2 SAT U 8 result 8 open None 0.1s 4151 k7:U:3930
+016a const-cond 0 SAT U 8 result 8 open None 0.1s 3624 k7:U:3441
+016a const-cond 1 SAT U 8 result 8 open None 0.1s 3624 k7:U:3441
+016a const-cond 2 SAT U 8 result 8 open None 0.1s 3624 k7:U:3441
+016a const-liveall-ess-cond 0 SAT U 8 result 8 open None 0.1s 3434 k7:U:3381
+016a const-liveall-ess-cond 1 SAT U 8 result 8 open None 0.1s 3434 k7:U:3381
+016a const-liveall-ess-cond 2 SAT U 8 result 8 open None 0.1s 3434 k7:U:3381
+EXIT 0

@@ -42,6 +42,11 @@
 //                    skipped budgets below U in increasing order with the cone constraints on (a new encoding
 //                    per budget). Without a witness up to --max, pass 2 runs the skipped budgets cone-free
 //                    and uncapped (the unrestricted fallback).
+//   --upper-witness "a,b;...|out" : an external chain (literal 2*w+p; wire 0 = constant 0, 1..n inputs, n+1+j
+//                    gate j = AND of its literals) simulated against the target; its size U is a verified upper
+//                    bound, so only the budgets below U are run, each with the full (proof) configuration and
+//                    no witness pass. All UNSAT: U is the minimum and the external chain is reported. A SAT
+//                    budget gives a better solver witness; a timeout leaves the interval [k, U-1] open.
 //   --complement-inputs auto : synthesize f with every input complemented whose x_i := 1 cofactor costs more than
 //                    its x_i := 0 cofactor (puts the stronger bound at zero); the chain is mapped back
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
@@ -1078,6 +1083,7 @@ static int run_main(int argc, char** argv) {
     double wall_seconds = 0;          // 0 = no driver deadline (the harness may still kill the run)
     bool budget_conflicts = false;    // false: --conflicts limits each SAT call (Percy's own meaning)
     std::string tt_hex, dc_hex, solver_name = "bsat", method = "std";
+    std::string upper_witness_spec;  // --upper-witness: external chain giving a verified upper bound
     bool nosym = false;
     Extra ex;
     for (int i = 1; i < argc; i++) {
@@ -1140,6 +1146,7 @@ static int run_main(int argc, char** argv) {
         }
         else if (a == "--restriction-essential") ex.restriction_essential = true;
         else if (a == "--restriction-conditional") ex.restriction_conditional = true;
+        else if (a == "--upper-witness") upper_witness_spec = next();
         else if (a == "--hybrid-witness") {
             ex.hybrid_witness = std::stoi(next());
             if (ex.hybrid_witness <= 0) { fprintf(stderr, "expected --hybrid-witness W > 0\n"); return 2; }
@@ -1311,6 +1318,52 @@ static int run_main(int argc, char** argv) {
         for (int r = 0; r < (1 << n); ++r) m |= uint64_t(kitty::get_bit(t, r) ^ flip) << r;
         return m;
     };
+    // External upper bound (--upper-witness "a,b;a,b;...|out"): literal 2*w+p is wire w complemented when p,
+    // wire 0 is constant zero, wires 1..n the inputs, wire n+1+j gate j = AND of its two literals. The chain is
+    // simulated here against the given table on the care set; it is a feasible upper bound only, not a prefix.
+    std::vector<std::array<int, 2>> ext_gates;
+    int ext_out = -1, ext_size = -1;
+    if (!upper_witness_spec.empty()) {
+        if (n > 6 || budget >= 0 || ex.hybrid_witness) {
+            fprintf(stderr, "--upper-witness needs at most 6 inputs and a ladder without --budget or --hybrid-witness\n");
+            return 2;
+        }
+        const auto bar = upper_witness_spec.find('|');
+        if (bar == std::string::npos) { fprintf(stderr, "--upper-witness: expected GATES|OUT\n"); return 2; }
+        const std::string body = upper_witness_spec.substr(0, bar);
+        ext_out = std::stoi(upper_witness_spec.substr(bar + 1));
+        for (size_t pos = 0; pos < body.size();) {
+            size_t end = body.find(';', pos);
+            if (end == std::string::npos) end = body.size();
+            const std::string g = body.substr(pos, end - pos);
+            const auto comma = g.find(',');
+            if (comma == std::string::npos) { fprintf(stderr, "--upper-witness: bad gate '%s'\n", g.c_str()); return 2; }
+            ext_gates.push_back({std::stoi(g.substr(0, comma)), std::stoi(g.substr(comma + 1))});
+            pos = end + 1;
+        }
+        const uint64_t full = n == 6 ? ~0ull : (1ull << (1 << n)) - 1;
+        std::vector<uint64_t> wire{0};
+        for (int i = 0; i < n; ++i) {
+            uint64_t m = 0;
+            for (int r = 0; r < (1 << n); ++r) m |= uint64_t(r >> i & 1) << r;
+            wire.push_back(m);
+        }
+        const auto lit = [&](int l, bool& ok) {
+            if (l < 0 || l / 2 >= int(wire.size())) { ok = false; return uint64_t(0); }
+            return wire[l / 2] ^ (l & 1 ? full : 0);
+        };
+        bool ok = true;
+        for (const auto& g : ext_gates) {
+            ok &= g[0] >= 2 && g[1] >= 2;  // no constant operands (Percy steps read inputs or steps)
+            wire.push_back(lit(g[0], ok) & lit(g[1], ok));
+        }
+        const uint64_t sim = lit(ext_out, ok);
+        if (!ok || ((sim ^ pack(tt_given, false)) & pack(dc_given, true)) != 0) {
+            fprintf(stderr, "--upper-witness does not compute the target on its care set\n");
+            return 2;
+        }
+        ext_size = int(ext_gates.size());
+    }
     unsigned complement_mask = 0;  // inputs complemented by --complement-inputs auto
     if (ex.complement_inputs) {
         const auto rs = restriction_certificate::restrictions(unsigned(n), pack(tt, false), pack(dc, true));
@@ -1459,6 +1512,8 @@ static int run_main(int argc, char** argv) {
     } else {
         if (cegar) enc.reset_sim_tts(sp.nr_in);
         int lo = budget >= 0 ? budget : start, hi = budget >= 0 ? budget : maxk;
+        // An external witness of size U leaves only the budgets below U; each must be proved (or found SAT).
+        if (ext_size >= 0) { upper = ext_size; hi = std::min(hi, ext_size - 1); }
         synthesis::ResidualMemo three_memo;  // decided residual answers are budget independent
         std::vector<restriction_certificate::Restriction> restrictions;
         if (ex.restriction_cuts) {
@@ -1860,9 +1915,20 @@ static int run_main(int argc, char** argv) {
     printf("{\"final\":\"%s\",\"reason\":\"%s\",\"last_k\":%d,\"steps\":%d,\"seconds\":%.6f,"
            "\"target_constraints_seconds\":%.6f,\"distinction_clauses\":%zu", final_status.c_str(),
            final_reason.c_str(), g_current_k, found, total, target_constraints_seconds, layer.clauses.size());
-    if (ex.hybrid_witness) printf(",\"upper_bound\":%d", found >= 0 ? found : upper);
+    if (ex.hybrid_witness || ext_size >= 0) printf(",\"upper_bound\":%d", found >= 0 ? found : upper);
+    if (ext_size >= 0) printf(",\"external_upper\":%d", ext_size);
     const bool have_chain = found >= 0 || upper >= 0;
-    if (have_chain && complement_mask) {
+    // The external chain is reported when no budget below it was found SAT (proved minimum, or open interval).
+    const bool external_chain = ext_size >= 0 && (found < 0 || found == ext_size);
+    if (external_chain) {
+        printf(",\"aig\":true,\"verified\":true,\"external_chain\":true,\"chain\":[");
+        for (size_t j = 0; j < ext_gates.size(); ++j) {
+            const int a = ext_gates[j][0], b = ext_gates[j][1];
+            const unsigned op = 1u << ((a & 1 ^ 1) | (b & 1 ^ 1) << 1);  // operand index bit 0 = first fanin
+            printf("%s[%u,%d,%d]", j ? "," : "", op, a / 2 - 1, b / 2 - 1);
+        }
+        printf("],\"out\":[%d,%d]", ext_out / 2, ext_out & 1);
+    } else if (have_chain && complement_mask) {
         // Map the chain of f(x ^ mask) back to f: complementing an operand that reads a complemented input
         // permutes the operator's truth table (operand 0 = index bit 0, operand 1 = index bit 1). Verified
         // against the given table and care set; operators stay AND-type but need not be normal.
