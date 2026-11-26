@@ -1,0 +1,41 @@
+{
+  "full_support_tables": 64594,
+  "exact_three_input_costs": 256,
+  "three_input_cost_histogram": [
+    8,
+    24,
+    64,
+    30,
+    104,
+    8,
+    18
+  ],
+  "cycle_improves_baseline": 56,
+  "peel_improves_baseline": 520,
+  "peel_improves_cycle": 46128,
+  "cycle_improves_mandatory": 35952,
+  "mandatory_only_improves_baseline": 0,
+  "first_improvement": {
+    "hex": "17e8",
+    "base": 5,
+    "cycle": 6,
+    "peel": 6,
+    "forced": [
+      6,
+      5,
+      3,
+      7
+    ],
+    "mandatory": 8
+  },
+  "first_peel_improvement": {
+    "hex": "16",
+    "base": 7,
+    "cycle": 3,
+    "peel": 4
+  },
+  "random_full_support_aigs": 1541,
+  "actual_single_reader_checks": 1541,
+  "actual_bound_checks": 1541
+}
+all assertions passed
