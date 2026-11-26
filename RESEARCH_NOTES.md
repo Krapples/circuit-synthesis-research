@@ -37,9 +37,9 @@ For order-four incidence L-meta-4653, the checked conjunction-list
 normalization preserves the number of OR gates and exposes the exact
 monotone boundary. The 105 positive rows pair with 25,237 maximal
 negative rows in 10 projective-symmetry orbits. Lean checked a uniform
-40-OR lower bound in a straight-line AND/OR model and the surrogate leaf
-projection for the common vertex-cover union model. In the union model
-Lean checked 34 instructions uniformly and 104 for independent operand centers.
+40 lower bound for the straight-line AND/OR and common vertex-cover union
+models, the surrogate leaf projection, and 104 union instructions for
+independent operand centers.
 The unrestricted bound of 104 remains open.
 [Reduction audit, geometry, proof, and diagnostics](sat-search/results/pg4_or_4653/README.md)
 

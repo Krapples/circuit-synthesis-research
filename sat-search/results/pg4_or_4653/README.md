@@ -111,9 +111,9 @@ identically false. Induction on edges gives at least `|E|−1` ORs for the fores
 paper that a sub-104 program must have a cycle of marked centers. Each leaf deletion that
 leaves an edge saves one OR, including in graphs with a cyclic core. Thus any saving over
 `|E|−1` must survive leaf deletion all the way to the remaining core. `LeafOrElimination.lean`
-checks the elimination and the induction for any finite certificate of leaf deletions. To
-apply this to the surrogate still requires a graph theorem producing the leaf certificate
-and a proof relating the compiler's forward evaluator to the elimination model.
+checks the elimination and the induction for any finite certificate of leaf deletions.
+Applying the induction to every acyclic surrogate still requires a graph theorem producing
+the leaf certificate and the corresponding split-incidence edge presentation.
 
 **Uniform bound of 40 in the straight-line circuit model.** The same elimination applies to
 any vertex incident to an edge if deletion leaves some edge. An edge using the vertex
@@ -123,10 +123,11 @@ cofactor is identically false. Replace it by an AND with the other operand repea
 replacement preserves wire numbering and the restricted function. For PG(2,4), a reverse
 spanning-tree traversal rooted at the incidence `(0,21)` gives 40 such deletions. Lean checks
 the explicit deletion order and `LeafOrElimination.PG4.lower_bound_40` for straight-line
-AND/OR circuits with variable and constant sources. The 34-instruction union bound and the
-104-instruction independent-center bound remain checked in their own model. The exact
-104-OR statement and the model equivalence needed to use the 40 bound in the common-union
-model remain open here. Both local proofs checked with Lean 4.36.0 under the locked `sat-search/lean`
+AND/OR circuits with variable and constant sources. `CompilerBridge.PG4.lower_bound_common_union`
+uses the compiler and the evaluator equivalence to transfer 40 to the common-union model.
+The earlier direct label argument gives 34 uniformly and gives 104 for independent operand
+centers. The exact unrestricted 104-OR statement remains open. The transport and elimination
+proofs checked with Lean 4.36.0 under the locked `sat-search/lean`
 environment, in 58.862 s for the transport and 34.893 s for the elimination and order.
 
 **Low merges can be shared even when every OR operand is critical.** Choose two different points
@@ -163,8 +164,9 @@ true. `ConjunctionCompiler.lean` checks this converse for all finite vertex sets
 emits exactly one OR and otherwise only ANDs, the initial failure of a star is a conjunction
 of its possible centers, and the compiled output agrees with the edge signal on all Boolean
 assignments. The compiler uses a forward gate list and explicit constant sources. Its Lean
-4.36.0 check finished in 32.721 s under the locked workspace. The proof that this evaluator
-agrees with the reverse-list elimination evaluator is the remaining implementation link.
+4.36.0 check finished in 32.721 s under the locked workspace. `CompilerBridge.lean` checks
+that reversing the gate list preserves both wire values and the OR count. It reused the
+two locally compiled modules and checked in 30.439 s.
 
 ## Bounded diagnostics and proof transfer
 
@@ -200,4 +202,26 @@ python -B sat-search/results/pg4_or_4653/search_or_budget.py --output sat-search
 python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/CoverUnion4653.lean --timeout 100
 python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/LeafOrElimination.lean --timeout 100
 python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/ConjunctionCompiler.lean --timeout 90
+```
+
+To reproduce the bridge check, compile the two source modules to a private cache with the
+locked toolchain. Rebuild a cached module when its source or Lean environment changes.
+
+```powershell
+$proofs = (Resolve-Path sat-search/results/pg4_or_4653).Path
+$cache = Join-Path $PWD.Path '.research/pg4-bridge'
+$lake = Join-Path $env:USERPROFILE '.elan/toolchains/leanprover--lean4---v4.36.0/bin/lake.exe'
+New-Item -ItemType Directory -Force $cache | Out-Null
+Push-Location sat-search/lean
+try {
+  foreach ($module in 'ConjunctionCompiler', 'LeafOrElimination') {
+    & $lake env lean "--root=$proofs" -o (Join-Path $cache "$module.olean") (Join-Path $proofs "$module.lean")
+    if ($LASTEXITCODE -ne 0) { throw "Lean module build failed for $module" }
+  }
+} finally { Pop-Location }
+$priorLeanPath = $env:LEAN_PATH
+try {
+  $env:LEAN_PATH = $cache
+  python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/CompilerBridge.lean --lake $lake --timeout 90
+} finally { $env:LEAN_PATH = $priorLeanPath }
 ```
