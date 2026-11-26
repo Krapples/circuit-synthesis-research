@@ -1,3 +1,53 @@
+# Research handoff — cubic witness counting barrier and component compression
+
+Updated 2026-11-26. Base handoff [7d493b0](https://github.com/Krapples/circuit-synthesis-research/commit/7d493b0940fc36e5c52578c963880b18895bb8a6). **L-clb-036 remains open.** This round moves from quadratic to cubic existential witnesses. It proves a #P-hard counting reduction, carefully separated from image decision, and a deterministic exact-image compression theorem for independent bounded-degree components. The cubic packed grammar and bounded-fan-in circuit costs are paper arguments; the executed replay tests the algebraic algorithms, not synthesized gates or Lean proofs.
+
+## Current results
+
+- Packed/permutable Andreev: near-cubic De Morgan formula leaf lower bound Omega(n^3/(log^2 n log log n)) conditional on Tal's revised Lemma 7.1, and Omega(n) high-path gates with Omega(n^1.99/(log^2 n log log n)) paths in hypothetical O(n^1.01)-gate AIGs. The earlier permutable and affine promise circuits are deterministic quasi-linear. The preceding deterministic quadratic paper construction also gives O(n log^C n) circuits, subject particularly to independent audit of its sparse-rank circuit cost.
+- **Cubic projection:** each chunk uses p=e_u AND e_v AND e_w, encoded by four clauses in the common-width identifier pool; degree one and two via repeated labels, zero via e_0. SAT is whether the table meets the image of a degree-three witness map F. Linear encoding length and coordinate-copy bounds are preserved in the paper construction. Nonempty fiber density is >=2^(-3k), so random affine dimension 3k+2 suffices for decision, 4k+2 for full image. This does not give quasi-linear exact cubic image evaluation.
+- **Counting obstruction:** encode each 3-CNF clause using two quadratic constraints g, introducing one unique auxiliary z per clause. The cubic scalar polynomial P=sum_j y_j g_j satisfies sum_(-1)^P=2^(2c) #SAT, where c is the clause count. Thus exact sparse cubic character sums and packed cubic witness histograms are #P-hard. Crucially this is NOT a reduction to cubic image membership or SAT decision: a nonconstant scalar polynomial has image {0,1}, regardless of the histogram.
+- **Deterministic component compression theorem:** if F=b+sum_i F_i on pairwise disjoint variable blocks and degree <=3, select at most 8k^2 blocks by 8k rounds of residual coefficient-span basis selection. The selected blocks have exactly the same joint image as the entire map. For every dual combination outside the annihilator of the remaining span, at least 8k selected independent scalar components are nonconstant, so its bias is <=(3/4)^(8k). Fourier inversion and minimum marginal density force every attainable marginal to lift to every compatible address. The argument generalizes to any fixed degree D with O_D(k^2) blocks.
+- **Variable-incidence cubic small-component upper bound:** if the raw witness interaction graph has components of <=k variables, recover them by k rounds of minimum-label propagation, perform component selection on actual canceled coefficients, evaluate only O(k^2) selected local maps on 2^k assignments each, and combine their Boolean image indicators by integer XOR convolution. All steps have explicit fixed-array bounded-fanin implementations with total O(n log^C n) size. This rules out that cubic subpromise as a standalone witness for L-clb-036, subject to independent review. A supplied separator of s witness variables leaving small components gives O(2^s n log^C n) circuits; s<=epsilon log_2 n with fixed epsilon<0.01 remains o(n^1.01). No algorithm for finding such a separator is asserted.
+- **Remaining target:** general variable-incidence cubic maps with large connected nonlinear cores. Counting hardness alone is not decision hardness. The missing bridge to distinct gate counts in unrestricted SAT remains open.
+
+## Current files and replay
+
+| File | Scope |
+|---|---|
+| [cubic_component_handoff.md](cubic_component_handoff.md) | New cubic projection, counting reduction, component theorem, fixed-array circuit argument, next steps |
+| [cubic_component_check.js](cubic_component_check.js) | Executed abstract component, convolution, density and counting regression |
+| [cubic_component_replay.txt](cubic_component_replay.txt) | Actual stdout, all assertions passed |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Prior deterministic quadratic image compression |
+| [deterministic_quadratic_check.py](deterministic_quadratic_check.py), [replay](deterministic_quadratic_replay.txt) | Prior sparse-rank and compression checks |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random quadratic compression and oblivious sketch obstruction |
+| [quadratic_witness_check.py](quadratic_witness_check.py), [replay](quadratic_witness_replay.txt) | Prior exact quadratic grammar and character sums |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md), [checker](affine_witness_check.py), [replay](affine_witness_replay.txt) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md), [checker](permutable_andreev_check.py), [replay](permutable_andreev_replay.txt) | Delta-free path theorem |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Unverified Lean draft |
+
+From this directory:
+
+```sh
+node cubic_component_check.js
+python -B deterministic_quadratic_check.py
+python -B quadratic_witness_check.py
+python -B affine_witness_check.py
+python -B permutable_andreev_check.py
+```
+
+New seed 870011: 216 component maps, 11,285 components, 3,635 selected components and Walsh convolutions, 203 strict reductions, 491 dual-coverage checks, 85,817 minimum-density checks, 96 counting reductions with 141,616 exhaustive multiplier assignments. Largest component count 1,201, largest selected count 385, largest discarded count 1,176. All assertions passed. These are abstract finite tests, not a replay of the cubic paired grammar or physical sorting networks. The exact JS source was executed and its output committed.
+
+## Native-agent priorities
+
+Read [cubic_component_handoff.md](cubic_component_handoff.md) and the preceding deterministic quadratic proof before the archive. Audit the sparse rank cost and new component Fourier argument. Implement the cubic grammar regression (four-clause product with repeated/zero labels, layout, balancing, padding) using the existing Python checker. Validate the variable-incidence component routing if useful. Reuse the already verified native LookupProjection, ParityLookup and Unfold modules rather than duplicating them. Investigate large connected cubic cores or heterogeneous full-SAT restrictions with distinct-gate accounting. Do not equate #P-hard histogram recovery with decision hardness, and do not turn the subpromise upper bounds into claims about full SAT. No production solver or verified Lean changes; no new Lean proof or claim of literature priority.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below. Older instructions and status claims refer to their own revisions.
+
 # Research handoff — deterministic quadratic witness compression
 
 Updated 2026-11-26. Base handoff [afe3753](https://github.com/Krapples/circuit-synthesis-research/commit/afe375378fd0d7d9ab390cc311ca4264b5b1f576). **L-clb-036 remains open.** This round closes the randomized-versus-deterministic gap for the *quadratic packed SAT promise*, via an input-dependent linear compression. This is a paper theorem with finite algorithm replay; the bounded-fan-in circuit construction requires independent audit and has not been synthesized or Lean verified. No unrestricted SAT upper bound or new unrestricted gate-count lower bound is asserted.
