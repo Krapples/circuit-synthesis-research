@@ -3,6 +3,8 @@
   "lookupCircuits": 36,
   "formalHistoryCases": 1693,
   "copyEvaluations": 10234,
+  "affineCopyEvaluations": 10234,
+  "affineStrictCuts": 0,
   "jointCutChecks": 1187,
   "actualReconstructions": 36072,
   "strictJointVsLocal": 270,
@@ -16,6 +18,7 @@
       "data": 4,
       "oldExactCapacityFlow": 4,
       "liftedFlow": 3,
+      "affineLiftedFlow": 3,
       "jointAffineRank": 3,
       "gates": 17
     },
@@ -25,6 +28,7 @@
       "data": 8,
       "oldExactCapacityFlow": 8,
       "liftedFlow": 8,
+      "affineLiftedFlow": 5,
       "jointAffineRank": 5,
       "gates": 61
     },
@@ -34,6 +38,7 @@
       "data": 16,
       "oldExactCapacityFlow": 16,
       "liftedFlow": 16,
+      "affineLiftedFlow": 9,
       "jointAffineRank": 9,
       "gates": 221
     },
@@ -43,6 +48,7 @@
       "data": 8,
       "oldExactCapacityFlow": 8,
       "liftedFlow": 5,
+      "affineLiftedFlow": 5,
       "jointAffineRank": 5,
       "gates": 30
     },
@@ -52,6 +58,7 @@
       "data": 16,
       "oldExactCapacityFlow": 16,
       "liftedFlow": 16,
+      "affineLiftedFlow": 7,
       "jointAffineRank": 7,
       "gates": 86
     },
@@ -61,6 +68,7 @@
       "data": 32,
       "oldExactCapacityFlow": 32,
       "liftedFlow": 32,
+      "affineLiftedFlow": 11,
       "jointAffineRank": 11,
       "gates": 270
     },
@@ -70,6 +78,7 @@
       "data": 16,
       "oldExactCapacityFlow": 16,
       "liftedFlow": 9,
+      "affineLiftedFlow": 9,
       "jointAffineRank": 9,
       "gates": 55
     },
@@ -79,6 +88,7 @@
       "data": 32,
       "oldExactCapacityFlow": 32,
       "liftedFlow": 32,
+      "affineLiftedFlow": 11,
       "jointAffineRank": 11,
       "gates": 135
     },
@@ -88,6 +98,7 @@
       "data": 64,
       "oldExactCapacityFlow": 64,
       "liftedFlow": 64,
+      "affineLiftedFlow": 15,
       "jointAffineRank": 15,
       "gates": 367
     }
