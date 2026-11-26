@@ -1,3 +1,56 @@
+# Research handoff — connected cubic neighborhood kernels and marginal lifting
+
+Updated 2026-11-26. Base handoff [56c61b1](https://github.com/Krapples/circuit-synthesis-research/commit/56c61b1a906230f9bb872d7a2a7ff5a02ce2aa02). **L-clb-036 remains open.** This round removes the independent-component requirement for structural compression of bounded-degree witness graphs. It proves an exact coordinate kernel and two new deterministic quasi-linear subpromise bounds. These are paper theorems with finite algorithm checks, not unrestricted SAT lower bounds or Lean-checked results.
+
+## Current results
+
+- The packed/permutable Andreev projection gives the near-cubic De Morgan formula lower bound Omega(n^3/(log^2 n log log n)) conditional on Tal's revised Lemma 7.1, and Omega(n) distinct high-path gates with Omega(n^1.99/(log^2 n log log n)) paths in hypothetical O(n^1.01)-gate AIGs. Prior permutable and affine promise circuits are deterministic quasi-linear. The deterministic quadratic upper bound is a paper result pending independent audit of its sparse-rank circuit cost. Exact cubic character sums are #P-hard; this is counting hardness, not image-decision hardness.
+- **Connected cubic kernel:** for a degree-three witness map F: GF(2)^q -> GF(2)^k whose variable-interaction graph has maximum degree Delta, select at most 8k^2(1+Delta+Delta^2+Delta^3) original variables K such that fixing all others to zero preserves the exact image. This includes single connected components, even bounded-degree expanders. Build 8k rounds of residual coefficient-span bases, selecting a center at an alive variable of each newly independent monomial and deleting its radius-three ball. Selected closed neighborhoods are disjoint and nonadjacent.
+- **Conditional bias and marginal lifting:** let V be the span of labels of monomials touching still-alive variables at termination, Lambda=V^perp of dimension t, and pi the projection along a basis of Lambda. Every lambda outside Lambda witnesses a nonzero scalar monomial at a selected center in each round. Conditioning outside the closed neighborhoods leaves independent nonconstant polynomials, each with bias magnitude <=3/4, so full and restricted scalar bias magnitude is <=(3/4)^(8k). Every lambda in Lambda depends only on K. The attained marginal fiber density is >=2^(-3t), and Fourier inversion gives the exact identity image(F)=image(F_K)=pi^(-1)(image(pi(F_K))). This generalizes to every fixed degree D using O_D(k) rounds. The kernel construction costs (q+m+1) poly(k,log(q+m+2)) bounded-fanin gates with m monomial records, by explicit sorting, scans and three graph propagation passes per selected center. Kernel existence alone does NOT imply quasi-linear image evaluation.
+- **First new deterministic tractable regime:** if Delta=poly(k) and t<=t_max with 3t_max log_2(K_max+1)<=k, where K_max=8k^2(1+Delta+Delta^2+Delta^3) capped by q, enumerate only supports of size <=3t_max. Every attained marginal has such a sparse witness by minimum monomial degree. The entire packed variable-incidence cubic subpromise has deterministic O(n log^C n) AIG circuits. For constant Delta this permits t_max=Theta(k/log k) with a suitable constant. A failed promise test does not imply UNSAT.
+- **Second new deterministic tractable regime:** if every cubic coefficient label lies in V, the residual marginal is quadratic even if t=Theta(k). Compute its exact image using dense quadratic character-sum pair elimination and Walsh inversion on the poly(k)-size coordinate kernel. This gives deterministic O(n log^C n) circuits for Delta=poly(k), independently of the earlier sparse quadratic rank algorithm. A supplied set of s retained variables hitting all marginal cubic monomials gives O(2^s n log^C n) circuits by conditioning. Both are paper circuit-cost bounds, not synthesized gate counts.
+- **Remaining target:** large high-degree witness cores, or bounded-degree systems with high-dimensional genuinely cubic exceptional marginals that resist these algorithms. General deterministic cubic image evaluation and a semantic-to-distinct-gate lower-bound bridge remain open.
+
+## Current files and replay
+
+| File | Scope |
+|---|---|
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | New connected-kernel proof, conditional bias, explicit circuit costs, marginal regimes |
+| [cubic_neighborhood_check.js](cubic_neighborhood_check.js) | Executed exact histogram, neighborhood separation, low-weight marginal and bias checks |
+| [cubic_neighborhood_replay.txt](cubic_neighborhood_replay.txt) | Actual stdout, all assertions passed |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Earlier cubic counting obstruction and independent-component theorem |
+| [cubic_component_check.js](cubic_component_check.js), [replay](cubic_component_replay.txt) | Earlier cubic abstract component checks |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Prior deterministic quadratic compression |
+| [deterministic_quadratic_check.py](deterministic_quadratic_check.py), [replay](deterministic_quadratic_replay.txt) | Sparse rank and compression checks |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random quadratic compression and oblivious-sketch barrier |
+| [quadratic_witness_check.py](quadratic_witness_check.py), [replay](quadratic_witness_replay.txt) | Actual quadratic grammar and character sums |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md), [checker](affine_witness_check.py), [replay](affine_witness_replay.txt) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md), [checker](permutable_andreev_check.py), [replay](permutable_andreev_replay.txt) | Delta-free path theorem |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Unverified Lean draft |
+
+Run from this directory:
+
+```sh
+node cubic_neighborhood_check.js
+node cubic_component_check.js
+python -B deterministic_quadratic_check.py
+python -B quadratic_witness_check.py
+python -B affine_witness_check.py
+python -B permutable_andreev_check.py
+```
+
+New seed 870012: 150 small maps and 14 connected path maps on 2,300 variables; 30 strict reductions; 3,518 address support/marginal lift checks; 674 exact rational bias checks; 164 low-weight marginal comparisons; 102 full-image maps. Largest discard 2,188 variables (2,300 -> 112, k=2, Delta=4, t=1). Non-surjective planted marginals also tested. Original and compressed histograms for long paths are independently computed by exact BigInt transfer-matrix dynamic programming. All assertions passed. The large tests are paths, not expanders; the proof is not limited to paths. Cubic actual paired-grammar replay, physical AIG synthesis and Lean verification remain outstanding.
+
+## Native-agent priority
+
+Read [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) before the archive. Audit separation radius, conditioned nonconstant-monomial argument, Fourier lifting, and fixed-array graph routing. Continue review of the earlier deterministic quadratic sparse rank gate-cost argument. Implement the cubic exact grammar replay (four-clause products, repeated/zero labels, coordinate layout, balancing and padding), reusing existing verified LookupProjection, ParityLookup and Unfold modules where possible. Investigate whether high-dimensional cubic exceptional marginals can be compressed further, and whether high-degree hubs can be handled without exponential enumeration. Do not confuse any subpromise upper bound, counting hardness or structural kernel with an unrestricted gate-count lower bound. No production solver or verified Lean modifications. No literature-priority claim.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and status statements refer to their own revisions.
+
 # Research handoff — cubic witness counting barrier and component compression
 
 Updated 2026-11-26. Base handoff [7d493b0](https://github.com/Krapples/circuit-synthesis-research/commit/7d493b0940fc36e5c52578c963880b18895bb8a6). **L-clb-036 remains open.** This round moves from quadratic to cubic existential witnesses. It proves a #P-hard counting reduction, carefully separated from image decision, and a deterministic exact-image compression theorem for independent bounded-degree components. The cubic packed grammar and bounded-fan-in circuit costs are paper arguments; the executed replay tests the algebraic algorithms, not synthesized gates or Lean proofs.
