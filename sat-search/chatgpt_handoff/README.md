@@ -1,3 +1,50 @@
+# Research handoff — batched lookup and asymmetric directed port capacities
+
+Updated 2026-11-26. Base [f0c899b](https://github.com/Krapples/circuit-synthesis-research/commit/f0c899b30300299d70b22c27cdf15cca4b84b572). **L-clb-036 remains open.** This round moves from symmetric cut capacity to asymmetric information flow, proves a batched lookup directional tradeoff, and packs it into linear-length paired SAT with single-copy data and query coordinates. Paper proofs and finite AIG/grammar replay; no Lean theorem or production solver change.
+
+## Current results
+
+- **Distinct directed port counts.** For vertex partition A,B let a=#distinct A vertices with a reader in B, b=#distinct B vertices with a reader in A. Evaluate in topological order and send each crossing source value just once, regardless of its fanout. This deterministic protocol has a forward and b reverse bits. Output owner need not announce output; its accepting portion of a transcript rectangle is still a rectangle. The previous exact matching demand cut inequality therefore holds with a+b instead of crossing wire count, as does the arbitrary-terminal constant-factor edge-cut bound.
+- **Batched asymmetric lookup.** For F(H,q)=AND_j H_j[q_j] on r independent M-bit tables, any such protocol satisfies a+b>=r log2 M and a+b+r>=rM/(2*2^(b/r)). Proof: restrict to data rows with >=M/2 ones per table; each has >=(M/2)^r accepting query columns and <=2^b transcripts. Assign each rich row to a large accepting rectangle, pigeonhole among <=2^(a+b) transcripts. The rectangle has >=2^(r(M-1)-a-b) rows and >=(M/2)^r/2^b columns. Its coordinate query projections force at least rM/(2*2^(b/r)) data bits to one, by AM-GM. Compare row counts. This is a direct application of classical asymmetric richness arguments (Miltersen-Nisan-Safra-Wigderson), not a new general communication method.
+- **Exact strategy bound for query-side output:** a*2^b>=log2(1+(2^M-1)^r), by encoding Alice's messages for every full Bob-bit string; distinct residual functions need distinct strategies. For b=0 this is a nearly rM-bit one-way interface, despite log matrix rank rk. With reverse budget b and M=2^k the optimal total communication is Theta(rk+rM 2^(-b/r)), matched by sending floor(b/r) high query bits per group then the selected table blocks, or all queries and a one-bit answer. No claim of tight forward-only cost at every b.
+- **Unequal domains:** replace rk by sum log2 d_j, rM by r*(product d_j)^(1/r) in the richness inequality, and (2^M-1)^r by product (2^d_j-1) in the strategy bound. Works for partial cut splits.
+- **Packed batched SAT projection:** r independent groups, M=2^k, ell a power of two of order k, P=2^ell, B=M/ell. Per group use k address unit polarities, 2B-1 guard nodes, P dictionary variables V_(j,p) with clauses pinning bit p[t] by low query t, and B guarded data clauses (-guard_i OR V_(j,p_i)). Common-width IDs Q+jP+p for dictionaries and following interval for auxiliaries, Q power of two >=rP+r(k+2B-1). All free data bits (low ell identifier digits) and query bits (unit signs) occur ONCE at invariant physical coordinates. SAT iff F=1. Word n=Theta(rM) for r<=M^c fixed c. Prior 10/14 padding transfers fixed r=2^floor(gamma*k) scale to all sufficiently large even lengths. This is NOT the same terminal layout as the prior unit-only separator promise.
+- **Directed cut application:** for a full table/query split apply all asymmetric bounds to original graph ports. For partially split group j with d'_j data bits in A and q'_j address bits in B, fix other query bits to a slice containing >=ceil(d'_j/2^(k-q'_j)) usable data positions. Restrict Bob's query domain to those positions; unequal-domain bounds apply. For topological prefix b=0 and query-side output, live forward signal frontier must carry log2(1+product(2^d_j-1)) bits. This is schedule-dependent storage, not an all-orders bound. Example r=M, n=Theta(M^2): b<=rk/2 forces a+b=Omega(n^0.75), stronger than rank Theta(sqrt(n) log n); b=O(r) forces a+b=Omega(n).
+- **Actual small-circuit control:** the fixed packed batched lookup promise has O(rM)=O(n) signed AIGs by independent mux trees and output AND. Thus all new direction inequalities coexist with linear unrestricted promise complexity. Prior well-linkedness, matching cut and graph-only routing gap remain valid. No additive charge across overlapping cuts or different terminal layouts, no transfer of topology through guarded slice compiler. Need a semantic constraint on shared internal computations to get a superlinear bound.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [packed_directional_handoff.md](packed_directional_handoff.md) | Proofs: distinct port protocol, asymmetric richness/strategy, tight tradeoff, packed grammar and partial split/frontier bounds |
+| [packed_directional_check.js](packed_directional_check.js), [replay](packed_directional_replay.txt) | Actual packed grammar, complete small protocols, signed mux AIG wire/port cut transcripts |
+| [packed_welllinked_handoff.md](packed_welllinked_handoff.md), [checker](packed_welllinked_check.js) | Arbitrary cuts, fixed matching, geometric wirelength, graph-only routing gap |
+| [packed_separator_handoff.md](packed_separator_handoff.md), [checker](packed_separator_check.js) | Balanced separator, planar/minor/genus bounds |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling and normalized two-primary-read compiler |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Prior finite linear lower bound |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress relaxation limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Joint Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run `node packed_directional_check.js` from this directory. Seed 870021. 112 actual paired SAT encodings (39 SAT, 73 UNSAT), 224 exact single-bit coordinate checks, max word 238,944 bits. 32 complete small protocols, 43,680 assignment entries, 16,600 transcript rectangles. Explicit mux AIGs: 90 partitions, 113,040 evaluations, 50,658 wire and 50,658 distinct-port rectangle checks; 58 cuts benefit from source deduplication (max saving 11 bits), 8 forward-only cuts with query-side output. All assertions passed. No new padding/slice replay, full SAT synthesis, general graph optimization, or Lean verification. The small protocols do not enumerate all protocols; paper theorem supplies general proof.
+
+## Native-agent priority
+
+Audit [packed_directional_handoff.md](packed_directional_handoff.md) and replay, especially output-owner strategy premise, richness rectangle choice, aligned identifier layout, partial-domain restriction and distinct-source protocol. The classic asymmetric communication literature is credited. Reuse existing packed layout and AIG infrastructure. Consider extracting directed ports and frontier sizes on actual circuits under legal restrictions; investigate programmable independent lookup groups with different orientations, without assuming their port charges are disjoint. Small mux and sorting controls must continue to pass. No new unrestricted gate-size result, production integration, topology-preserving slice claim or literature priority. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — arbitrary terminal cuts, fixed matching demands and routing gaps
 
 Updated 2026-11-26. Base [3340781](https://github.com/Krapples/circuit-synthesis-research/commit/3340781f4d41f4d27bad347a94a39627fbe5f3cd). **L-clb-036 remains open.** Strengthens the balanced terminal separator theorem to arbitrary cuts, derives exact simultaneous matching cut conditions, geometric wirelength tradeoffs, and a linear-size bounded-degree graph counterexample to a cut-to-routing inference. Paper theorems and finite replay, no new Lean theorem or production solver changes.
