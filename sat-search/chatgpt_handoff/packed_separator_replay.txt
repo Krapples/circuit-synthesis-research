@@ -1,0 +1,19 @@
+{
+  "local_cut_checks": 844,
+  "pair_rank_checks": 18,
+  "partitions": 72,
+  "strict_balance_partitions": 60,
+  "mixed_mode_partitions": 54,
+  "pair_mode_partitions": 36,
+  "hybrid_partitions": 18,
+  "grammar_sat_checks": 1296,
+  "satisfiable": 288,
+  "unsatisfiable": 1008,
+  "coordinate_checks": 720,
+  "max_word": 3072,
+  "max_terminal_bits": 192,
+  "min_log_rank_fraction": 0.26023845981594834,
+  "larger_cut_checks": 197,
+  "min_larger_cross_rank": 3
+}
+all assertions passed
