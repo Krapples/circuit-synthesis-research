@@ -6,3 +6,5 @@ import SatBridge.RobustRestriction
 import CircuitLemmas.PairSensitiveCounting
 import SatBridge.RobustIdentifier
 import SatBridge.WeightSlice
+import SatBridge.LookupProjection
+import SatBridge.ParityLookup

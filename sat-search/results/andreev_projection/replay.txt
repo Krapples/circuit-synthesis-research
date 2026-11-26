@@ -1,0 +1,21 @@
+k 1 r 2 inputs 4 gates 2 encoded 266 balanced 810 rows 16
+k 2 r 2 inputs 8 gates 5 encoded 780 balanced 2352 rows 256
+k 3 r 2 inputs 14 gates 10 encoded 1738 balanced 5226 rows 256
+k 4 r 4 inputs 32 gates 27 encoded 5552 balanced 16668 rows 256
+k 5 r 6 inputs 62 gates 56 encoded 12902 balanced 38718 rows 256
+k 6 r 10 inputs 124 gates 117 encoded 29956 balanced 89880 rows 64
+k 7 r 18 inputs 254 gates 246 encoded 69442 balanced 208338 rows 64
+encoded assignments 1168 restricted table rows 16256 contexts 448 padding checks 532 path identities 2000
+k=1 gates=6 leaves=10 max_path=2 max_data_ancestor_path=1
+k=2 gates=15 leaves=28 max_path=4 max_data_ancestor_path=1
+k=3 gates=30 leaves=64 max_path=8 max_data_ancestor_path=1
+k=4 gates=81 leaves=496 max_path=32 max_data_ancestor_path=1
+k=5 gates=168 leaves=2512 max_path=128 max_data_ancestor_path=1
+k=6 gates=351 leaves=14176 max_path=512 max_data_ancestor_path=1
+k=7 gates=738 leaves=89536 max_path=2048 max_data_ancestor_path=1
+k=8 gates=1509 leaves=522496 max_path=4096 max_data_ancestor_path=1
+k=9 gates=3018 leaves=3401728 max_path=16384 max_data_ancestor_path=1
+k=10 gates=6099 leaves=23309056 max_path=65536 max_data_ancestor_path=1
+k=11 gates=12246 leaves=158259712 max_path=262144 max_data_ancestor_path=1
+k=12 gates=24525 leaves=1071387136 max_path=1048576 max_data_ancestor_path=1
+selector-only sharing verified on 592 circuit evaluations

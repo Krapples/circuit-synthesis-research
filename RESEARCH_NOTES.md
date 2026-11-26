@@ -94,6 +94,13 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+The audited Andreev projection gives a near-cubic De Morgan formula lower
+bound for paired SAT at all sufficiently large even lengths, using Tal's
+published shrinkage theorem. A linear-size AIG for that exact restriction
+concentrates all path multiplicity above one in selector-only gates. This
+obstructs a charge to distinct gates based on the restriction and path counts
+alone. [Proofs, Lean scope, and replay](sat-search/results/andreev_projection/README.md)
+
 An exact paired-grammar projection sends each SAT length `n` to one Hamming layer
 of length `3n+12` and weight `2n+5`. With monotone threshold guards and the
 Berkowitz–Valiant slice compiler, an `O(n^alpha)` monotone size bound on this family

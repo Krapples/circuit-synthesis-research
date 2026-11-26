@@ -1,0 +1,18 @@
+Lean (version 4.36.0, x86_64-w64-windows-gnu, commit 611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9, Release)
+✔ [18485/18491] Built SatBridge.LookupProjection (12s)
+✔ [18487/18491] Built SatBridge.ParityLookup (11s)
+✔ [18489/18491] Built SatBridge (18s)
+Build completed successfully (18491 jobs).
+✔ [18266/18270] Built CircuitLemmas.Unfold (18s)
+✔ [18268/18270] Built CircuitLemmas (18s)
+Build completed successfully (18270 jobs).
+'SatBridge.lookupPattern_eval' depends on axioms: [propext, Quot.sound]
+'SatBridge.lookupCNF_eval' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.lookupInstance_sat' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.lookupPattern_padded' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.lookupLength_select' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.lookupPattern_length_le' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.parityLookup_program' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.parityLookup_padded' depends on axioms: [propext, Classical.choice, Quot.sound]
+'CircuitLemmas.GateElim.Circuit.unfold_paths' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.andreev_padded_at_scale' depends on axioms: [propext, Classical.choice, Quot.sound]

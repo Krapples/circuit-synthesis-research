@@ -1,4 +1,5 @@
 import SatBridge
+import CircuitLemmas.Unfold
 #print axioms SatBridge.transfer
 #print axioms SatBridge.word_mem_sat
 #print axioms SatBridge.sat_six_lower
@@ -16,3 +17,14 @@ import SatBridge
 #print axioms SatBridge.weightSliceWord_guard
 #print axioms SatBridge.weightSliceWord_length
 #print axioms SatBridge.weightSliceWord_weight
+#print axioms SatBridge.lookupPattern_eval
+#print axioms SatBridge.lookupCNF_eval
+#print axioms SatBridge.lookupInstance_sat
+#print axioms SatBridge.lookupPattern_padded
+#print axioms SatBridge.lookupLength_select
+#print axioms SatBridge.lookupPattern_length_le
+#print axioms SatBridge.parityLookup_program
+#print axioms SatBridge.parityLookup_padded
+#print axioms CircuitLemmas.GateElim.Circuit.unfold_paths
+
+#print axioms SatBridge.andreev_padded_at_scale

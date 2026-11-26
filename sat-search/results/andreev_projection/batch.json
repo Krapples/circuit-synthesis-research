@@ -1,0 +1,16 @@
+{
+  "schema": "research-batch/1",
+  "task": "andreev-sat",
+  "decision": "Reproduce the pinned SAT projection and check whether an explicit small realizing AIG can concentrate all path multiplicity in selector gates.",
+  "jobs": [
+    {
+      "id": "andreev-projection-replay",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/andreev_projection_check.py"],
+      "query": {"basis": "signed binary AIG and paired SAT", "scope": "pinned handoff k=1..7; selector-only sharing k=1..12"},
+      "workers": 1,
+      "memory_mib": 256,
+      "timeout": {"initial": 60, "maximum": 60}
+    }
+  ]
+}

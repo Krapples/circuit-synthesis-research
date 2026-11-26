@@ -6,3 +6,4 @@ import CircuitLemmas.Excess
 import CircuitLemmas.Composition
 import CircuitLemmas.Robust
 import CircuitLemmas.BlockProduct
+import CircuitLemmas.Unfold

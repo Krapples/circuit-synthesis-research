@@ -461,3 +461,12 @@ exponent-preserving equivalence to unrestricted SAT. This is a problem reduction
 with no circuit synthesis or orientation change. The ordinary monotone CLIQUE
 projection is ruled out by averaging projected weights over vertex relabelings.
 [Proof and replay](results/sat_weight_slice/README.md)
+
+## Andreev projection and limits of path counting
+
+The paired grammar embeds parity-addressed lookup by fixing all tokens except
+the polarity of each input unit clause. Tautological padding extends the formula
+bound to every sufficiently large even length. A linear-size realizing AIG can
+concentrate the high multiplicities in selector-only gates, with exactly one
+output path per gate having a data ancestor. This gives a barrier for a sharing
+argument based on the Andreev restriction. [Proofs and replay](results/andreev_projection/README.md)
