@@ -1,3 +1,53 @@
+# Research handoff — joint response histories and specialized-copy flow
+
+Updated 2026-11-26. Base [5829985](https://github.com/Krapples/circuit-synthesis-research/commit/58299857e0cc1f0542a6a03547240f1a2db426f9). **L-clb-036 remains open.** Joint response codes and history-expanded source-shared flow capture correlations missed by even exact individual response capacities. A new explicit signed AIG family has a polynomial-factor separation. Stable original IDs permit additive per-gate charges across specialized copies. No unrestricted superlinear numerical size result, Lean theorem, production changes, or literature-priority claim.
+
+## Current results
+
+- **Joint response code:** for fixed A,B partition and common history universe H containing all actual global reverse histories, encode J_K(x)=((T_v(x,h))_(v in K))_(h in H). Any internal A-only data-to-forward-port cut K satisfies log2 N<=log2 |image J_K|. In reconstructing v, use any common history extending its already evaluated local reverse coordinates; later reverse coordinates cannot affect it. Data-dependent feedback is allowed. Union of the per-vertex partial-response conflict graphs also gives an exact shared-message coloring characterization with separate history-only decoders, at most the product of individual color counts. Joint coloring not executed this round.
+- **Stable-ID specialization:** fix each formal reverse history, simplify constants, signed aliases, equal/opposite inputs, commutative structural hashing. Keep original representative gate IDs; no synthesized gates. Additional certified affine aliases via GF(2) forms and recognition of local XOR/XNOR macros (complemented ANDs with mutually complementary operand pairs, both children in A). This uses known signed AIG phases, not only bare topology or arbitrary unknown gate functions.
+- **History-expanded flow:** disjoint specialized copies per h, unit vertex capacities, shared capacity-one vertex per original free data source feeding its occurrences in all copies, sinks at nonconstant representative cut outputs K_h. Min-cut/max-flow L(K) satisfies log2 N<=log2 |image J_K|<=L(K)<=|S|: encode bits at any network vertex cut and reconstruct all copies. Per-history cuts may use different original IDs; shared sources avoid counting the same primary repeatedly. L(K)<=sum of independent per-history mincuts. Not always stronger than previous exact per-vertex flow; use minimum of valid capacity estimates.
+- **Additive gate charge:** under residual injectivity and K=F, full lifted flow gives one unit path per source, entering one history copy. Let m_v be the number of live copies of original gate v. Assign each copy cost 1/m_v; unit capacities ensure all copies of one original gate charge <=1 total. Sum of minimum source-to-port path costs <=number of original live A gates<=s_A. More generally allocate nonnegative cost budgets lambda_(v,h) with sum_h lambda<=1 per gate; the proof is identical, and a finite LP can optimize them. No LP executed. Old and lifted path charges cannot automatically be added or assumed to dominate each other.
+- **Strict unbounded-factor separation from ALL exact individual causal cuts:** r tables of M=2^k bits, shared independent q, A mux outputs p_i=H_i[q], e=[q!=0], forward f_i=p_i XOR (e AND XOR_(j!=i)p_j). Bob selects a port. At q=0 outputs independent r bits; at q!=0 all r outputs equal one common parity. Joint response GF(2) rank exactly r+M-1, while each output has 2^M different responses. Every old individual-capacity cut passes rM demand: varying only H_i proves exact local capacities suffice for M units along its mux tree and direct XOR branch, disjoint across i. Histories independently reachable so exact partial color capacities also suffice. Affine specialization identifies all same-parity outputs per nonzero history; lifted mincut exactly r+M-1. For r=M this is factor Theta(M) separation, with O(rM+r^2)=O(rM) gates and every data bit essential. This is a REJECTED signed gate/phase assignment for INDEX, not an INDEX circuit nor impossibility for all assignments to that bare graph.
+- **Negative controls/limits:** correct mux trees for INDEX are linear; enabled permutable lookup is quasi-linear via sorting. The new joint theorem captures lost joint information, not an unavoidable superlinear numerical cost. Still need a necessary expensive weighted path/coordination property for SAT, or stronger simultaneous joint constraints based on existential consistency. No new physical SAT layout, topology transfer to guarded slice, or sum of overlapping charges asserted.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [joint_history_handoff.md](joint_history_handoff.md) | Joint codes, union conflict graph, stable affine specialization, shared-source lifted flow, gate charge, explicit separation |
+| [joint_history_check.js](joint_history_check.js), [replay](joint_history_replay.txt) | Actual history copies, cut/flow reconstruction, targeted affine examples |
+| [feedback_compatibility_handoff.md](feedback_compatibility_handoff.md), [checker](feedback_compatibility_check.js) | Partial response coloring, common history separators, fractional charge |
+| [causal_response_handoff.md](causal_response_handoff.md), [checker](causal_response_check.js) | Causal response cuts and virtual gate charge |
+| [causal_lookup_check.js](causal_lookup_check.js), [replay](causal_lookup_replay.txt) | Enabled permutable packed lookup |
+| [packed_directional_handoff.md](packed_directional_handoff.md), [checker](packed_directional_check.js) | Asymmetric lookup ports |
+| [packed_welllinked_handoff.md](packed_welllinked_handoff.md), [checker](packed_welllinked_check.js) | Arbitrary cuts, exact matching, geometric bounds and routing gap |
+| [packed_separator_handoff.md](packed_separator_handoff.md), [checker](packed_separator_check.js) | Balanced separators, planar/minor/genus bounds |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling and two-read normal form |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Finite linear improvements |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress count limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Joint Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compression |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run `node joint_history_check.js`. Seed 870025. 249 random and 36 mux AIGs, 1,693 formal histories, 10,234 ordinary and 10,234 affine specialization comparisons, 1,187 internal cuts, 36,072 actual reconstruction checks. 270 strict joint-image vs individual-sum improvements, 913 shared-source vs independent-copy flow refinements, 67 injective weighted charge checks. Zero strict lifted-vs-exact-individual forward-flow improvements and zero extra affine-flow improvements in that random/mux sample. Nine targeted r=2,4,8 and k=1..3 examples: all old exact individual flows=rM; affine lifted mincuts=joint rank=r+M-1; ordinary hashing misses six larger-r examples. 720 actual family assignment checks. Largest example 64 data bits, 367 gates, old/ordinary lifted capacity 64, new affine lifted capacity 15. All assertions passed. First simplifier missed larger correlations, fixed with affine aliases; independent-copy capacities corrected. No new joint coloring, charge-budget optimization, SAT grammar/padding/slice replay, full SAT synthesis, Lean verification or production changes.
+
+## Native / independent agent priority
+
+Read [joint_history_handoff.md](joint_history_handoff.md) and replay. Audit common-history extension, stable original IDs, local XOR identity/affine aliases, source-shared network cut proof, exact-individual full-flow witnesses and per-gate charge. Explore symbolic covers instead of enumerating histories, joint constraints from genuinely shared existential SAT witnesses, and optimized charge budgets. Distinguish phase-specific rejection from bare-topology rejection. Keep small mux, sorting, two-read and Andreev/Tseitin/cubic controls. No unrestricted superlinear size claim: no proof yet of a necessary superlinear sum of path costs. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — feedback compatibility and structural history separators
 
 Updated 2026-11-26. Base [e67385e](https://github.com/Krapples/circuit-synthesis-research/commit/e67385efdb039b579611901d2f30e8ed2c88d38c). **L-clb-036 remains open.** Stronger causal response capacities accounting for realizable histories, with an exact compatibility-coloring interpretation and noncircular topology-only refinement. All old causal cuts can pass while the new structural bound fails. The additive gate charge survives real capacities. Paper proofs and finite replay; no unrestricted superlinear size result, Lean theorem, or production solver changes.
