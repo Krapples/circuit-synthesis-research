@@ -20,3 +20,4 @@ open CircuitLemmas
 #print axioms CircuitLemmas.GateElim.xnorConj_std_lower
 #print axioms CircuitLemmas.GateElim.card_le_degCount
 #print axioms CircuitLemmas.GateElim.excess_restriction
+#print axioms CircuitLemmas.GateElim.xnorConj_restriction_lower

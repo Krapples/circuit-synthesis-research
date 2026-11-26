@@ -2,7 +2,8 @@
 
 This note reviews ChatGPT's six-bit fragment and even-length notes, which were supplied as
 `sat_six_bit_fragments_notes.md` and `sat_even_length_bound_notes.md` in Downloads and are not
-committed. It is a paper review plus finite checks: **not Lean-checked, and no novelty claim.**
+committed. It is a paper review plus finite checks: **not Lean-checked as a whole, and no novelty claim.**
+Lean status (2026-11-26): claims 4, 5 and 6 are formally checked; see "Lean formalization".
 The external project was read at open-goat/pequalnp-proofs `d9f1ea2` (2026-11-25).
 
 ## Model and target
@@ -34,8 +35,8 @@ The external project was read at open-goat/pequalnp-proofs `d9f1ea2` (2026-11-25
 | 2 | First-gate lemma: no pair funnel implies a repeated operand at the earliest gate | **Proved** (paper). The funnel test on F_q and the tails is checked finitely. |
 | 3 | The absorbing restriction of a repeated earliest operand removes at least 3 gates | **Proved** (paper). The two-reader case is handled by the canalizing replacement; see below. |
 | 4 | Independent literal extension: `C(g AND z) >= C(g) + 1` for nonconstant g | **Proved** (paper, standard). **Formally checked** in Lean for the repository's free-NOT model (`literal_extension`; see below). |
-| 5 | `C(F_q) = 4q - 1` | **Proved** from 2-4. Percy reports C(F_2) = 7 (UNSAT at 6, SAT at 7; solver-reported, not certified). |
-| 6 | Excess monotonicity: `B >= n - m + C(f restricted)` for coordinate restrictions | **Proved** (paper). The cycle rank `B - n + 1` of a trimmed connected circuit cannot increase under deletion or contraction. Not valid for identifications. |
+| 5 | `C(F_q) = 4q - 1` | **Proved** from 2-4. **Formally checked** in Lean (`xnorConj_lower`, 2026-11-26), with a direct proof that needs no canalizing replacement. Percy reports C(F_2) = 7 (UNSAT at 6, SAT at 7; solver-reported, not certified). |
+| 6 | Excess monotonicity: `B >= n - m + C(f restricted)` for coordinate restrictions | **Proved** (paper). **Formally checked** in Lean (`excess_restriction`, 2026-11-26) by a counting proof in place of graph minors. The cycle rank `B - n + 1` of a trimmed connected circuit cannot increase under deletion or contraction. Not valid for identifications. |
 | 7 | Full essential support of `SAT_n` | **Checked** for every even n from 12 to 60 except 14, using the witnesses in the notes (the n=16 certificate included). L037 proves the n=6q case in Lean. |
 | 8 | Mux tail: `C(F_q AND mux) = 4q + 3` | **Proved** (paper). Percy reports C(F_1 AND mux) = 7. |
 | 9 | Three-input tails, cases (a) and (b): `C(F_q AND g) >= 4q + 4` | **Proved** (paper). Percy reports C(F_1 AND g) = 8 for all four strong cofactors of H. |
@@ -123,15 +124,56 @@ It does not use the external project's `Circuit`. Comparing the two models (item
 | `Circuit.eval_restrict`, `realizes_restrict` | Fixing an input to a constant gives a circuit of the same size, so restriction never increases complexity. |
 | `restrict_eliminates` | Fixing input `z` deletes every gate that reads `z`: `size' + readers z ≤ size`. |
 | `literal_extension` | If `g` is nonconstant and ignores `z`, a circuit for `g ∧ x_z` of size `s` gives one for `g` of size `s - 1`. This is claim 4 of the table. |
+| `literal_extension_phase` (XnorConj.lean) | The same for `g ∧ (x_z == c)`, either phase. |
+| `xnorConj_lower`, `xnorConj_std_lower` (XnorConj.lean) | Every circuit for the AND of `x_a == x_b` over `q` disjoint pairs has at least `4q - 1` gates. With pairs `(2j, 2j+1)` this is `C(F_q) >= 4q - 1` (claim 5). |
+| `card_le_degCount`, `excess_restriction` (Excess.lean) | If every input of `F` is essential for `f` and `f` with `F` fixed is nonconstant, then `C(f restricted) <= C(f) - |F|`. This is claim 6 in the form the SAT argument uses (`|F| = n - m`). |
+| `xnorConj_restriction_lower` (Composition.lean) | If fixing a set `F` of essential inputs leaves the XNOR conjunction of `q >= 1` disjoint pairs, then `C(f) >= |F| + 4q - 1`. With the six-bit fragments (`|F| = 4q + 6` at `n = 6q + 6`) this is the `8q + 5` step of claim 11, given the string identity and full support. |
 
-**Not formalized yet:**
-- the first-gate funnel lemma and the three-gate absorbing elimination (claims 2-3). `restrict_eliminates`
-  and `bypass_many` are their accounting core: the remaining steps are a reader of the earliest gate and the
-  canalizing replacement;
-- excess monotonicity (claim 6);
-- `C(F_q) = 4q - 1` and the tails (claims 5 and 8-10);
-- the string identities (claim 1);
-- the final bound (claim 11).
+**XNOR proof (audited 2026-11-26).** Strong induction on circuit size, then on `q`. A degenerate first
+gate, a first gate on an input outside the pairs, or a dead first gate gives a smaller circuit. Otherwise
+the first gate `g0 = l_u ∧ l_v` reads two distinct pair inputs. Each of `u, v` has a second reader: if
+not, fixing `x_u` to make `l_u` false would make the circuit ignore `x_v`. For the same reason `g0` is not
+the output. One gate cannot read the three wires `u, v, g0`, so some `z ∈ {u, v}` has two distinct later
+gates reading `z` or `g0`. Fixing `x_z` to make `l_z` false deletes `g0` and those two gates. The rest is
+`F_{q-1} ∧ (x_z' == c)`, and the literal costs one more gate. The two-reader case of claim 3 never arises,
+so the canalizing replacement is not needed.
+
+**Excess proof (audited 2026-11-26).** Take a circuit of minimum size and call a wire constant if its
+value does not depend on the free inputs once `F` is fixed. Every input of `F` is read by some gate:
+it is essential, and the output reading it directly would make the restriction constant. Every constant
+gate has a later reader: there are no dead gates, and the output is not constant. So at least
+`|F| + #constant gates` distinct constant wires are read. A constant gate has at most two constant
+operand slots, and a nonconstant gate at most one, since two would make it constant. So
+`|F| <= #gates with a constant operand or value`. All of these are degenerate after the restriction, and
+`bypass_many` deletes them. This is stronger than the per-input count: it needs no assumption about inputs
+that become irrelevant. Both hypotheses are needed: `f = y ∧ z` with `y = 0` fixed has `C(f) = 1 < 2`,
+and it is excluded only because the restriction is constant. **Finite check:**
+`experiments/excess_restriction_check.py` takes every 4-input function and every restriction of essential
+inputs with a nonconstant result, using the exact NPN sizes in `results/sat_gadget/npn4_exact_aig_all.json`:
+2,920,992 cases, 0 violations, 0 undecided (`logs/excess_restriction_check.out`).
+
+**Verification status.** `lake build` passes (18,264 jobs). `AxiomsCheck.lean` reports only `propext`,
+`Classical.choice` and `Quot.sound` for every theorem above. There is no `sorry` and no `native_decide`.
+The new files have no string literals, no `#` commands and no `set_option`. They do define their own types
+(the GateElim model), so external submission would need a model transfer and human review (below).
+
+**Not formalized yet** (remaining gaps, 2026-11-26):
+- the string identity (claim 1): defining `SAT_n` in this model, or transferring the external `wfD`
+  automaton, and proving `SAT(T(x1,y1)...T(xq,yq) 110100) = F_q`;
+- full support of `SAT_n` for every even `n` (claim 7). The external L037 covers only `n = 6q`;
+- the tails for `n = 6k+2, 6k+4` (claims 8-10). Each is an induction like `xnorConj_lower`, with a tail
+  factor in place of the last pair;
+- the final bound (claim 11), which is `xnorConj_restriction_lower` plus the three items above;
+- the model transfer to the external `Circuit` (and/or/not gates on `List ℕ` inputs, counted NOTs). Free-NOT
+  `B` is at most the counted size, so lower bounds transfer, but this needs a compiler between the models
+  and a proof;
+- 17n/12: the additive-weight theorem `C(AND f_j) >= sum w(f_j) - 1`, the four block weights (6/8/10/12,
+  backed by exact-synthesis certificates that would need checkable proofs), the 11-state mixed-block
+  certificate and the padding lemma. None is formalized. The weight theorem is the largest piece: its
+  recursion uses the exact minima of 4-input cofactors, which would have to come from checked certificates.
+
+The claim-2/3 route (funnel lemma, absorbing elimination, canalizing replacement) is no longer needed for
+claim 5. The tails still need their own case analysis.
 
 The additive-weight theorem stays separate until it has its own full review.
 
@@ -326,7 +368,8 @@ python -I sat-search/experiments/additive_weight_check.py --exact4-exe sat-searc
 - 76,176 block pairs, checked against an independent token parser plus a SAT evaluator;
 - 5,000 seeded mixed sequences.
 
-**Lean obligations** beyond those of the 12q+6 route:
+**Lean obligations** beyond those of the 12q+6 route (none formalized as of 2026-11-26; the excess
+inequality they rely on is now `excess_restriction`):
 - a mixed-block automaton induction;
 - the padding lemma over the `wfD` automaton or parser;
 - an even-n full-support theorem replacing L037's 6q.
