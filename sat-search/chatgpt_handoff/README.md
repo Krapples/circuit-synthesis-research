@@ -1,3 +1,55 @@
+# Research handoff — cross-history quotient and optimal capacitated charges
+
+Updated 2026-11-26. Base [47dca20](https://github.com/Krapples/circuit-synthesis-research/commit/47dca200e6096b38706b7ecea866be0c921c2287). **L-clb-036 remains open.** This round captures correlations across different histories even when each history has full response rank, and optimizes additive gate charges while respecting simultaneous flow constraints. Explicit unbounded separations, including a quasi-linear-size candidate family. No unrestricted superlinear numerical size bound, Lean verification, production change, or literature-priority claim.
+
+## Current results
+
+- **Cross-history quotient:** specialize all formal feedback histories, retain stable original gate IDs, process original vertices topologically and merge certified equivalent/complementary Boolean functions across histories. Constant/structural hashing and certified affine aliases suffice for new examples. All aliases point to existing earlier representatives; quotient remains a DAG. Unit-vertex max-flow q(K) from shared data sources to joint output representatives satisfies log2 N<=log2 |image J_K|<=q(K)<=|S| by vertex-cut coding. Exact joint response preservation, not a physical simultaneous evaluation or arbitrary cyclic contraction. This is phase-specific, not a bare-topology exclusion; checker uses verified-by-construction XOR macro provenance, production needs generic certification. No general monotonicity over every alternative representative selection or all previous capacity tests asserted.
+- **Cross-history strict separation:** M=2^k, M tables of M bits, forward f_i(q)=XOR_j H_j[q XOR i XOR j]. Let P_t=XOR_j H_j[t XOR j]; M independent parities on disjoint supports. Each history q has full output rank M (permutes P_t); across histories joint rank remains M. All old exact individual capacities allow M^2 flow, witnessed by routing row i through its H_i[q] mux and direct XOR chain, varying row i alone. Disjoint history flow also M^2, selecting H_i[q] in history q; within-history supports are disjoint. Global affine quotient flow exactly M. All data bits essential, yet fails intended two-address INDEX injection. Separate mux implementation O(M^3); shared conditional XOR permutations on each row (k stages of M muxes) reduce to O(M^2 log M), preserving exact old full-flow witnesses. This is a quasi-linear-size candidate rejected by stronger phase-specific tests, not a correct INDEX circuit or new SAT size bound.
+- **Capacitated charge:** in injective case, use full feasible flow polytope P, unit copy vertex capacities, copy load l_z(f), nonnegative cost lambda_z with sum over original gate's copies<=1. B(lambda)=min_(f in P) sum_z lambda_z l_z(f)<=s_A. This preserves competition between inputs for ports/gates, unlike independently choosing shortest paths. Fixed-cost min-cost flow admits integral optimizer.
+- **Optimal budget dual:** B*=max_lambda B(lambda)=min_(f in P) sum_v max_(z labelled v) l_z(f), by bilinear minimax over compact convex polytopes. Polynomial-size LP on explicit network via variables u_v>=l_z(f). Right-hand optimizer may be fractional; do not substitute distinct labels touched by an integral flow. Alternative constraint generation: master LP over budgets and t<=cost of each integral full flow, min-cost-flow separation oracle. Numerical implementation executed, not a formal rational certificate generator. Fixed feasible weights plus exact mincost certificate needed for production exclusion.
+- **Unbounded charge gaps:** no-feedback x,y,z_i, outputs x XOR y, serial x XOR z_1 XOR ... XOR z_L, and z_i raw. Injective. Independent shortest charge 4 (x and y both choose same port); feasible flow forces y through that port, x through chain, exact optimum 2L+2. History dilution: y,z raw and y XOR mux([q!=0],x,z); x must use two XOR gates only at zero history, but they survive all H histories. Uniform mincost 2/H, optimum 2, quotient uniform 1. These are architecture-specific charges, not minimum circuit bounds.
+- **Multiple scenarios (paper only):** one shared lambda budget per original gate across ALL copies of all legal injective partitions/restrictions; sum of their independent feasible mincost values<=s. Optimized dual minimizes sum_v max_(scenario,copy labelled v) load. Permits legitimate simultaneous charges across overlapping contexts/partitions, not simply adding independent metrics. No superlinear lower bound on this objective yet, no multi-scenario experiment.
+- Earlier causal response, compatibility coloring, upstream history separator, joint history flow, and packed enabled lookup remain valid. Correct mux/sorting controls remain small. Need prove a superlinear minimum over feasible collections of flows or establish a limitation; no topology transfer through guarded-slice compiler.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [cross_history_charge_handoff.md](cross_history_charge_handoff.md) | Quotient proof, cross-history correlation family, capacitated charge/minimax, scenario extension and exact gaps |
+| [cross_history_charge_check.js](cross_history_charge_check.js), [replay](cross_history_charge_replay.txt) | Stable quotient, mincost, LP constraint generation, chain/dilution/shared permutation controls |
+| [joint_history_handoff.md](joint_history_handoff.md), [checker](joint_history_check.js) | Earlier disjoint history flow and same-history affine correlation |
+| [feedback_compatibility_handoff.md](feedback_compatibility_handoff.md), [checker](feedback_compatibility_check.js) | Compatibility coloring and history separators |
+| [causal_response_handoff.md](causal_response_handoff.md), [checker](causal_response_check.js) | Causal capacity and distinct-gate charge |
+| [causal_lookup_check.js](causal_lookup_check.js), [replay](causal_lookup_replay.txt) | Enabled permutable packed lookup |
+| [packed_directional_handoff.md](packed_directional_handoff.md), [checker](packed_directional_check.js) | Asymmetric lookup ports |
+| [packed_welllinked_handoff.md](packed_welllinked_handoff.md), [checker](packed_welllinked_check.js) | Arbitrary cuts, matching and routing gap |
+| [packed_separator_handoff.md](packed_separator_handoff.md), [checker](packed_separator_check.js) | Balanced separators and architecture bounds |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling and two-read normal form |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Finite linear improvements |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress count limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md) | Joint Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Cluster/hub bounds |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression/sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Path theorem |
+
+Run `node cross_history_charge_check.js`. Seed 870026. Five chain gaps 4 vs 6,10,18,34,66; five dilution gaps uniform 2/H vs optimum 2, H=2..32. Six orbit-parity AIGs (separate and shared permutation implementations) with old full 4,16,64 flow vs quotient 2,4,8. Largest separate circuit 1533 ANDs; shared permutation 765, 64 data bits. 480 sampled orbit evaluations. 201 retained random AIGs, 5700 local data/history quotient semantic checks, four strict quotient-flow refinements, 114 injective joint maps with optimized charge, zero strict charge improvements in random sample, max two LP constraint iterations. Targeted examples prove gaps analytically. All assertions passed. Initial repository write rejected and corrected. Numerical LP is not a rational proof checker; no multi-scenario experiment, new packed grammar, full SAT synthesis, Lean verification, or production modification.
+
+## Native / independent agent priority
+
+Audit [cross_history_charge_handoff.md](cross_history_charge_handoff.md), quotient alias ordering and XOR provenance, cross-history orbit/parity flow witness, mincost and fractional minimax dual, exact chain/dilution witnesses. Replay. Consider rational mincost certificates and simultaneous legal shared-witness scenarios; optimize one budget across all original IDs. Seek a semantic reason EVERY feasible flow collection has superlinear maximum-load sum, or a rigorous barrier. Compare with native recursive regional/coupled-reader baselines, mux/sorting, two-read and Andreev/Tseitin/cubic controls. No claim of numerical minimum-size improvement or unrestricted solution. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — joint response histories and specialized-copy flow
 
 Updated 2026-11-26. Base [5829985](https://github.com/Krapples/circuit-synthesis-research/commit/58299857e0cc1f0542a6a03547240f1a2db426f9). **L-clb-036 remains open.** Joint response codes and history-expanded source-shared flow capture correlations missed by even exact individual response capacities. A new explicit signed AIG family has a polynomial-factor separation. Stable original IDs permit additive per-gate charges across specialized copies. No unrestricted superlinear numerical size result, Lean theorem, production changes, or literature-priority claim.
