@@ -73,3 +73,21 @@ python "$probe/search-16102-full.py" sat-search/logs/16102-full-replay.jsonl
 python "$probe/search-16102.py" sat-search/logs/16102-typed-replay.jsonl
 python "$probe/search-16102-normalization-controls.py" sat-search/logs/16102-controls-replay.jsonl
 ```
+
+## Two-fork structural advance and certificate replay (2026-11-26)
+
+[New paper proof](two_fork_handoff.md): the target needs **at least eight proper binary AND/OR gates even with free negations**, attained by the existing eight-gate monotone witness. The live fanout excess is b-5 for b binary gates. The first fork must carry a signed singleton input (all 63 residual-subset checks); fixing that primary eliminates the one-fork case, via a non-read-once cofactor for every input. Two forks give an exact formula-forest decomposition, including nested forks. [Standalone checker](two_fork_check.js) excludes all independent and nested templates; [replay](two_fork_replay.json) records 12,774,316 direct formula comparisons, 186 nested subset checks, 17 retained templates, 14 consistent upstream tables, and zero matching partial downstream specifications. An independent preliminary C++/Python implementation agrees. This is a paper proof with executed exact finite checks, not Lean verification.
+
+Consequently any posted at-most-nine candidate must have exactly eight live genuine binary gates and one live internal NOT (not the output); degenerate or signed-equivalent binary gates cannot occur. The NOT's ignored second operand can be deleted, and every primary must have a path to output avoiding the NOT. Only fanout excess three remains. The previous computational UNSAT results for this final case remain valid evidence, not a checked proof.
+
+[Certificate runner](certify-nine-gate.py) imports the archived full-syntax encoder and adds precisely the above necessary syntax and bypass-path clauses. The 22 first-gate representatives are the binary AND/OR pairs under the input automorphism. Its constraint self-test was replayed independently in Python (same two functions, no solver dependency): 14,400 toy syntaxes, 736 accepted, 13,664 rejected, 14,336 exhaustive negative path-flag checks. [Output](nine_gate_constraint_selftest.json). The full runner requires the native PySAT environment and an independently installed DRAT verifier; **the 22 actual certificate solves have not been run here**. The solver output and proof trace hashes plus verifier result are retained per shard; independent CNF verification is still not a Lean encoding-soundness theorem.
+
+From this directory (native environment):
+
+```sh
+node two_fork_check.js
+python certify-nine-gate.py --self-test
+python certify-nine-gate.py --out proof-shards --solver glucose4 --timeout 300 --proof-checker drat-trim
+````
+
+The runner supports repeated `--job 0` through `--job 21` in separate fresh output directories. A complete proof must cover all 22, including any timed-out shards, and prove the circuit-to-CNF mapping under the posted syntax, or replace the CNF route with a formal three-excess argument. No upstream PR opened: live desk exact statement unavailable in this session, open PR search found no match but did not certify absence, and no Lean toolchain here. Z3's initial internal DRAT validation failed; with several simplifications disabled a six-gate query timed out. Neither is claimed as a certificate. Continue L-clb-036 separately.
