@@ -14,6 +14,9 @@
   "matching_grammar_checks": 960,
   "matching_cross_bits": 1964,
   "matching_mixed_orientation_pairs": 261,
-  "layout_checks": 300
+  "layout_checks": 300,
+  "edge_protocol_checks": 447,
+  "vertex_protocol_checks": 306,
+  "transcript_rectangles": 13056
 }
 all assertions passed
