@@ -1,3 +1,44 @@
+# Research handoff — exact guard peeling and two-primary-read normal form
+
+Updated 2026-11-26. Base [8b797db](https://github.com/Krapples/circuit-synthesis-research/commit/8b797db4eca0873dc7b2fa680d31b301a8778b57). **L-clb-036 remains open.** New converse to guard-cylinder peeling, and a constant-factor compiler reducing every primary to at most two reads without primary-equivalent internal buffers. The latter is a fundamental limitation on a superlinear primary-read-only argument. No new Lean theorem or production solver changes.
+
+## Current results
+
+- **Exact peeling feasibility:** for full-support f and specified subset U, Peel(U) iff there exists a semantically normalized signed AIG realizing f in which all U inputs have exactly one primary occurrence. No size bound on that realization is asserted. Necessity is the prior earliest-reader lemma. Sufficiency maintains the residual-function invariant on state = outside inputs + earlier reader outputs. Singleton guard is one iff the state's residual depends on the next input; peeling ensures a nonempty guard-zero region, and essentiality ensures a guard-one region. Compatible pair compresses to its exceptional signed AND bit. State retains the residual function, and an arbitrary final decoder realizes f. A blocked assignment proves no internal gate can equal any selected primary up to phase; normalization cannot add selected reads. Consequently u_peel exactly maximizes single readers across normalized realizations of unrestricted size, not necessarily across minimum circuits.
+- **Two-read normal form:** any s-gate signed AIG on n>=2 inputs compiles to at most 6s+2n+3 gates with at most two direct reads of EVERY primary. Choose anchors a,b; compute d=a AND b, p=a AND NOT d, q=b AND NOT d, g=p OR q=a XOR b. This reads each anchor twice. In domain g=1 their positive rails are p,q; in domain g=0 both rails are d. Each remaining input x enters two rails g AND x and NOT g AND x. Simulate the original AIG separately on domain-supported rails, with masked complement D AND NOT rail(v) and ordinary AND; OR the two output rails. All nonfinal gate outputs are supported in a single domain, and each domain contains both phases of every primary, so none equals a signed primary. For full-support f the final gate is also nonconstant and not primary-equivalent. Constant/duplicate normalization and dead-cone pruning preserve the two-read cap. No claim that the minimum-size circuit itself is two-read.
+- **Asymptotic equivalence:** C(f)<=C_2(f)<=6C(f)+2n+3, where C_2 restricts primary operand occurrences to two; for full support this is <=8C(f)+5 even with normalization. For alpha>1, existence of O(n^alpha) circuits is equivalent in the two models. Hence L-clb-036 may be studied in this bounded-primary-read normal form without asymptotic loss, but a universal superconstant primary-read requirement cannot hold, even after removing identity buffers. Internal fanout remains unrestricted. Next lower-bound target is downstream routing, internal cut ports, recombination and sharing costs, not raw primary degree alone.
+- Prior guard-cylinder lower bound remains valid: C>=2n-u_peel-1, improving the ordinary exact single-restriction baseline on 520 of 64,594 full-support four-input tables. It is linear and does not claim superiority to stronger native regional/coupled-reader bounds. The earlier ingress and programmable-role controls remain relevant.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md) | Constructive converse, normalized two-read compiler, complexity equivalence and limitations |
+| [guard_read_normal_form_check.js](guard_read_normal_form_check.js), [replay](guard_read_normal_form_replay.txt) | Exhaustive subset-state invariant, actual AIG constructions and masked two-read checks |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Prior necessary peeling and distinct-gate linear bound |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress count relaxation and limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Stable internal gate role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md) | Global witness compatibility and joint Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Exact cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and cubic counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor, independently audited |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and oblivious sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run: `node guard_read_normal_form_check.js` from this directory. Seed 870018. 64,594 full-support four-input tables; 1,033,504 subset tests, 701,314 feasible sets with constructive residual invariant verified; 5,721 actually synthesized/normalized AIGs, 91,536 truth-table entries, 8,861 selected single-reader checks. Two-read compiler: 305 full-support random circuits, 1,824 truth-table entries, 733 read-cap checks. All passed. Earlier preliminary three-read anchor construction superseded by the stronger two-read construction. No optimized guard/decoder cost, minimum-size two-read claim, or speedup asserted.
+
+## Native-agent priority
+
+Audit both proofs and replay. Formalize the separable rail identities, occurrence counts and normalization lemma if useful; compare prior peeling with native stronger regional/coupled-reader baselines. The pure primary-read charge saturates at a constant per input by construction, so redirect the asymptotic investigation toward internal reader ports and distinct shared-routing/recombination gates. The bounded-primary-read model may be assumed without asymptotic loss, not bounded internal fanout. Do not use the unbounded-size peeling converse to certify a small-budget witness. No production integration or Lean verification this round; no literature priority claim.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — single-reader guard dependencies and cylinder peeling
 
 Updated 2026-11-26. Base [689d102](https://github.com/Krapples/circuit-synthesis-research/commit/689d1028363893e7f0c108817c5f2ed34043cc83). **L-clb-036 remains open.** This round obtains an actual stronger distinct-gate lower bound on finite functions, in contrast to the previous count-only ingress ledger. The new bound uses semantic constraints on the other operand of a single primary reader, and the acyclic order of several such readers. It is at most 2n-1, not a superlinear SAT result. No new Lean theorem or production solver changes.
