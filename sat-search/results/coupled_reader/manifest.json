@@ -1,0 +1,65 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Reproduce the handoff and check whether coupled elimination improves on exact-leaf first-gate baselines.",
+  "jobs": [
+    {
+      "id": "coupled-reader-handoff-replay",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/results/coupled_reader/handoff_reference.py"
+      ],
+      "query": {
+        "basis": "free-complement AIG",
+        "scope": "handoff-replay",
+        "expected": "Reproduce the archived handoff counts and 07e1 orbit"
+      },
+      "workers": 1,
+      "memory_mib": 768,
+      "timeout": {
+        "initial": 120,
+        "maximum": 120
+      },
+      "inputs": [
+        "sat-search/results/coupled_reader/handoff_reference.py"
+      ],
+      "cache": true
+    },
+    {
+      "id": "coupled-reader-matched-screen",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/experiments/coupled_reader_audit.py"
+      ],
+      "query": {
+        "basis": "free-complement AIG",
+        "scope": "208 essential NPN4 classes, random 5/6-input functions, complete frozen corpus up to 7 inputs",
+        "expected": "sound bounds and verified size 7 for 07e1",
+        "gate_budget": {
+          "07e1_excluded": 6,
+          "07e1_witness": 7
+        }
+      },
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {
+        "initial": 120,
+        "maximum": 120
+      },
+      "inputs": [
+        "sat-search/experiments/coupled_reader_audit.py",
+        "sat-search/theory/first_gate_bound.py",
+        "sat-search/theory/module_contraction.py",
+        "sat-search/theory/signed_region_bounds.py",
+        "sat-search/theory/xor_factor.py",
+        "sat-search/results/cofactor_witness/npn4_witnesses.json",
+        "sat-search/results/synthesis_cases.json",
+        "sat-search/results/synthesis_signed_cases.json"
+      ],
+      "cache": true
+    }
+  ]
+}

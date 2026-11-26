@@ -94,6 +94,13 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+The coupled first-gate reader audit gives a separate lower-bound proof of the known
+seven-gate AIG minimum for `0x07e1`. The inexpensive absorbing extension raises
+the exact-leaf identification bound from 6 to 7, and the stronger recursive regional
+baseline already reaches 7. Against that baseline the extension improves one of 300
+seeded five-input tables and none of the 89 frozen corpus targets. Extra reader and
+phase compatibility tests stay experimental. [Proof, finite replay, and comparison](sat-search/results/coupled_reader/README.md)
+
 For sparse SAT conflict templates, the exact fork kernel has at most three occurrences
 per mode variable. A linear-size parsimonious reduction gives fully genuine, linear
 width-two/three mode cores that survive matching contraction and pure-literal or unit

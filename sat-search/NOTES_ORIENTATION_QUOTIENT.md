@@ -439,3 +439,16 @@ python -B sat-search/experiments/orientation_check.py bench OUT --random 5:60:51
 ```
 
 Random seeds: 5101 / 6101 / 7101 / 8101 for n = 5 / 6 / 7 / 8.
+
+## Coupled first-gate reader audit
+
+The two absorbing restrictions and the joint reader profiles are sound for a
+minimum AIG chosen to maximize its number of first-layer gates. The audit also
+checks phase compatibility when two first-layer gates share an input pair.
+`0x07e1` has exact free-complement AIG cost 7 by a small exhaustive cofactor
+certificate and an independently replayed witness. The strongest compared
+first-gate baseline already reaches 7 using recursive signed regional bounds.
+The absorbing extension improves one of 300 seeded five-input tables and none of
+the 89 frozen corpus targets with that baseline. The extensions remain experimental.
+The proof uses complete truth tables and does not justify orientation or partial-label pruning.
+[Audit, scope, and matched replay](results/coupled_reader/README.md)

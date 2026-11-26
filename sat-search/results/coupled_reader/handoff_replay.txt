@@ -1,0 +1,16 @@
+local rewrite truth tables 32
+enumeration 2 3 distinct complement classes 8 candidate output hits 54
+enumeration 3 6 distinct complement classes 128 candidate output hits 3766248
+enumeration 4 4 distinct complement classes 1795 candidate output hits 515772
+full-support screen 3 {'full_support': 218, 'no_reapp_gain': 0, 'pattern_gain': 0, 'total_gain': 0} witnesses [] max gain 0
+full-support screen 4 {'full_support': 64594, 'no_reapp_gain': 384, 'pattern_gain': 192, 'total_gain': 576} witnesses [('0x6b0', 6, 6, 7), ('0x6d0', 6, 6, 7), ('0x790', 6, 6, 7), ('0x7e2', 5, 6, 6), ('0x7e4', 5, 6, 6)] max gain 1
+full-support screen 5 {'full_support': 300, 'no_reapp_gain': 3, 'pattern_gain': 1, 'total_gain': 4} witnesses [('0xda9c8bb1', 8, 9, 9), ('0x870856ff', 8, 8, 9), ('0x4729e3fc', 8, 9, 9), ('0x9cf0341c', 8, 9, 9)] max gain 1
+full-support screen 6 {'full_support': 80, 'no_reapp_gain': 0, 'pattern_gain': 0, 'total_gain': 0} witnesses [] max gain 0
+isolated 4 {'sets': 742, 'pattern_over_existing_first_gate': 0, 'pattern_over_isolation': 456, 'pattern_over_both': 0} []
+isolated 5 {'sets': 200, 'pattern_over_existing_first_gate': 0, 'pattern_over_isolation': 174, 'pattern_over_both': 0} []
+isolated 6 {'sets': 80, 'pattern_over_existing_first_gate': 0, 'pattern_over_isolation': 80, 'pattern_over_both': 0} []
+random circuits {'circuits': 1500, 'full_support': 173}
+exact three-input leaves 4 {'cases': 64594, 'no_reapp_gain': 384, 'pattern_gain': 0, 'total_gain': 384} [('0x7e1', 6, 7, 7), ('0x7e8', 6, 7, 7), ('0xbd2', 6, 7, 7), ('0xbd4', 6, 7, 7), ('0xdb2', 6, 7, 7), ('0xdb4', 6, 7, 7)]
+exact-leaf four-input gains are one NPN orbit 384 0x7e1
+exact three-input leaves 5 {'cases': 300, 'no_reapp_gain': 6, 'pattern_gain': 0, 'total_gain': 6} [('0xc688438d', 8, 9, 9), ('0xc7f71aa0', 8, 9, 9), ('0x794df1b0', 8, 9, 9), ('0x93c11280', 8, 9, 9), ('0xc4eb4ca2', 8, 9, 9), ('0x1d3ec55', 8, 9, 9)]
+elapsed seconds 15.725714199943468
