@@ -1,0 +1,136 @@
+automaton self-test: 21845 words
+L=2 blocks=0 1.9s
+L=4 blocks=7 2.3s
+L=6 blocks=73 2.7s
+L=8 blocks=214 3.1s
+L=10 blocks=730 3.6s
+L=12 blocks=1353 4.1s
+L=14 blocks=2903 5.2s
+{
+ "blocks": 2903,
+ "npn_classes": 66,
+ "open_classes": [],
+ "seconds": 7.7,
+ "best_composing": [
+  {
+   "L": 6,
+   "tail": "110100",
+   "m": 4,
+   "tt": "e8e4",
+   "template": "11abcd",
+   "C": 7,
+   "e_lower": 4,
+   "ratio_lower": 0.6666666666666666
+  },
+  {
+   "L": 10,
+   "tail": "110100",
+   "m": 4,
+   "tt": "d004",
+   "template": "11a1b0c10d",
+   "C": 7,
+   "e_lower": 4,
+   "ratio_lower": 0.4
+  },
+  {
+   "L": 6,
+   "tail": "110100",
+   "m": 2,
+   "tt": "9",
+   "template": "11a10b",
+   "C": 3,
+   "e_lower": 2,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 6,
+   "tail": "110100",
+   "m": 3,
+   "tt": "82",
+   "template": "a1b10c",
+   "C": 4,
+   "e_lower": 2,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 6,
+   "tail": "110100",
+   "m": 3,
+   "tt": "84",
+   "template": "11ab0c",
+   "C": 4,
+   "e_lower": 2,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 6,
+   "tail": "110100",
+   "m": 3,
+   "tt": "ed",
+   "template": "11a1bc",
+   "C": 4,
+   "e_lower": 2,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 6,
+   "tail": "110100",
+   "m": 4,
+   "tt": "8020",
+   "template": "a1bc0d",
+   "C": 5,
+   "e_lower": 2,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 12,
+   "tail": "",
+   "m": 4,
+   "tt": "e8e4",
+   "template": "11abcd110100",
+   "C": 7,
+   "e_lower": 4,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 12,
+   "tail": "110100",
+   "m": 4,
+   "tt": "9009",
+   "template": "11a10b11c10d",
+   "C": 7,
+   "e_lower": 4,
+   "ratio_lower": 0.3333333333333333
+  },
+  {
+   "L": 10,
+   "tail": "110100",
+   "m": 4,
+   "tt": "ed21",
+   "template": "11a1bc1d01",
+   "C": 6,
+   "e_lower": 3,
+   "ratio_lower": 0.3
+  },
+  {
+   "L": 10,
+   "tail": "110100",
+   "m": 4,
+   "tt": "d404",
+   "template": "11a1b0c1d0",
+   "C": 6,
+   "e_lower": 3,
+   "ratio_lower": 0.3
+  },
+  {
+   "L": 10,
+   "tail": "110100",
+   "m": 4,
+   "tt": "e220",
+   "template": "11a1b1c0d1",
+   "C": 6,
+   "e_lower": 3,
+   "ratio_lower": 0.3
+  }
+ ]
+}

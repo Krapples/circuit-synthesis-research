@@ -135,6 +135,62 @@ It does not use the external project's `Circuit`. Comparing the two models (item
 
 The additive-weight theorem stays separate until it has its own full review.
 
+## Exact-size gadget study (2026-11-26)
+
+Script: `experiments/sat_gadget_exact.py`. Record: `results/sat_gadget/blocks_l14.jsonl`. Exact minima per NPN class
+are cached in `results/sat_gadget/npn4_exact_aig.json`.
+
+**Accounting.** A coordinate restriction with m essential free bits gives `B(SAT_n) >= n - m + C(restriction)`
+(cycle-rank excess, reviewed above; it needs full support of SAT_n). Suppose a block B(z) of length L with tail t satisfies
+
+* `SAT(B(z_1) ... B(z_q) t) = AND_i f(z_i)`, and
+* `C(AND_i f(z_i)) = q (C(f) + 1) - 1`.
+
+Then the coefficient is `1 + e / L`, where `e = C(f) + 1 - m`. Check: T = `11x10y` gives f = XNOR, C = 3, e = 2, coefficient 4/3.
+
+**Search.**
+
+* Every block of length L <= 14 with 2..4 free coordinates (all other bits fixed), each with tails `''`, `00` and `110100`.
+* f must depend on all m free bits. This gives 2,903 distinct (L, tail, f) blocks in 66 NPN classes.
+* C(f) is exact for every class: a Percy cone+cond ladder below the cofactor library witness, extended tier, no open budget. The search takes 8 s.
+
+**Composition proof for all q.** `induction_certificate` models the decoder as a finite automaton at token
+boundaries. The state records the phase, whether the last index digit is 0, whether the clause is nonempty, whether it already has a positive literal, and the polarity of the current literal. The certificate requires, over all states R reachable at block boundaries:
+
+* acceptance of each block value does not depend on the state, and equals f;
+* every clause that closes has a positive literal (so the all-true assignment satisfies every valid word, and empty clauses are definite rejects);
+* the tail reaches the accepting state from every state in R.
+
+Induction on q then gives the identity for every q. The automaton agrees with the reviewed parser on all 21,845
+words of at most 14 bits (`automaton_selftest`). The certificate is sound but incomplete: some blocks pass the
+exhaustive q = 2, 3 checks but not the certificate.
+
+**Result: block `11abcd` with tail `110100`.**
+
+* f = `e8e4` (NPN class `036f`); 8 of 16 values accept. Exact C(f) = 7, so e = 4 and e/L = **2/3**.
+* The composition identity is proved for every q by the certificate and also checked exhaustively for q = 2 and 3.
+* T is its sub-restriction b = 1, c = 0. The earlier sparse searches fixed the final token, so they could not see it.
+* If additivity held, i.e. C(AND of q copies) = 8q - 1, the bound would be `B(SAT_{6q+6}) >= 10q + 5`, about **5n/3**, compared with 4n/3 now and L041's 5n/4.
+
+| Block | Tail | m | f | C | e/L | All-q certificate |
+| --- | --- | ---: | --- | ---: | ---: | --- |
+| `11abcd` | `110100` | 4 | e8e4 | 7 | 0.667 | yes |
+| `10abc10d` | `110100` | 4 | e008 | 7 | 0.5 | no (all-negative clause); q=2,3 exhaustive yes |
+| `11a1b0c10d` | `110100` | 4 | d004 | 7 | 0.4 | yes |
+| `11a10b` (T) | `110100` | 2 | 9 (XNOR) | 3 | 0.333 | yes |
+
+**Open obligation (the decisive one).** The lower bound `C(AND_q e8e4) >= 8q - 1`, or anything above 6q - 3,
+is what beats 4n/3. Using the T sub-restriction only gives 4q - 1.
+
+* A probe of mixed additivity, `C(e8e4(x0..x3) AND XNOR(x4,x5))`, would be 11 if additive. Percy in base mode (first-layer options support at most 5 inputs) proves k <= 8 UNSAT (k=8: 1.32M conflicts) and times out at k=9. So 9 <= C <= 11 is open (`logs/sat_gadget_probe_e8e4_xnor.out`).
+* A proof would need a gate-elimination argument for e8e4 in the style of the F_q proof (absorbing elimination plus literal extension), or the additive-weight theorem with w(e8e4) = 8. That is theory work.
+* Full support of SAT_n at lengths 6q + 6 is the existing 6k witness.
+
+**Scope.** Free-NOT AIG count, which lower-bounds the Lean counted size. Every coefficient above is a candidate
+until the additivity is proved. No novelty claim.
+
+Reproduce: `python -B sat-search/experiments/sat_gadget_exact.py OUT.jsonl --max-len 14 --top 300`.
+
 ## Reproduction
 
 ```powershell

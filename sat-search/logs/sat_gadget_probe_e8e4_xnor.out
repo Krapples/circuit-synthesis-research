@@ -1,0 +1,2 @@
+{"status": "TIMEOUT", "upper_bound": null, "open_budget": 9, "wall_seconds": 193.28530210000463}
+[(1, 'UNSAT', 1), (2, 'UNSAT', 20), (3, 'UNSAT', 87), (4, 'UNSAT', 444), (5, 'UNSAT', 3516), (6, 'UNSAT', 22904), (7, 'UNSAT', 151297), (8, 'UNSAT', 1318267), (9, 'TIMEOUT', 2234588)]

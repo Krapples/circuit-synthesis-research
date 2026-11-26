@@ -1,0 +1,464 @@
+{
+"0001": {
+"open_budget": null,
+"seconds": 0.02,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+},
+"0003": {
+"open_budget": null,
+"seconds": 0.022,
+"status": "SAT",
+"upper": 2,
+"witness": 2
+},
+"0006": {
+"open_budget": null,
+"seconds": 0.022,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"0007": {
+"open_budget": null,
+"seconds": 0.019,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+},
+"000f": {
+"open_budget": null,
+"seconds": 0.02,
+"status": "SAT",
+"upper": 1,
+"witness": 1
+},
+"0017": {
+"open_budget": null,
+"seconds": 0.023,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"0019": {
+"open_budget": null,
+"seconds": 0.022,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"001b": {
+"open_budget": null,
+"seconds": 0.021,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"001e": {
+"open_budget": null,
+"seconds": 0.021,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"001f": {
+"open_budget": null,
+"seconds": 0.019,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+},
+"003c": {
+"open_budget": null,
+"seconds": 0.015,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"003d": {
+"open_budget": null,
+"seconds": 0.015,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"003f": {
+"open_budget": null,
+"seconds": 0.013,
+"status": "SAT",
+"upper": 2,
+"witness": 2
+},
+"006f": {
+"open_budget": null,
+"seconds": 0.014,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"007e": {
+"open_budget": null,
+"seconds": 0.044,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"007f": {
+"open_budget": null,
+"seconds": 0.042,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+},
+"0119": {
+"open_budget": null,
+"seconds": 0.103,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"011b": {
+"open_budget": null,
+"seconds": 0.054,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"011f": {
+"open_budget": null,
+"seconds": 0.042,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"012f": {
+"open_budget": null,
+"seconds": 0.043,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"013f": {
+"open_budget": null,
+"seconds": 0.031,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"017f": {
+"open_budget": null,
+"seconds": 0.039,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"0181": {
+"open_budget": null,
+"seconds": 0.032,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"0182": {
+"open_budget": null,
+"seconds": 0.212,
+"status": "SAT",
+"upper": 8,
+"witness": 8
+},
+"0183": {
+"open_budget": null,
+"seconds": 0.022,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"018b": {
+"open_budget": null,
+"seconds": 0.02,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"018f": {
+"open_budget": null,
+"seconds": 0.022,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"0198": {
+"open_budget": null,
+"seconds": 0.176,
+"status": "SAT",
+"upper": 8,
+"witness": 8
+},
+"0199": {
+"open_budget": null,
+"seconds": 0.02,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"019b": {
+"open_budget": null,
+"seconds": 0.055,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"019f": {
+"open_budget": null,
+"seconds": 0.061,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"01aa": {
+"open_budget": null,
+"seconds": 0.037,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"01ab": {
+"open_budget": null,
+"seconds": 0.026,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"01ad": {
+"open_budget": null,
+"seconds": 0.031,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"01ae": {
+"open_budget": null,
+"seconds": 0.027,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"01af": {
+"open_budget": null,
+"seconds": 0.023,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"01bd": {
+"open_budget": null,
+"seconds": 0.05,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"01bf": {
+"open_budget": null,
+"seconds": 0.025,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"01ea": {
+"open_budget": null,
+"seconds": 0.033,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"01eb": {
+"open_budget": null,
+"seconds": 0.02,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"01ee": {
+"open_budget": null,
+"seconds": 0.017,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"01ef": {
+"open_budget": null,
+"seconds": 0.017,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"033f": {
+"open_budget": null,
+"seconds": 0.015,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"0357": {
+"open_budget": null,
+"seconds": 0.044,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+},
+"035b": {
+"open_budget": null,
+"seconds": 0.05,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"035e": {
+"open_budget": null,
+"seconds": 0.081,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"035f": {
+"open_budget": null,
+"seconds": 0.045,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"036f": {
+"open_budget": null,
+"seconds": 0.088,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"03c0": {
+"open_budget": null,
+"seconds": 0.041,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"03c3": {
+"open_budget": null,
+"seconds": 0.034,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"03c7": {
+"open_budget": null,
+"seconds": 0.02,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"03cf": {
+"open_budget": null,
+"seconds": 0.018,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+},
+"03d5": {
+"open_budget": null,
+"seconds": 0.021,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"03d7": {
+"open_budget": null,
+"seconds": 0.017,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"03de": {
+"open_budget": null,
+"seconds": 0.021,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"03fc": {
+"open_budget": null,
+"seconds": 0.019,
+"status": "SAT",
+"upper": 4,
+"witness": 4
+},
+"0660": {
+"open_budget": null,
+"seconds": 0.021,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"0662": {
+"open_budget": null,
+"seconds": 0.108,
+"status": "SAT",
+"upper": 7,
+"witness": 8
+},
+"0666": {
+"open_budget": null,
+"seconds": 0.04,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"06b7": {
+"open_budget": null,
+"seconds": 0.239,
+"status": "SAT",
+"upper": 8,
+"witness": 8
+},
+"06f0": {
+"open_budget": null,
+"seconds": 0.054,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"06f2": {
+"open_budget": null,
+"seconds": 0.062,
+"status": "SAT",
+"upper": 7,
+"witness": 7
+},
+"06f6": {
+"open_budget": null,
+"seconds": 0.034,
+"status": "SAT",
+"upper": 6,
+"witness": 6
+},
+"0776": {
+"open_budget": null,
+"seconds": 0.101,
+"status": "SAT",
+"upper": 7,
+"witness": 8
+},
+"07f0": {
+"open_budget": null,
+"seconds": 0.018,
+"status": "SAT",
+"upper": 5,
+"witness": 5
+},
+"0ff0": {
+"open_budget": null,
+"seconds": 0.013,
+"status": "SAT",
+"upper": 3,
+"witness": 3
+}
+}
