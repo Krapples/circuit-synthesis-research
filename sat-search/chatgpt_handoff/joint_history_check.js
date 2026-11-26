@@ -22,16 +22,28 @@ function run(){
  }
  // Original live gates are represented by their own IDs. Constants use -2,-1.
  // Aliases and structural hash reuse only earlier original A gates.
- function specialize(C,P,h){
+ function specialize(C,P,h,affine=false){
   let N=C.side.length,L=Array(N).fill(-2),E=new Map(),hash=new Map(),H=new Map(P.Q.map((v,i)=>[v,(h>>i)&1]));
   function lit(l){let v=l>>1;return (C.side[v]===0?L[v]:-2+(H.get(v)||0))^(l&1);}
+  let A=Array(N).fill(null),AH=new Map([[0n,-2],[1n,-1]]);
+  function alit(l){let v=l>>1,a=C.side[v]===0?A[v]:BigInt(H.get(v)||0);return a===null?null:a^BigInt(l&1);}
+  function affineAnd(u,w){let a=alit(u),b=alit(w);if(a===0n||b===0n)return 0n;if(a===1n)return b;if(b===1n)return a;if(a!==null&&b!==null){if(a===b)return a;if((a^b)===1n)return 0n;}return null;}
+  function form(u,w){
+   if((u&1)&&(w&1)&&(u>>1)>=C.n&&(w>>1)>=C.n&&C.side[u>>1]===0&&C.side[w>>1]===0){
+    let [p,q]=C.E[(u>>1)-C.n],B=C.E[(w>>1)-C.n];
+    if((B[0]===(p^1)&&B[1]===(q^1))||(B[1]===(p^1)&&B[0]===(q^1))){let a=alit(p),b=alit(q);if(a!==null&&b!==null)return a^b;}
+   }return affineAnd(u,w);
+  }
   function AND(a,b,v){
    if(a===-2||b===-2)return -2;if(a===-1)return b;if(b===-1)return a;if(a===b)return a;if(a===(b^1))return -2;
    if(a>b)[a,b]=[b,a];let key=a+","+b;if(hash.has(key))return hash.get(key);
    E.set(v,[a,b]);hash.set(key,2*v);return 2*v;
   }
-  for(let v=0;v<C.n;v++)if(C.side[v]===0)L[v]=2*v;
-  for(let j=0;j<C.E.length;j++){let v=C.n+j;if(C.side[v]===0)L[v]=AND(lit(C.E[j][0]),lit(C.E[j][1]),v);}
+  for(let v=0;v<C.n;v++)if(C.side[v]===0){L[v]=2*v;if(affine){A[v]=1n<<BigInt(v+1);AH.set(A[v],L[v]);AH.set(A[v]^1n,L[v]^1);}}
+  for(let j=0;j<C.E.length;j++){let v=C.n+j;if(C.side[v]!==0)continue;let [u,w]=C.E[j];
+   let a=affine?form(u,w):null;A[v]=a;
+   if(a!==null&&AH.has(a))L[v]=AH.get(a);else{L[v]=AND(lit(u),lit(w),v);if(a!==null){AH.set(a,L[v]);AH.set(a^1n,L[v]^1);}}
+  }
   return {L,E,H};
  }
  function evalLocal(C,P,h,x){
@@ -61,7 +73,7 @@ function run(){
   }return {edge,flow};
  }
  function lifted(C,data,Ts,K,shared){
-  let N=C.side.length,H=Ts.length,source=2*N*H+data.length,sink=source+1,G=network(sink+1),inf=data.length+1;
+  let N=C.side.length,H=Ts.length,source=2*N*H+data.length,sink=source+1,G=network(sink+1),inf=(shared?data.length:data.length*H)+1;
   let live=Ts.map(T=>{let L=new Set(),todo=K.map(v=>T.L[v]).filter(l=>l>=0).map(l=>l>>1);
    while(todo.length){let v=todo.pop();if(L.has(v))continue;L.add(v);if(T.E.has(v))todo.push(...T.E.get(v).map(l=>l>>1));}return L;});
   let mult=Array(N).fill(0);
@@ -89,12 +101,12 @@ function run(){
   for(let v of data)G.edge(s,2*v,inf);for(let v of P.F)G.edge(2*v+1,t,inf);return G.flow(s,t);
  }
  function full(C,x){let V=Array.from({length:C.n},(_,i)=>x>>i&1);for(let [a,b] of C.E)V.push((V[a>>1]^(a&1))&(V[b>>1]^(b&1)));return V;}
- let S={randomCircuits:0,lookupCircuits:0,formalHistoryCases:0,copyEvaluations:0,jointCutChecks:0,actualReconstructions:0,strictJointVsLocal:0,strictLiftedVsOld:0,strictSharedSourceVsSummed:0,fullChargeChecks:0,examples:[],affineExamples:[]};
+ let S={randomCircuits:0,lookupCircuits:0,formalHistoryCases:0,copyEvaluations:0,affineCopyEvaluations:0,affineStrictCuts:0,jointCutChecks:0,actualReconstructions:0,strictJointVsLocal:0,strictLiftedVsOld:0,strictSharedSourceVsSummed:0,fullChargeChecks:0,examples:[],affineExamples:[]};
  function verify(C,out){
   let n=C.n,N=C.side.length,data=Array.from({length:n},(_,i)=>i).filter(i=>C.side[i]===0),bob=Array.from({length:n},(_,i)=>i).filter(i=>C.side[i]===1),P=structure(C,data);
   if(!data.length||!bob.length||data.length>5||P.Q.length>5||C.side[out>>1]!==1)return false;
-  let X=sub(data.reduce((s,v)=>s|1<<v,0)),Y=sub(bob.reduce((s,v)=>s|1<<v,0)),H=2**P.Q.length,Ts=Array.from({length:H},(_,h)=>specialize(C,P,h));
-  let W=X.map(x=>Ts.map((T,h)=>{let a=evalLocal(C,P,h,x),b=evalCopy(C,T,x);for(let v=0;v<N;v++)if(C.side[v]===0)ok(a[v]===b[v],"copy");S.copyEvaluations++;return a;}));
+  let X=sub(data.reduce((s,v)=>s|1<<v,0)),Y=sub(bob.reduce((s,v)=>s|1<<v,0)),H=2**P.Q.length,Ts=Array.from({length:H},(_,h)=>specialize(C,P,h)),As=Array.from({length:H},(_,h)=>specialize(C,P,h,true));
+  let W=X.map(x=>Ts.map((T,h)=>{let a=evalLocal(C,P,h,x),b=evalCopy(C,T,x);for(let v=0;v<N;v++)if(C.side[v]===0)ok(a[v]===b[v],"copy");let c=evalCopy(C,As[h],x);for(let v=0;v<N;v++)if(C.side[v]===0)ok(a[v]===c[v],"affine copy");S.affineCopyEvaluations++;S.copyEvaluations++;return a;}));
   S.formalHistoryCases+=H;
   let fullW=X.map(x=>Y.map(y=>full(C,x|y))),res=fullW.map(row=>row.map(V=>V[out>>1]^(out&1)).join("")),need=Math.log2(new Set(res).size);
   let cap=Array.from({length:N},(_,v)=>C.side[v]===0?Math.log2(new Set(W.map(row=>row.map(V=>V[v]).join(""))).size):0);
@@ -102,8 +114,9 @@ function run(){
   function cut(K){let ks=new Set(K),r=Array(N).fill(false);for(let v of data)r[v]=!ks.has(v);for(let j=0;j<C.E.length;j++){let v=n+j;if(C.side[v]===0&&!ks.has(v))r[v]=C.E[j].some(l=>C.side[l>>1]===0&&r[l>>1]);}return P.F.every(v=>!r[v]);}
   let cuts=[data,P.F];for(let t=0;t<8;t++){let K=A.filter(()=>rnd(3)===0);if(cut(K))cuts.push(K);}
   for(let K of cuts){
-   let L=lifted(C,data,Ts,K,true),sum=lifted(C,data,Ts,K,false),codes=W.map(row=>row.map(V=>K.map(v=>V[v]).join("")).join("|")),joint=Math.log2(new Set(codes).size),local=K.reduce((s,v)=>s+cap[v],0);
+   let L=lifted(C,data,Ts,K,true),AF=lifted(C,data,As,K,true),sum=lifted(C,data,Ts,K,false),codes=W.map(row=>row.map(V=>K.map(v=>V[v]).join("")).join("|")),joint=Math.log2(new Set(codes).size),local=K.reduce((s,v)=>s+cap[v],0);
    ok(need<=joint+1e-8&&joint<=local+1e-8&&joint<=L.flow+1e-8&&L.flow<=sum.flow+1e-8,"joint inequality");
+   ok(joint<=AF.flow+1e-8,"affine flow");if(AF.flow<L.flow-1e-8)S.affineStrictCuts++;
    if(joint<local-1e-8)S.strictJointVsLocal++;if(L.flow<sum.flow-1e-8)S.strictSharedSourceVsSummed++;
    if(K===P.F&&L.flow<old-1e-8)S.strictLiftedVsOld++;
    if(need===data.length&&K===P.F){ok(L.charge<=L.liveGates+1e-8,"lifted charge");S.fullChargeChecks++;}
@@ -171,11 +184,11 @@ function run(){
    while(v){let j=v.toString(2).length-1;if(!basis.has(j)){basis.set(j,v);break;}v^=basis.get(j);}
   }
   ok(basis.size===r+M-1&&basis.size<d,"joint affine rank");
-  let L=lifted(C,data,Ts,P.F,true);
+  let L=lifted(C,data,Ts,P.F,true),AF=lifted(C,data,Array.from({length:M},(_,h)=>specialize(C,P,h,true)),P.F,true);ok(AF.flow===basis.size,"affine structural lifted cut");
   // Structural hash alone catches the two-port case; for r>2 use the
   // independently certified affine rank instead of pretending hash is complete.
   if(r===2)ok(L.flow===r+M-1,"joint structural lifted cut");
-  S.examples.push({k,r,data:d,oldExactCapacityFlow:old,liftedFlow:L.flow,jointAffineRank:basis.size,gates:C.E.length});
+  S.examples.push({k,r,data:d,oldExactCapacityFlow:old,liftedFlow:L.flow,affineLiftedFlow:AF.flow,jointAffineRank:basis.size,gates:C.E.length});
   // Actual exhaustive residuals in small cases and random basis comparisons.
   let checks=0;
   for(let t=0;t<80;t++){
