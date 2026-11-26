@@ -9,3 +9,8 @@ open CircuitLemmas
 #print axioms restrict_const
 #print axioms minSize_perm
 #print axioms Circuit.excess_identity
+#print axioms CircuitLemmas.GateElim.bypass
+#print axioms CircuitLemmas.GateElim.bypass_many
+#print axioms CircuitLemmas.GateElim.realizes_restrict
+#print axioms CircuitLemmas.GateElim.restrict_eliminates
+#print axioms CircuitLemmas.GateElim.literal_extension

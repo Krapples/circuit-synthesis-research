@@ -33,7 +33,7 @@ The external project was read at open-goat/pequalnp-proofs `d9f1ea2` (2026-11-25
 | 1 | `SAT(T(x1,y1)...T(xq,yq) 110100) = AND_i (xi XNOR yi)`, where `T(x,y) = 11x10y` | **Proved** (paper), and checked exhaustively through q=6 with an independently written decoder. |
 | 2 | First-gate lemma: no pair funnel implies a repeated operand at the earliest gate | **Proved** (paper). The funnel test on F_q and the tails is checked finitely. |
 | 3 | The absorbing restriction of a repeated earliest operand removes at least 3 gates | **Proved** (paper). The two-reader case is handled by the canalizing replacement; see below. |
-| 4 | Independent literal extension: `C(g AND z) >= C(g) + 1` for nonconstant g | **Proved** (paper, standard). |
+| 4 | Independent literal extension: `C(g AND z) >= C(g) + 1` for nonconstant g | **Proved** (paper, standard). **Formally checked** in Lean for the repository's free-NOT model (`literal_extension`; see below). |
 | 5 | `C(F_q) = 4q - 1` | **Proved** from 2-4. Percy reports C(F_2) = 7 (UNSAT at 6, SAT at 7; solver-reported, not certified). |
 | 6 | Excess monotonicity: `B >= n - m + C(f restricted)` for coordinate restrictions | **Proved** (paper). The cycle rank `B - n + 1` of a trimmed connected circuit cannot increase under deletion or contraction. Not valid for identifications. |
 | 7 | Full essential support of `SAT_n` | **Checked** for every even n from 12 to 60 except 14, using the witnesses in the notes (the n=16 certificate included). L037 proves the n=6q case in Lean. |
@@ -91,6 +91,8 @@ The external project was read at open-goat/pequalnp-proofs `d9f1ea2` (2026-11-25
     `dep_lower_set`.
   - It has no three-gate absorbing elimination, no free-NOT binary-gate count and no cycle-rank excess
     lemma.
+  - The repository's own Lean project now has a free-NOT binary model with gate deletion, restriction and
+    literal extension (see the Lean formalization section below).
 - **Formalizing would need:**
   1. a binary-gate count on `Circuit` and its comparison with `size`;
   2. constant folding and trimming with gate accounting;
@@ -98,8 +100,40 @@ The external project was read at open-goat/pequalnp-proofs `d9f1ea2` (2026-11-25
   4. the graph-minor cycle-rank argument, or a direct inductive replacement for it;
   5. the string identities, which are close to the existing `SatFive` witnesses.
 
-  Items 1-4 are reusable for any gate-elimination bound. This is a multi-file Lean project that has not
-  been started.
+  Items 1-4 are reusable for any gate-elimination bound.
+
+### Lean formalization (started 2026-11-25)
+
+`sat-search/lean/CircuitLemmas/GateElim.lean` is in the repository's own Lean project (Mathlib through
+the existing junction, so nothing was downloaded). It defines its own free-NOT binary model:
+- AND gates on literals, where a literal is a constant or a wire with a complement flag;
+- size = number of binary gates, i.e. `B`;
+- no well-formedness side condition, since a missing wire reads `false`.
+
+It does not use the external project's `Circuit`. Comparing the two models (item 1 above) is still open.
+
+**Formally checked** (`lake build`; `AxiomsCheck.lean` shows only `propext`, `Classical.choice` and
+`Quot.sound`):
+
+| Theorem | Statement |
+| --- | --- |
+| `bypass`, `deleteGate_eval` | A gate equal to a literal over earlier wires on every input can be deleted: one gate fewer, same function. |
+| `bypass_many` | All degenerate gates (`degCount`) can be deleted together. The latest is deleted first, so earlier prefixes stay unchanged. |
+| `Circuit.eval_restrict`, `realizes_restrict` | Fixing an input to a constant gives a circuit of the same size, so restriction never increases complexity. |
+| `restrict_eliminates` | Fixing input `z` deletes every gate that reads `z`: `size' + readers z ≤ size`. |
+| `literal_extension` | If `g` is nonconstant and ignores `z`, a circuit for `g ∧ x_z` of size `s` gives one for `g` of size `s - 1`. This is claim 4 of the table. |
+
+**Not formalized yet:**
+- dead-gate deletion;
+- the first-gate funnel lemma and the three-gate absorbing elimination (claims 2-3). `restrict_eliminates`
+  and `bypass_many` are their accounting core: the remaining steps are a reader of the earliest gate and the
+  canalizing replacement;
+- excess monotonicity (claim 6);
+- `C(F_q) = 4q - 1` and the tails (claims 5 and 8-10);
+- the string identities (claim 1);
+- the final bound (claim 11).
+
+The additive-weight theorem stays separate until it has its own full review.
 
 ## Reproduction
 
