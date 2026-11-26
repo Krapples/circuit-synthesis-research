@@ -1,0 +1,19 @@
+{
+  "dictionary_expectation_checks": 50,
+  "local_rank_checks": 3200,
+  "partitions": 320,
+  "separator_large_cases": 64,
+  "local_cases": 180,
+  "dominant_cases": 76,
+  "unbalanced_cases": 142,
+  "min_smaller_side": 1,
+  "min_certified_rank_ratio": 0.14285714285714285,
+  "grammar_checks": 1536,
+  "matching_partitions": 120,
+  "matching_pair_rank_checks": 1353,
+  "matching_grammar_checks": 960,
+  "matching_cross_bits": 1964,
+  "matching_mixed_orientation_pairs": 261,
+  "layout_checks": 300
+}
+all assertions passed
