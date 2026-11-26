@@ -1,0 +1,14 @@
+{
+  "small_maps": 80,
+  "long_maps": 8,
+  "connected_sets": 12753,
+  "local_series": 1436556,
+  "cancellations": 153336,
+  "exact_weight_address_checks": 2434,
+  "image_checks": 424,
+  "largest_q": 160,
+  "largest_truncation": 8,
+  "largest_degree": 7,
+  "high_degree_maps": 8
+}
+all assertions passed
