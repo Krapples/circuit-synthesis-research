@@ -1,0 +1,95 @@
+{
+  "random_circuits": 213,
+  "lookup_circuits": 42,
+  "source_subsets": 777,
+  "internal_cuts": 4428,
+  "residual_checks": 60492,
+  "response_reconstructions": 438712,
+  "distinct_response_codes": 57368,
+  "strictly_stronger_port_bounds": 664,
+  "strictly_stronger_internal_bounds": 658,
+  "counterexamples": [
+    {
+      "k": 4,
+      "M": 16,
+      "a": 4,
+      "b": 4,
+      "allFeedback": false,
+      "portCapacity": 8,
+      "internalCapacity": 4,
+      "gates": 51
+    },
+    {
+      "k": 4,
+      "M": 16,
+      "a": 4,
+      "b": 4,
+      "allFeedback": true,
+      "portCapacity": 16,
+      "internalCapacity": 4,
+      "gates": 60
+    },
+    {
+      "k": 5,
+      "M": 32,
+      "a": 5,
+      "b": 5,
+      "allFeedback": false,
+      "portCapacity": 10,
+      "internalCapacity": 5,
+      "gates": 100
+    },
+    {
+      "k": 5,
+      "M": 32,
+      "a": 5,
+      "b": 5,
+      "allFeedback": true,
+      "portCapacity": 32,
+      "internalCapacity": 5,
+      "gates": 112
+    },
+    {
+      "k": 6,
+      "M": 64,
+      "a": 6,
+      "b": 6,
+      "allFeedback": false,
+      "portCapacity": 12,
+      "internalCapacity": 6,
+      "gates": 197
+    },
+    {
+      "k": 6,
+      "M": 64,
+      "a": 6,
+      "b": 6,
+      "allFeedback": true,
+      "portCapacity": 64,
+      "internalCapacity": 6,
+      "gates": 212
+    },
+    {
+      "k": 7,
+      "M": 128,
+      "a": 7,
+      "b": 7,
+      "allFeedback": false,
+      "portCapacity": 14,
+      "internalCapacity": 7,
+      "gates": 390
+    },
+    {
+      "k": 7,
+      "M": 128,
+      "a": 7,
+      "b": 7,
+      "allFeedback": true,
+      "portCapacity": 128,
+      "internalCapacity": 7,
+      "gates": 408
+    }
+  ],
+  "max_feedback_bits": 6
+}
+all assertions passed
