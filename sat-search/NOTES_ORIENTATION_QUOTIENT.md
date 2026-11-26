@@ -483,7 +483,17 @@ for cross-context accounting while leaving the distinct-gate charge open.
 Lean checks the local source layout when auxiliary and tag widths stay
 fixed. The affine compression replay reproduced both the rare-fiber
 misses and the obstruction to a fixed sketch list. The deterministic
-orthogonal-block follow-up passed the finite replay and gives a paper
-quasi-linear upper bound for the quadratic promise. Its sparse routing
-cost and the distinct-gate question for full SAT are separate obligations.
+orthogonal-block follow-up passed finite replay. The sparse routing audit
+confirms its quasi-linear gate count on the variable-incidence quadratic
+promise.
 [Proofs, benchmark data, and paired SAT replay](results/quadratic_witness/README.md)
+
+A signed AIG implements capped rank and original minors with one sort
+per row level, plus forward and backward segmented scans. Separate AIGs
+verify the indexed gather and polar XOR scatter. The cubic audit verified
+the packed product gadget, padding and balancing on pinned witnesses.
+For bounded-degree cubic neighborhood kernels, finding an `h`-variable
+cover of a `t`-bit residual marginal and solving the quadratic branches
+costs `O((3^h+2^(h+t)) poly(log n))` gates beyond the quasi-linear kernel
+and final table join. The distinct-gate question for full SAT remains open.
+[Independent routing audit, cubic proof and replays](results/sparse_quadratic_routing/README.md)

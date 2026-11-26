@@ -1,0 +1,22 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Replay the cubic component and connected neighborhood handoffs before using the neighborhood marginal in the cover argument.",
+  "jobs": [
+    {
+      "id": "cubic-component-handoff-replay",
+      "kind": "command",
+      "argv": ["node", "cubic_component_check.js"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "cubic component handoff at 07f58b4", "basis": "GF(2)"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    },
+    {
+      "id": "cubic-neighborhood-handoff-replay",
+      "kind": "command",
+      "argv": ["node", "cubic_neighborhood_check.js"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "connected cubic neighborhood handoff at 07f58b4", "basis": "GF(2)"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    }
+  ]
+}

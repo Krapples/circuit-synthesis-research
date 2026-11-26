@@ -1,0 +1,17 @@
+{"rows": 1, "cols": 1, "capacity": 0, "threshold": 2, "assignments": 1, "sparse_built_ands": 0, "sparse_live_ands": 0, "sparse_built_by_level": [0], "dense_built_ands": 0, "dense_live_ands": 0}
+{"rows": 1, "cols": 2, "capacity": 3, "threshold": 2, "assignments": 512, "sparse_built_ands": 237, "sparse_live_ands": 209, "sparse_built_by_level": [234], "dense_built_ands": 48, "dense_live_ands": 41}
+{"rows": 2, "cols": 2, "capacity": 3, "threshold": 2, "assignments": 4096, "sparse_built_ands": 619, "sparse_live_ands": 514, "sparse_built_by_level": [213, 403], "dense_built_ands": 132, "dense_live_ands": 102}
+{"rows": 3, "cols": 4, "capacity": 2, "threshold": 3, "assignments": 2304, "sparse_built_ands": 990, "sparse_live_ands": 801, "sparse_built_by_level": [119, 212, 657], "dense_built_ands": 584, "dense_live_ands": 469}
+{"rows": 4, "cols": 7, "capacity": 7, "threshold": 1, "assignments": 242, "sparse_built_ands": 4930, "sparse_live_ands": 4532, "sparse_built_by_level": [1528, 1667, 1728], "dense_built_ands": 1320, "dense_live_ands": 1276}
+{"rows": 5, "cols": 3, "capacity": 9, "threshold": 3, "assignments": 242, "sparse_built_ands": 29421, "sparse_live_ands": 25602, "sparse_built_by_level": [3192, 3899, 7094, 15227], "dense_built_ands": 1430, "dense_live_ands": 1230}
+{"rows": 8, "cols": 9, "capacity": 17, "threshold": 4, "assignments": 242, "sparse_built_ands": 95525, "sparse_live_ands": 83340, "sparse_built_by_level": [12262, 13939, 22383, 46924], "dense_built_ands": 10356, "dense_live_ands": 9801}
+{"rows": 3, "cols": 5, "capacity": 4, "threshold": 7, "assignments": 242, "sparse_built_ands": 4161, "sparse_live_ands": 3400, "sparse_built_by_level": [685, 991, 2481], "dense_built_ands": 1093, "dense_live_ands": 908}
+{"query_join": 1, "requests": 2, "payload_bits": 1, "assignments": 8, "live_ands": 15}
+{"query_join": 3, "requests": 1, "payload_bits": 3, "assignments": 2048, "live_ands": 198}
+{"query_join": 3, "requests": 7, "payload_bits": 3, "assignments": 400, "live_ands": 3975}
+{"query_join": 7, "requests": 5, "payload_bits": 4, "assignments": 400, "live_ands": 6118}
+{"query_join": 16, "requests": 20, "payload_bits": 5, "assignments": 400, "live_ands": 51671}
+{"polar_variables": 2, "slots": 2, "outputs": 1, "witnesses": 1, "assignments": 256, "live_ands": 1005}
+{"polar_variables": 3, "slots": 3, "outputs": 2, "witnesses": 2, "assignments": 360, "live_ands": 6620}
+{"polar_variables": 5, "slots": 7, "outputs": 3, "witnesses": 3, "assignments": 360, "live_ands": 37177}
+{"polar_variables": 9, "slots": 12, "outputs": 2, "witnesses": 4, "assignments": 360, "live_ands": 109220}

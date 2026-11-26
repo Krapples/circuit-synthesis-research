@@ -201,9 +201,11 @@ complement. The signature is therefore linear there, and preserving its
 range preserves the projected image. The high-rank marginal lemma lifts
 this equality to equality of the full supports. The replay checks this
 algebra on finite inputs. The fixed-record circuit implementation and
-its size bound remain paper results pending an independent routing audit.
+its size bound are independently audited in the follow-up. The follow-up
+also checks signed AIGs for its rank and routing primitives.
 
 [Deterministic checker](../../chatgpt_handoff/deterministic_quadratic_check.py) · [Replay output](deterministic_replay.txt)
+[Independent routing audit](../sparse_quadratic_routing/README.md)
 
 ## Checked coordinate layout
 

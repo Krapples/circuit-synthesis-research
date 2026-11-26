@@ -102,13 +102,21 @@ that shared witness IDs can change joint satisfiability while both
 individual lookups stay satisfiable. Coupled one-bit quadratic checks
 express 3-CNF with unique witness extension per satisfying assignment.
 Lean checks the local packed layout and its source-position invariance.
-The affine compression handoff replay also reproduced the rare-fiber
-misses and the fixed-sketch obstruction. The input-dependent deterministic
-checker passed its finite image tests. The follow-up gives a paper
-quasi-linear upper bound for the variable-incidence quadratic promise.
-The sparse routing cost needs an independent audit. A lower bound on
-distinct gates for unrestricted SAT remains open.
 [Proofs, controls, and matched experiments](sat-search/results/quadratic_witness/README.md)
+
+The deterministic quasi-linear circuit bound for the variable-incidence
+quadratic promise passed the independent sparse routing audit. A signed
+AIG checks the rank-minor primitive, indexed joins, and polar constraint
+routing. The sparse implementation used 917,255 live AND gates versus
+1,205,657 for matched dense decoding at the tested `64 x 64` shape with
+rank cap two. Dense decoding was smaller at the three smaller sizes.
+For a cubic neighborhood kernel of polynomial dimension in `k`, a
+residual marginal of `t` bits with an unsupplied cubic monomial cover
+of size `h` has a circuit of size `O((n+3^h+2^(h+t)) poly(log n))`.
+The exact packed cubic grammar passed finite checks including padding,
+balancing and invariant source positions. Unrestricted SAT distinct-gate
+accounting remains open.
+[Routing proof, gate counts, cubic bound and grammar replay](sat-search/results/sparse_quadratic_routing/README.md)
 
 The audited Andreev projection gives a near-cubic De Morgan formula lower
 bound for paired SAT at all sufficiently large even lengths, using Tal's

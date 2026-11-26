@@ -1,0 +1,27 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check input-dependent sparse matrix routing on signed AIGs and compare its gate counts with direct dense decoding on the same certificate problem.",
+  "jobs": [
+    {
+      "id": "sparse-rank-aig-check",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/sparse_rank_routing_check.py", "check"],
+      "query": {"scope": "sparse rank, original minors, and variable-label routing", "basis": "free-complement signed AIG"},
+      "workers": 1, "memory_mib": 384, "timeout": {"initial": 60, "maximum": 60}
+    },
+    {
+      "id": "sparse-rank-aig-bench",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/sparse_rank_routing_check.py", "bench"],
+      "query": {"scope": "matched sparse and dense signed-AIG gate counts with rank threshold two", "basis": "free-complement signed AIG"},
+      "workers": 1, "memory_mib": 512, "timeout": {"initial": 60, "maximum": 60}
+    },
+    {
+      "id": "cubic-witness-cover-check",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/cubic_witness_modulator_check.py"],
+      "query": {"scope": "degree-three monomial covers and exact union of quadratic image supports", "basis": "GF(2)"},
+      "workers": 1, "memory_mib": 128, "timeout": {"initial": 30, "maximum": 30}
+    }
+  ]
+}
