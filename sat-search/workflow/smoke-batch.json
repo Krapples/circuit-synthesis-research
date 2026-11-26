@@ -1,0 +1,20 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check that a known two-gate path witness survives independent verification and that its relabeling reuses the result.",
+  "jobs": [
+    {
+      "id": "three-vertex-path",
+      "kind": "cube",
+      "query": {"n": 3, "edges": [[0, 1], [1, 2]], "size": 2, "basis": "monotone"},
+      "timeout": {"initial": 30, "maximum": 60},
+      "memory_mib": 3072
+    },
+    {
+      "id": "same-path-relabeled",
+      "kind": "cube",
+      "query": {"n": 3, "edges": [[0, 1], [0, 2]], "size": 2, "basis": "monotone"},
+      "timeout": {"initial": 30, "maximum": 60},
+      "memory_mib": 3072
+    }
+  ]
+}

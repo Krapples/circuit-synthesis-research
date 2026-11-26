@@ -28,6 +28,38 @@ those conditions, and document proofs, counterexamples, and open questions for t
    under control, clean up child processes, and stop when the experiment reaches its limits
    or further progress requires human input.
 
+## Research efficiency and handoffs
+
+- Use the [research workflow runner](sat-search/workflow/README.md) across research tasks.
+  Start or resume with `python -B sat-search/workflow/research.py status --task <step>`.
+  Preserve existing checkouts, leases, run records and proof packets. Check the topic notes
+  for older evidence before launching work the run database has never seen.
+- Give each SAT or Lean batch a decision to inform. Use analytical bounds, small counterexample
+  searches, or independent enumeration to narrow the batch where practical. Check prior runs
+  before launching and record the reason for a repeat or a longer cap. Reused evidence keeps
+  its original target, basis, budget, coverage, and verification grade.
+- Use reusable runners for solver jobs, Lean, lease renewal, PR status, and routine Git checks.
+  Keep full logs and per-job records on disk. Return one bounded batch summary by default and
+  surface actionable errors and meaningful state changes. Keep active leases renewed through
+  the established heartbeat. Run independent jobs in the background and check them when their
+  results are needed.
+- Maintain a compact record for the active research step. Update it at meaningful milestones
+  with the target, basis, budget or restriction, strongest checked result, open obligation,
+  next action, evidence paths, and active jobs or lease state. Resume from this record after
+  compaction or handoff, then open only the evidence or log excerpts needed for the next decision.
+- When measuring a workflow change, use a new representative milestone and record model calls,
+  uncached input and output tokens, tool-result bytes, and verified progress where available.
+  Use existing runs as the baseline.
+- Define basis, budget, reduction scope, resource estimates and timeout bounds in a manifest.
+  Canonicalize whole-graph queries through the cube adapter. Preserve the original labeling
+  and exact scope for pinned jobs, partial labels, or prescribed input roles. Use the shared
+  worker and memory budget, review measurements before escalating, and record the reason for
+  any intentional duplicate. Keep solver verdicts, independently verified witnesses, and
+  checked proofs distinct.
+- Use the Lean project's locked incremental Lake environment. Keep project checker, axiom,
+  permitted-dependency, lease and exact-commit submission requirements in force. Normalize
+  selected source files before staging and checkpoint focused changes after applicable checks.
+
 ## Reports and commits
 
 Maintain [RESEARCH_NOTES.md](RESEARCH_NOTES.md) as the consolidated quick reference. Link it to

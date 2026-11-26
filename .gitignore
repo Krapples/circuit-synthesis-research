@@ -12,6 +12,7 @@ pequalnp-proofs/
 !.scratch-sat/L_meta_524_upper.lean
 
 # Working logs; finished results live in sat-search/results/
+.research/
 *.log
 *.jsonl
 !sat-search/results/*.log

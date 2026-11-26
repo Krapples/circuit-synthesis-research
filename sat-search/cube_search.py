@@ -29,7 +29,7 @@ from provider_certificates import required_distinctions
 from provider_capacity import ALLOCATION_LEVELS, ordered_allocation_excess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STOP = os.path.join(HERE, 'STOP')
+STOP = os.environ.get('CUBE_SEARCH_STOP_FILE') or os.path.join(HERE, 'STOP')
 KISSAT_NAMES = getattr(SolverNames, 'kissat404', ())
 MATCHING_INTERFACE_CNF_CUTS = 8
 
@@ -2696,7 +2696,7 @@ def main():
         if log:
             log.write(line + '\n'); log.flush()
 
-    if os.path.exists(STOP):
+    if not os.environ.get('CUBE_SEARCH_STOP_FILE') and os.path.exists(STOP):
         os.remove(STOP)
     n = a.n
     raw = [tuple(map(int, e.split('-'))) for e in a.edges.split(',') if e.strip()]
