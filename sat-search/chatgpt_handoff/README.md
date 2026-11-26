@@ -1,3 +1,57 @@
+# Research handoff — causal response-table cuts and additive gate accounting
+
+Updated 2026-11-26. Base [811266b](https://github.com/Krapples/circuit-synthesis-research/commit/811266b4e5ea603d7937dc50247851d3995a69f1). **L-clb-036 remains open.** This round obtains a strictly stronger topology-sensitive necessary invariant than directed port counts and turns it into a sound additive distinct-gate charge using a virtual flow. New enabled permutable packed lookup grammar distinguishes all data bits across metadata contexts with just one active group. No unrestricted superlinear numerical size bound, Lean theorem, production solver change, or literature-priority claim.
+
+## Current results
+
+- **Local response capacity:** partition original DAG vertices into A,B with output on B. Vary data primaries S in A, fix all other A inputs publicly. Forward ports F are distinct A vertices with B readers, reverse ports R the converse. For v in A, D(v) is the set of S ancestors along A-only directed paths, R(v) the reverse-port values reaching v via one B-to-A edge then an A-only path. Treat reverse inputs as formal independent bits; with data x fixed, v has a response table T_v(x) on R(v). Number of possible tables as x varies <=2^c(v), where c(v)=min(|D(v)|,2^|R(v)|). This is virtual capacity across counterfactual responses, not actual physical bit bandwidth.
+- **Causal response-cut theorem:** for ANY K in A meeting every A-only S-to-F path (including length-zero), log2 N<=sum_(v in K)c(v), where N is distinct residual functions f(x,.) on Bob's allowed input domain. Encode x by the response tables at K. Simulate in topological order using the encoded tables evaluated on actual earlier reverse-port values. Every A forward port can be computed without reaching unfixed data outside K, and all B gates/output reconstruct correctly. Reverse values may depend on previous data messages; no independence of actual feedback is assumed. K=F strengthens prior global a*2^b strategy bound. Internal K captures early irreversible compression.
+- **Strict topology rejections:** M=2^k data bits (k>=4), k query bits; compress k disjoint data groups to parity signals z_i in A, then forward w_i=z_i XOR q_i, with B combining outputs. Raw a=b=k passes all prior INDEX directional inequalities but causal port capacity 2k<M rejects. If all w_i instead depend on parity of ALL k queries, port capacity M passes; internal K={z_i} has capacity k<M, so the new internal theorem still rejects. Actual explicit AIG topologies tested, not circuits for INDEX.
+- **Virtual flow and additive distinct-gate charge:** assign c(v) vertex capacities in A and use max-flow/min-cut from data S to forward ports F. Integral flow value >=ceil(log2 N). If residuals injective, N=2^|S|, there is one unit path per data primary. For each source i define d_i as shortest A-only data-to-forward-port path cost, charging 1/c(v) per gate (not primary), positive capacities only. Sum_i d_i<=s_A, since every gate's total flow load/capacity<=1. This is a valid additive distinct-gate inequality without assuming disjoint physical routing; flow may have virtual capacity >1. If EVERY relevant path includes >=L gates with <=h local reverse ancestors, s_A>=|S|L/2^h. No proof yet that SAT forces a superlinear weighted path sum; short paths and early feedback can make the charge small.
+- **Enabled permutable packed lookup:** extend prior batched grammar with group enable variable pinned by a unit polarity. Data clause (-e_j OR -guard_(j,i) OR V_(j,p)); emit all fixed group dictionaries/guards first, then rB0 physical data slots with arbitrary permutation of logical group/block IDs. Common-width IDs, A0=r(k+2B0), Q power of two >=rP+A0; all data/query/enable coordinates single-copy and invariant. Length Theta(rM) for r<=M^c. For fixed metadata and all query/enable bits in B, every data bit can be individually retrieved, so residual map is exactly injective on all rM bits (no sentinel loss). 
+- **Joint one-active-group metadata variant:** fix only group 0 enabled, high query bits zero, other queries zero. Vary permutation metadata and lo=log2 ell low query bits of group 0; any physical chunk can be swapped into logical block 0 of group 0, then any bit retrieved. Across legal contexts all rM data bits must have distinct joint residuals, even though each fixed metadata context tests only one ell-bit chunk. This requires changing metadata/low-query coordinates on B and all other A primaries held to SAME constants across contexts; otherwise the joint encoding inference is invalid. Causal response-cut capacity >=rM and weighted charge applies to entire data set under those premises.
+- **Limits and control:** fixed pi enabled promise O(n) signed AIGs, permutable promise O(n log^2 n) via sorting guard-ID/payload records and evaluating muxes. Thus neither joint residual injectivity nor virtual cut capacity alone establishes unrestricted superlinear size. Seek a necessary large inverse-capacity shortest-path sum or sharper capacity constrained by joint response realizability. Do not sum overlapping partitions, treat virtual flow as physical prescribed routing, or claim topology transfer through guarded-slice compiler. Earlier asymmetric communication, well-linkedness and separator results remain valid.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [causal_response_handoff.md](causal_response_handoff.md) | Local response theorem, internal-cut proof, strict topology examples, virtual flow gate charge, enabled metadata grammar |
+| [causal_response_check.js](causal_response_check.js), [replay](causal_response_replay.txt) | Actual response reconstruction, residual counts, internal cuts, virtual flow and additive charges |
+| [causal_lookup_check.js](causal_lookup_check.js), [replay](causal_lookup_replay.txt) | Enabled permutable grammar and single-active-group joint residual injection |
+| [packed_directional_handoff.md](packed_directional_handoff.md), [checker](packed_directional_check.js) | Earlier asymmetric port and strategy bounds |
+| [packed_welllinked_handoff.md](packed_welllinked_handoff.md), [checker](packed_welllinked_check.js) | Arbitrary cuts, matching demands, wirelength and routing-gap obstruction |
+| [packed_separator_handoff.md](packed_separator_handoff.md), [checker](packed_separator_check.js) | Balanced separator, planar/minor/genus bounds |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling, normalized two-primary-read compiler |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Prior finite linear lower bound |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress count limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compression |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run from this directory:
+
+    node causal_response_check.js
+    node causal_lookup_check.js
+
+Seed 870022: 213 random signed AIGs, 42 actual mux AIGs, 777 source subsets, 4,428 internal cuts, 60,492 response code checks, 438,712 full reconstruction evaluations, 57,368 response codes, 664 refined-port and 658 internal-cut strict capacity refinements (not minimum circuit size improvements). Eight strict topology examples k=4..7. 777 vertex-split flow/min-cut certificates, 513 full-source flows and additive weighted gate checks. Seed 870023: 72 primary packed cases (42 SAT, 30 UNSAT), 72 changed-permutation layout/semantics, 216 single-coordinate mutations, 216 individual retrievals and 216 with one fixed active group. Exhaustive 336 residual data rows and 2,496 entries for group selection, same counts for one active group across metadata. Largest word 55,056 bits. All assertions passed. No new padding/slice replay, general SAT synthesis, Lean verification or production changes.
+
+## Native-agent priority
+
+Audit [causal_response_handoff.md](causal_response_handoff.md), especially reconstruction in the presence of data-dependent reverse feedback, vertex-split flow proof, inverse-capacity path metric and one-active-group metadata ownership premise. Replay both scripts. Explore whether legal cuts in a hypothetical small SAT circuit force many costly data-to-port paths; also consider actual joint realizability constraints of response tables. The new theorem can reject specified topologies that pass earlier cut bounds but is not yet a superlinear universal size bound. Do not conflate virtual capacity with physical bandwidth or claim overlapping charges add. Keep experimental until independent proof and differential checks. No production integration or literature priority claim. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — batched lookup and asymmetric directed port capacities
 
 Updated 2026-11-26. Base [f0c899b](https://github.com/Krapples/circuit-synthesis-research/commit/f0c899b30300299d70b22c27cdf15cca4b84b572). **L-clb-036 remains open.** This round moves from symmetric cut capacity to asymmetric information flow, proves a batched lookup directional tradeoff, and packs it into linear-length paired SAT with single-copy data and query coordinates. Paper proofs and finite AIG/grammar replay; no Lean theorem or production solver change.
