@@ -13,7 +13,9 @@
 //          cofactors on the care rows ("cut" mode). Upstream pair costs are exact (BFS over normalized
 //          column sets); the decoder is the minimum-cost completion of the induced partial table.
 //   m >= 5 recursive and heuristic: (a, b) in {(g0, g1)} and, on fully specified cofactors, also
-//          {(g0, g0^g1), (g1, g0^g1)}; each signal is solved at level m-1.
+//          {(g0, g0^g1), (g1, g0^g1)}; each signal is solved at level m-1. With a_first (default), also
+//          a in {inputs, g0, g1, g0^g1} and b a partial function that only splits each a-side into two
+//          compatible cofactor patterns (don't-cares where both fit), solved with its care set at m-1.
 // Only upper bounds come out of this file. The builder hashes columns, so the built count never exceeds the
 // planned estimate. Every chain is pruned to the output cone and re-simulated row by row.
 //
@@ -236,11 +238,14 @@ struct Plan {
 
 class Synth {
  public:
-  Synth(const PairTable& T, int n) : T_(T), n_(n), full_(full_mask(n)) {
+  Synth(const PairTable& T, int n, bool a_first = true, int b_cap = 8, int root_slack = -1)
+      : T_(T), n_(n), full_(full_mask(n)), a_first_(a_first), b_cap_(b_cap), root_slack_(root_slack) {
     if (n < 3 || n > 6) throw std::invalid_argument("n must be in 3..6");
     for (int i = 0; i < n; ++i) X_[i] = var_column(n, i);
   }
   std::shared_ptr<const Plan> solve(u64 f, u64 care) { return solve(f & full_, care & full_, (1 << n_) - 1); }
+  // m >= 5 root candidates (every pair considered at the root), recorded when root_slack >= 0.
+  const std::vector<std::shared_ptr<Plan>>& roots() const { return roots_; }
   u64 build(const Plan& p, Builder& B) const {
     u64 r;
     if (p.m == 3) {
@@ -348,20 +353,69 @@ class Synth {
           cands.push_back({g0, full_, g0 ^ g1, full_});
           cands.push_back({g1, full_, g0 ^ g1, full_});
         }
-        for (auto& [ta, ca, tb, cb] : cands) {
-          auto pa = solve(ta, ca, W & ~(1 << i)), pb = solve(tb, cb, W & ~(1 << i));
+        auto consider = [&](const std::shared_ptr<const Plan>& pa, const std::shared_ptr<const Plan>& pb) {
           int dk = decoder_full(f, care, pa->col, pb->col, i);
           if (dk < 0) throw std::logic_error("decoder inconsistent");
           auto [dc, d] = T_.part[dk];
           int est = pa->est + (pa == pb ? 0 : pb->est) + dc;
-          if (est >= best->est) continue;
+          if (root_slack_ >= 0 && W == (1 << n_) - 1) {
+            auto p = std::make_shared<Plan>();
+            p->est = est; p->m = m; p->split = i; p->pa = pa; p->pb = pb; p->d = d;
+            p->col = compose_full(pa->col, pb->col, d, i);
+            roots_.push_back(p);
+          }
+          if (est >= best->est) return;
           best->est = est; best->m = m; best->split = i; best->pa = pa; best->pb = pb; best->d = d;
+        };
+        const int Wi = W & ~(1 << i);
+        for (auto& [ta, ca, tb, cb] : cands) consider(solve(ta, ca, Wi), solve(tb, cb, Wi));
+        if (!a_first_) continue;
+        // a-first: fix a (an input of Wi, or a cofactor signal), then b only has to split each a-side into
+        // two compatible cofactor patterns; rows compatible with both patterns are don't-cares for b.
+        std::vector<std::pair<u64, u64>> As;
+        for (int j : vars) if (j != i) As.push_back({X_[j], full_});
+        As.push_back({g0, c0}); As.push_back({g1, c1}); As.push_back({g0 ^ g1, c0 & c1});
+        for (auto& [ta, ca] : As) {
+          auto pa = solve(ta, ca, Wi);
+          for (auto& [bv, bc] : b_options(pa->col, g0, c0, g1, c1)) consider(pa, solve(bv, bc, Wi));
         }
       }
       best->col = compose_full(best->pa->col, best->pb->col, best->d, best->split);
     }
     memo_.emplace(key, best);
     return best;
+  }
+  // Partial targets for b given a completed column A: on each side A = s, choose patterns P (b = 0) and
+  // Q (b = 1) for the cofactor pair; every row must be compatible with P or Q (cared values agree). If one
+  // pattern fits a whole side, b is free there. The b complement is free, so side 0 keeps one orientation.
+  std::vector<std::pair<u64, u64>> b_options(u64 A, u64 g0, u64 c0, u64 g1, u64 c1) const {
+    std::array<u64, 4> compat;
+    for (int P = 0; P < 4; ++P)
+      compat[P] = (~c0 | ((P & 1) ? g0 : ~g0)) & (~c1 | ((P & 2) ? g1 : ~g1)) & full_;
+    struct Opt { u64 val, care; };
+    std::array<std::vector<Opt>, 2> side;
+    for (int s = 0; s < 2; ++s) {
+      u64 rows = (s ? A : ~A) & full_;
+      bool single = false;
+      for (int P = 0; P < 4 && !single; ++P) single = (rows & ~compat[P]) == 0;
+      if (single) { side[s].push_back({0, 0}); continue; }
+      for (int P = 0; P < 4; ++P)
+        for (int Q = P + 1; Q < 4; ++Q) {
+          if (rows & ~(compat[P] | compat[Q])) continue;
+          u64 only0 = rows & compat[P] & ~compat[Q], only1 = rows & compat[Q] & ~compat[P];
+          side[s].push_back({only1, only0 | only1});
+        }
+    }
+    std::vector<std::pair<u64, u64>> out;
+    for (auto& o0 : side[0])
+      for (auto& o1 : side[1]) {
+        out.push_back({o0.val | o1.val, o0.care | o1.care});
+        if (o0.care && o1.care) out.push_back({o0.val | (o1.care & ~o1.val), o0.care | o1.care});
+      }
+    std::sort(out.begin(), out.end());
+    out.erase(std::unique(out.begin(), out.end()), out.end());
+    if (int(out.size()) > b_cap_) out.resize(b_cap_);
+    return out;
   }
   u64 compose3(int d, const std::array<int, 3>& Y) const {
     u64 c = 0;
@@ -412,8 +466,12 @@ class Synth {
   const PairTable& T_;
   int n_;
   u64 full_;
+  bool a_first_;
+  int b_cap_;
+  int root_slack_;
   std::array<u64, 6> X_{};
   std::unordered_map<Key, std::shared_ptr<const Plan>, KeyHash> memo_;
+  std::vector<std::shared_ptr<Plan>> roots_;
 };
 
 struct Witness {
@@ -430,16 +488,26 @@ struct Witness {
 };
 
 // Synthesize, build, prune and independently verify on the care set.
-inline Witness synthesize(const PairTable& T, int n, u64 f, u64 care) {
-  Synth S(T, n);
+// root_slack >= 0 (m >= 5 only): build every root candidate whose estimate is within root_slack of the best
+// and keep the smallest pruned chain; the estimate ignores sharing between a, b and the decoder, the build does not.
+inline Witness synthesize(const PairTable& T, int n, u64 f, u64 care, bool a_first = true, int b_cap = 8,
+                          int root_slack = -1) {
+  Synth S(T, n, a_first, b_cap, root_slack);
   auto plan = S.solve(f, care);
-  Builder B(n);
-  u64 col = S.build(*plan, B);
-  auto [gates, out] = B.extract(col);
+  std::vector<std::shared_ptr<const Plan>> cands{plan};
+  for (auto& p : S.roots()) if (p->est <= plan->est + root_slack) cands.push_back(p);
   u64 full = full_mask(n);
-  if (((simulate(n, gates, out) ^ f) & care & full) != 0) throw std::logic_error("witness fails on the care set");
-  if (int(gates.size()) > plan->est) throw std::logic_error("built count exceeds the plan estimate");
-  return {n, plan->est, f & full, care & full, gates, out};
+  Witness best;
+  bool have = false;
+  for (auto& p : cands) {
+    Builder B(n);
+    u64 col = S.build(*p, B);
+    auto [gates, out] = B.extract(col);
+    if (((simulate(n, gates, out) ^ f) & care & full) != 0) throw std::logic_error("witness fails on the care set");
+    if (int(gates.size()) > p->est) throw std::logic_error("built count exceeds the plan estimate");
+    if (!have || gates.size() < best.gates.size()) { best = {n, p->est, f & full, care & full, gates, out}; have = true; }
+  }
+  return best;
 }
 
 }  // namespace cofactor

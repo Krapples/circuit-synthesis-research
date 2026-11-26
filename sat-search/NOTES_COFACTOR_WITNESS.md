@@ -142,6 +142,53 @@ re-simulated in C++, and the checker re-simulates it again in Python.
 
 Root recombination was not pursued.
 
+## Stronger m >= 5 stage (2026-11-26)
+
+Two opt-in additions to `cofactor_witness.hpp`. Each has a legacy toggle, and n = 4 behaviour is unchanged.
+
+* **a-first partial b** (default on; `--no-a-first` restores legacy):
+  * The signal a ranges over the inputs of Y, g0, g1 and g0^g1 (care set c0&c1).
+  * On each a-side, b only has to separate two cofactor patterns P (b = 0) and Q (b = 1) that cover that side's rows. Rows compatible with both patterns are don't-cares for b. If one pattern covers a side, b is free there.
+  * At most `--b-cap` options are kept (default 8; on these tests the cap never binds).
+  * Note: for a complete target, (f0, f1) usually takes all four values. Then (a, b) must be a bijective re-encoding, which the legacy pairs (g0, g1), (g0, g0^g1) and (g1, g0^g1) already cover up to complement. The gain therefore comes from partial and structured targets.
+* **root build-and-measure** (`--root-slack K`, default off):
+  * Every root candidate within K of the best estimate is built with the column-hashed builder, and the smallest pruned chain is kept.
+  * The estimate ignores sharing between a, b and the decoder; the build does not.
+
+Check (`native_cofactor_check.py --random 200`, new `--exe-args` passthrough). All configurations match the library on all 65,536 four-input functions, and every chain is correct on its care set.
+
+| Configuration | n=5 mean / max | n=6 mean / max | Max s per target (n=6) | Corpus gap to 11 verified minima |
+| --- | --- | --- | ---: | --- |
+| legacy (`--no-a-first`) | 15.18 / 21 | 30.04 / 37 | 0.025 | 0: 8, +1: 2, +4: 1 |
+| a-first (default) | 15.10 / 21 | 29.72 / 37 | 0.17 | **0: 11** |
+| legacy + `--root-slack 2` | 15.03 / 20 | 29.65 / 36 | 0.025 | 0: 8, +1: 2, +2: 1 |
+| a-first + `--root-slack 2` | 14.97 / 20 | 29.29 / 36 | 0.16 | **0: 11** |
+
+Records:
+
+* `results/cofactor_witness/native_cofactor_check_rootslack2.jsonl`;
+* summaries in `logs/ncc_{legacy,afirst,rootonly,new}.out`.
+
+### Proof ladders below native bounds, 5-input corpus (`experiments/native_upper_bench.py`)
+
+Setup:
+
+* Native chain: a-first + `--root-slack 2`, re-simulated in C++ and in Python.
+* `percy_run --upper-witness` from k=1, extended tier (300 s, 2M conflicts per call), 10 workers. Known minima are not consulted.
+* Complete targets use `slack-three-phase-set-lift1` with cegar. The restriction counters (cone+cond) accept only 4-input complete tables.
+* Partial targets use `base` with std. First-layer options need std on partial tables. Cegar on partial-07 looped at k=1 (242,754 CEGAR rows, 0 conflicts in 300 s), which is a separate Percy issue.
+
+Results, all 22 five-input corpus cases (total 390 s):
+
+* **20 cases: native U proved minimal** (every budget below U UNSAT).
+  * Hardest: complete-5 = 10 (73.8 s; k=9 UNSAT, 990k conflicts) and comparator-02 = 9 (14.9 s).
+  * The other 18 finish in at most 0.2 s.
+* **partial-07: solver chain of 6** below native U = 7 (SAT at k=6, k=5 UNSAT), 0.4 s.
+* **threshold-5-3: open.** k <= 9 is UNSAT (k=9: 1.31M conflicts) and k=10 timed out at 2.06M conflicts, so 10 <= C <= 12 under this scope. Budgets 10 and 11 are open, not UNSAT.
+
+Record: `results/cofactor_witness/native_upper_bench_n5.jsonl` (`logs/native_upper_bench_n5.out`).
+Reproduce: `python -B sat-search/experiments/native_upper_bench.py OUT [--n 5] [--names ...]`.
+
 ## Lean: cascaded constant deletions (formally checked)
 
 `lean/CircuitLemmas/GateElim.lean` adds:
@@ -168,6 +215,7 @@ python -B sat-search/experiments/native_cofactor_check.py sat-search/results/cof
 
 ## Open questions
 
-* A stronger signal search at m >= 5 (four-input pairs) and an evaluation on the five- and six-input corpus as upper bounds for the proof ladder.
-* Percy's `--upper-witness` with the native bound on five-input targets. Not run yet.
+* m >= 5 on complete random targets is still about 3-4 gates above typical optima. Bijective re-encodings are exhausted, so further gains need joint (a, b) synthesis with sharing or decompositions beyond one split variable.
+* Six-input corpus ladders below native bounds (not run). threshold-5-3 budgets 10-11 are open.
+* Percy cegar on partial tables loops at k=1 (partial-07).
 * Whether the existing percy cascade counter D counts exactly the gates `cascade` admits. The Lean bound covers every gate with a constant operand under the restriction, so any D that is a subset of these is sound.

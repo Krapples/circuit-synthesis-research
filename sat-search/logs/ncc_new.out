@@ -1,0 +1,51 @@
+{
+ "npn4_reps": {
+  "count": 222,
+  "size_minus_library": {
+   "0": 222
+  },
+  "native_total": 1541,
+  "library_total": 1541,
+  "seconds": 2.578469900181517,
+  "table": "pair table depth 7 transitions 18416601 pairs 7838 seconds 2.53782"
+ },
+ "all4": {
+  "count": 65536,
+  "size_minus_class_library": {
+   "0": 65536
+  },
+  "seconds": 12.701112799812108
+ },
+ "random4": {
+  "count": 400,
+  "seconds": 2.6053714000154287,
+  "max_size_partial": 9,
+  "max_size_complete": 10,
+  "mean_size_complete": 6.975,
+  "max_seconds": 0.0002834
+ },
+ "random5": {
+  "count": 400,
+  "seconds": 3.8820175000000745,
+  "max_size_partial": 15,
+  "max_size_complete": 20,
+  "mean_size_complete": 14.97,
+  "max_seconds": 0.0063075
+ },
+ "random6": {
+  "count": 400,
+  "seconds": 26.837685300037265,
+  "max_size_partial": 28,
+  "max_size_complete": 36,
+  "mean_size_complete": 29.29,
+  "max_seconds": 0.156697
+ },
+ "corpus": {
+  "count": 62,
+  "with_verified_minimum": 11,
+  "size_minus_minimum": {
+   "0": 11
+  },
+  "below_minimum": []
+ }
+}

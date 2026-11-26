@@ -1,0 +1,22 @@
+hypergraph-02 SAT U 5 result 5 open None 0.0s 596 
+hypergraph-07 SAT U 7 result 7 open None 0.0s 1947 
+hypergraph-12 SAT U 8 result 8 open None 0.2s 9573 k6:U:1568 k7:U:7175
+hypergraph-17 SAT U 7 result 7 open None 0.0s 1814 k6:U:1248
+hypergraph-21 SAT U 8 result 8 open None 0.1s 4635 k6:U:1470 k7:U:2552
+threshold-5-3 TIMEOUT U 12 result 12 open 10 300.0s 3469016 k8:U:88395 k9:U:1314446 k10:T:2064622
+threshold-5-5 SAT U 4 result 4 open None 0.0s 6 
+complete-5 SAT U 10 result 10 open None 73.8s 1057606 k7:U:1008 k8:U:65640 k9:U:990322
+bipartite-2-3 SAT U 4 result 4 open None 0.0s 35 
+graph-01 SAT U 8 result 8 open None 0.1s 4814 k6:U:1170 k7:U:2912
+cycle-5 SAT U 7 result 7 open None 0.1s 3445 k6:U:1910
+random-monotone-02 SAT U 6 result 6 open None 0.0s 1559 k5:U:1032
+random-monotone-07 SAT U 6 result 6 open None 0.0s 1195 
+read-once-02 SAT U 4 result 4 open None 0.0s 52 
+read-once-07 SAT U 4 result 4 open None 0.0s 25 
+generated-02 SAT U 5 result 5 open None 0.0s 522 
+generated-07 SAT U 4 result 4 open None 0.0s 28 
+generated-11 SAT U 4 result 4 open None 0.0s 73 
+comparator-02 SAT U 9 result 9 open None 14.9s 432026 k6:U:1390 k7:U:1557 k8:U:428585
+comparator-07 SAT U 8 result 8 open None 0.1s 3184 k7:U:2034
+partial-02 SAT U 4 result 4 open None 0.0s 162 
+partial-07 SAT U 7 result 6 open None 0.4s 34917 k4:U:1414 k5:U:5394 k6:S:27924

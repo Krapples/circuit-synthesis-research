@@ -2,6 +2,8 @@
 // Usage:
 //   cofactor_synth [--depth D] N TT [CARE]     one target (hex truth table, row r = sum x_i 2^i)
 //   cofactor_synth [--depth D] --stdin         one target per line: N TT [CARE]
+// Options: --no-a-first (legacy m>=5 candidates only), --b-cap K (partial-b options per a, default 8),
+//          --root-slack K (m>=5: build root candidates within K of the best estimate, keep the smallest; default off).
 // Prints one JSON line per target: size, plan estimate, indexed AIG, and the percy_run --upper-witness spec.
 // Each chain is re-simulated against the target on its care set before it is printed.
 #include <chrono>
@@ -13,9 +15,13 @@
 
 using namespace cofactor;
 
+static bool g_a_first = true;
+static int g_b_cap = 8;
+static int g_root_slack = -1;
+
 static void emit(const PairTable& T, int n, u64 f, u64 care) {
   auto t0 = std::chrono::steady_clock::now();
-  Witness w = synthesize(T, n, f, care);
+  Witness w = synthesize(T, n, f, care, g_a_first, g_b_cap, g_root_slack);
   double s = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
   int hex = std::max(1, (1 << n) / 4);
   char tt[32], cr[32];
@@ -35,6 +41,9 @@ int main(int argc, char** argv) {
     std::string a = argv[i];
     if (a == "--depth" && i + 1 < argc) depth = std::stoi(argv[++i]);
     else if (a == "--stdin") from_stdin = true;
+    else if (a == "--no-a-first") g_a_first = false;
+    else if (a == "--b-cap" && i + 1 < argc) g_b_cap = std::stoi(argv[++i]);
+    else if (a == "--root-slack" && i + 1 < argc) g_root_slack = std::stoi(argv[++i]);
     else break;
   }
   try {

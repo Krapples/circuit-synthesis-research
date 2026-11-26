@@ -38,10 +38,13 @@ def simulate(n, gates, out):
     return tt
 
 
+EXE_ARGS = []
+
+
 def native(jobs):
     """jobs: list of (n, tt, care). Returns parsed records in order, each re-verified here."""
     text = ''.join(f'{n} {tt:x} {care:x}\n' for n, tt, care in jobs)
-    p = subprocess.run([str(EXE), '--stdin'], input=text, capture_output=True, text=True, check=True)
+    p = subprocess.run([str(EXE), *EXE_ARGS, '--stdin'], input=text, capture_output=True, text=True, check=True)
     recs = [json.loads(line) for line in p.stdout.splitlines()]
     assert len(recs) == len(jobs), (len(recs), len(jobs), p.stderr[-500:])
     for (n, tt, care), r in zip(jobs, recs):
@@ -66,7 +69,9 @@ def main():
     p.add_argument('out', type=Path)
     p.add_argument('--random', type=int, default=2000)
     p.add_argument('--seed', type=int, default=20261125)
+    p.add_argument('--exe-args', default='', help='extra cofactor_synth flags, e.g. "--no-a-first"')
     a = p.parse_args()
+    EXE_ARGS[:] = a.exe_args.split()
     lib = Library(ROOT / 'results/cofactor_witness/npn4_witnesses.json')
     size_of = {rep: len(g) for rep, (g, _) in lib.reps.items()}
     out = a.out.open('w')
