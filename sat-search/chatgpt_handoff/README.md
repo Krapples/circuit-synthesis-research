@@ -1,3 +1,9 @@
+# Upstream contribution follow-up — L-meta-16102 (2026-11-26)
+
+L-clb-036 remains our principal long-term target. New independently executed two-fork decomposition for L-meta-16102: target needs eight binary gates even with free NOTs, matching existing monotone witness. [Proof](../results/mid_not_16102/two_fork_handoff.md), [checker](../results/mid_not_16102/two_fork_check.js), [replay](../results/mid_not_16102/two_fork_replay.json). At most nine total gates with required internal NOT reduces to exactly eight proper live binary gates plus one live internal non-output NOT, excess three. All earlier UNSAT evidence is computational; formal final exclusion remains outstanding. [Certificate runner and instructions](../results/mid_not_16102/README.md) cover 22 first-gate representatives; added-constraint self-test executed, actual proof-producing solver runs and Lean mapping not yet performed. No upstream PR opened: exact live desk statement unavailable, absence of open PR not definitively established, no Lean/independent DRAT verifier here. No lease requested. See also [public research comparison](pequalnp_comparison_2026-11-26.md). No new unrestricted asymptotic result or production changes.
+
+---
+
 # Research handoff — compatibility colouring and Bob-entropy causal capacities
 
 Updated 2026-11-26. Base [e67385e](https://github.com/Krapples/circuit-synthesis-research/commit/e67385efdb039b579611901d2f30e8ed2c88d38c). Native-agent round. **L-clb-036 remains open.** There is no superlinear bound, no Lean proof, no production change and no claim of priority. Details are in [causal_compat_handoff.md](causal_compat_handoff.md).
