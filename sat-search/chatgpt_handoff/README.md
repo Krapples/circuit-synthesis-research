@@ -1,3 +1,288 @@
+# Research handoff — packed Andreev projection and distributed high-path obligations
+
+Processed agent revision: bb010ab9dd1c72682a3d4db9c0e78a04c95b13e3. User requested a further manual research iteration and pointed out Tal's sharper formula bound. No new agent work since that revision. Both requested repository notes reread at master 822b44415b0ad68318fd98179a3eeb64bae9b7cd: RESEARCH_NOTES.md blob 6a73e0ace8bd773c2fd3e1267d2cd2ea2495358a; sat-search/NOTES_ORIENTATION_QUOTIENT.md blob d8074cd1b06eab80558a705bc949658d41998f5a.
+
+## 0. Status and agent action
+
+**Ready for independent agent replay and proof audit.** This round removes ALL three extra logarithmic factors in the previous formula lower bound transfer (the log^3 loss in the encoding) and two additional log-log factors (from the earlier independent restriction argument). The result for actual SAT formula size is Omega(n^3/(log^2 n log log n)) on every sufficiently large even length. The same lower bound applies on the guarded Hamming layer. In addition, the new distribution-of-path-mass theorem forces linearly many distinct high-path gates in a hypothetical n^1.01-size circuit, not just one. These are paper theorems importing a standard formula composition lemma, not new unrestricted superlinear gate-count lower bounds. No claim of novelty relative to all literature. The new exact packed grammar projection is independently testable, as is the graph-counting lemma. Do not duplicate the previous uncompressed Andreev projection if not already formalized; prefer this stronger construction.
+
+## 1. Literature correction and sharper premise
+
+The user's cited sharper Andreev bound is confirmed in Avishay Tal, Shrinkage of de Morgan Formulae by Spectral Techniques, ECCC TR14-048 revision 1, dated April 19, 2016: https://eccc.weizmann.ac.il/report/2014/048/revision/1/download/ . Specifically Lemma 7.1 and Theorem 7.2, printed pp. 12–13 (zero-based PDF pages 12–13). The 2014 original has a log^3 log n factor; the revision chooses exactly one survivor in each parity row and proves L(h composed with parity_r)=Theta(r^2 L(h)) for arbitrary Boolean h. We inspected the actual revision, including these pages. The historical Andreev bound is usually written n^(2.5-o(1)) rather than an assertion of an exact Omega(n^2.5) without lower-order qualifications. Håstad's result is n^(3-o(1)). We import Tal's composition lemma explicitly, not an unproved Lean axiom. The earlier use of independent p-random restrictions is valid but loses a factor (log log n)^2 unnecessarily.
+
+Let k>=1, M=2^k, r=floor(M/k), and A_k(h,X)=h[sum_j 2^j parity(X_j)], with M free data bits and k rows of r selector bits. A counting bound on k-variable formulae gives a hard h of leaf cost Omega(M/log k); using Tal's lemma on that fixed table yields L(A_k)=Omega(M^3/(k^2 log k)). Divisibility of M by k is unnecessary since the lemma holds for every integer row length. This is a classical Andreev function, computable by O(M) unrestricted AIG gates (XOR row chains, binary multiplexer tree), so this formula result alone does not distinguish polynomial DAG size.
+
+The previous handoff used a separate variable pin and Tseitin clauses for every source bit/gate, producing n_k=Theta(Mk). Merely importing the revised Tal bound there improves the denominator to (log n)^5 log log n. The following construction instead has n_k=Theta(M), with a literal projection into the actual SAT encoding. That is the key new reduction.
+
+## 2. Packed projection: O(M) exact SAT bits
+
+Set ell to the largest power of two <=max(1,floor(k/2)), P=2^ell, B=M/ell, J=ceil(r/ell), lo=log_2 ell. For k>=2, k/4<ell<=k/2 (allow weak inequalities). In all arguments, mathematical variable IDs are zero-based; executable code uses signed (ID+1). Use two disjoint reserved variable families:
+
+    U_p has ID P+p, V_p has ID 2P+p, 0<=p<P.
+
+All IDs of U_p have exactly ell+1 bits; all IDs of V_p have ell+2 bits, with fixed high bits (10 in MSB-first order for V). Their lowest ell bits represent the pattern p. Fresh auxiliary variables use IDs starting at 4P; reserve 0 and 1 for padding.
+
+Parity dictionary: add a unit clause fixing U_p to parity(p) for every p. Partition each row X_j into J chunks of ell bits (last chunk zero-padded). For each chunk with numerical value p, create fresh z and clauses (NOT z OR U_p), (z OR NOT U_p). This is the entire input-dependent encoding for the chunk: only the low ell bits of the ID of U_p in the two literal occurrences vary. The clauses force z to the parity of the chunk. XOR the J chunk parities in a chain using the standard four width-three clauses per XOR, obtaining a_j=parity(X_j) as an auxiliary wire. This costs kJ chunk variables and k(J-1) XOR variables. The row index/address bits are in LSB-first order.
+
+Data dictionary: for every p and every offset q in [0,ell), use one clause whose first lo literals express that the low address bits differ from q, and whose last literal is V_p if bit_q(p)=1, NOT V_p otherwise. More precisely the i-th address literal is NOT a_i when bit_i(q)=1 and a_i otherwise. When the actual low address equals q the resulting unit forces V_p=bit_q(p), and all other offset clauses are satisfied. For ell=1 the clause simply becomes the fixed unit V_p or NOT V_p. Thus all pattern outputs are shared between all data chunks; there is no dictionary copy per chunk.
+
+Data block selection: partition the M free data bits into B contiguous chunks of ell bits. Build a full binary tree with B leaves and a root guard forced to 1. Split using address bits a_(k-1), a_(k-2), ..., a_lo in that order. For every parent guard u and signed selector literal b (the negative selector for left, positive for right), create child v=u AND b, encoded by (NOT v OR u), (NOT v OR b), (v OR NOT u OR NOT b). Thus exactly one leaf g_i is true, the one indexed by the high address bits. For chunk i with pattern p_i, add (NOT g_i OR V_(p_i)). This last literal is the only input-dependent ID occurrence for that data chunk. The selected leaf requires the selected offset bit of that chunk to be 1. All other chunks' clauses are automatically true. This proves satisfiability iff A_k(h,X)=1. In fact all auxiliary values are uniquely forced before testing the B final clauses.
+
+## 3. Exact grammar, projection multiplicity, and length
+
+Use the actual encoding of every literal (ID v, sign s) as [1,s], then [1,d] for each bit of v in canonical LSB-first order, then [0,1], and [0,0] at clause end. The two dictionary ID ranges have fixed bit length independent of their low ell bits. All gate, guard and dictionary-helper clauses are constant; only the IDs in the programmable lookup literals vary. Encode input data/selector chunks as their packed little-endian patterns. Therefore each original word coordinate is either fixed or copies one source bit. Each of the M data bits occurs exactly ONCE, and each of the kr selector bits occurs exactly TWICE, in disjoint digit coordinates (padded digits are fixed zero). No variable is encoded by a computed parity or arithmetic carry at a free coordinate. The reduction is a positive literal projection allowing copies, NOT an injective coordinate restriction; the bounded-copy property is important below. Formula complexity does not increase under this kind of substitution: replace each leaf label by its projected constant or literal. Circuit size similarly cannot increase with free constants/complements.
+
+Exact counts, with q=k(J-1):
+
+    number of clauses = P + 2kJ + 4q + P*ell + 1 + 3(2B-2) + B
+    number of literals = P + 4kJ + 12q + P*ell*(lo+1) + 1 + 7(2B-2) + 2B.
+
+Highest auxiliary ID is less than 4P+k(2J-1)+2B-1, so each identifier length is O(k). Since ell=Theta(k), kJ=O(M/k+k), B=O(M/k), and P<=2^(k/2), the number of literal occurrences is O(M/k): the dictionary term P*ell*(lo+1)=o(M/k). Clause count is at most literal count. Each literal uses O(k) bits. Thus n_k=O(M). Also n_k>=M from the distinct data coordinates, so n_k=Theta(M) with absolute constants. These estimates require no assertion that the finite n_k/M ratios are decreasing. Every encoded word is of the same even length n_k and ends in 00.
+
+Padding as in the earlier handoff: for every even delta>=48, represent delta=10a+14b with nonnegative a,b using a tautological clause on ID 0 repeated a times and one on ID 1 repeated b times. Choose b in {0,...,4} solving 14b=delta mod 10. For delta>=56 the remainder is nonnegative; deltas 48,50,52,54 use b=2,0,3,1 respectively. These clauses impose no constraint and involve no programmable bits. For every sufficiently large even n, choose the largest k with n_k<=n-48. Since n_k=Theta(2^k), bounded adjacent length ratios imply n_k=Theta(n), hence M=Theta(n). Pad to n. The SAT identity and all per-source copy counts persist.
+
+For the agent's guarded layer G_n, apply its existing balancing projection to these padded words. The final 00 is already valid; the appended clause is a tautology with one digit complement for every prefix bit. Length N=3n+12, weight t=2n+5. Each source data bit now occurs exactly twice (one positive, one negative), each selector bit exactly four times (two per phase); all coordinates are constants or signed copies, with disjoint occurrence sets. Therefore any formula correct on this layer substitutes to a signed formula for A_k without increasing the leaf count. In particular the monotone formula bound is inherited as a special case.
+
+Combining n=Theta(M) with Tal's Lemma 7.1 proves
+
+    L(SAT_n) >= c n^3 / ((log n)^2 log log n)
+    L(G_n on layer) >= c' N^3 / ((log N)^2 log log N)
+
+for all sufficiently large even n. Constants independent of n. Depth d of a binary circuit computing either function satisfies d>=3log_2 n-2log_2 log_2 n-log_2 log_2 log_2 n-O(1), with N in place of n for the layer. This is a formula/depth theorem, not a circuit-size theorem.
+
+## 4. Distributed high-path theorem (new strengthening)
+
+For a binary circuit C computing SAT_n, contract NOT gates into signed edges and, without increasing binary size, represent OR as signed AND. Let s be binary gate count. For each node v, let p(v) be the number of directed paths from v to the single output, counting operand occurrences (parallel edges separately); include the zero-length output path. Reverse dynamic programming computes these exact numbers. For a primary node i, p(i) is the number of occurrences of i as a leaf in the fully unfolded signed formula. This follows from the unfolding identity in the previous handoff; phases do not affect leaf multiplicities. Use the same definition for any circuit correct on the layer.
+
+Fix any constant 0<delta<1, let d=ceil((1-delta)k), R=floor(r/2). For each selector source bit x, define w(x) as the sum of p(i) over its actual projected coordinate nodes (exactly two in SAT, four in the balanced layer). Disjointness is crucial: a coordinate belongs to at most one source bit. Fix a universal constant c>0 such that the composition/counting lower bound for any sufficiently large number d of address bits is c * 2^d R^2/log_2 d. Choose
+
+    T = (c/2) * 2^d R / (d log_2 d).
+
+Call a selector bit light if w(x)<T. Suppose d rows each contain at least R light bits. Select exactly R light bits per such row; fix all other selector bits to zero. Fix the data table to a hard Boolean function of just the d selected address positions (replicate across unselected addresses). The remaining function is h composed with d independent R-bit parities. Its formula leaf complexity is >= c * 2^d R^2/log_2 d. But the unfolded circuit, under the packed projection and these restrictions, can be simplified to a formula with at most the sum of w(x) for selected bits: constants are removed from AND/OR trees by constant propagation, and the target is nonconstant. That sum is <d R T, only HALF the necessary bound. Contradiction.
+
+Hence fewer than d rows contain R light bits. At least k-d+1>=delta*k rows each contain at least r-R+1 heavy bits with w(x)>=T. This is Omega_delta(kr)=Omega_delta(n) distinct source bits. Every such bit has some actual primary coordinate with p(i)>=T/2 (or T/4 on the layer); coordinates selected for different bits are distinct. Since d=ceil((1-delta)k), 2^d>=M^(1-delta), R=Theta(M/k), d<=k and log d<=log k, we obtain a threshold
+
+    p(i) >= Omega_delta(n^(2-delta) / ((log n)^2 log log n))
+
+for Omega_delta(n) distinct primary coordinates. This holds for EVERY correct circuit, regardless of its gate count and fanout. It is stronger than merely requiring a large sum of path counts; the balanced selected-row argument prevents a few heavily reused inputs from carrying all the formula complexity. The constants may depend on fixed delta, and no uniform-in-delta bound is asserted.
+
+Transfer to internal gate nodes: let H be the set of these high-path primaries, h=|H|, tau their common threshold. The output cannot be a primary for a function with this formula lower bound. Each primary i has p(i)=sum over its direct consumer operand occurrences e of p(consumer(e)). Total primary-to-gate operand occurrences are at most 2s. Hence at least h/2 primaries of H have direct-reader occurrence degree <=4s/h. Every such primary has some direct consuming gate g with p(g)>=tau*h/(4s). A single gate can be chosen by at most two distinct primaries, so at least h/4 DISTINCT binary gates meet this bound. This proof counts repeated operand occurrences consistently and allows dead gates. Thus, if s=O(n^1.01), for every fixed delta in (0,1), at least Omega_delta(n) distinct binary gates have
+
+    p(g) >= Omega_delta(n^(1.99-delta) / ((log n)^2 log log n)).
+
+Same statement for layer circuits with N substituted for n. More generally the lower threshold is Omega_delta(n^(3-delta)/(s*(log n)^2 log log n)). This is a genuine necessary structural condition for unrestricted SAT circuits. It does NOT prove that the number of gates must be superlinear. Large path counts can occur on many gates because of downstream reconvergence. One must find a semantic restriction on this kind of sharing to make progress toward L-clb-036. In particular A_k itself has O(M) gates despite the formula lower bound. Do not use path-multiplicity thresholds alone as an exclusion certificate for size without a separately justified DAG constraint.
+
+## 5. Executed reference tests and finite caveats
+
+The stdlib Python code below was actually executed on this turn, with seeds 20261126 and 20160419. It implements the exact packed formula, separately structured parser, specialized unit propagation, balancing map, positive coordinate probes, row-restricted lookup checks, padding lengths and graph counting. The independent propagation checker verifies a contradiction or that every nontautological clause is satisfied; it is not a complete general-purpose SAT solver.
+
+| k | M | ell | r | n_k | n_k/M | tested input rows |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 2 | 1 | 2 | 526 | 263 | 16 |
+| 2 | 4 | 1 | 2 | 1220 | 305 | 256 |
+| 3 | 8 | 1 | 2 | 2404 | 300.5 | 40 |
+| 4 | 16 | 2 | 4 | 3194 | 199.625 | 40 |
+| 5 | 32 | 2 | 6 | 6926 | 216.438 | 40 |
+| 6 | 64 | 2 | 10 | 15652 | 244.562 | 40 |
+| 7 | 128 | 2 | 18 | 35742 | 279.234 | 40 |
+| 8 | 256 | 4 | 32 | 42266 | 165.102 | 12 |
+| 9 | 512 | 4 | 56 | 86836 | 169.602 | 12 |
+
+496 original inputs, exhaustive for k<=2; for each both original and balanced SAT words checked against direct address lookup (992 semantic evaluations). 839 programmable-coordinate locations probed (all source bits for k<=7, 32 source bits each for k=8,9); the complete inferred positive-coordinate mapping was verified on the tested assignments for k<=7. Largest balanced word 260520 bits. 192 selected-row contexts, 3072 restricted lookup evaluations; 476 padding-length checks for even increments 48..998; 2000 random DAG checks of the high-path reader transfer. Every final assertion passed. The large-parameter count-only bound U/M was 191.344,247.848,151.846,179.604,211.276,133.707,197.625,128.813,127.406 at k=8,12,16,20,24,32,48,64,128 respectively. This is arithmetic for the explicit upper bound, not construction at exponentially large lengths. No claim that this packed encoding beats the uncompressed encoding at every small k; shared dictionaries have substantial finite overhead. No Lean run, native solver speedup, general-circuit lower bound beyond the earlier verified linear bounds, or proof of L-clb-036 claimed.
+
+## 6. Executed reference (byte-for-byte)
+
+Extract this first Python fenced block as packed_andreev_check.py and run python -B packed_andreev_check.py. ASCII length 7359, FNV-1a 32-bit 315d31a2, SHA-256 c0c077482fcc57f488e025df28505dcd128a21ec97d8e6bcd31f9c50fa70e69f.
+
+```python
+from itertools import product
+from collections import defaultdict, deque
+from random import Random
+
+def encode(F):
+    w=[]
+    for C in F:
+        for l in C:
+            v=abs(l)-1;w.extend((1,int(l>0)))
+            while v:w.extend((1,v&1));v>>=1
+            w.extend((0,1))
+        w.extend((0,0))
+    return w
+
+def parse(w):
+    F=[];C=[];i=0
+    while i<len(w):
+        a,b=w[i:i+2];i+=2
+        if (a,b)==(0,0):F.append(C);C=[];continue
+        assert a==1
+        ds=[]
+        while w[i]:ds.append(w[i+1]);i+=2
+        assert w[i:i+2]==[0,1] and (not ds or ds[-1]);i+=2
+        v=int(''.join(map(str,ds[::-1])) or '0',2)+1
+        C.append(v if b else -v)
+    assert not C
+    return F
+
+def balance(w):
+    assert w[-2:]==[0,0]
+    return w+[1,0,0,1,1,1,0,1,1,0]+[b for x in w[:-2] for b in (1,1-x)]+[1,1,0,1,0,0]
+
+def propagate(F):
+    F=[set(C) for C in F if not any(-l in C for l in C)]
+    occ=defaultdict(list);sizes=[];done=[False]*len(F);Q=deque();val={}
+    for i,C in enumerate(F):
+        if not C:return False
+        sizes.append(len(C))
+        if len(C)==1:Q.append(next(iter(C)))
+        for l in C:occ[l].append(i)
+    while Q:
+        l=Q.popleft();v=abs(l);b=l>0
+        if v in val:
+            if val[v]!=b:return False
+            continue
+        val[v]=b
+        for i in occ[l]:done[i]=True
+        for i in occ[-l]:
+            if done[i]:continue
+            sizes[i]-=1
+            if sizes[i]==0:return False
+            if sizes[i]==1:
+                live=[u for u in F[i] if abs(u) not in val];assert len(live)==1
+                Q.append(live[0])
+    assert all(done), 'unresolved clauses in deterministic gadget'
+    return True
+
+def pack(bits):return sum(b<<i for i,b in enumerate(bits))
+
+def params(k):
+    M=1<<k;r=M//k;ell=1<<max(0,(max(1,k//2)).bit_length()-1)
+    return M,r,ell
+
+def build(k,h,x):
+    M,r,ell=params(k);P=1<<ell;D=2*P;J=(r+ell-1)//ell;lo=ell.bit_length()-1
+    assert len(h)==M and len(x)==k*r
+    F=[];nxt=4*P+1 # 1-based names; IDs are one less
+    def fresh():
+        nonlocal nxt
+        v=nxt;nxt+=1;return v
+    def parity_lit(p):return P+p+1
+    def data_lit(p):return D+p+1
+    for p in range(P):F.append([parity_lit(p) if p.bit_count()%2 else -parity_lit(p)])
+    addr=[]
+    for j in range(k):
+        z=[]
+        for i in range(J):
+            p=pack(x[j*r+i*ell:j*r+min(r,(i+1)*ell)]);v=fresh();a=parity_lit(p)
+            F.extend([[-v,a],[v,-a]]);z.append(v)
+        a=z[0]
+        for b in z[1:]:
+            c=fresh()
+            for A,B,C in product((0,1),repeat=3):
+                if C!=A^B:F.append([-v if t else v for v,t in zip((a,b,c),(A,B,C))])
+            a=c
+        addr.append(a)
+    for p in range(P):
+        for j in range(ell):
+            F.append([(-a if j>>i&1 else a) for i,a in enumerate(addr[:lo])]+[data_lit(p) if p>>j&1 else -data_lit(p)])
+    root=fresh();F.append([root]);nodes=[root]
+    for a in reversed(addr[lo:]):
+        new=[]
+        for parent in nodes:
+            for b in (-a,a):
+                c=fresh();F.extend([[-c,parent],[-c,b],[c,-parent,-b]]);new.append(c)
+        nodes=new
+    assert len(nodes)==M//ell
+    for i,g in enumerate(nodes):F.append([-g,data_lit(pack(h[i*ell:(i+1)*ell]))])
+    return F
+
+def direct(k,h,x):
+    M,r,_=params(k)
+    a=sum((sum(x[j*r:(j+1)*r])%2)<<j for j in range(k))
+    return h[a]
+
+def check():
+    rng=Random(20261126);total=0;locs=0;maxratio=0
+    for k in range(1,10):
+        M,r,ell=params(k);d=M+k*r;zero=encode(build(k,[0]*M,[0]*(k*r)));n=len(zero)
+        # Every position is constant or a direct input bit, checked by zero and unit probes.
+        # Limit probes for high k; random assignments below check the inferred map where complete.
+        mapping={};probe=list(range(d)) if k<=7 else rng.sample(range(d),32)
+        for i in probe:
+            a=[0]*d;a[i]=1;w=encode(build(k,a[:M],a[M:]));assert len(w)==n
+            diff=[j for j,(u,v) in enumerate(zip(zero,w)) if u!=v]
+            assert len(diff)==(1 if i<M else 2) and all(zero[j]==0 for j in diff)
+            for j in diff:assert j not in mapping;mapping[j]=i
+            locs+=len(diff)
+        gen=product((0,1),repeat=d) if k<=2 else ([rng.randrange(2) for _ in range(d)] for _ in range(40 if k<=7 else 12))
+        count=0
+        for a in gen:
+            h,x=a[:M],a[M:];F=build(k,h,x);w=encode(F);y=balance(w);want=direct(k,h,x)
+            assert len(w)==n and len(y)==3*n+12 and sum(y)==2*n+5
+            assert parse(w)==F
+            assert propagate(parse(w))==want and propagate(parse(y))==want
+            if k<=7:assert all(b==(a[mapping[j]] if j in mapping else zero[j]) for j,b in enumerate(w))
+            count+=1;total+=1
+        print('k',k,'M',M,'ell',ell,'r',r,'n',n,'n/M',round(n/M,3),'rows',count,flush=True)
+    print('inputs',total,'projection-coordinate checks',locs,flush=True)
+    # Large lengths without generating words: exact literal-length upper bound via counts.
+    for k in (8,12,16,20,24,32,48,64,128):
+        M,r,e=params(k);P=1<<e;J=(r+e-1)//e;B=M//e;lo=e.bit_length()-1
+        # vars = P parity + P data (reserved IDs), chunk outputs, XORs, 2B-1 guards
+        maxid=4*P+k*(2*J-1)+2*B-1
+        lits=P+4*k*J+12*k*(J-1)+P*e*(lo+1)+1+7*(2*B-2)+2*B
+        clauses=P+2*k*J+4*k*(J-1)+P*e+1+3*(2*B-2)+B
+        U=(4+2*maxid.bit_length())*lits+2*clauses
+        print('bound',k,'ell',e,'U/M',round(U/M,3),flush=True)
+if __name__=='__main__':check()
+
+def extra_checks():
+    rng=Random(20160419);contexts=0;rows=0;padchecks=0;graphs=0
+    for k in range(2,10):
+        M,r,e=params(k)
+        for _ in range(24):
+            d=rng.randrange(1,k+1);R=rng.randrange(1,r+1)
+            sel=sorted(rng.sample(range(k),d));cols=[rng.sample(range(r),R) for j in sel]
+            h=[rng.randrange(2) for _ in range(1<<d)]
+            table=[h[sum(((a>>j)&1)<<i for i,j in enumerate(sel))] for a in range(M)]
+            for _ in range(16):
+                x=[0]*(k*r);b=0
+                for i,(j,c) in enumerate(zip(sel,cols)):
+                    for q in c:x[j*r+q]=rng.randrange(2)
+                    b|=(sum(x[j*r:(j+1)*r])%2)<<i
+                assert direct(k,table,x)==h[b];rows+=1
+            contexts+=1
+    for delta in range(48,1000,2):
+        b=next(i for i in range(5) if (delta-14*i)%10==0);a=(delta-14*b)//10
+        assert a>=0 and len(encode([[1,-1]]*a+[[2,-2]]*b))==delta;padchecks+=1
+    for _ in range(2000):
+        n=rng.randrange(2,25);s=rng.randrange(1,100)
+        E=[(rng.randrange(n+i),rng.randrange(n+i)) for i in range(s)]
+        out=n+s-1;p=[0]*(n+s);p[out]=1;adj=[[] for _ in range(n)]
+        for j in reversed(range(s)):
+            for v in E[j]:
+                p[v]+=p[n+j]
+                if v<n:adj[v].append(n+j)
+        assert all(p[i]==sum(p[j] for j in adj[i]) for i in range(n))
+        threshold=rng.randrange(1,max(2,max(p[:n])+1));H=[i for i in range(n) if p[i]>=threshold]
+        if H:
+            light=[i for i in H if len(adj[i])*len(H)<=4*s]
+            assert 2*len(light)>=len(H)
+            chosen={max(adj[i],key=lambda j:p[j]) for i in light}
+            assert 4*len(chosen)>=len(H)
+            assert all(4*s*p[j]>=threshold*len(H) for j in chosen)
+        graphs+=1
+    print('selected-row contexts',contexts,'restricted rows',rows,'padding checks',padchecks,'reader-transfer DAGs',graphs)
+if __name__=='__main__':extra_checks()
+```
+
+## 7. Concrete request to native agent
+
+Audit the shared pattern dictionaries, ID ranges and exact low-digit projection. Reproduce the tests independently and formalize the packed grammar/satisfiability/length/projection-count lemmas (especially the 1/2 source multiplicities, 2/4 in the layer) and high-primary-to-gate transfer inequality. Check the selected-row proof separately; it depends on the published Tal composition theorem and ordinary counting, so a full Lean theorem should have an explicit theorem premise if that external theorem is not formalized. Do not add an axiom to pass an axiom audit. The graph lemma and grammar identities require no shrinkage premise. Prioritize semantic constraints on the distribution of high-path gates (or rigorous counterexamples), rather than another raw unfolding bound. No production synthesis feature requested absent a certified pruning rule. Record outcomes in the usual agent notes.
+
+---
+
+# Historical archive — earlier handoffs (superseded claims/implementation instructions should not be repeated)
+
 # Research handoff — near-cubic formula lower bound and circuit-sharing obligations at every large even SAT length
 
 Processed agent revision: bb010ab9dd1c72682a3d4db9c0e78a04c95b13e3. The prior parity handoff is still pending independent agent review. The user manually requested continuation; no new agent note changes were present. Autonomous task: ignore handoff-only commits.
