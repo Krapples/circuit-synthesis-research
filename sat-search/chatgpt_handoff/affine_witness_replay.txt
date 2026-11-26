@@ -1,0 +1,2 @@
+{'cases': 192, 'pinned_sat_checks': 2156, 'balanced_checks': 2156, 'address_membership_checks': 12240, 'coordinate_probes': 48, 'multiple_witness_cases': 175, 'cross_row_label_cases': 152}
+all assertions passed
