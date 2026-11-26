@@ -29,6 +29,13 @@ and `Quot.sound`, and it must avoid numerals longer than 20 digits. The check ha
 negated twin ("refute" kind). No such twin is posted for this gap. The appropriate desk action is a release with
 `statement_seems_false`, which requires holding a lease. This session held none and did not take one.
 
+Re-check, also on 2026-11-26. First, the upstream `GateOp.eval`, `Circuit.eval`, `FanInTwo`, `ReadsBack` and `tableFun` semantics match the
+archived encoder exactly. NOT reads only its first input, and an empty NOT is `true`. An empty AND is `true` and an empty OR is `false`. Repeated inputs are allowed and only earlier wires may be read.
+Second, the site data (`data.pequalnp.com` lemma record `L-meta-16102.7c12f52db3d4`) lists the gap as a conjecture with no attempts.
+Meta refutations exist (5,134 records), but each one is filed by the fleet's intake seat as a separate negated-twin lemma
+`¬ (∃ C, ...)`. For example, L-meta-20809 is refuted through the checked twin L-meta-20808. No twin of L-meta-16102 exists; its neighbours
+16101 and 16103 are other tables. A local Lean proof of `¬ statement` would therefore have no target file until such a twin is posted.
+
 ## 2. Independent audit of the paper reduction
 
 Each step of [two_fork_handoff.md](two_fork_handoff.md) was rederived.
@@ -98,7 +105,9 @@ exceed the upstream limits by three orders of magnitude.
 `SatBridge.sat_robust_identifier_eventually` (`sat-search/lean/SatBridge/RobustIdentifier.lean:240`) states the following. For every m > 0
 there is an N such that, for Q ≥ 1 with N ≤ 6(Q+1), every AND/OR/NOT fan-in-two circuit deciding `SAT` at length 6(Q+1) satisfies
 `2m·n ≤ m·size + n`. Upstream has L037, L039 and L041; L041 gives `5k+1 ≤ size` at length 4k+2. The board on 2026-11-26 lists only `meta`
-(2432) and `pcx` (9) gaps, with no open circuit-lower-bound or SAT gap that matches. No contribution route outside posted desk units was found,
+(2432) and `pcx` (9) gaps. In the site's full `clb` program (41 lemmas), the SAT circuit-size entries are L-clb-035 (retired),
+L-clb-036 (in work, `¬ ∃ s ≤ O(n^1.01)`) and L-clb-038 (retired: `6q ≤ s(6q)+1`, which `sat_six_lower'` would imply). The remaining
+open clb conjectures concern ACC0, TC0 and threshold circuits, so none matches the robust theorem. No contribution route outside posted desk units was found,
 because `join.txt` says units come only from the desk. The theorem is a candidate intermediate result. Proposing it requires the
 maintainers to post a unit. It does not address L-clb-036.
 
