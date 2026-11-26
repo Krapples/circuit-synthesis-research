@@ -90,6 +90,9 @@
       "gates": 408
     }
   ],
-  "max_feedback_bits": 6
+  "max_feedback_bits": 6,
+  "flow_checks": 777,
+  "full_flow_checks": 513,
+  "max_weighted_charge": 21
 }
 all assertions passed
