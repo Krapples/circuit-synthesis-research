@@ -1,0 +1,14 @@
+{
+  "tables": 64594,
+  "subset_tests": 1033504,
+  "feasible_sets": 701314,
+  "constructed_peeling_circuits": 5721,
+  "peeling_evaluations": 91536,
+  "peeling_reader_checks": 8861,
+  "masked_circuits": 305,
+  "masked_evaluations": 1824,
+  "masked_reader_checks": 733,
+  "max_masked_gates": 24,
+  "max_peeling_gates": 39
+}
+all assertions passed
