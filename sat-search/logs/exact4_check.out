@@ -1,0 +1,201 @@
+{
+ "queries": 3000,
+ "mismatch": 0,
+ "by": {
+  "4-random": {
+   "queries": 200,
+   "hits": 134,
+   "excluded": 66,
+   "cost": [
+    64,
+    25,
+    15,
+    18,
+    12
+   ],
+   "mismatch": 0
+  },
+  "4-planted": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    101,
+    68,
+    26,
+    3,
+    2
+   ],
+   "mismatch": 0
+  },
+  "4-small": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    91,
+    96,
+    11,
+    2,
+    0
+   ],
+   "mismatch": 0
+  },
+  "5-random": {
+   "queries": 200,
+   "hits": 92,
+   "excluded": 108,
+   "cost": [
+    32,
+    19,
+    20,
+    12,
+    9
+   ],
+   "mismatch": 0
+  },
+  "5-planted": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    84,
+    79,
+    31,
+    6,
+    0
+   ],
+   "mismatch": 0
+  },
+  "5-small": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    74,
+    103,
+    23,
+    0,
+    0
+   ],
+   "mismatch": 0
+  },
+  "6-random": {
+   "queries": 200,
+   "hits": 42,
+   "excluded": 158,
+   "cost": [
+    12,
+    14,
+    4,
+    4,
+    8
+   ],
+   "mismatch": 0
+  },
+  "6-planted": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    48,
+    80,
+    57,
+    12,
+    3
+   ],
+   "mismatch": 0
+  },
+  "6-small": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    53,
+    131,
+    14,
+    1,
+    1
+   ],
+   "mismatch": 0
+  },
+  "7-random": {
+   "queries": 200,
+   "hits": 23,
+   "excluded": 177,
+   "cost": [
+    1,
+    3,
+    6,
+    6,
+    7
+   ],
+   "mismatch": 0
+  },
+  "7-planted": {
+   "queries": 200,
+   "hits": 196,
+   "excluded": 4,
+   "cost": [
+    33,
+    89,
+    55,
+    12,
+    7
+   ],
+   "mismatch": 0
+  },
+  "7-small": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    40,
+    133,
+    25,
+    1,
+    1
+   ],
+   "mismatch": 0
+  },
+  "8-random": {
+   "queries": 200,
+   "hits": 0,
+   "excluded": 200,
+   "cost": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "mismatch": 0
+  },
+  "8-planted": {
+   "queries": 200,
+   "hits": 196,
+   "excluded": 4,
+   "cost": [
+    16,
+    91,
+    50,
+    29,
+    10
+   ],
+   "mismatch": 0
+  },
+  "8-small": {
+   "queries": 200,
+   "hits": 200,
+   "excluded": 0,
+   "cost": [
+    28,
+    142,
+    27,
+    3,
+    0
+   ],
+   "mismatch": 0
+  }
+ }
+}

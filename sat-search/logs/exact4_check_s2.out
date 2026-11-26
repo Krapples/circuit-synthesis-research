@@ -1,0 +1,201 @@
+{
+ "queries": 15000,
+ "mismatch": 0,
+ "by": {
+  "4-random": {
+   "queries": 1000,
+   "hits": 662,
+   "excluded": 338,
+   "cost": [
+    302,
+    111,
+    92,
+    84,
+    73
+   ],
+   "mismatch": 0
+  },
+  "4-planted": {
+   "queries": 1000,
+   "hits": 1000,
+   "excluded": 0,
+   "cost": [
+    530,
+    326,
+    126,
+    15,
+    3
+   ],
+   "mismatch": 0
+  },
+  "4-small": {
+   "queries": 1000,
+   "hits": 1000,
+   "excluded": 0,
+   "cost": [
+    511,
+    431,
+    55,
+    2,
+    1
+   ],
+   "mismatch": 0
+  },
+  "5-random": {
+   "queries": 1000,
+   "hits": 431,
+   "excluded": 569,
+   "cost": [
+    188,
+    77,
+    59,
+    48,
+    59
+   ],
+   "mismatch": 0
+  },
+  "5-planted": {
+   "queries": 1000,
+   "hits": 999,
+   "excluded": 1,
+   "cost": [
+    397,
+    360,
+    191,
+    42,
+    9
+   ],
+   "mismatch": 0
+  },
+  "5-small": {
+   "queries": 1000,
+   "hits": 1000,
+   "excluded": 0,
+   "cost": [
+    381,
+    521,
+    87,
+    11,
+    0
+   ],
+   "mismatch": 0
+  },
+  "6-random": {
+   "queries": 1000,
+   "hits": 251,
+   "excluded": 749,
+   "cost": [
+    57,
+    61,
+    54,
+    31,
+    48
+   ],
+   "mismatch": 0
+  },
+  "6-planted": {
+   "queries": 1000,
+   "hits": 999,
+   "excluded": 1,
+   "cost": [
+    269,
+    422,
+    222,
+    66,
+    20
+   ],
+   "mismatch": 0
+  },
+  "6-small": {
+   "queries": 1000,
+   "hits": 1000,
+   "excluded": 0,
+   "cost": [
+    266,
+    625,
+    103,
+    6,
+    0
+   ],
+   "mismatch": 0
+  },
+  "7-random": {
+   "queries": 1000,
+   "hits": 116,
+   "excluded": 884,
+   "cost": [
+    5,
+    13,
+    22,
+    37,
+    39
+   ],
+   "mismatch": 0
+  },
+  "7-planted": {
+   "queries": 1000,
+   "hits": 988,
+   "excluded": 12,
+   "cost": [
+    153,
+    429,
+    281,
+    97,
+    28
+   ],
+   "mismatch": 0
+  },
+  "7-small": {
+   "queries": 1000,
+   "hits": 1000,
+   "excluded": 0,
+   "cost": [
+    184,
+    682,
+    127,
+    7,
+    0
+   ],
+   "mismatch": 0
+  },
+  "8-random": {
+   "queries": 1000,
+   "hits": 4,
+   "excluded": 996,
+   "cost": [
+    0,
+    0,
+    1,
+    0,
+    3
+   ],
+   "mismatch": 0
+  },
+  "8-planted": {
+   "queries": 1000,
+   "hits": 990,
+   "excluded": 10,
+   "cost": [
+    117,
+    401,
+    316,
+    112,
+    44
+   ],
+   "mismatch": 0
+  },
+  "8-small": {
+   "queries": 1000,
+   "hits": 1000,
+   "excluded": 0,
+   "cost": [
+    180,
+    690,
+    122,
+    8,
+    0
+   ],
+   "mismatch": 0
+  }
+ }
+}

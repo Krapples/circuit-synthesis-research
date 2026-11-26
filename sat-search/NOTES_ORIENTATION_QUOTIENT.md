@@ -344,6 +344,69 @@ need near-minimal encoder candidates that the current bank does not rank. The AN
 Records: `results/orientation/bench_*_{p7spB,rd,cn,rdcn}.jsonl` and `bench_n8_bundle_rdw.jsonl`, with logs beside
 them.
 
+## Phase 6: exact <= 4-gate support-projection prepass (handoff section 1, opt-in `--exact4`)
+
+`src/exact4.hpp` decides the standalone free-phase AIG minimum of a partial table exactly when it is at most 4,
+and otherwise proves K >= 5.
+
+*Theorem (paper; the handoff's argument, re-derived here):*
+- A trimmed one-output AIG with g gates reads at most g + 1 inputs.
+- At g = 4 with 5 inputs, the cone has 9 nodes and 8 arcs, so it is a tree, i.e. a signed read-once formula.
+- So every solution with g <= 4 is either a complete 4-input function of cost <= 4 over some 4-subset of inputs,
+  or a 5-input signed read-once formula, which agrees with the projection of the table onto that support.
+- A support that misses a mandatory input is skipped, as is a projection where a positive and a negative row
+  fall in the same fibre.
+
+*Implementation:*
+- Libraries: depth-first enumeration of gate sequences over distinct complement-normalized columns gives every
+  function of 1..4 inputs with cost <= 4 and a minimum chain. Signed read-once formulas over 5 inputs are
+  built by subset recursion.
+- Each library has one bitset per row; the lowest surviving record is the cheapest match.
+- Search order and early stop follow the Python reference.
+
+**Checks.**
+- `preduce_check --exact4`:
+  - the libraries have 4 / 16 / 230 / 3,590 / 15,104 columns, the handoff's counts;
+  - every chain simulates to its column at its cost;
+  - the 3-input costs equal the exact3 BFS minima;
+  - the exact <= 4 decision of all 6,651 partial tables on 1..3 inputs equals the exact minimum over
+    completions (6,609 hits, 42 exclusions);
+  - every hit's imported witness is valid on care, and the handoff regressions pass.
+- `experiments/exact4_check.py` against the handoff's Python `exact4`: random, planted and small-planted
+  queries on 4..8 inputs, 3,000 at seed 1 and 15,000 at seed 2. Cost, support and column match, with 0
+  mismatches; the 15,000 include 327 cost-4 hits and 3,560 exclusions.
+
+**Wiring.** In the partial oracle, after `--reduce`, each nontrivial core of 3..6 inputs is first given to
+exact4:
+- a hit is imported in place of the native constructor;
+- an exclusion falls through to the constructor;
+- with `--reduce-wide`, a 7..8-input core that hits is also served.
+
+Results are cached per core. Only standalone witnesses are produced; the lower bound is never used to prune
+the live, shared cost.
+
+**Benchmark** (same sets as Phase 5, `--native-partial 7 --support-project --reduce` with and without
+`--exact4`, run concurrently):
+
+| Set | gates (both) | constructor calls | oracle s | exact4 queries / hits / s |
+| --- | --- | --- | --- | --- |
+| n5 random | 806 = 806 | 51,761 -> 48,323 | 188 -> 187 | 51,732 / 3,409 / 0.29 |
+| n7 random | 655 = 655 | 13,155 -> 13,126 | 190 -> 190 | 13,155 / 29 / 0.12 |
+| n7 bundle | 357 = 357 | 5,744 -> 5,636 | 70 -> 70 | 5,744 / 108 / 0.11 |
+| n8 bundle | 280 = 280 | 408 -> 388 | 1.7 -> 1.8 | 408 / 20 / 0.15 |
+
+No size changed and no target won or lost. The hits are small cores that the constructor already solves
+cheaply, so oracle time does not move. This matches the handoff's expectation (0.64% of its pool was strictly
+additional). `--exact4` stays opt-in and is not recommended for throughput. Its value is as a certified small
+oracle (exact <= 4 or a proven K >= 5) for other callers.
+
+Records: `results/orientation/bench_*_{rdB,rde4}.jsonl` (`rdB` is a concurrent rerun of `rd`; identical sizes and
+counts).
+
+**Not integrated** (handoff sections 0/0a): reusable exclusion cores, sparse lower-bound caches, and the
+enhanced first-gate leaves. These are useful only for expensive exact exclusions, which this path does not
+make. At four gates, the handoff's own replay shows the direct lookup is cheaper than the cache.
+
 ## Limits and open questions
 
 * The partial oracle covers only 3..6 inputs, so the n = 8 b and bank stages (7 inputs) need a 7-input partial
@@ -370,6 +433,9 @@ python -B sat-search/experiments/orientation_check.py bench OUT --random 5:60:51
 sat-search/native/preduce_check.exe --exact3
 python -B sat-search/experiments/partial_reduce_check.py --reference <dir with the handoff reduce.py> --count 400 --seed 1
 python -B sat-search/experiments/orientation_check.py bench OUT --input <td>/input_pilot.jsonl <td>/input_heldout.jsonl --min-n 7 --max-n 7 --with-spec --exe-args="--native-partial 7 --support-project --reduce"
+sat-search/native/preduce_check.exe --exact4
+python -B sat-search/experiments/exact4_check.py --reference <dir with the handoff projection.py> --count 1000 --seed 2
+python -B sat-search/experiments/orientation_check.py bench OUT --random 5:60:5101 --exe-args="--native-partial 7 --support-project --reduce --exact4"
 ```
 
 Random seeds: 5101 / 6101 / 7101 / 8101 for n = 5 / 6 / 7 / 8.

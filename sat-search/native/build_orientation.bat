@@ -1,7 +1,7 @@
 @echo off
 rem Build native\orientation_synth.exe (target-directed encoder orientations over the cofactor constructor) and
 rem native\fq_check.exe (feature-quotient and root-partition checks) and native\preduce_check.exe (exact partial
-rem reductions and canonical normalization checks), MSVC C++20.
+rem reductions, canonical normalization and the exact <= 4-gate projection checks), MSVC C++20.
 call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvars64.bat" >nul
 cd /d "%~dp0"
 if not exist build\orientation mkdir build\orientation
