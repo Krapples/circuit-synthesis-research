@@ -1,0 +1,24 @@
+{
+  "small_maps": 150,
+  "connected_path_maps": 14,
+  "strict_reductions": 30,
+  "addresses": 3518,
+  "dual_bias_checks": 674,
+  "low_marginal_checks": 164,
+  "full_image_maps": 102,
+  "max_q": 2300,
+  "max_degree": 9,
+  "max_kernel": 2016,
+  "max_discard": 2188,
+  "max_low_active": 12,
+  "largest_connected_kernel_case": {
+    "q": 2300,
+    "k": 2,
+    "degree": 4,
+    "retained": 112,
+    "discarded": 2188,
+    "low_dimension": 1,
+    "image": 4
+  }
+}
+all assertions passed
