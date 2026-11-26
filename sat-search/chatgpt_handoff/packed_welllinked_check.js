@@ -71,20 +71,20 @@ function run(){
  // Exact rank for a prescribed matching on aligned coordinates, even when
  // the orientations of the crossed pairs differ within one slot pair.
  for(let trial=0;trial<120;trial++){
-  let slots=Array.from({length:m},(_,i)=>({tag:1+Math.floor(i/2),sign:i%2})),R=dicts[0],F=[],free=Array(m).fill(0);
+  let slots=Array.from({length:m},(_,i)=>({tag:1+Math.floor(i/2),sign:i%2})),R=dicts[0],F=[],free=Array(m).fill(0),fixed=Array(m).fill(0);
   for(let i=0;i<m;i+=2){
    let a=rnd(1<<l),b=rnd(1<<l),c=rnd(1<<l)&~a,d=rnd(1<<l)&~b;
    let L=a&~(b|d),J=b&~(a|c),crossed=L|J,r=pop(crossed);
    if(L&&J)S.matching_mixed_orientation_pairs++;
    free[i]=free[i+1]=crossed;
-   if(!r){slots[i+1]={tag:m-i/2,sign:1};continue;}
+   if(!r){fixed[i]=1;continue;}
    let U=sub(crossed),M=U.map(x=>U.map(y=>+(((x&L)|(y&J))!==((y&L)|(x&J)))));
    ok(rank(M)===2**r,"matching rank");S.matching_pair_rank_checks++;S.matching_cross_bits+=r;F.push(i);
   }
   for(let t=0;t<8;t++){
-   let x=free.map(a=>rnd(1<<l)&a);
+   let x=free.map((a,i)=>(rnd(1<<l)&a)|fixed[i]);
    if(t===0)for(let i of F){x[i]=free[i]&-free[i];x[i+1]=0;}
-   let want=F.every(i=>x[i]!==x[i+1]);ok(parse(encode(R,slots,x))===want,"matching grammar");if(!t)ok(want);S.matching_grammar_checks++;
+   let want=F.every(i=>x[i]!==x[i+1]);ok(want===slots.every((_,i)=>i%2||x[i]!==x[i+1]),"fixed matching factors");ok(parse(encode(R,slots,x))===want,"matching grammar");if(!t)ok(want);S.matching_grammar_checks++;
   }S.matching_partitions++;
  }
  // Exact discrete coarea identity on arbitrary layouts of multigraphs.
