@@ -1,3 +1,45 @@
+# Research handoff — delta-free distributed paths and coupled existential witnesses
+
+Updated 2026-11-26. Latest inspected native-agent revision: [5c75256](https://github.com/Krapples/circuit-synthesis-research/commit/5c75256319fcd4f6877c1385a623877e6b58fe60), which formalizes the earlier uncompressed Andreev construction and unfolding identity; see [agent results](../results/andreev_projection/README.md). The packed projection in the previous handoff at [870ffb7](https://github.com/Krapples/circuit-synthesis-research/commit/870ffb7) is retained verbatim below. **L-clb-036 remains open.**
+
+## Current results and priority
+
+1. The exact paired SAT grammar supports a permutable packed Andreev projection of length Theta(M), M=2^k. Equal-width auxiliary identifiers permit every permutation of physical chunks into logical parity rows while leaving programmable coordinates fixed. Sorting per-chunk light-bit counts and assigning round-robin balances all k rows to within ell=Theta(k) light bits. This removes the previous n^(-delta) loss: in any correct AIG, Omega(n) distinct primaries have Omega(n^2/(log^2 n log log n)) output paths, and Omega(n) distinct internal gates have Omega(n^3/(s log^2 n log log n)) paths. For s=O(n^1.01) the latter is Omega(n^1.99/(log^2 n log log n)). Counts are by operand occurrence, and formula complexity is De Morgan leaf count. The original near-cubic formula lower bound remains unchanged. All statements are conditional on the standard external Tal composition lemma, TR14-048 revision 1, Lemma 7.1. The same projections work on the guarded Hamming layer.
+2. The permutable promise itself has O(n log^2 n) circuits using sorting networks and lookup. Therefore even the delta-free path requirement cannot establish an unrestricted gate-count lower bound by itself.
+3. **New existential extension:** add an arbitrary shared witness label to each physical chunk, and XOR the corresponding free witness bit into its parity before the row chain. Label zero is pinned to zero. The exact SAT predicate is whether the data table's 1-set intersects an affine address space b+im(H). Each accepted address has 2^(q-rank(H)) extensions on the used variables, where q is the number of distinct active nonzero labels. Cross-row shared labels can yield 2^Omega(n/log n) witnesses. The delta-free high-path theorem still applies by restricting every label to zero. Nonetheless the whole existential affine promise admits O(n log^2 n) circuits by sorting, segmented XOR and GF(2) basis construction. This is a negative control for claims that witness multiplicity or affine coupling alone makes sharing expensive.
+4. **New nonlinear target:** replace each witness contribution by a product of two shared witness bits. The address becomes a quadratic map F: GF(2)^q -> GF(2)^k. If every nonzero linear combination of address coordinates has polar rank >=2k, F is surjective by the quadratic Walsh-bias identity. More sharply, an omitted address requires a nonzero-bias combination with rank <=2k-2. Therefore UNSAT with a nonempty data 1-set requires such a low-rank combination. This is a semantic constraint on the witness system, not a circuit lower bound. The quadratic encoding and rank theorem are paper-only in this round; investigate joint rank structure and sparse nonlinear witness coupling next.
+
+## Files and reproduction
+
+| File | Scope |
+|---|---|
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Complete delta-free theorem, exact grammar proof and promise upper bound; previous-session snapshot |
+| [permutable_andreev_check.py](permutable_andreev_check.py) | Executed independent projection, balancing and graph replay |
+| [permutable_andreev_replay.txt](permutable_andreev_replay.txt) | Actual output, reproduced this round |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Draft local formalization, not elaborated or kernel checked |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | New affine witness construction, exact count, quasi-linear upper bound, quadratic rank criterion and agent tasks |
+| [affine_witness_check.py](affine_witness_check.py) | Executed affine witness replay, with all active witnesses enumerated per test |
+| [affine_witness_replay.txt](affine_witness_replay.txt) | Actual output: 192 cases, 2,156 original + 2,156 balanced pinned SAT checks, 12,240 address membership checks, 48 flip probes, all assertions passed |
+
+From this directory:
+
+```sh
+python -B permutable_andreev_check.py
+python -B affine_witness_check.py
+```
+
+The permutable replay passed 248 original and 248 balanced evaluations, 184 coordinate probes, 36 selected-row checks, 3,970 balance profiles, 3,000 reader transfers (1,000 explicit unfoldings), and 476 padding checks. The new affine replay includes 175 multiple-witness and 152 cross-row label cases. These are finite regression checks; none is a general circuit lower-bound certificate.
+
+## Instructions for the native research agent
+
+Read the two current handoff documents before the archive. Independently replay both scripts, review the equal-width permutation layout and the new affine projection, and use the already checked LookupProjection, ParityLookup and CircuitLemmas.Unfold modules rather than repeating the uncompressed proof. Compile and repair the Lean draft in the pinned environment; it is not a verified source and is deliberately kept in this handoff directory. Keep the external Tal theorem explicit, with no unproved Lean axiom introduced as a verified result. Prioritize genuinely nonlinear coupled witness systems and the rank criterion; find a semantic-to-distinct-gate accounting argument rather than counting unfolded paths. No native solver or Lean library changes were made in this ChatGPT round. No independent agent review of the new results has yet been completed. No novelty claim relative to the entire literature.
+
+---
+
+# Historical archive — previous handoffs
+
+The original packed handoff and all earlier history are preserved below verbatim. Older instructions and statements of repository status refer to their own revisions, not the current head. Prefer the current files and tasks above.
+
 # Research handoff — packed Andreev projection and distributed high-path obligations
 
 Processed agent revision: bb010ab9dd1c72682a3d4db9c0e78a04c95b13e3. User requested a further manual research iteration and pointed out Tal's sharper formula bound. No new agent work since that revision. Both requested repository notes reread at master 822b44415b0ad68318fd98179a3eeb64bae9b7cd: RESEARCH_NOTES.md blob 6a73e0ace8bd773c2fd3e1267d2cd2ea2495358a; sat-search/NOTES_ORIENTATION_QUOTIENT.md blob d8074cd1b06eab80558a705bc949658d41998f5a.
