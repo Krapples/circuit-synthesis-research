@@ -1,0 +1,112 @@
+{
+  "randomMaps": 80,
+  "plantedMaps": 80,
+  "periodBasisChecks": 296,
+  "bruteRows": 6468,
+  "translationChecks": 108621,
+  "filtrationChecks": 2112,
+  "examples": [
+    {
+      "M": 2,
+      "data": 8,
+      "gates": 32,
+      "fullQuotientFlow": 8,
+      "polynomialSpanRank": 8,
+      "periodCodimension": 6,
+      "filtration": [
+        8,
+        4,
+        2
+      ],
+      "pathNodes": 20,
+      "evalChecks": 64,
+      "derivativeBasisCalls": 12
+    },
+    {
+      "M": 4,
+      "data": 24,
+      "gates": 172,
+      "fullQuotientFlow": 24,
+      "polynomialSpanRank": 24,
+      "periodCodimension": 12,
+      "filtration": [
+        24,
+        16,
+        12
+      ],
+      "pathNodes": 144,
+      "evalChecks": 128,
+      "derivativeBasisCalls": 40
+    },
+    {
+      "M": 8,
+      "data": 80,
+      "gates": 848,
+      "fullQuotientFlow": 80,
+      "polynomialSpanRank": 80,
+      "periodCodimension": 24,
+      "filtration": [
+        80,
+        64,
+        56
+      ],
+      "pathNodes": 1088,
+      "evalChecks": 256,
+      "derivativeBasisCalls": 144
+    }
+  ],
+  "witness": [
+    {
+      "m": 2,
+      "l": 2,
+      "d": 4,
+      "queries": 16,
+      "periodCodimension": 4,
+      "polynomialSpan": 9
+    },
+    {
+      "m": 3,
+      "l": 2,
+      "d": 6,
+      "queries": 32,
+      "periodCodimension": 6,
+      "polynomialSpan": 21
+    },
+    {
+      "m": 2,
+      "l": 4,
+      "d": 8,
+      "queries": 64,
+      "periodCodimension": 8,
+      "polynomialSpan": 45
+    }
+  ],
+  "limitations": [
+    {
+      "n": 2,
+      "periodCodimension": 2,
+      "logImage": 1
+    },
+    {
+      "n": 3,
+      "periodCodimension": 3,
+      "logImage": 1
+    },
+    {
+      "n": 4,
+      "periodCodimension": 4,
+      "logImage": 1
+    },
+    {
+      "n": 5,
+      "periodCodimension": 5,
+      "logImage": 1
+    },
+    {
+      "n": 6,
+      "periodCodimension": 6,
+      "logImage": 1
+    }
+  ]
+}
+all assertions passed
