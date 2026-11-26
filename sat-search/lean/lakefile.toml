@@ -10,3 +10,12 @@ rev = "fc4f59e577feb1a4956671bc04ac18aaaf8cd842"
 
 [[lean_lib]]
 name = "CircuitLemmas"
+
+# The external pequalnp library (local checkout, pinned at d9f1ea23) for the SAT bridge: its circuit
+# model, SAT language and L037. Same Mathlib commit, so the junctioned packages are shared.
+[[require]]
+name = "pequalnp"
+path = "../../external/pequalnp-proofs-open-goat/lean"
+
+[[lean_lib]]
+name = "SatBridge"

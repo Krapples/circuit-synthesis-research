@@ -130,6 +130,9 @@ It does not use the external project's `Circuit`. Comparing the two models (item
 | `xnorConj_restriction_lower` (Composition.lean) | If fixing a set `F` of essential inputs leaves the XNOR conjunction of `q >= 1` disjoint pairs, then `C(f) >= |F| + 4q - 1`. With the six-bit fragments (`|F| = 4q + 6` at `n = 6q + 6`) this is the `8q + 5` step of claim 11, given the string identity and full support. |
 | `three_step`, `potential_lower`, `potential_restriction_lower` (Robust.lean) | Strong pair sensitivity on a set `S` (for distinct `u, v` in `S` and either value of `x_u`, `x_v` still matters) gives `C(f) >= 3 + C(f|x_z=c)` for some `z` in `S`. A potential that drops by at most one per such restriction then gives `C >= 3*mu`, or `C(f) >= |F| + 3*mu` after an essential restriction. |
 | `block_product_lower`, `block_restriction_lower` (BlockProduct.lean) | If `f` is the AND of `k` functions on disjoint blocks `V_j`, each `PS_d` (Strong on the free inputs under every partial assignment leaving at least `d >= 2` of them free) and each with `|V_j| >= d`, then `C(f) >= 3 * sum_j (|V_j| - d + 1)`, and `C(f) >= |F| + 3 * sum_j (|V_j| - d + 1)` when an essential restriction of `F` leaves that product. Non-vacuity check: parity on `r` inputs is `PS_2`, giving `3(r-1)`, which is tight. |
+| `transfer` (SatBridge/Transfer.lean) | Model transfer. Any external `PEqualNP.CircuitLowerBounds.Circuit` whose gates are and/or/not with at most two inputs compiles into a GateElim circuit for the same function on `n` inputs, with at most `C.size` AND gates. NOTs become free negations, and `or` becomes a negated AND of negations. Lower bounds in the free-NOT model therefore bound the external counted size. |
+| `word_mem_sat` (SatBridge/SixBit.lean) | String identity (claim 1) for the external `SAT` and `encodeCNF`: `T(x1,y1)...T(xq,yq) 110100 ∈ SAT ↔ ∀ j, xj = yj`. A bad block sends the external `wfD` acceptor to its dead state (`foldl_cnf`, `foldl_dead`). An all-good word is the encoding of an explicit positive CNF, which the all-true assignment satisfies. |
+| `sat_six_lower`, `sat_six_lower'`, `sat_not_size_133` (SatBridge/SixQ.lean) | **End-to-end bound at `n = 6Q`, `Q >= 2`:** every external circuit with and/or/not gates of fan-in at most 2 that decides `SAT` on length `6Q` has `size >= 8Q - 3 = 4n/3 - 3`. Full support comes from the external L037, and the restriction step from `xnorConj_restriction_lower` with `|F| = 4Q + 2`. Corollary: no `SIZE s` with `100 s(n) <= 133 n + c` contains `SAT`. This is an internal check: the slope beats L041's 5/4, but only on lengths divisible by six. |
 
 **XNOR proof (audited 2026-11-26).** Strong induction on circuit size, then on `q`. A degenerate first
 gate, a first gate on an input outside the pairs, or a dead first gate gives a smaller circuit. Otherwise
@@ -154,25 +157,22 @@ and it is excluded only because the restriction is constant. **Finite check:**
 inputs with a nonconstant result, using the exact NPN sizes in `results/sat_gadget/npn4_exact_aig_all.json`:
 2,920,992 cases, 0 violations, 0 undecided (`logs/excess_restriction_check.out`).
 
-**Verification status.** `lake build` passes (18,268 jobs, with Robust.lean and BlockProduct.lean, 2026-11-26). `AxiomsCheck.lean` reports only `propext`,
+**Verification status.** `lake build` passes (18,268 jobs, with Robust.lean and BlockProduct.lean, 2026-11-26). `lake build SatBridge` passes (18,471 jobs) and `SatBridgeAxioms.lean` reports only the same three axioms for the five SatBridge theorems. `SatBridge` is not a default target: it requires the external pequalnp checkout at `external/pequalnp-proofs-open-goat/lean` (local path require, pinned commit d9f1ea23, same Mathlib revision). `AxiomsCheck.lean` reports only `propext`,
 `Classical.choice` and `Quot.sound` for every theorem above. There is no `sorry` and no `native_decide`.
 The new files have no string literals, no `#` commands and no `set_option`. They do define their own types
 (the GateElim model), so external submission would need a model transfer and human review (below).
 
 **Not formalized yet** (remaining gaps, 2026-11-26):
-- the string identity (claim 1): defining `SAT_n` in this model, or transferring the external `wfD`
-  automaton, and proving `SAT(T(x1,y1)...T(xq,yq) 110100) = F_q`;
-- full support of `SAT_n` for every even `n` (claim 7). The external L037 covers only `n = 6q`;
+- done 2026-11-26 (SatBridge): the string identity, the model transfer, and claim 11 at `n = 6Q` (full
+  support from external L037);
+- full support of `SAT_n` for even `n` not divisible by six (claim 7). L037 covers only `n = 6q`;
 - the tails for `n = 6k+2, 6k+4` (claims 8-10). Each is an induction like `xnorConj_lower`, with a tail
-  factor in place of the last pair;
-- the final bound (claim 11), which is `xnorConj_restriction_lower` plus the three items above;
-- the model transfer to the external `Circuit` (and/or/not gates on `List ℕ` inputs, counted NOTs). Free-NOT
-  `B` is at most the counted size, so lower bounds transfer, but this needs a compiler between the models
-  and a proof;
-- 17n/12: the additive-weight theorem `C(AND f_j) >= sum w(f_j) - 1`, the four block weights (6/8/10/12,
-  backed by exact-synthesis certificates that would need checkable proofs), the 11-state mixed-block
-  certificate and the padding lemma. None is formalized. The weight theorem is the largest piece: its
-  recursion uses the exact minima of 4-input cofactors, which would have to come from checked certificates.
+  factor in place of the last pair. These were deferred deliberately (README(8));
+- 17n/12: the additive-weight theorem `C(AND f_j) >= sum w(f_j) - 1`, the four block weights (6/8/10/12),
+  the 11-state mixed-block certificate and the padding lemma. README(8) clarifies that the recursive
+  weights use only nonzero tables, trimming, literal factors, cofactors and signed-AND module quotients.
+  They need no exact circuit minima and no Percy UNSAT certificates, so the finite weights can be checked
+  by direct truth-table evaluation in the kernel.
 
 - the 2n-o(n) route (below): existence of a `PS_d` table by counting, the unit-clause helper identity,
   and the explicit finite inequality. The gate-elimination part is `block_restriction_lower`.
