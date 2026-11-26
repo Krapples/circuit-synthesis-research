@@ -452,3 +452,12 @@ The absorbing extension improves one of 300 seeded five-input tables and none of
 the 89 frozen corpus targets with that baseline. The extensions remain experimental.
 The proof uses complete truth tables and does not justify orientation or partial-label pruning.
 [Audit, scope, and matched replay](results/coupled_reader/README.md)
+
+## SAT on one Hamming layer
+
+The independent SAT direction uses a signed projection into the actual paired grammar
+at a fixed Hamming weight. Threshold guards and the monotone slice compiler give an
+exponent-preserving equivalence to unrestricted SAT. This is a problem reduction,
+with no circuit synthesis or orientation change. The ordinary monotone CLIQUE
+projection is ruled out by averaging projected weights over vertex relabelings.
+[Proof and replay](results/sat_weight_slice/README.md)

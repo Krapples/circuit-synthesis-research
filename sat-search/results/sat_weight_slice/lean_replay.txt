@@ -1,0 +1,7 @@
+Lean (version 4.36.0, x86_64-w64-windows-gnu, commit 611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9, Release)
+✔ [18483/18487] Built SatBridge.WeightSlice (12s)
+Build completed successfully (18487 jobs).
+'SatBridge.sat_append_tautology_aligned' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.weightSliceWord_guard' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SatBridge.weightSliceWord_length' depends on axioms: [propext, Quot.sound]
+'SatBridge.weightSliceWord_weight' depends on axioms: [propext, Classical.choice, Quot.sound]

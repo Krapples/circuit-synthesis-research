@@ -1,0 +1,55 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Replay the affine cofactor handoff and independently test the balanced SAT projection and monotone slice compilation.",
+  "jobs": [
+    {
+      "id": "affine-handoff-replay",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/experiments/sat_weight_slice_check.py",
+        "--replay-handoff"
+      ],
+      "query": {
+        "scope": "pinned first Python block of handoff 26d92ea",
+        "basis": "Boolean SAT and fan-in-two monotone AND/OR"
+      },
+      "workers": 1,
+      "memory_mib": 128,
+      "timeout": {
+        "initial": 45,
+        "maximum": 45
+      },
+      "inputs": [
+        "sat-search/experiments/sat_weight_slice_check.py",
+        "sat-search/experiments/sat_encoding_bound_review.py"
+      ],
+      "cache": true
+    },
+    {
+      "id": "sat-weight-slice",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/experiments/sat_weight_slice_check.py"
+      ],
+      "query": {
+        "scope": "SAT grammar, fixed-weight projection, and monotone comparator-network compilation",
+        "basis": "Boolean SAT and fan-in-two monotone AND/OR"
+      },
+      "workers": 1,
+      "memory_mib": 128,
+      "timeout": {
+        "initial": 45,
+        "maximum": 45
+      },
+      "inputs": [
+        "sat-search/experiments/sat_weight_slice_check.py",
+        "sat-search/experiments/sat_encoding_bound_review.py"
+      ],
+      "cache": true
+    }
+  ]
+}

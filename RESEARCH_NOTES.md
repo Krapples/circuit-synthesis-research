@@ -94,6 +94,14 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+An exact paired-grammar projection sends each SAT length `n` to one Hamming layer
+of length `3n+12` and weight `2n+5`. With monotone threshold guards and the
+Berkowitz–Valiant slice compiler, an `O(n^alpha)` monotone size bound on this family
+is equivalent to unrestricted SAT in `O(n^alpha)` for every fixed `alpha > 1`.
+An orbit-averaging obstruction rules out positive-coordinate projections from
+ordinary CLIQUE to any guarded single layer. The equivalent lower bound remains
+open. [Reduction, obstruction, and replay](sat-search/results/sat_weight_slice/README.md)
+
 The coupled first-gate reader audit gives a separate lower-bound proof of the known
 seven-gate AIG minimum for `0x07e1`. The inexpensive absorbing extension raises
 the exact-leaf identification bound from 6 to 7, and the stronger recursive regional

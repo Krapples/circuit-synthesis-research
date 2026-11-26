@@ -1,0 +1,13 @@
+m 5 n 40 gates 173 blocks 8 distinct Walsh fingerprints 4 largest collision 4
+m 6 n 96 gates 428 blocks 16 distinct Walsh fingerprints 3 largest collision 8
+m 7 n 224 gates 1013 blocks 32 distinct Walsh fingerprints 32 largest collision 1
+m 8 n 512 gates 2302 blocks 64 distinct Walsh fingerprints 64 largest collision 1
+m 9 n 1152 gates 5163 blocks 128 distinct Walsh fingerprints 128 largest collision 1
+m 10 n 2560 gates 11465 blocks 256 distinct Walsh fingerprints 256 largest collision 1
+affine conjugation row checks 599168 AIG cofactor row checks 24192 Walsh invariance checks 72
+counting m 16 n 262144 s 256 log2 circuit count upper 4672.59 log2 equivalence failure upper -7891 per-block lower 209
+counting m 20 n 5242880 s 3276 log2 circuit count upper 83149.18 log2 equivalence failure upper -130615 per-block lower 3217
+counting m 24 n 100663296 s 43690 log2 circuit count upper 1434448.0 log2 equivalence failure upper -2096507 per-block lower 43619
+counting m 32 n 34359738368 s 8388608 log2 circuit count upper 402653326.22 log2 equivalence failure upper -536869795 per-block lower 8388513
+exhaustive m3 affine comparisons 1344 minimum moved 2
+sampled affine comparisons 700

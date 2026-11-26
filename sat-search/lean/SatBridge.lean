@@ -5,3 +5,4 @@ import SatBridge.UnitClauses
 import SatBridge.RobustRestriction
 import CircuitLemmas.PairSensitiveCounting
 import SatBridge.RobustIdentifier
+import SatBridge.WeightSlice

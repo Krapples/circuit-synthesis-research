@@ -12,3 +12,7 @@ import SatBridge
 #print axioms SatBridge.sat_robust_identifier_numeric
 #print axioms SatBridge.sat_robust_identifier_logarithmic_width
 #print axioms SatBridge.sat_robust_identifier_eventually
+#print axioms SatBridge.sat_append_tautology_aligned
+#print axioms SatBridge.weightSliceWord_guard
+#print axioms SatBridge.weightSliceWord_length
+#print axioms SatBridge.weightSliceWord_weight

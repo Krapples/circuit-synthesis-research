@@ -1,0 +1,1 @@
+{"exhaustive_projection_rows": 21844, "positives": 82, "seeded_projection_rows": 2000, "seeded_positives": 460, "clique_vertex_relabelings": 22584, "guard_rows": 122880, "inversion_rows": 110604, "gate_rows": 55406544}
