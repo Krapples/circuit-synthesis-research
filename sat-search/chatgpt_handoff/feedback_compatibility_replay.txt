@@ -1,0 +1,58 @@
+{
+  "circuits": 379,
+  "vertices": 1921,
+  "history_refinements": 1,
+  "structural_refinements": 0,
+  "color_refinements": 167,
+  "strict_color_vs_union": 166,
+  "cut_checks": 1739,
+  "code_reconstructions": 51784,
+  "flow_checks": 379,
+  "flow_refinements": 9,
+  "full_flow_charges": 81,
+  "topology_examples": [
+    {
+      "k": 4,
+      "M": 16,
+      "seed_queries": 3,
+      "reverse_ports": 4,
+      "old_min_cut": 16,
+      "refined_port_capacity": 8,
+      "gates": 49
+    },
+    {
+      "k": 5,
+      "M": 32,
+      "seed_queries": 3,
+      "reverse_ports": 5,
+      "old_min_cut": 32,
+      "refined_port_capacity": 8,
+      "gates": 101
+    },
+    {
+      "k": 6,
+      "M": 64,
+      "seed_queries": 3,
+      "reverse_ports": 6,
+      "old_min_cut": 64,
+      "refined_port_capacity": 8,
+      "gates": 201
+    },
+    {
+      "k": 7,
+      "M": 128,
+      "seed_queries": 3,
+      "reverse_ports": 7,
+      "old_min_cut": 128,
+      "refined_port_capacity": 8,
+      "gates": 398
+    }
+  ],
+  "partial_history_example": {
+    "histories": 17,
+    "rows": 544,
+    "max_per_row": 2,
+    "min_colors_lower_bound": 5
+  }
+}
+all assertions passed
