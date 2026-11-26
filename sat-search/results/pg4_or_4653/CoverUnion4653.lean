@@ -396,4 +396,88 @@ theorem independent_operand_centers_lower_bound (R : List (Set Edge × Set Edge)
   have concrete : allEdges.card = 105 := by decide +kernel
   omega
 
+omit [DecidableEq α] in
+theorem project_fold (R : List (Set α × Set α)) (F G : Set (Set α)) (T K : Set α)
+    (target : T ∈ F → T ∩ K ∈ G)
+    (operands : ∀ r ∈ R, (r.1 ∈ F → r.1 ∩ K ∈ G) ∧ (r.2 ∈ F → r.2 ∩ K ∈ G))
+    (available : T ∈ R.foldl step F) :
+    T ∩ K ∈ (R.map (fun r => (r.1 ∩ K, r.2 ∩ K))).foldl step G := by
+  induction R generalizing F G with
+  | nil => exact target available
+  | cons r R ih =>
+    obtain ⟨left, right⟩ := operands r (by simp)
+    have advance (S : Set α) (lift : S ∈ F → S ∩ K ∈ G) (h : S ∈ step F r) :
+        S ∩ K ∈ step G (r.1 ∩ K, r.2 ∩ K) := by
+      rcases h with initial | ⟨a, b, small⟩
+      · exact Or.inl (lift initial)
+      · refine Or.inr ⟨left a, right b, ?_⟩
+        intro e he
+        rcases small he.1 with ha | hb
+        · exact Or.inl ⟨ha, he.2⟩
+        · exact Or.inr ⟨hb, he.2⟩
+    exact ih _ _ (advance T target) (fun s hs => by
+      obtain ⟨a, b⟩ := operands s (by simp [hs])
+      exact ⟨advance s.1 a, advance s.2 b⟩) available
+
+abbrev SplitVertex := Vertex ⊕ (Edge × Vertex)
+
+noncomputable def splitEndpoint (R : List (Set Edge × Set Edge)) (e : Edge) (v : Vertex) :
+    SplitVertex := by
+  classical exact if v ∈ operandCenters R then .inl v else .inr (e, v)
+
+theorem splitEndpoint_fresh (R : List (Set Edge × Set Edge)) (e f : Edge) (v w : Vertex)
+    (fresh : v ∉ operandCenters R) (same : splitEndpoint R e v = splitEndpoint R f w) : e = f := by
+  classical
+  by_cases marked : w ∈ operandCenters R
+  · simp [splitEndpoint, fresh, marked] at same
+  · have pair : (e, v) = (f, w) := Sum.inr.inj (by simpa only [splitEndpoint, if_neg fresh, if_neg marked] using same)
+    exact congrArg Prod.fst pair
+
+def splitStart (R : List (Set Edge × Set Edge)) (W : Set SplitVertex) : Set (Set Edge) :=
+  {S | S = ∅ ∨ ∃ w ∈ W, ∀ e ∈ S, splitEndpoint R e e.1 = w ∨ splitEndpoint R e e.2 = w}
+
+theorem split_cover_transport (R : List (Set Edge × Set Edge))
+    (hR : ∀ Z : Set Vertex,
+      (∀ e : Edge, incidence e → e.1 ∈ Z ∨ e.2 ∈ Z) →
+      {e | incidence e} ∈ R.foldl step (start Z))
+    (W : Set SplitVertex)
+    (cover : ∀ e : Edge, incidence e → splitEndpoint R e e.1 ∈ W ∨ splitEndpoint R e e.2 ∈ W) :
+    {e | incidence e} ∈ (R.map (fun r => (r.1 ∩ {e | incidence e}, r.2 ∩ {e | incidence e}))).foldl
+      step (splitStart R W) := by
+  classical
+  let T : Set Edge := {e | incidence e}
+  let Z : Set Vertex := {v | v ∉ operandCenters R ∨ Sum.inl v ∈ W}
+  have origCover (e : Edge) (he : incidence e) : e.1 ∈ Z ∨ e.2 ∈ Z := by
+    by_cases a : e.1 ∈ operandCenters R
+    · by_cases b : e.2 ∈ operandCenters R
+      · rcases cover e he with h | h
+        · exact Or.inl (Or.inr (by simpa [splitEndpoint, a] using h))
+        · exact Or.inr (Or.inr (by simpa [splitEndpoint, b] using h))
+      · exact Or.inr (Or.inl b)
+    · exact Or.inl (Or.inl a)
+  have liftOperand (r : Set Edge × Set Edge) (hr : r ∈ R) (S : Set Edge)
+      (side : S = r.1 ∨ S = r.2) (h : S ∈ start Z) : S ∩ T ∈ splitStart R W := by
+    by_cases empty : S ∩ T = ∅
+    · exact Or.inl empty
+    obtain ⟨e, he⟩ := Set.nonempty_iff_ne_empty.mpr empty
+    by_cases thin : ∀ f ∈ S ∩ T, f = e
+    · rcases cover e he.2 with h₁ | h₂
+      · exact Or.inr ⟨splitEndpoint R e e.1, h₁, fun f hf => Or.inl (by rw [thin f hf])⟩
+      · exact Or.inr ⟨splitEndpoint R e e.2, h₂, fun f hf => Or.inr (by rw [thin f hf])⟩
+    push Not at thin
+    obtain ⟨f, hf, distinct⟩ := thin
+    rcases h with no | ⟨v, hv, centered⟩
+    · exact (no ▸ he.1).elim
+    have marked : v ∈ operandCenters R :=
+      ⟨r, hr, S, side, ⟨f, hf.1, e, he.1, hf.2, he.2, distinct⟩, centered⟩
+    refine Or.inr ⟨.inl v, hv.resolve_left (fun unmarked => unmarked marked), fun g hg => ?_⟩
+    rcases centered g hg.1 with a | b
+    · exact Or.inl (by rw [a]; simp [splitEndpoint, marked])
+    · exact Or.inr (by rw [b]; simp [splitEndpoint, marked])
+  have transfer := project_fold R (start Z) (splitStart R W) T T
+    (fun h => (not_all_initial Z h).elim)
+    (fun r hr => ⟨liftOperand r hr r.1 (Or.inl rfl), liftOperand r hr r.2 (Or.inr rfl)⟩)
+    (hR Z origCover)
+  simpa only [Set.inter_self] using transfer
+
 end CoverUnion4653

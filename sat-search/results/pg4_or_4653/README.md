@@ -98,7 +98,9 @@ the same marked centers and all unmarked original vertices. Project each operand
 edges corresponding to its original incidences. A queried set that was initially available and
 contained two or more incidences had a marked center, and that center remains available in the
 new graph. A singleton incidence is always available. Subset and union implications are
-preserved throughout the fold.
+preserved throughout the fold. Lean checks `split_cover_transport` for every cover of the
+surrogate and `splitEndpoint_fresh`, which ensures each split endpoint belongs to only its
+original incidence. The transport preserves the number of instructions.
 
 If the marked center subgraph is a forest, so is the new graph. The converse cover simulation
 would turn its projected program into a monotone circuit using at most one OR per instruction.
@@ -106,9 +108,26 @@ For a nontrivial forest, delete a leaf while some edge remains. Along a path fro
 to the output, the first OR can be removed under the zero restriction, since the preceding ANDs
 hold the operand at false. Such a path must contain an OR, or the restricted function would be
 identically false. Induction on edges gives at least `|E|−1` ORs for the forest. This proves on
-paper that a sub-104 program must have a cycle of marked centers. The independent-center case
-above is checked in Lean and the forest extension still needs formalization. The next counting
-problem concerns programs with an induced center core containing a cycle.
+paper that a sub-104 program must have a cycle of marked centers. Each leaf deletion that
+leaves an edge saves one OR, including in graphs with a cyclic core. Thus any saving over
+`|E|−1` must survive leaf deletion all the way to the remaining core. `LeafOrElimination.lean`
+checks the elimination and the induction for any finite certificate of leaf deletions. To
+apply this to the surrogate still requires a graph theorem producing the leaf certificate
+and a construction of the circuit from a cover-union program.
+
+**Uniform bound of 40 in the straight-line circuit model.** The same elimination applies to
+any vertex incident to an edge if deletion leaves some edge. An edge using the vertex
+witnesses essentiality and another edge witnesses that the restricted function can still be
+true. The earliest wire with both properties must be an OR with an operand whose zero
+cofactor is identically false. Replace it by an AND with the other operand repeated. The
+replacement preserves wire numbering and the restricted function. For PG(2,4), a reverse
+spanning-tree traversal rooted at the incidence `(0,21)` gives 40 such deletions. Lean checks
+the explicit deletion order and `LeafOrElimination.PG4.lower_bound_40` for straight-line
+AND/OR circuits with variable and constant sources. The 34-instruction union bound and the
+104-instruction independent-center bound remain checked in their own model. The exact
+104-OR statement and the bridge needed to use the 40 bound in the common-union model remain
+open here. Both local proofs checked with Lean 4.36.0 under the locked `sat-search/lean`
+environment, in 58.862 s for the transport and 34.893 s for the elimination and order.
 
 **Low merges can be shared even when every OR operand is critical.** Choose two different points
 on each of the 21 lines. Build one OR tree from the first chosen edge on each line and another
@@ -175,4 +194,6 @@ allowlist through the project's gate before any public submission.
 python -B sat-search/results/pg4_or_4653/check_geometry.py
 python -B sat-search/results/pg4_or_4653/search_or_budget.py --profile-cnf
 python -B sat-search/results/pg4_or_4653/search_or_budget.py --output sat-search/results/pg4_or_4653/profiles.jsonl
+python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/CoverUnion4653.lean --timeout 100
+python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/LeafOrElimination.lean --timeout 100
 ```
