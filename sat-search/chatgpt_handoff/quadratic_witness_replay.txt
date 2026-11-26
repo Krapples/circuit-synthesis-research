@@ -1,0 +1,2 @@
+{'cases': 84, 'pinned_sat': 1096, 'balanced_sat': 1096, 'coordinate_probes': 28, 'rank_checks': 2964, 'exact_histograms': 180, 'restriction_checks': 4880, 'compression_trials': 84, 'compression_misses': 0, 'rare_trials': 256, 'rare_misses': 22, 'high_rank_checks': 26, 'missing_address_cases': 76, 'fixed_sketch_counterexamples': 128}
+all assertions passed
