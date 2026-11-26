@@ -1,0 +1,107 @@
+{
+  "span_examples": [
+    {
+      "M": 2,
+      "data": 6,
+      "original_ANDs": 24,
+      "distinct_nondirect_responses": 4,
+      "per_history_rank": 4,
+      "quotient_flow": 6,
+      "span_rank": 4,
+      "live_quotient_vertices": 30,
+      "comparisons": 400,
+      "rank_minor_flow_checks": 30
+    },
+    {
+      "M": 4,
+      "data": 20,
+      "original_ANDs": 144,
+      "distinct_nondirect_responses": 16,
+      "per_history_rank": 8,
+      "quotient_flow": 20,
+      "span_rank": 8,
+      "live_quotient_vertices": 212,
+      "comparisons": 800,
+      "rank_minor_flow_checks": 30
+    },
+    {
+      "M": 8,
+      "data": 72,
+      "original_ANDs": 768,
+      "distinct_nondirect_responses": 64,
+      "per_history_rank": 16,
+      "quotient_flow": 72,
+      "span_rank": 16,
+      "live_quotient_vertices": 1608,
+      "comparisons": 1600,
+      "rank_minor_flow_checks": 30
+    },
+    {
+      "M": 16,
+      "data": 272,
+      "original_ANDs": 3840,
+      "distinct_nondirect_responses": 256,
+      "per_history_rank": 32,
+      "quotient_flow": 272,
+      "span_rank": 32,
+      "live_quotient_vertices": 12560,
+      "comparisons": 3200,
+      "rank_minor_flow_checks": 0
+    }
+  ],
+  "packed_witness": {
+    "cases": 128,
+    "single_copy_data_mutations": 128,
+    "single_copy_selection_mutations": 128,
+    "single_copy_query_mask_mutations": 128,
+    "max_word_bits": 224508
+  },
+  "matrix": [
+    {
+      "rows": 1,
+      "columns": 2,
+      "data_bits": 2,
+      "query_columns": 8,
+      "rank": 4,
+      "distinct_residuals": 4,
+      "full_query_degree": 2
+    },
+    {
+      "rows": 2,
+      "columns": 2,
+      "data_bits": 4,
+      "query_columns": 16,
+      "rank": 10,
+      "distinct_residuals": 16,
+      "full_query_degree": 4
+    },
+    {
+      "rows": 3,
+      "columns": 2,
+      "data_bits": 6,
+      "query_columns": 32,
+      "rank": 22,
+      "distinct_residuals": 64,
+      "full_query_degree": 6
+    },
+    {
+      "rows": 2,
+      "columns": 4,
+      "data_bits": 8,
+      "query_columns": 64,
+      "rank": 46,
+      "distinct_residuals": 256,
+      "full_query_degree": 8
+    },
+    {
+      "rows": 3,
+      "columns": 4,
+      "data_bits": 12,
+      "query_columns": 128,
+      "rank": 106,
+      "distinct_residuals": 4096,
+      "full_query_degree": 12
+    }
+  ]
+}
+all assertions passed
