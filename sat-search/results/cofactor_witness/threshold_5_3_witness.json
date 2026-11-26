@@ -1,0 +1,16 @@
+{
+ "case": "threshold-5-3",
+ "n": 5,
+ "tt": "fee8e880",
+ "care": "ffffffff",
+ "basis": "AIG (percy aig=true)",
+ "witness_source": "external, supplied 2026-11-26",
+ "spec": "6,8;10,4;13,15;7,9;11,5;19,21;22,2;23,3;16,25;27,29|30",
+ "size": 10,
+ "checks": [
+  "python row-by-row simulation (n=5, importer logic): tt fee8e880, no constant operands, no forward refs",
+  "percy_run --upper-witness --start 10 --max 12: verified true, external_chain true, no budget solved"
+ ],
+ "lower_bound_evidence": "results/cofactor_witness/native_upper_bench_n5.jsonl: k=1..9 UNSAT (slack-three-phase-set-lift1, cegar, extended tier)",
+ "verdict": "minimum 10 (solver UNSAT verdicts k<=9, no checked proof certificate) + independently verified 10-gate chain"
+}

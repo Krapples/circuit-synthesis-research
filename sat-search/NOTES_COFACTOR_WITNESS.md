@@ -184,7 +184,10 @@ Results, all 22 five-input corpus cases (total 390 s):
   * Hardest: complete-5 = 10 (73.8 s; k=9 UNSAT, 990k conflicts) and comparator-02 = 9 (14.9 s).
   * The other 18 finish in at most 0.2 s.
 * **partial-07: solver chain of 6** below native U = 7 (SAT at k=6, k=5 UNSAT), 0.4 s.
-* **threshold-5-3: open.** k <= 9 is UNSAT (k=9: 1.31M conflicts) and k=10 timed out at 2.06M conflicts, so 10 <= C <= 12 under this scope. Budgets 10 and 11 are open, not UNSAT.
+* **threshold-5-3 = 10.** Ladder: k <= 9 UNSAT (k=9: 1.31M conflicts); k=10 timed out at 2.06M conflicts.
+  * An externally supplied 10-gate chain closes the interval. It was verified by row-by-row simulation (importer logic at n=5) and by `percy_run --upper-witness --start 10`, which accepts the chain without solving any budget.
+  * The lower bound rests on solver UNSAT verdicts, not on checked certificates.
+  * Record: `results/cofactor_witness/threshold_5_3_witness.json`.
 
 Record: `results/cofactor_witness/native_upper_bench_n5.jsonl` (`logs/native_upper_bench_n5.out`).
 Reproduce: `python -B sat-search/experiments/native_upper_bench.py OUT [--n 5] [--names ...]`.
@@ -216,6 +219,6 @@ python -B sat-search/experiments/native_cofactor_check.py sat-search/results/cof
 ## Open questions
 
 * m >= 5 on complete random targets is still about 3-4 gates above typical optima. Bijective re-encodings are exhausted, so further gains need joint (a, b) synthesis with sharing or decompositions beyond one split variable.
-* Six-input corpus ladders below native bounds (not run). threshold-5-3 budgets 10-11 are open.
+* Six-input corpus ladders below native bounds (not run).
 * Percy cegar on partial tables loops at k=1 (partial-07).
 * Whether the existing percy cascade counter D counts exactly the gates `cascade` admits. The Lean bound covers every gate with a constant operand under the restriction, so any D that is a subset of these is sound.
