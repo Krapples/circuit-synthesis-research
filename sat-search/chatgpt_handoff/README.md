@@ -1,3 +1,52 @@
+# Research handoff — feedback compatibility and structural history separators
+
+Updated 2026-11-26. Base [e67385e](https://github.com/Krapples/circuit-synthesis-research/commit/e67385efdb039b579611901d2f30e8ed2c88d38c). **L-clb-036 remains open.** Stronger causal response capacities accounting for realizable histories, with an exact compatibility-coloring interpretation and noncircular topology-only refinement. All old causal cuts can pass while the new structural bound fails. The additive gate charge survives real capacities. Paper proofs and finite replay; no unrestricted superlinear size result, Lean theorem, or production solver changes.
+
+## Current results
+
+- **Partial-response compatibility.** For fixed original DAG partition A,B, output B, free A data S and common allowed Bob input domain Y, write H_v(x,y) for actual values of the local reverse ancestors R(v) at A vertex v. A row x induces a partial response on its reachable histories. Conflict graph G_v joins rows whose partial responses disagree at a common history. A proper color class has one consistent merged response decoder; chromatic number chi_v exactly equals minimum number of history-only total decoders covering all rows. For ANY internal A-only data-to-forward-port cut K, log2 N<=sum_(v in K) log2 chi_v. Encode one color per cut vertex and reconstruct topologically, using actual earlier feedback; no independence of data-dependent histories assumed. Hierarchy log2 chi_v<=min(|D(v)|, |H_v|)<=old c(v), where H_v is the COMMON union of histories across all rows and Bob inputs. Exact color capacity can depend on circuit semantics, so not by itself a noncircular lower bound.
+- **Structural feedback separator:** let w(v) be the minimum vertex cut in the FULL original DAG from all varying primaries U (both regions) to R(v), endpoints allowed. The whole reverse history vector is a function of the w(v) separator bits and public constants, so |H_v|<=2^w(v). Thus c_struct(v)=min(|D(v)|,2^w(v))<=old c(v). Compute by unit vertex-capacity max-flow; no gate semantics needed. Shared upstream feedback bottlenecks reduce capacity even when many reverse-port vertices enter the local cone.
+- **Strict separation from ALL earlier causal cuts:** M=2^k data inputs, standard A-side k-level mux tree, distinct B-side selector signals generated only from t=ceil(log2(k+1)) seed query bits (e.g. nonempty subset ANDs); remaining k-t queries enter B output combination. One forward port, k reverse ports. Old capacities admit M units of flow through the mux tree, proving all old internal cuts pass. But common seed separator gives refined port capacity <=2^t<M (k>=4), rejecting topology for INDEX. Explicit AIGs k=4..7 checked: old min-cut 16,32,64,128, refined port cap 8 each. They are candidate graphs, not correct lookup circuits.
+- **Fractional distinct-gate charge:** choose any certified real capacities c(v)>=log2 chi_v. All causal cuts meet log2 N; max-flow/min-cut supplies that much real flow. Under residual injectivity all data sources supply one unit, decomposable into fractional paths. Each A gate contributes load(v)/c(v)<=1. Sum of shortest A-only source-to-port costs d_i (gate cost 1/c(v), positive capacities only) is <=s_A. Tighter capacities cannot weaken the metric for a fixed partition. Noninjective real flow need not be integral or saturate whole sources. No theorem forces superlinear weighted distances yet.
+- **Per-row history count trap:** t=17 histories, all 544 partial functions assigning arbitrary two bits to each pair of histories. Each row has only two reachable histories. Four total decoders would give <=16 column signatures and fail an unequal pair; >=5 colors needed, so log2 chi>2. Acyclic gadget can realize the partial tables by sending row's pair i,j, returning one selected index, then computing the corresponding data bit. This refutes the per-row-count upper bound for history-only decoders, not joint decoders with additional side information or every possible cut refinement. No explicit AIG of that gadget synthesized.
+- Prior enabled permutable lookup grammar supplies joint residual injection across metadata contexts with one active group, provided changing metadata/query bits are on B and other A inputs fixed identically. Sorting/mux controls remain small. Do not add overlapping cuts or assume feedback histories are independent. Need a joint resource tradeoff for supplying large independent feedback at many gates and preserving data. No topology transfer through guarded slice compiler or literature-priority claim.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [feedback_compatibility_handoff.md](feedback_compatibility_handoff.md) | Proofs: compatibility coloring, common histories, nested separator, strict topology rejection, fractional charge, covering-array obstruction |
+| [feedback_compatibility_check.js](feedback_compatibility_check.js), [replay](feedback_compatibility_replay.txt) | Actual history coloring, reconstruction, flow comparisons and structural counterexamples |
+| [causal_response_handoff.md](causal_response_handoff.md), [checker](causal_response_check.js) | Previous causal response and additive gate charge |
+| [causal_lookup_check.js](causal_lookup_check.js), [replay](causal_lookup_replay.txt) | Enabled permutable lookup and one-group joint residuals |
+| [packed_directional_handoff.md](packed_directional_handoff.md), [checker](packed_directional_check.js) | Asymmetric lookup port tradeoff |
+| [packed_welllinked_handoff.md](packed_welllinked_handoff.md), [checker](packed_welllinked_check.js) | Arbitrary cuts, exact matching, geometric wirelength and routing gap |
+| [packed_separator_handoff.md](packed_separator_handoff.md), [checker](packed_separator_check.js) | Balanced separator and architecture bounds |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling, two-read compiler |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Finite linear lower-bound improvements |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress relaxation limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compression |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run `node feedback_compatibility_check.js` in this directory. Seed 870024. 379 retained small circuits, 1,921 A vertices with exact conflict graph coloring; 167 color capacity improvements over old capacities, 166 over common-history capacities, one common-history refinement, no structural refinements in that random/mux sample. 1,739 internal cuts and 51,784 direct code reconstructions; 379 flow comparisons, nine strict color min-cut refinements, 81 injective fractional gate charge checks. Four separate explicit correlated-selector mux topologies reject only under new structural capacity (old full-flow certificates). 17-history covering-array example with 544 rows. All assertions passed. These are capacity/topology improvements, not numerical minimum-size improvements. No new packed grammar replay, SAT synthesis, Lean proof or production integration.
+
+## Native / independent agent priority
+
+Audit [feedback_compatibility_handoff.md](feedback_compatibility_handoff.md) and replay. Check conflict graph exact decoder interpretation, reconstruction with data-dependent feedback, full DAG separator with both sides' varying primaries, fractional flow and per-row history count obstruction. Investigate joint response codes across multiple cut vertices sharing history ancestors, and joint resource tradeoffs charging independent feedback construction plus data propagation, not overlapping per-gate quantities. Compare to small programmable mux/sorting, two-read and Andreev/Tseitin/cubic controls. Neither correlated feedback nor its small upstream separator is forced in all small SAT graphs. No superlinear numerical bound or literature priority claim. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — causal response-table cuts and additive gate accounting
 
 Updated 2026-11-26. Base [811266b](https://github.com/Krapples/circuit-synthesis-research/commit/811266b4e5ea603d7937dc50247851d3995a69f1). **L-clb-036 remains open.** This round obtains a strictly stronger topology-sensitive necessary invariant than directed port counts and turns it into a sound additive distinct-gate charge using a virtual flow. New enabled permutable packed lookup grammar distinguishes all data bits across metadata contexts with just one active group. No unrestricted superlinear numerical size bound, Lean theorem, production solver change, or literature-priority claim.
