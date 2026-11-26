@@ -1,0 +1,112 @@
+{
+  "chain": [
+    {
+      "L": 2,
+      "data": 4,
+      "shortest": 4,
+      "capacitated": 6,
+      "optimized": 6
+    },
+    {
+      "L": 4,
+      "data": 6,
+      "shortest": 4,
+      "capacitated": 10,
+      "optimized": 10
+    },
+    {
+      "L": 8,
+      "data": 10,
+      "shortest": 4,
+      "capacitated": 18,
+      "optimized": 18
+    },
+    {
+      "L": 16,
+      "data": 18,
+      "shortest": 4,
+      "capacitated": 34,
+      "optimized": 34
+    },
+    {
+      "L": 32,
+      "data": 34,
+      "shortest": 4,
+      "capacitated": 66,
+      "optimized": 66
+    }
+  ],
+  "dilution": [
+    {
+      "histories": 2,
+      "uniform": 1,
+      "optimized": 2,
+      "quotientUniform": 1,
+      "iterations": 2
+    },
+    {
+      "histories": 4,
+      "uniform": 0.5,
+      "optimized": 2,
+      "quotientUniform": 1,
+      "iterations": 2
+    },
+    {
+      "histories": 8,
+      "uniform": 0.25,
+      "optimized": 2,
+      "quotientUniform": 1,
+      "iterations": 2
+    },
+    {
+      "histories": 16,
+      "uniform": 0.125,
+      "optimized": 2,
+      "quotientUniform": 1,
+      "iterations": 2
+    },
+    {
+      "histories": 32,
+      "uniform": 0.0625,
+      "optimized": 2,
+      "quotientUniform": 1,
+      "iterations": 2
+    }
+  ],
+  "crossHistory": [
+    {
+      "k": 1,
+      "data": 4,
+      "oldIndividualFlow": 4,
+      "disjointHistoryFlow": 4,
+      "quotientFlow": 2,
+      "gates": 21
+    },
+    {
+      "k": 2,
+      "data": 16,
+      "oldIndividualFlow": 16,
+      "disjointHistoryFlow": 16,
+      "quotientFlow": 4,
+      "gates": 189
+    },
+    {
+      "k": 3,
+      "data": 64,
+      "oldIndividualFlow": 64,
+      "disjointHistoryFlow": 64,
+      "quotientFlow": 8,
+      "gates": 1533
+    }
+  ],
+  "randomCircuits": 194,
+  "quotientEvaluations": 5688,
+  "strictQuotientCuts": 4,
+  "injectiveRandom": 103,
+  "randomOptimizations": 103,
+  "strictOptimization": 0,
+  "strictCongestion": 0,
+  "maxIterations": 1,
+  "orbitChecks": 240
+}
+all assertions passed
