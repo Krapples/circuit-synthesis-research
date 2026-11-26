@@ -95,6 +95,42 @@ function run(){
   let median=term.slice().sort((a,b)=>a-b)[Math.floor(term.length/2)];
   ok(cuts===len&&dem===term.reduce((s,v)=>s+Math.abs(v-median),0),"coarea");S.layout_checks++;
  }
+ // Verify no-output-message rank argument on actual finite circuit DAGs.
+ S.edge_protocol_checks=0;S.vertex_protocol_checks=0;S.transcript_rectangles=0;
+ function protocol(n,E,side,vertex){
+  let A=0,B=0;for(let i=0;i<n;i++){if(side[i]===0)A|=1<<i;else if(side[i]===1)B|=1<<i;}
+  if(!A||!B)return;
+  let publicBits=rnd(1<<n)&~(A|B),X=sub(A),Y=sub(B),M=[],groups=new Map(),cost=0;
+  for(let j=0;j<E.length;j++)for(let l of E[j]){
+   let v=l>>1,g=n+j;
+   if(vertex){if(side[g]===2&&side[v]!==2)cost++;}
+   else if(side[g]!==side[v])cost++;
+  }
+  for(let x of X){let row=[];for(let y of Y){
+   let input=x|y|publicBits,V=Array.from({length:n},(_,i)=>input>>i&1),trans="";
+   for(let j=0;j<E.length;j++){
+    let [u,v]=E[j],g=n+j;
+    for(let l of [u,v])if(vertex?(side[g]===2&&side[l>>1]!==2):side[g]!==side[l>>1])trans+=V[l>>1];
+    V.push((V[u>>1]^(u&1))&(V[v>>1]^(v&1)));
+   }
+   ok(trans.length===cost,"protocol schedule");let z=V.at(-1);row.push(z);
+   if(!groups.has(trans))groups.set(trans,{all:[],yes:[]});
+   let G=groups.get(trans);G.all.push([x,y]);if(z)G.yes.push([x,y]);
+  }M.push(row);}
+  function rectangle(P){return P.length===new Set(P.map(a=>a[0])).size*new Set(P.map(a=>a[1])).size;}
+  for(let G of groups.values()){ok(rectangle(G.all)&&rectangle(G.yes),"transcript rectangle");S.transcript_rectangles+=2;}
+  ok(groups.size<=2**cost&&rank(M)<=2**cost,"communication rank");
+  if(vertex){ok(cost<=2*side.filter(v=>v===2).length);S.vertex_protocol_checks++;}
+  else S.edge_protocol_checks++;
+ }
+ for(let t=0;t<500;t++){
+  let n=3+rnd(4),g=3+rnd(9),E=Array.from({length:g},(_,i)=>[2*rnd(n+i)+rnd(2),2*rnd(n+i)+rnd(2)]);
+  let side=Array.from({length:n+g},()=>rnd(2));protocol(n,E,side,false);
+  // Mark one endpoint of every A-B wire as a separator vertex.
+  for(let j=0;j<g;j++)for(let l of E[j])if(side[l>>1]!==2&&side[n+j]!==2&&side[l>>1]!==side[n+j])side[rnd(2)?l>>1:n+j]=2;
+  for(let j=0;j<g;j++)for(let l of E[j])ok(side[l>>1]===2||side[n+j]===2||side[l>>1]===side[n+j]);
+  protocol(n,E,side,true);
+ }
  return S;
 }
 if(typeof module!=="undefined"&&require.main===module){console.log(JSON.stringify(run(),null,2));console.log("all assertions passed");}
