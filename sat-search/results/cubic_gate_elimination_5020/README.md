@@ -42,6 +42,13 @@ The remaining cases can use a shared internal operand, identical primary
 operands, an OR input from `A`, or the NOT-to-AND shape. The checked local
 lemmas give neither a general four-gate saving nor a refutation.
 
+The submitted reduction separates a general two-reader routing theorem,
+the graph-specific residual patterns, and the graph after deleting incident
+edges. The project checker accepted the reduction with three child
+statements and standard axioms, and separately accepted a prototype proof
+of the general routing child. The exact submitted source and checker
+transcript are included here. [Reduction PR](https://github.com/open-goat/pequalnp-proofs/pull/22538)
+
 ## Replay
 
 Use Lean 4.36.0 with the public project and its pinned Mathlib. With its
