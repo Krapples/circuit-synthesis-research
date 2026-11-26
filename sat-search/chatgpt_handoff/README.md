@@ -1,3 +1,223 @@
+# Research handoff — parity distributions on the actual SAT Hamming slice
+
+Processed agent revision: bb010ab9dd1c72682a3d4db9c0e78a04c95b13e3 (master). Autonomous task checkpoint: ignore the handoff-only commit when looking for new agent work.
+
+## 0. Agent audit and scope
+
+Read the agent's sat-search/results/sat_weight_slice/README.md, RESEARCH_NOTES.md (blob 6a73e0ace8bd773c2fd3e1267d2cd2ea2495358a), and sat-search/NOTES_ORIENTATION_QUOTIENT.md (blob d8074cd1b06eab80558a705bc949658d41998f5a). Both notes rechecked after experiments. The exact grammar projection and the exponent equivalence are sound on paper inspection: the appended clause is a tautology, the pinned 00 is an aligned clause terminator in any legal parse, the last-token test is necessary, and the Batcher forward/backward complement compiler gives O(N log^2 N) additive overhead. Its backward comparator identities hold for all four input pairs. The agent reports Lean checked the grammar projection, length and weight; I have not rerun Lean here. The previous affine-cofactor result was audited/replayed by the agent. Do not repeat either implementation.
+
+The new work gives explicit SAT/UNSAT distributions on the actual guarded layer and proves an exponential approximate DNF/CNF size lower bound, and a quadratic formula leaf lower bound, in the number of programmable bits. Crucially a linear monotone circuit separates the very same distributions. Thus these properties by themselves are insufficient for an unrestricted monotone circuit lower bound. This is both a positive restricted-model lower bound on the actual slice and a rigorous negative control for approximation-based methods. No novelty claim; paper proofs, finite replay below, no Lean verification. L-clb-036 remains open.
+
+## 1. Actual encoded distribution construction
+
+Let m>=2. Use m ordinary variables x1,...,xm, and m-1 distinct auxiliary variables z2,...,zm. Put z1=x1. For i=2,...,m use four width-three clauses encoding zi=z_(i-1) XOR xi. For each forbidden triple (a,b,c) with c != a XOR b, include the clause false exactly on that triple. Add the unit NOT zm. For each b in {0,1}^m, add m unit clauses pinning xi=b_i. Order the pin units first, then XOR clauses, then the output unit. Use fixed variable IDs 0,...,2m-2 (1-based names in the code). Only the m signs of the first units vary. This CNF is SAT iff parity(b)=0, and its existential extension is unique when SAT.
+
+Encode exactly with the repository's grammar: each literal with identifier v and positive flag s becomes (1,s), then (1,d) for each canonical LSB-first bit of v (none for zero), then (0,1); append (0,0) after each clause. Let w(b) be the encoded word of fixed even length n. All words end in 00. There are 13m-11 literal occurrences and 5m-3 clauses: explicitly m pins +4(m-1) XOR clauses +1 output =5m-3 clauses; literal occurrences m+12(m-1)+1=13m-11. Thus n=Theta(m log m): O(m log m) by identifier size, Omega(m log m) already from the m pin IDs. (No use of an asymptotic gate lower bound here.)
+
+Apply the agent's actual balanced grammar projection at this n. With u=w[:-2], append to w the tokens 1001 1101 10, then pairs (1,NOT u_j) for all j, then 11 01 00. Call the resulting word y(b). It has N=3n+12 coordinates and weight t=2n+5. It is SAT iff w(b) is SAT. In the image, precisely two coordinates depend on each b_i: a positive rail b_i (original pin sign), and a negative rail NOT b_i (the paired suffix digit). Every other coordinate is constant. Thus y is injective.
+
+Let P be uniform on y(b) for even parity b, and Q uniform for odd parity b. They are supported respectively on positive and negative words of the agent's exact G_n, both at weight t. Each support has 2^(m-1) words.
+
+## 2. Identical low-order marginals and exponential approximate DNF/CNF bounds
+
+Any set of fewer than m actual word coordinates involves fewer than m distinct programmable bits. Under either parity distribution these bits are exactly uniform: each partial assignment to r<m bits has 2^(m-r-1) even and 2^(m-r-1) odd completions. Consequently the two distributions agree on all joint marginals of fewer than m actual coordinates, on all multilinear polynomials of degree <m in the actual coordinates, and on every positive monomial of width <m. This includes constant or inconsistent rail patterns. The assertion is equality of marginals, not independence of all N coordinates (opposite rails are dependent).
+
+Any monotone DNF on actual coordinates pulls back under y to an ordinary signed DNF in b after deleting constant and impossible terms and repeated literals. Call the number of distinct pinned bits in a consistent term its effective width. Let D be any such DNF with effective width <=w<m. For every accepted even string b, choose a witnessing term of width <=w. Flipping any bit not fixed by that term leaves D true. Hence at least m-w of its m hypercube neighbors, all odd, are accepted. Every accepted odd string receives at most m such edges. Counting edges between accepted even and odd strings gives
+
+    Q(D=1) >= (1-w/m) P(D=1).
+
+This is an approximation obstruction on the ENTIRE union of short terms, not merely equality of individual monomial moments.
+
+More generally suppose D has P(D=1)>=1-epsilon and Q(D=1)<=epsilon. Split it into D_short (terms effective width <=w) and D_long (the other terms). Since Q(D_short=1)<=epsilon, the previous inequality gives P(D_short=1)<=epsilon/(1-w/m). Therefore
+
+    P(D_long=1) >= 1-epsilon-epsilon/(1-w/m).
+
+Each long consistent term fixes r>=w+1 bits; its even-parity probability is 2^(-r) if r<m, and at most 2^(-(m-1)) if r=m, hence <=2^(-w). Union bound yields
+
+    #terms >= [1-epsilon-epsilon/(1-w/m)] 2^w.
+
+For epsilon=1/4 and w=floor(m/2), this is >=2^floor(m/2)/4. For exact separation every consistent term must have effective width m (otherwise it hits both distributions), so at least 2^(m-1) terms are needed. Matching DNF of this size uses one complete rail conjunction per even assignment. By complementing the pullback, swapping parity distributions, and applying the same argument, the same term-count bounds apply to CNF clause counts. This proves exp(Omega(N/log N)) approximate DNF/CNF lower bounds for separating these distributions on an unbounded subsequence of actual slice lengths, and therefore for exact computation of G_n in those models. No claim about an exponential monotone circuit lower bound.
+
+## 3. Formula lower bound (Khrapchenko edge argument, with proof)
+
+For any fan-in-two monotone AND/OR formula H on the actual word bits that separates P and Q exactly, substitute the rails and constants to obtain a signed Boolean formula on m bits for even parity. Its number L of leaves does not increase. Let A be the even strings, B the odd strings, and E={(a,b) in A x B: distance(a,b)=1}. Then |A|=|B|=2^(m-1), |E|=m*2^(m-1).
+
+Associate a deterministic rectangle partition of A x B to the formula tree. At an OR node whose values differ 1 on a and 0 on b, choose the first child that evaluates to 1 on a. Both are 0 on b, so the choice depends only on a and splits the current row set. At an AND node choose the first child that is 0 on b; both are 1 on a, and the choice splits the column set. Recursing from the root gives disjoint leaf rectangles A_l x B_l whose union is A x B; each nonempty leaf rectangle is separated by one signed literal. A constant cannot separate a nonempty rectangle. For a leaf labeled b_i or NOT b_i, every edge of E inside its rectangle must differ at i, and the edges form a matching (each endpoint has at most one such neighbor). Thus
+
+    |E intersect (A_l x B_l)| <= min(|A_l|,|B_l|) <= sqrt(|A_l||B_l|).
+
+Summing over leaves and applying Cauchy-Schwarz gives
+
+    |E| <= sqrt(L * sum_l |A_l||B_l|) = sqrt(L |A||B|).
+
+Therefore L>=|E|^2/(|A||B|)=m^2. In the binary formula model the gate count is at least m^2-1. For m a power of two this is sharp for separation on the promise: split parity into equal halves, and form the output phase using two ANDs and an OR on the two possible half-parity combinations. Recursively duplicating the required signed subformulas gives L(m)=4L(m/2), L(1)=1, hence m^2 leaves. This lower bound applies to general unrestricted signed formulas as well as the monotone slice formulas; in terms of N it is Omega(N^2/log^2 N) on our lengths. This is not a bound for AIGs with shared nodes.
+
+## 4. Why the distributions are not a circuit lower bound
+
+The very same P,Q have a monotone circuit separator on N inputs with at most 6(m-1) gates. Read only the paired rails. Maintain the odd and even parity of a prefix as two wires p,q. Start with p=b1,q=NOT b1 from actual positive and negative coordinates. On the next pair a=b_i,c=NOT b_i, update
+
+    p' = (p AND c) OR (q AND a)
+    q' = (p AND a) OR (q AND c).
+
+These are six monotone gates per step and the output q separates P,Q exactly. This circuit is a total monotone function of all N coordinates, but is only asserted to agree with G_n on the selected support, NOT on the whole slice. Since m=Theta(N/log N), its cost is sublinear in N. Any distributional lower bound on all monotone separators of this pair cannot beat this upper bound.
+
+There is a quantitative obstruction to a naive gate-by-gate approximation argument. Suppose every wire of this separator is assigned a short DNF (effective width <=w<m), with primaries exact. Let delta_g be the probability, under the equal mixture (P+Q)/2, that the approximant of gate g differs from applying g to its two operand approximants. At any assignment where no local disagreement occurs, induction in topological order gives agreement with the true output. The root approximant has mixture classification error >= (1-w/m)/2, since its two acceptance probabilities obey section 2. Union bound (once per distinct gate, no path multiplicity) implies
+
+    sum_g delta_g >= (1-w/m)/2.
+
+In particular some local error is at least (1-w/m)/(2s), where s is the actual separator gate count. For w=floor(m/2), this is >=1/(4s). No method that approximates every gate of this example by short DNFs can guarantee total local error o(1), regardless of how many terms the approximants are allowed. This is a precise limitation, not a disproof of the monotone approximation method for other carefully chosen distributions. A successful proof for G_n must choose distributions without such cheap joint separators and must prove a stronger closure/approximation invariant than low-order marginal agreement plus DNF/CNF hardness.
+
+## 5. Executed verification
+
+The standalone stdlib Python script below was run in the current research session. It constructs exact words, parses them using separately structured token logic, checks satisfiability by unit propagation plus DPLL, evaluates the monotone parity separator directly on the actual word coordinates, checks weight and constant/rail coordinates, and counts term marginals and short-DNF acceptance. For m=2..12 all 8188 words passed. Lengths N: 324,696,1134,1584,2100,2616,3132,3660,4254,4848,5442; at m=12 t=3625, separator upper bound 66. It performed 2165 monomial checks (exhaustive consistent rail patterns of width <m for m<=6; sampled actual-coordinate terms for larger m), 2200 seeded short-DNF checks, and verified the rectangle partition of the exact-size balanced formulas for m=2,4,8 (4,64,16384 pairs; 4,32,1024 adjacent pairs; 4,16,64 leaves). Seed 22661. All assertions passed. These finite checks do not replace the general proofs. No native solver benchmark, new SAT circuit lower bound, or independent Lean run claimed.
+
+## 6. Runnable reference (stdlib Python)
+
+```python
+from itertools import product,combinations
+from random import Random
+from math import comb
+
+def enc(F):
+    w=[]
+    for C in F:
+        for l in C:
+            v=abs(l)-1; w += [1,int(l>0)]
+            while v: w += [1,v&1]; v >>= 1
+            w += [0,1]
+        w += [0,0]
+    return tuple(w)
+
+def parse(w):
+    F=[]; C=[]; j=0
+    while j<len(w):
+        if w[j:j+2]==(0,0): F.append(C);C=[];j+=2;continue
+        assert w[j]==1 and j+1<len(w)
+        sign=w[j+1];j+=2;digits=[]
+        while w[j:j+1]==(1,):digits.append(w[j+1]);j+=2
+        assert w[j:j+2]==(0,1) and (not digits or digits[-1]);j+=2
+        v=1+sum(b<<i for i,b in enumerate(digits));C.append(v if sign else -v)
+    assert not C
+    return F
+
+def sat(F):
+    while True:
+        if not F:return True
+        if any(not C for C in F):return False
+        u=next((C[0] for C in F if len(C)==1),None)
+        if u is None:break
+        F=[[l for l in C if l!=-u] for C in F if u not in C]
+    v=F[0][0]
+    return sat(F+[[v]]) or sat(F+[[-v]])
+
+def formula(x):
+    m=len(x);F=[[i+1 if b else -i-1] for i,b in enumerate(x)];prev=1
+    for i in range(2,m+1):
+        z=m+i-1
+        for a,b,c in product((0,1),repeat=3):
+            if c != (a^b):F.append([(-v if t else v) for v,t in zip((prev,i,z),(a,b,c))])
+        prev=z
+    return F+[[-prev]]
+
+def balance(w):
+    assert w[-2:]==(0,0)
+    u=w[:-2]
+    return w+(1,0,0,1,1,1,0,1,1,0)+tuple(b for x in u for b in (1,1-x))+(1,1,0,1,0,0)
+
+def table(m):
+    return [balance(enc(formula(x))) for x in product((0,1),repeat=m)]
+
+def monotone_sep(y,pos,neg):
+    p,q=y[pos[0]],y[neg[0]]
+    for i,j in zip(pos[1:],neg[1:]):
+        a,b=y[i],y[j]
+        p,q=(p&b)|(q&a),(p&a)|(q&b)
+    return q
+
+def main():
+    r=Random(22661); checked=0; marginal=0; dnfs=0; rows=0
+    for m in range(2,13):
+        W=table(m);N=len(W[0]);n=(N-12)//3;t=2*n+5
+        pos=[];neg=[];base=W[0]
+        for i in range(m):
+            v=W[1<<(m-1-i)];p=[j for j in range(N) if base[j]==0 and v[j]==1];q=[j for j in range(N) if base[j]==1 and v[j]==0];assert len(p)==len(q)==1;pos+=p;neg+=q
+        for j,y in enumerate(W):
+            assert len(y)==N and sum(y)==t
+            assert sat(parse(y)) == (j.bit_count()%2==0)
+            assert monotone_sep(y,pos,neg)==(j.bit_count()%2==0)
+            assert all(y[a]^y[b] for a,b in zip(pos,neg))
+            assert all(y[k]==base[k] for k in range(N) if k not in pos and k not in neg)
+            checked+=1
+        full=(1<<len(W))-1; even=sum(1<<j for j in range(len(W)) if j.bit_count()%2==0);odd=full^even
+        bits=[sum(y[k]<<j for j,y in enumerate(W)) for k in range(N)]
+        if m<=6:
+            terms=(tuple(pos[i] if b==1 else neg[i] for i,b in enumerate(pat) if b!=-1) for pat in product((-1,0,1),repeat=m) if -1 in pat)
+        else:
+            terms=(tuple(r.sample(range(N),r.randrange(m))) for _ in range(200))
+        for term in terms:
+            a=full
+            for k in term:a&=bits[k]
+            assert (a&even).bit_count()==(a&odd).bit_count();marginal+=1
+        w=m//2
+        for _ in range(200):
+            mask=0
+            for __ in range(r.randrange(1,20)):
+                ix=r.sample(range(m),r.randrange(w+1));a=full
+                for i in ix:a&=bits[r.choice((pos[i],neg[i]))]
+                mask|=a
+            pp=(mask&even).bit_count();pn=(mask&odd).bit_count()
+            assert m*pn >= (m-w)*pp
+            dnfs+=1
+        print('m',m,'original',n,'balanced',N,'weight',t,'rows',len(W),'separator_gate_upper',6*(m-1),flush=True)
+    print('rows',checked,'monomial checks',marginal,'short DNF checks',dnfs)
+if __name__=='__main__':main()
+
+def parity_formula(ix,phase):
+    if len(ix)==1:return ix[0]+1 if phase else -ix[0]-1
+    a,b=ix[:len(ix)//2],ix[len(ix)//2:]
+    return ('or',('and',parity_formula(a,1),parity_formula(b,1-phase)),('and',parity_formula(a,0),parity_formula(b,phase)))
+def f_eval(f,x):
+    if isinstance(f,int):return ((x>>(abs(f)-1))&1)^(f<0)
+    a,b=f_eval(f[1],x),f_eval(f[2],x)
+    return (a&b) if f[0]=='and' else (a|b)
+def rectangle_check():
+    for m in (2,4,8):
+        f=parity_formula(list(range(m)),0);A=[x for x in range(1<<m) if x.bit_count()%2==0];B=[x for x in range(1<<m) if x.bit_count()%2==1]
+        assert all(f_eval(f,x)==(x.bit_count()%2==0) for x in range(1<<m))
+        leaves=[]
+        def walk(f,A,B):
+            if isinstance(f,int):
+                assert all(f_eval(f,x) for x in A) and all(not f_eval(f,x) for x in B)
+                leaves.append((A,B,f));return
+            if f[0]=='or':
+                a=[x for x in A if f_eval(f[1],x)];b=[x for x in A if not f_eval(f[1],x)]
+                walk(f[1],a,B);walk(f[2],b,B)
+            else:
+                a=[x for x in B if not f_eval(f[1],x)];b=[x for x in B if f_eval(f[1],x)]
+                walk(f[1],A,a);walk(f[2],A,b)
+        walk(f,A,B)
+        pairs={};edges=0
+        for a,b,l in leaves:
+            e=0
+            for x in a:
+                for y in b:
+                    assert (x,y) not in pairs;pairs[x,y]=l
+                    if (x^y).bit_count()==1:
+                        assert x^y==1<<(abs(l)-1);e+=1
+            assert e<=min(len(a),len(b));edges+=e
+        assert len(pairs)==len(A)*len(B) and edges==m*len(A) and len(leaves)==m*m
+        print('formula',m,'leaves',len(leaves),'pairs',len(pairs),'adjacent',edges)
+if __name__=='__main__':rectangle_check()
+```
+
+## 7. Next research priority
+
+Do not implement a synthesis feature for this parity control. For a real slice lower-bound attempt, examine distributions over legal encodings with nonlocal semantic dependencies where no simple signed projection or cheap separator is available, and require a compositional approximation lemma with explicit per-gate error control for arbitrary reconvergent DAGs. Compare any candidate invariant against the parity control before pursuing a full proof. The exact slice equivalence remains a useful research target, not a way to bypass the unrestricted circuit barrier.
+
+---
+
+# Historical research archive — older handoffs, not a request to repeat completed work
+
 # Research handoff — affine-inequivalent hard block restrictions in a linear-size AIG
 
 Processed agent revision: ebe057e6b6c1d4ffda7f80cd16a95d59e71707c4 (master). This is the checkpoint for the autonomous research task: do not count the handoff-only commit as a new agent revision.
