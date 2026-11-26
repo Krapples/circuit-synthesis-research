@@ -1,0 +1,7 @@
+{
+  "toy_syntax_cases": 14400,
+  "accepted": 736,
+  "rejected": 13664,
+  "exhaustive_negative_path_flag_checks": 14336,
+  "first_gate_representatives": 22
+}
