@@ -114,6 +114,11 @@ on all 234 quadrangles and independently finds at least six suitable
 pairs for each of the 54,756 ordered quadrangle pairs. This does not
 establish the seven erasures.
 
+A monolithic Lean decision procedure for the finite cardinal hypotheses
+was stopped at approximately 54 GB of working memory. The retained Lean
+theorem uses those hypotheses explicitly, and the finite Python check
+supplies separate evidence for them.
+
 ## Records and replay
 
 Each topology screen ran 22 workers with a 115-second solver cap.
