@@ -1,3 +1,238 @@
+# Research handoff — affine-inequivalent hard block restrictions in a linear-size AIG
+
+Processed agent revision: ebe057e6b6c1d4ffda7f80cd16a95d59e71707c4 (master). This is the checkpoint for the autonomous research task: do not count the handoff-only commit as a new agent revision.
+
+## 0. Status and audit of the agent's new results
+
+Both requested notes were fetched again after the experiments. RESEARCH_NOTES.md blob 88e22468e76a1a50883d940bea03f9c9bfe97b42; sat-search/NOTES_ORIENTATION_QUOTIENT.md blob 1dc2063bcbff6994f8af057deeb617a4cda00315. Read sat-search/results/coupled_reader/README.md at the processed revision. The agent independently verified the coupled-reader argument and certified C(0x07e1)=7 using exact three-input leaves plus identification and an archived seven-gate witness. The stronger recursive signed-regional baseline already gives 7; two-sided absorption improves just 1/300 five-input sampled tables and 0/89 frozen corpus targets against it. Phase compatibility improves 4/300 sampled five-input tables against that stronger baseline, 0/89 frozen targets. Do not port these as production improvements on present evidence. This supersedes the previous handoff's implementation recommendation and unresolved 0x07e1 witness. No independent rerun of the agent's native or Lean jobs is claimed here.
+
+The new result below is a counterexample to a proposed superlinear resource-counting route, not a new SAT lower bound. The precise scope is summing unrestricted cofactor gate costs across disjoint input blocks even after quotienting by invertible affine input changes and output complement. It goes beyond counting residual diversity: each block cofactor itself is large in unrestricted circuit complexity, simultaneously at every common context. The function nonetheless has a linear-size AIG. No novelty claim; this is a paper proof, not Lean-checked. L-clb-036 remains open.
+
+## 1. Statement
+
+For every integer m >= 16 put M=2^m, k=2^(m-2), n=km. There exists a full-support n-input function F and a partition into k blocks of m inputs such that:
+
+* F has an unrestricted AIG of at most 6n+3(M-1) gates (in particular O(n)).
+* For every common assignment a of all n inputs, let f_v^a be the m-input restriction leaving only block v free. Every f_v^a requires at least floor(M/(16m))+1-3m gates.
+* For distinct v,w, the functions f_v^a and f_w^b are inequivalent under every invertible affine transformation of their m inputs and output complementation, even for unrelated contexts a,b.
+* Hence even a sum that counts only one representative from each affine/output-phase equivalence class of block restrictions can be Omega(n^2/(log n)^3), at every common assignment. A generic claim C(F) >= that sum divided by any fixed constant is false, as is division by a factor o(n/(log n)^3). Here C is unrestricted single-output AND count with free constants/complemented edges. In the counted AND/OR/NOT basis the same construction has O(n) size, by replacing free complemented edges with at most one NOT per used wire.
+
+The family uses a nonuniform hard lookup table; existence is proved by counting. It is not an efficiently uniformly computable explicit hard function in the usual lower-bound sense. All logarithms in the proof below are base 2.
+
+## 2. Construction and cost
+
+Index each block by v in F_2^(m-2). Write a block x=(x0,x1,x2,...,x_(m-1)). Define the quadratic shear
+
+    Q_v(x) = x1 * sum_(j=2..m-1) v_(j-2) x_j     (over F_2)
+    T_v(x) = (x0+Q_v(x), x1, ..., x_(m-1)).
+
+T_v is a bijection, its own inverse, and T_v T_w=T_(v+w). For v!=w their product is genuinely quadratic, not affine: its reduced multilinear polynomial has at least one x1*xj term. Compute the selected parity with at most m-3 XORs (the empty subset costs zero), one AND, and one XOR. Each XOR uses three AIG gates, so both T_v and its inverse cost at most 3m gates to compute their vector outputs.
+
+Let h:F_2^m -> {0,1} be a lookup table chosen below. Set
+
+    F(x^(0),...,x^(k-1)) = h( XOR_v T_v(x^(v)) ).
+
+The block transforms cost <=3mk; the coordinatewise sum costs <=3m(k-1). A complete binary Shannon tree of h costs at most 3(M-1) AND gates (each two-way multiplexer uses three AND gates with free complements). Thus C(F)<=6n+3(M-1). Fixing every block other than v leaves
+
+    f_v(x) = h(T_v(x)+c)
+
+where c is the sum of the fixed transformed blocks. This identity is exact, not a promise about a particular assignment.
+
+## 3. The affine quotient does not remove the obstruction
+
+For a translation tau_c(x)=x+c, T_v tau_c T_v is affine and invertible. Its first coordinate is x0+c0+Q_v(x)+Q_v(x+c), and the quadratic parts cancel. Every other coordinate is a translation. Consequently h tau_c T_v = h T_v (T_v tau_c T_v). For a fixed v, ALL contexts give the same affine-equivalence class as h T_v. It therefore suffices to make the k base functions h T_v pairwise affine/output-phase inequivalent.
+
+For distinct v,w, invertible affine A and epsilon in {0,1}, suppose
+
+    h(T_v(x)) = h(T_w(A(x))) XOR epsilon    for every x.
+
+Put y=T_v(x). This is the constraint h(y)=h(P(y)) XOR epsilon for the permutation P=T_w A T_v. A fixed point corresponds precisely to A(x)=T_(v+w)(x). The difference in the first coordinate is a nonzero multilinear polynomial of degree two: subtracting an affine polynomial cannot cancel its quadratic monomials. A nonzero multilinear polynomial of degree <=d on m bits is nonzero on at least 2^(m-d) points. Proof: induct on m, writing p=x_(m-1) q+r; if q=0 use the smaller variable count and double its weight; otherwise each assignment where q=1 contributes at least one nonzero among the two values, and q has degree <=d-1. For d=0 a nonzero constant has full weight. Thus P moves at least M/4 points. Its cycles number at most M-M/8, since every nontrivial cycle has length >=2.
+
+Take h uniformly at random from all 2^M truth tables. For a fixed P and epsilon the constraint admits at most two choices per cycle (zero if inconsistent on a cycle), so its probability is <=2^(-M/8). There are at most k^2 ordered pairs and at most 2^(m^2+m) invertible affine transformations (bounding all matrices and offsets), and two output phases. The union bound on ANY cross-block equivalence is
+
+    2^(2(m-2)+m^2+m+1-M/8).
+
+This is below 1/4 for m>=16. The exponential negative term dominates, and the inequality persists by induction since M/8 doubles and the positive polynomial grows by 2m+4. This proof does not assume independence of the different equivalence events.
+
+## 4. Hardness and full support simultaneously
+
+Let s=floor(M/(16m)). The number of circuits of size <=s on m inputs is at most
+
+    (s+1) [2(m+s+1)]^(2s+1).
+
+Count ordered operand literals for each AND, with the available signals padded to m+s+1 including the constant, and count output literals; overcounting invalid forward references is safe. Since 2(m+s+1)<=M for m>=16, the log of this bound is at most (2s+1)m+log(s+1) <= M/8+2m < M-2. Thus Pr[C(h)<=s]<1/4. Also, each h T_v is a uniformly random Boolean table because T_v is a permutation. The probability it ignores any specific variable is 2^(-M/2); the union bound over k*m variables is k*m*2^(-M/2)<1/4. In fact this also implies full support for all translated h tau_c T_v: union bound over all M translations costs at most an extra factor M and remains <1/4. Use this stronger bound if requiring support of EVERY restriction. The three failure probabilities sum to <1, so a single h satisfies all requirements.
+
+Any AIG for h tau_c T_v can be composed with T_v tau_c, whose vector outputs cost at most 3m (translations are free complemented edges), to compute h. Therefore C(f_v)>=C(h)-3m>=s+1-3m. This argument works for every context regardless of the symmetry argument. For m>=16 the lower bound is positive; asymptotically it is Omega(M/m). Since n=km, k=M/4, the sum is Omega(kM/m)=Omega(n^2/m^3). Also m=Theta(log n). The same asymptotic separation holds with lower bounds measured in the counted basis: the free-AND count is a lower bound for it, while the original construction costs O(n).
+
+## 5. Consequence for restriction-based circuit lower bounds
+
+In a common restriction context, one might try to charge each live subcircuit once for every genuinely different hard block function it computes, discarding phase/permutation or even affine duplicates. This construction rules out using inequivalence alone as a guarantee of disjoint computational work. In the original circuit, the single shared lookup circuit receives an invertible block-dependent re-encoding when any block alone varies. In fact all k block restrictions simultaneously have near-Shannon-scale cost and are inequivalent under affine changes, but their cost comes from one shared lookup. The barrier applies to sums of exact unrestricted minima, not just weak lower bounds.
+
+This does NOT exclude a bound exploiting the specific SAT semantics or a bound measuring the cost of an entire common restriction family with shared programmable gates. It excludes generic additive accounting based only on individual cofactor complexities and affine inequivalence. The preceding SAT verifier/Tseitin bridge embeds a deterministic AIG of size O(n) as a fixed CNF with n programmable input-unit signs and total exact encoding length O(n log n). Thus these negative controls occur among fixed CNF projections as well; this is not an upper bound on general SAT_n. No new exact SAT string experiment was performed this round; the embedding uses the earlier proved general bridge.
+
+Suggested next mathematical target: characterize when a common core can serve restrictions through distinct low-cost *nonlinear* bijections, and look for a SAT-specific invariant incompatible with that kind of sharing. Do not use raw block lower-bound sums or affine-orbit counts as a superlinear certificate. Do not port the random construction as a production solver enhancement. The earlier regional-bound result is a separate issue.
+
+## 6. Actual executed verification
+
+Python stdlib reference below, seed 8312026 for the lookup tables and 671209 for sampled affine maps. All gates in the constructed circuits were evaluated with bit-packed truth tables on the free block, using independently computed direct shear/lookup expected rows. Actual results:
+
+| m | n | constructed gates | blocks | distinct sorted absolute Walsh spectra | largest collision |
+|---:|---:|---:|---:|---:|---:|
+| 5 | 40 | 173 | 8 | 4 | 4 |
+| 6 | 96 | 428 | 16 | 3 | 8 |
+| 7 | 224 | 1013 | 32 | 32 | 1 |
+| 8 | 512 | 2302 | 64 | 64 | 1 |
+| 9 | 1152 | 5163 | 128 | 128 | 1 |
+| 10 | 2560 | 11465 | 256 | 256 | 1 |
+
+The multiset of absolute Walsh coefficients is invariant under invertible affine changes and output complement: linear characters are permuted by the transpose of the invertible linear part, and translations/output phase only multiply coefficients by signs. Distinct fingerprints therefore certify pairwise inequivalence for m=7..10 for these specific sampled tables, also at every context by the proved conjugation. Collisions at m=5,6 do NOT certify equivalence. No claim of exact hardness for those small sampled h.
+
+* 599168 exhaustive conjugation row checks (m=3..7).
+* 24192 AIG cofactor row checks (12 random contexts per m=5..10), 72 Walsh invariance checks.
+* 1344 exhaustive invertible affine comparisons for m=3, minimum moved points 2=M/4.
+* 700 sampled comparisons at m=4..10, all at least M/4.
+* Counting arithmetic at m=16,20,24,32: respective certified existence per-block lower bounds 209,3217,43619,8388513. These are consequences of counting, not solver results on the sampled small tables.
+* No test failed; no native speedup, no Lean verification, and no explicit superlinear SAT lower bound established.
+
+## 7. Runnable reference (Python 3.10+, standard library)
+
+Extract this first Python code block as affine_cofactor_check.py and execute it. The two original scripts were executed separately; the single consolidated block below combines them and reports the stronger all-context support failure bound (the original arithmetic checked the base-table bound; adding m to its log bound leaves all four cases strictly below -2).
+
+```python
+from random import Random
+from collections import Counter
+from math import log2
+from itertools import product
+
+def shear(x,v):
+    return x ^ (((x>>1)&1) & ((v&(x>>2)).bit_count()&1))
+
+def walsh(t):
+    a=[1-2*b for b in t]; w=1
+    while w<len(a):
+        for i in range(0,len(a),2*w):
+            for j in range(i,i+w):
+                u,v=a[j],a[j+w];a[j]=u+v;a[j+w]=u-v
+        w*=2
+    return tuple(sorted(map(abs,a)))
+
+class AIG:
+    def __init__(self,n):self.n=n;self.g=[];self.cache={}
+    def AND(self,a,b):
+        if a==b:return a
+        if a==b^1 or a==0 or b==0:return 0
+        if a==1:return b
+        if b==1:return a
+        p=tuple(sorted((a,b)))
+        if p not in self.cache:
+            self.g.append(p);self.cache[p]=2*(self.n+len(self.g))
+        return self.cache[p]
+    def XOR(self,a,b):return self.AND(self.AND(a,b^1)^1,self.AND(a^1,b)^1)^1
+    def mux(self,x,a,b):return self.AND(self.AND(x^1,a)^1,self.AND(x,b)^1)^1
+    def parity(self,a):
+        z=0
+        for x in a:z=self.XOR(z,x)
+        return z
+    def lookup(self,z,t):
+        if not z:return t[0]
+        return self.mux(z[0],self.lookup(z[1:],t[::2]),self.lookup(z[1:],t[1::2]))
+    def eval(self,vals,mask,out):
+        w=[0]+list(vals)
+        def lit(l):return w[l//2]^(mask if l&1 else 0)
+        for a,b in self.g:w.append(lit(a)&lit(b))
+        return lit(out)
+
+def build(m,h):
+    k=1<<(m-2);g=AIG(k*m);z=[0]*m
+    for v in range(k):
+        x=[2*(v*m+j+1) for j in range(m)]
+        q=g.AND(x[1],g.parity([x[j+2] for j in range(m-2) if v>>j&1]))
+        x[0]=g.XOR(x[0],q)
+        z=[g.XOR(a,b) for a,b in zip(z,x)]
+    return g,g.lookup(z,h)
+
+def main():
+    r=Random(8312026); conjugates=0; replays=0; spectrum_checks=0
+    for m in range(3,8):
+        M=1<<m;k=1<<(m-2)
+        for v in range(k):
+            for c in range(M):
+                f=lambda x:shear(shear(x,v)^c,v)
+                a=f(0); cols=[f(1<<j)^a for j in range(m)]
+                for x in range(M):
+                    y=a
+                    for j in range(m):
+                        if x>>j&1:y^=cols[j]
+                    assert y==f(x);conjugates+=1
+    for m in (5,6,7,8,9,10):
+        M=1<<m;k=1<<(m-2);h=[r.randrange(2) for _ in range(M)]
+        f=[walsh([h[shear(x,v)] for x in range(M)]) for v in range(k)]
+        g,out=build(m,h); n=k*m;mask=(1<<M)-1
+        patterns=[sum(1<<x for x in range(M) if x>>j&1) for j in range(m)]
+        assert len(g.g)<=6*n+3*(M-1)
+        for _ in range(12):
+            v=r.randrange(k);a=[r.randrange(M) for _ in range(k)];c=0
+            for j,x in enumerate(a):
+                if j!=v:c^=shear(x,j)
+            vals=[mask if x>>j&1 else 0 for x in a for j in range(m)]
+            vals[v*m:(v+1)*m]=patterns
+            want=[h[shear(x,v)^c] for x in range(M)]
+            assert g.eval(vals,mask,out)==sum(b<<x for x,b in enumerate(want));replays+=M
+            assert walsh(want)==f[v];spectrum_checks+=1
+        groups=Counter(f)
+        print('m',m,'n',n,'gates',len(g.g),'blocks',k,'distinct Walsh fingerprints',len(groups),'largest collision',max(groups.values()),flush=True)
+    print('affine conjugation row checks',conjugates,'AIG cofactor row checks',replays,'Walsh invariance checks',spectrum_checks)
+    for m in (16,20,24,32):
+        M=1<<m;k=1<<(m-2);n=k*m;s=M//(16*m)
+        L=log2(s+1)+(2*s+1)*log2(2*(m+s+1))
+        E=2*(m-2)+m*m+m+1-M//8
+        essentialE=(m-2)+log2(m)+m-M//2
+        assert L<M-2 and E<-2 and essentialE<-2
+        assert s+1>3*m
+        print('counting m',m,'n',n,'s',s,'log2 circuit count upper',round(L,2),'log2 equivalence failure upper',round(E,2),'per-block lower',s+1-3*m)
+
+def independent(cols):
+    span={0}
+    for c in cols:
+        if c in span:return False
+        span|={x^c for x in span}
+    return True
+
+def apply(x,cols,c):
+    for i,t in enumerate(cols):
+        if x>>i&1:c^=t
+    return c
+
+def moved_check():
+    m=3;M=1<<m; counts=[]
+    for cols in product(range(1,M),repeat=m):
+        if not independent(cols):continue
+        for c in range(M):
+            moved=sum(apply(x,cols,c)!=shear(x,1) for x in range(M))
+            assert moved>=M//4;counts.append(moved)
+    print('exhaustive m3 affine comparisons',len(counts),'minimum moved',min(counts))
+    r=Random(671209);count=0
+    for m in range(4,11):
+        M=1<<m
+        for _ in range(100):
+            v=r.randrange(1,1<<(m-2));cols=[1<<i for i in range(m)]
+            for j in range(5*m):
+                a,b=r.sample(range(m),2);cols[a]^=cols[b]
+            c=r.randrange(M)
+            assert independent(cols)
+            assert sum(apply(x,cols,c)!=shear(x,v) for x in range(M))>=M//4
+            count+=1
+    print('sampled affine comparisons',count)
+
+if __name__=='__main__':
+    main()
+    moved_check()
+```
+
+---
+
+# Historical archive — earlier handoffs (do not reimplement reviewed or integrated work)
+
 # Research handoff — coupled first-gate reader budgets
 
 ## 0. Scope and status
