@@ -102,7 +102,7 @@ function run(){
   for(let j=0;j<s;j++)C.AND(2*rnd(C.V.length)+rnd(2),2*rnd(C.V.length)+rnd(2));
   let out=2*(C.V.length-1)+rnd(2),f=C.value(out);
   if(plan(f,n).ess!==(1<<n)-1)continue;
-  const B=builder(n),a=B.AND(B.prim(0),B.prim(1)^1),b=B.AND(B.prim(0)^1,B.prim(1)),d=B.AND(B.prim(0),B.prim(1)),p=B.OR(a,b);
+  const B=builder(n),d=B.AND(B.prim(0),B.prim(1)),a=B.AND(B.prim(0),d^1),b=B.AND(B.prim(1),d^1),p=B.OR(a,b);
   let rails=[];
   for(let phase=0;phase<2;phase++){
    let g=phase?p:p^1,W=[0,phase?a:d,phase?b:d];
@@ -114,7 +114,7 @@ function run(){
   let o=B.OR(...rails),raw=B.E.length,N=B.normalize(o);
   ok(raw<=6*s+2*n+3,"size cap");
   ok(N.truth===f,"masked output");
-  for(let i=0;i<n;i++){ok(N.read[i]<=(i<2?3:2),"read cap");stats.masked_reader_checks++;}
+  for(let i=0;i<n;i++){ok(N.read[i]<=2,"read cap");stats.masked_reader_checks++;}
   stats.masked_circuits++;stats.masked_evaluations+=1<<n;stats.max_masked_gates=Math.max(stats.max_masked_gates,N.size);
  }
  return stats;
