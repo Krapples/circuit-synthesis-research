@@ -1,0 +1,13 @@
+{
+  "cases": 72,
+  "sat": 35,
+  "unsat": 37,
+  "coordinate_checks": 216,
+  "permutation_layout_checks": 72,
+  "individual_data_retrievals": 216,
+  "distinct_residuals": 336,
+  "residual_entries": 2496,
+  "max_word": 55056,
+  "max_data_bits": 256
+}
+all assertions passed
