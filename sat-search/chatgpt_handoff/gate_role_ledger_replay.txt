@@ -1,0 +1,12 @@
+{
+  "full_support_tables": 64594,
+  "demand_profiles": 710,
+  "ingress_profiles": 32631,
+  "strict_improvements": 0,
+  "ledger_weaker": 0,
+  "equal_bounds": 64594,
+  "random_aigs": 500,
+  "restriction_checks": 22912,
+  "port_checks": 1453
+}
+all assertions passed
