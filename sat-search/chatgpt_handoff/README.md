@@ -1,3 +1,47 @@
+# Research handoff — single-reader guard dependencies and cylinder peeling
+
+Updated 2026-11-26. Base [689d102](https://github.com/Krapples/circuit-synthesis-research/commit/689d1028363893e7f0c108817c5f2ed34043cc83). **L-clb-036 remains open.** This round obtains an actual stronger distinct-gate lower bound on finite functions, in contrast to the previous count-only ingress ledger. The new bound uses semantic constraints on the other operand of a single primary reader, and the acyclic order of several such readers. It is at most 2n-1, not a superlinear SAT result. No new Lean theorem or production solver changes.
+
+## Current results
+
+- **Guard lemma:** in a minimum signed AIG, a primary x_i read exactly once enters an AND with an earlier nonconstant guard H_i independent of x_i. Its nonempty zero set must be contained in Z_i, the zero set of the target's Boolean derivative in i. If Z_i is empty, i requires at least two primary operand occurrences.
+- **Forced dependencies:** if Z_i has no edge in coordinate j, every such guard must depend on j. For two singly-read inputs this forces the reader of j to precede the reader of i, unless both share one AND. Shared readers require three of the four pair cofactors to be identical as full functions (factorization through a signed AND); neither member may have a forced dependency outside the pair. Contract valid shared pairs; cycles among distinct readers are impossible. Maximizing feasible single-reader subset size gives u_cycle.
+- **Guard-cylinder peeling:** for any subset U of singly-read inputs, consider the earliest original reader. It either reads a valid pair in U, or its guard is independent of every still remaining U input and has some zero assignment. In the latter case Z_i contains a full coordinate subcube free in U minus {i}. Recursively remove such a singleton or valid pair. Every actual single-reader set passes; max accepted cardinality u_peel<=u_cycle. Feasibility is downward closed, so for a fixed U arbitrary eligible peeling choices suffice. Maximization remains a subset search in the reference.
+- **Distinct-gate bound:** 2s total operand occurrences include >=s-1 internal occurrences and >=2n-u_peel primary occurrences, so C_AIG(f)>=2n-u_peel-1. Take max with independent certified bounds; do not add overlapping charges. This refines the previous ingress profile by keeping simultaneous semantic guard constraints. It is a linear bound and alone cannot solve L-clb-036.
+- **Strict improvement:** all 256 three-input signed AIG costs resolved exactly by exhaustive available-function state enumeration through size six. Among all 64,594 full-support four-input tables, forced cycles improve the ordinary exact single-restriction baseline on 56, cylinder peeling on 520. Peeling improves the cycle bound on 46,128 tables, cycles improve the everywhere-sensitive-only charge on 35,952. The first baseline improvement is f=x_3 XOR majority(x_0,x_1,x_2), table 0x17e8: baseline 5, new bound 6, explicit upper bound 7 (no exact four-input minimum claimed). For majority on 2m+1 inputs, m>=2, no forced arcs exist but u_peel=m, giving C>=3m+1. Not asserted to beat the best known majority bound.
+- Native [coupled reader](../results/coupled_reader/README.md) and recursive regional methods are stronger comparisons still to be tested. Native earlier quadratic routing, cubic grammar, cluster/hub audit and cubic negative controls are complete; see [cubic audit](../results/cubic_cluster_hub/README.md). No duplication needed. Prior ingress count and programmable-role negative controls remain valid in their stated scope.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [guard_dependency_handoff.md](guard_dependency_handoff.md) | Proofs, greedy feasibility, exact finite comparison, majority example, limits and next tasks |
+| [guard_dependency_check.js](guard_dependency_check.js), [replay](guard_dependency_replay.txt) | Exact small AIG minima, all four-input tables, normalized random AIG checks |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Prior ingress inequalities and no-improvement theorem |
+| [programmable_gate_roles.js](programmable_gate_roles.js), [replay](programmable_gate_roles_replay.txt) | Fixed routing AIG with high stable-gate role rank |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Prior synthesis and Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Exact cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor, independently audited |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run: `node guard_dependency_check.js` from this directory.
+
+Exact three-input cost histogram at sizes 0..6: [8,24,64,30,104,8,18]. Full-support four-input tables 64,594; cycle improvements over ordinary cofactor baseline 56; peeling improvements 520. 5,000 attempted random signed AIGs, 1,541 retained full-support normalized outputs, all 1,541 actual single-reader sets and all size checks pass. A preliminary five-gate enumeration assumption was incorrect and was fixed by exploring level six; committed replay uses exact costs. No exact four-input minima, comparison to strongest native regional baseline, or synthesis speedup asserted.
+
+## Native-agent priority
+
+Read [guard_dependency_handoff.md](guard_dependency_handoff.md). Audit guard dependency and shared-reader treatment; replay and compare against native recursive regional and coupled-reader baselines, rather than only the ordinary restriction baseline. If useful, test the topology-sensitive peeling rejection separately before production integration. Generalize to small multi-reader sets and shared guard patterns, explicitly charging distinct reader/cone gates; the present one-vs-many read distinction saturates below 2n. For L-clb-036 a superconstant per-input charge or other superlinear invariant is still needed. No novelty claim for classical reader/gate-elimination techniques. No new Lean verification.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — stable gate-role ledgers and programmable-role obstruction
 
 Updated 2026-11-26. Base [2f69df4](https://github.com/Krapples/circuit-synthesis-research/commit/2f69df44f735042859531da6d20bc353151cfb79). **L-clb-036 remains open.** This round develops a sound multi-context capacity inequality, proves a limitation of its count-only relaxation, and constructs an actual fixed AIG falsifying a second candidate capacity based on restricted gate-function rank. No new unrestricted superlinear gate bound or Lean theorem.
