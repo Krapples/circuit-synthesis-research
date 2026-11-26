@@ -1,3 +1,51 @@
+# Research handoff — quadratic witness compression and deterministic sketch barrier
+
+Updated 2026-11-26. Base handoff [575f7be](https://github.com/Krapples/circuit-synthesis-research/commit/575f7bebfa11d3e8d6052dfc386ca66f91c687fe). **L-clb-036 remains open.** This round adds a verified finite replay of the previously paper-only quadratic encoding, an exact image algorithm, a randomized quasi-linear promise-circuit upper bound, and a counterexample to a particular deterministic derandomization strategy. The new asymptotic results are paper proofs, not Lean-checked theorems.
+
+## Current results
+
+- The packed/permutable Andreev projection has exact paired SAT length Theta(M), M=2^k. It yields De Morgan formula leaf lower bound Omega(n^3/(log^2 n log log n)); for a hypothetical s=O(n^1.01)-gate AIG it forces Omega(n) distinct gates with Omega(n^1.99/(log^2 n log log n)) output paths. The formula theorem imports Tal's revised Lemma 7.1, TR14-048, as an explicit mathematical premise. The permutable and affine existential promise families both admit deterministic O(n log^2 n)-size circuits.
+- **Quadratic encoding executed:** replace each chunk's witness contribution by e_u AND e_v, with label zero forced to zero. Equal-width auxiliary identifiers preserve linear total length and selector/data coordinate multiplicities (two/one respectively). SAT iff the table's 1-set meets the image of the quadratic address map F: GF(2)^q -> GF(2)^k. The prior missing-address rank condition is independently exercised: an omitted address implies a nonzero-bias linear combination with polar rank <=2k-2.
+- **Exact image:** calculate the signed character sum for every linear combination of the k coordinate polynomials by quadratic pair elimination, then perform one fast Walsh-Hadamard transform to obtain every address count. On d witness bits this uses O(M(k d^2+d^3+k(d+k))) gates after the dense coefficients are available.
+- **Compression:** every nonempty fiber has density >=2^(-2k), the standard minimum-weight bound applied to its degree-at-most-2k indicator. Every attainable address also has a witness of weight <=2k. A random affine map from d=3k+2 dimensions preserves the whole image with probability >=3/4 by pairwise independence and a union bound; d=2k+2 suffices for one-sided-error SAT decision.
+- **Randomized circuit barrier:** route random affine label forms using sorting networks, build compressed coefficients, and recover exact compressed image by the Walsh algorithm. The entire variable-incidence quadratic promise admits O(n log^3 n)-size randomized circuits with O(n) random bits, no false positives and false-negative probability <=1/4. Fixed incidence has deterministic O(n log^2 n) circuits by integer XOR convolution with the fixed image indicator. Naive union-bound derandomization for varying incidence gives O(n^2 log^3 n), NOT a quasi-linear deterministic bound.
+- **Oblivious derandomization obstruction:** any input-independent list of t affine maps of dimension d into the full witness label pool with t(d+1)<J can be defeated by a genuinely quadratic address map e_w L(e), where L is a nonzero linear form annihilating every listed map and w is fresh. It is realizable with the J slots of one row. Consequently a fixed sketch-list OR algorithm needs t(d+1)>=J=Theta(M/k^2); for d=O(k), t=Omega(n/log^3 n). This is a limitation of that specific strategy, not a circuit-size lower bound. Input-dependent compression is not excluded.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | New complete paper proof, explicit circuit costs, oblivious sketch counterexample, agent tasks |
+| [quadratic_witness_check.py](quadratic_witness_check.py) | Executed quadratic projection, rank, exact image, compression, and counterexample checker |
+| [quadratic_witness_replay.txt](quadratic_witness_replay.txt) | Actual stdout; all assertions passed |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Prior affine witness barrier and quadratic rank criterion |
+| [affine_witness_check.py](affine_witness_check.py), [replay](affine_witness_replay.txt) | Prior affine finite checks |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free distributed path theorem and deterministic promise upper bound |
+| [permutable_andreev_check.py](permutable_andreev_check.py), [replay](permutable_andreev_replay.txt) | Prior exact projection and reader-transfer checks |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Unelaborated local formalization draft, not kernel checked |
+
+Run from this directory:
+
+```sh
+python -B permutable_andreev_check.py
+python -B affine_witness_check.py
+python -B quadratic_witness_check.py
+```
+
+New seed 870009: 84 quadratic packed instances; 1,096 original and 1,096 balanced pinned-witness SAT checks; 28 coordinate flips; 2,964 rank checks; 180 histogram comparisons against brute force; 4,880 compressed evaluation checks; 84 full-image compression trials (zero misses in this small-q sample); 256 rare-fiber trials (22 expected false negatives); 26 planted high-rank checks; 76 missing-address cases; 128 fixed-sketch annihilator counterexamples. All assertions passed. The randomized circuit cost is a paper bound, not a synthesized circuit count. The fixed-sketch counterexamples were tested in the abstract quadratic model.
+
+## Native-agent priority
+
+Read [quadratic_compression_handoff.md](quadratic_compression_handoff.md) before the archive. Audit the actual quadratic grammar and coordinate layout, Walsh pair elimination, fiber-density and compression proof, bounded-fanin routing and pivot costs, and the precise quantifiers of the fixed-list counterexample. Reuse the native agent's earlier checked LookupProjection, ParityLookup and CircuitLemmas.Unfold modules (see [agent results](../results/andreev_projection/README.md)). Compile and repair the Lean draft only in the pinned environment; no new Lean proof is claimed here. Do not treat a randomized upper bound as a deterministic upper bound or a restriction of the fixed-sketch algorithm as an unrestricted lower bound.
+
+Next investigate input-dependent deterministic compression for sparse quadratic witnesses, or a semantic-to-distinct-gate argument for varying incidence. Higher-degree witness systems retain the density bound (degree D gives 2^(-Dk)) and random dimension reduction, but the exact quadratic character-sum method does not automatically extend. No production solver or verified Lean library modifications were made. No literature-priority claim.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README, including all earlier archived handoffs, follows verbatim. Older instructions and repository status are historical.
+
 # Research handoff — delta-free distributed paths and coupled existential witnesses
 
 Updated 2026-11-26. Latest inspected native-agent revision: [5c75256](https://github.com/Krapples/circuit-synthesis-research/commit/5c75256319fcd4f6877c1385a623877e6b58fe60), which formalizes the earlier uncompressed Andreev construction and unfolding identity; see [agent results](../results/andreev_projection/README.md). The packed projection in the previous handoff at [870ffb7](https://github.com/Krapples/circuit-synthesis-research/commit/870ffb7) is retained verbatim below. **L-clb-036 remains open.**
