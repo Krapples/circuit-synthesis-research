@@ -72,7 +72,40 @@ function run(){
   for(let j=0;j<6;j++){let K=V.filter(()=>rnd(3)===0);if(P.cut(S0,K))sets.push(K);}
   return sets.filter(K=>P.cut(S0,K));
  }
- const S={random_circuits:0,lookup_circuits:0,source_subsets:0,internal_cuts:0,residual_checks:0,response_reconstructions:0,distinct_response_codes:0,strictly_stronger_port_bounds:0,strictly_stronger_internal_bounds:0,counterexamples:[],max_feedback_bits:0};
+ const S={random_circuits:0,lookup_circuits:0,source_subsets:0,internal_cuts:0,residual_checks:0,response_reconstructions:0,distinct_response_codes:0,strictly_stronger_port_bounds:0,strictly_stronger_internal_bounds:0,counterexamples:[],max_feedback_bits:0,flow_checks:0,full_flow_checks:0,max_weighted_charge:0};
+ function flowCheck(C,P,U){
+  let N=C.S.length,source=2*N,sink=source+1,V=sink+1,adj=Array.from({length:V},()=>[]);
+  function edge(u,v,c){let a={v,c,rev:adj[v].length},b={v:u,c:0,rev:adj[u].length};adj[u].push(a);adj[v].push(b);}
+  let capacity=Array.from({length:N},(_,v)=>C.S[v]===0?Math.min(pop(P.D[v]&U),2**pop(P.H[v])):0);
+  let inf=pop(U)+1;
+  for(let v=0;v<N;v++)if(C.S[v]===0){
+   edge(2*v,2*v+1,capacity[v]);
+   if(v<C.n&&(U>>v&1))edge(source,2*v,inf);
+   if(v>=C.n)for(let l of C.E[v-C.n])if(C.S[l>>1]===0)edge(2*(l>>1)+1,2*v,inf);
+  }
+  for(let v of P.fwd)edge(2*v+1,sink,inf);
+  let flow=0,reach;
+  for(;;){
+   let prev=Array(V).fill(null),q=[source];prev[source]=[-1,-1];
+   for(let j=0;j<q.length;j++){let u=q[j];for(let i=0;i<adj[u].length;i++){let e=adj[u][i];if(e.c>0&&prev[e.v]===null){prev[e.v]=[u,i];q.push(e.v);}}}
+   if(prev[sink]===null){reach=prev.map(x=>x!==null);break;}
+   let d=inf;for(let v=sink;v!==source;){let [u,i]=prev[v];d=Math.min(d,adj[u][i].c);v=u;}
+   for(let v=sink;v!==source;){let [u,i]=prev[v],e=adj[u][i];e.c-=d;adj[v][e.rev].c+=d;v=u;}flow+=d;
+  }
+  let K=[];for(let v=0;v<N;v++)if(C.S[v]===0&&reach[2*v]&&!reach[2*v+1])K.push(v);
+  ok(P.cut(U,K)&&P.cap(U,K)===flow,"mincut certificate");
+  // Shortest causal paths, measured by inverse virtual capacity per A gate.
+  let dist=Array(N).fill(Infinity);
+  for(let v of P.fwd)if(capacity[v])dist[v]=0;
+  for(let v=N-1;v>=C.n;v--)if(C.S[v]===0&&capacity[v]&&Number.isFinite(dist[v]))
+   for(let l of C.E[v-C.n])if(C.S[l>>1]===0&&capacity[l>>1])dist[l>>1]=Math.min(dist[l>>1],dist[v]+1/capacity[v]);
+  let weight=P.A.filter(i=>U>>i&1).reduce((a,i)=>a+dist[i],0);
+  if(flow===pop(U)){
+   ok(Number.isFinite(weight)&&weight<=C.S.slice(C.n).filter(v=>v===0).length+1e-8,"additive gate charge");
+   S.full_flow_checks++;S.max_weighted_charge=Math.max(S.max_weighted_charge,weight);
+  }
+  S.flow_checks++;return flow;
+ }
  function verify(C,out,tries){
   let P=analyze(C,out),A=P.A.reduce((m,i)=>m|1<<i,0),B=P.B.reduce((m,i)=>m|1<<i,0);
   if(C.S[out>>1]!==1||!A||!B||P.rev.length>8)return false;
@@ -81,6 +114,7 @@ function run(){
    let U=j===0?A:(rnd(1<<C.n)&A);if(!U)continue;S.source_subsets++;
    let fixed=rnd(1<<C.n)&(A^U),X=sub(U),Y=sub(B),residuals=new Set();
    for(let x of X)residuals.add(Y.map(y=>P.evalFull(x|fixed|y)).join(""));
+   let flow=flowCheck(C,P,U);ok(flow+1e-9>=Math.log2(residuals.size),'flow residual lower bound');
    let base=P.fwd.length*2**P.rev.length,port=P.cap(U,P.fwd);
    if(port<base)S.strictly_stronger_port_bounds++;
    for(let K of frontiers(C,P,U)){
