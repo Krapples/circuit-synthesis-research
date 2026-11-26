@@ -1,3 +1,53 @@
+# Research handoff — stable gate-role ledgers and programmable-role obstruction
+
+Updated 2026-11-26. Base [2f69df4](https://github.com/Krapples/circuit-synthesis-research/commit/2f69df44f735042859531da6d20bc353151cfb79). **L-clb-036 remains open.** This round develops a sound multi-context capacity inequality, proves a limitation of its count-only relaxation, and constructs an actual fixed AIG falsifying a second candidate capacity based on restricted gate-function rank. No new unrestricted superlinear gate bound or Lean theorem.
+
+## Native status
+
+The native [cubic cluster and hub audit](../results/cubic_cluster_hub/README.md) confirms the mathematical cluster, common-kernel and Walsh query arguments; signed AIG scores agree with direct counts on 5,660 assignments. It also supplies a full-marginal, coordinate-incompressible seven-output cubic control with a linear-size fixed-metadata AIG and Tal-dependent formula lower bound Omega(n^(20/7)/(log^2 n log log n)). The two-output control separates zero-coordinate restrictions from fixed-phase restrictions, with local support identity, converse and trivial-period lemma Lean checked. The previous quadratic routing audit and actual cubic paired-grammar replay are complete. These native controls and the Andreev-Tseitin control are important falsification cases for gate accounting.
+
+## New results
+
+- **Sound ingress ledger.** Partition primary inputs into disjoint blocks. Count pure gates a_i, mixed gates with one pure block-i operand b_i (attachments), mixed gates with two pure operands from distinct blocks c_ij (seeds), and mixed gates with two mixed operands d (merges). All are stable original IDs. If the output is mixed, d>=sum c_ij-1. For every retained block subset S, cofactor size demand L_S satisfies L_S<=d+sum_(i in S)(a_i+b_i)+sum_(i,j in S,i<j)c_ij. Fixing a pure operand deletes the corresponding original AND, with any alias propagated. All inequalities hold simultaneously. For residual diversity N_i across block i, distinct boundary-port count p_i satisfies ceil(log_2 N_i)<=p_i<=b_i+sum_(j!=i)c_ij. No uniform small capacity is claimed for deep merges.
+- **Count-only limitation theorem.** For singleton blocks of a full-support n-input function, normalize away unary gates. Put B=max(n-1,max_S(L_S+n-|S|)), the standard single-restriction baseline over nonempty proper S. Even with exact cofactor minima, the integer ingress-count relaxation has a feasible abstract profile of cost B: one seed on 1,2, one attachment per remaining input, and B-(n-1) merges. Every cofactor inequality holds since at least |S|-1 ingress slots are counted. Thus adding all ingress inequalities to the single-restriction baseline cannot strengthen it on singleton partitions. This is a limitation of the abstraction, not of all multi-context arguments or actual topology constraints.
+- **Programmable-role obstruction.** A fixed programmable permutation network followed by N/2 disjoint pair ANDs and their XOR has O(N log^2 N) AIG gates (explicit swap controls). EACH stable internal bank AND realizes all binom(N,2) pair monomials across contexts; these are linearly independent over GF(2). Every context uses disjoint pairs simultaneously, and every bank gate is live. Thus number/rank of restricted gate functions does not give a constant or polylogarithmic per-gate capacity. A paper paired-SAT embedding uses equal-width permuted IDs in unit clauses and fixed AND/XOR gadgets; sort the tags and evaluate matching parity in O(word_length log^2 word_length) gates. No new packed replay for this last embedding.
+- **Interpretation:** charge the cost of changing the operand routing, not the count of resulting gate roles. Pure-ingress counts discard actual paired operand identities; raw role ranks fail because a router can change those identities cheaply. The next experiment should track co-varying restricted operand signatures, alias propagation, and original edge/gate IDs, with the native forced-derivative and restriction-cone machinery. No new capacity lemma for this refined invariant has been proved.
+
+## New files and replay
+
+| File | Scope |
+|---|---|
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md) | Proofs, count-only limitation, routing obstruction, native update and next steps |
+| [gate_role_ledger_check.js](gate_role_ledger_check.js), [replay](gate_role_ledger_replay.txt) | Exhaustive small-table ingress relaxation and stable-ID random AIG restriction checks |
+| [programmable_gate_roles.js](programmable_gate_roles.js), [replay](programmable_gate_roles_replay.txt) | Actual fixed signed AIG, exhaustive permutation and gate-rank checks |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js), [replay](joint_witness_control_replay.txt) | Prior synthesis and packed Andreev-Tseitin negative control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Prior exact cluster and hub bounds; independently audited by native agent |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel and marginal lifting |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and cubic counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor, independently audited |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and oblivious sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run in this directory:
+
+```sh
+node gate_role_ledger_check.js
+node programmable_gate_roles.js
+```
+
+Ledger replay: 64,594 full-support four-input truth tables, 710 cofactor-demand profiles, 32,631 ingress profiles, zero improvements, all 64,594 equal to the standard baseline. Cofactor costs are exact only through the stated search caps (1,3,4 for one/two/three inputs); unresolved costs get valid cap+1 lower bounds. The general no-improvement proof does not depend on the finite caps. 500 random AIGs, 22,912 stable-ID restriction checks and 1,453 residual-port checks. Programmable roles: actual 99-live-AND AIG with six sources and 15 query control bits; 720 permutations, 46,080 output and 138,240 bank-role checks; each of three bank gates has exact role rank 15. All committed assertions passed. Earlier combined replay failure was corrected by separating the checks. No exact four-input minima, full paired matching grammar replay, or Lean verification claimed.
+
+## Native-agent priority
+
+Read [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md) first. Reuse checked excess_restriction and current native restriction counters; do not integrate the singleton ingress relaxation as a stronger lower bound. Audit the stable-ID and boundary cut inequalities, abstract-profile obstruction and programmable role control. If useful, implement a small operand-signature ledger with actual gate and edge identities, and seek a conditional inequality that survives the router, Andreev-Tseitin and native cubic controls. The target is to charge operand-routing changes without double-counting shared gates; this remains a hypothesis, not a pruning rule. No production solver or verified Lean modifications. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and status statements refer to their own revisions.
+
 # Research handoff — synthesis of barriers and shared-witness compatibility
 
 Updated 2026-11-26. Base handoff [d376f3e](https://github.com/Krapples/circuit-synthesis-research/commit/d376f3e8cb7fc794454c13a1bd2628d4a0608daa). **L-clb-036 remains open.** This round reviews the accumulated research and literature, updates native-agent status, and combines our strongest formula/path theorem with a global witness-compatibility negative control. It proposes a shift toward multi-context distinct-gate accounting. No unrestricted superlinear gate-count lower bound, no new Lean theorem, no novelty claim.
