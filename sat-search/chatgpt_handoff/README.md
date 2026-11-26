@@ -1,3 +1,52 @@
+# Research handoff — deterministic quadratic witness compression
+
+Updated 2026-11-26. Base handoff [afe3753](https://github.com/Krapples/circuit-synthesis-research/commit/afe375378fd0d7d9ab390cc311ca4264b5b1f576). **L-clb-036 remains open.** This round closes the randomized-versus-deterministic gap for the *quadratic packed SAT promise*, via an input-dependent linear compression. This is a paper theorem with finite algorithm replay; the bounded-fan-in circuit construction requires independent audit and has not been synthesized or Lean verified. No unrestricted SAT upper bound or new unrestricted gate-count lower bound is asserted.
+
+## Current results
+
+- The prior packed Andreev formula lower bound remains Omega(n^3/(log^2 n log log n)), conditional on the external Tal composition lemma, TR14-048 revision 1, Lemma 7.1. The delta-free distributed theorem forces Omega(n) distinct internal gates with Omega(n^1.99/(log^2 n log log n)) paths in a hypothetical O(n^1.01)-gate circuit. Path counts are not gate counts.
+- The permutable and affine existential promise families have deterministic O(n log^2 n) upper bounds. The prior quadratic family has a randomized O(n log^3 n) upper bound; the fixed-list sketch obstruction is valid but only for oblivious sketch lists.
+- **New deterministic exact-image compression:** any sparse quadratic map F: GF(2)^q -> GF(2)^k, given m labeled monomial records, has an input-dependent linear subspace E of dimension O(k^4) with F(E)=F(GF(2)^q). Construct E in (q+m+1) poly(k,log(q+m+2)) binary gates. The key is to preserve support, not the original witness histogram.
+- **High-rank marginal:** for a dual subspace Lambda of dimension t, if every combination outside Lambda has polar rank >=4k, the full image is the inverse image of the Lambda-marginal image. Fourier contributions outside Lambda cannot cancel an attained marginal: its density is at least 2^(-2t). Build 2k successive common-orthogonal blocks, each containing <=k pairs whose polar labels span the current residual labels. For Lambda annihilating the final residual labels, every combination outside Lambda has rank >=4k already on the selected span. Retain pivot coordinates and a basis of a small linear signature of the final residual to preserve the Lambda-marginal exactly.
+- **Sparse rank oracle:** test whether B_lambda vanishes on ker L using rank([A_lambda,L^T;L,0])=2 rank L+rank(B_lambda|ker L). A nonsingular minor of order >2 rank L yields a small support containing a witnessing pair. Construct each label-span basis with O(k^2) calls; total O(k^3) calls, not 2^k full-size matrix eliminations. A balanced merge of truncated original row bases, implemented by sorting and segmented scans of sparse column records, gives a rank-threshold certificate in (a+b+S) poly(T,log(a+b+S+2)) gates for an a by b matrix with S sparse records and threshold T. The complete paper cost proof includes fixed record capacities, sparse routing and batched kernel-signature evaluation.
+- Recover the exact compressed image using the prior quadratic pair-elimination Walsh algorithm, in an additional 2^k poly(k) gates. At the natural packed scale q,m=O(n), k=Theta(log n), 2^k=Theta(n), this gives deterministic **O(n log^C n)**-size AIG circuits for some absolute constant C, hence o(n^1.01). If independently confirmed, this rules out the entire variable-incidence quadratic promise as a standalone lower-bound witness. The large polylog exponent is not optimized; no practical performance claim.
+
+## Current files and replay
+
+| File | Scope |
+|---|---|
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | New theorem and detailed proof, augmented-rank and sparse circuit cost, next research directions |
+| [deterministic_quadratic_check.py](deterministic_quadratic_check.py) | Executed compression and rank-certificate reference |
+| [deterministic_quadratic_replay.txt](deterministic_quadratic_replay.txt) | Actual stdout, all assertions passed |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Prior quadratic encoding, random compression, Walsh algorithm and oblivious sketch barrier |
+| [quadratic_witness_check.py](quadratic_witness_check.py), [replay](quadratic_witness_replay.txt) | Prior quadratic finite replay |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md), [affine checker](affine_witness_check.py), [replay](affine_witness_replay.txt) | Prior affine existential construction |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md), [checker](permutable_andreev_check.py), [replay](permutable_andreev_replay.txt) | Delta-free path theorem and packed coordinate construction |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Unverified Lean draft, not kernel checked |
+
+Run from this directory:
+
+```sh
+python -B permutable_andreev_check.py
+python -B affine_witness_check.py
+python -B quadratic_witness_check.py
+python -B deterministic_quadratic_check.py
+```
+
+New seed 870010: 1,000 rank-certificate tests; 232 quadratic maps (including 48 packed maps and four mixed high/low-rank planted maps); 228 original histograms compared to brute force; 3,300 address support comparisons; 57 compressed high-rank combinations; 128 strict dimension reductions; largest original q=180, largest compressed dimension=83, largest reduction=97. All assertions passed on two local executions. These are finite algebraic algorithm checks, not gate-synthesis measurements or verification of the actual sorting-network implementation.
+
+## Native-agent priority
+
+Read [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) before the archive. Independently audit the high-rank marginal lemma, orthogonal blocks, low-signature preservation, augmented rank identity and especially the sparse-record gate-cost proof. Replay the checker and, if useful, formalize the algebraic lemmas in the pinned Lean environment or test the rank circuit's sorting/scan implementation. Reuse the existing checked LookupProjection, ParityLookup and CircuitLemmas.Unfold modules (see [agent results](../results/andreev_projection/README.md)). No Lean executable was available in this round, so no new kernel-checked theorem is claimed. No solver or verified Lean library modifications were made.
+
+Next: investigate cubic/higher-degree witness interactions or a bridge across heterogeneous full-SAT restrictions. Cubic fibers still satisfy a 2^(-3k) density bound, but the quadratic rank identity and efficient Walsh pair elimination do not automatically generalize. Do not treat increasing algebraic degree alone as a gate-count lower bound. No claim of literature priority. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The entire previous README follows verbatim. Older claims and instructions reflect the status of their own revisions.
+
 # Research handoff — quadratic witness compression and deterministic sketch barrier
 
 Updated 2026-11-26. Base handoff [575f7be](https://github.com/Krapples/circuit-synthesis-research/commit/575f7bebfa11d3e8d6052dfc386ca66f91c687fe). **L-clb-036 remains open.** This round adds a verified finite replay of the previously paper-only quadratic encoding, an exact image algorithm, a randomized quasi-linear promise-circuit upper bound, and a counterexample to a particular deterministic derandomization strategy. The new asymptotic results are paper proofs, not Lean-checked theorems.
