@@ -15,3 +15,6 @@ open CircuitLemmas
 #print axioms CircuitLemmas.GateElim.restrict_eliminates
 #print axioms CircuitLemmas.GateElim.literal_extension
 #print axioms CircuitLemmas.GateElim.delete_dead
+#print axioms CircuitLemmas.GateElim.literal_extension_phase
+#print axioms CircuitLemmas.GateElim.xnorConj_lower
+#print axioms CircuitLemmas.GateElim.xnorConj_std_lower

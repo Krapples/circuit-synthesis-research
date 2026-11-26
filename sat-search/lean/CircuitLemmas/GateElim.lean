@@ -26,7 +26,8 @@ Proved here:
   forces constant, and so on) is deleted; `readers_le_cascade` shows this contains the first level.
 
 The other foundations of the six-bit SAT bound (three-gate absorbing elimination, excess monotonicity,
-`C(F_q) = 4q - 1`, the string identities) are not formalized yet.
+`C(F_q) = 4q - 1` (now `XnorConj.xnorConj_lower`), the string identities) are not all formalized yet;
+see `XnorConj.lean` for the XNOR conjunction bound.
 -/
 import Mathlib
 
