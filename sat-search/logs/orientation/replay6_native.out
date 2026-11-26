@@ -1,0 +1,22 @@
+{
+ "cases": 15,
+ "wall_seconds": 1.92,
+ "fallback": 274,
+ "orient": 262,
+ "reuse": 261,
+ "native_seconds": 0,
+ "orient_seconds": 1.863,
+ "strict_improvements": 5,
+ "reference_matched": 15,
+ "reference_mismatch": 0,
+ "by_n": {
+  "6": {
+   "cases": 15,
+   "fallback": 274,
+   "orient": 262,
+   "reuse": 261,
+   "fallback_seconds": 0.0,
+   "orient_seconds": 1.863
+  }
+ }
+}
