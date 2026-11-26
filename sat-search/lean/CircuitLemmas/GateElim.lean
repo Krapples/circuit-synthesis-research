@@ -10,9 +10,11 @@ first (`rgates`), which makes evaluation structurally recursive. A wire that doe
 `n` are read.
 
 Proved here:
-* `bypass`: a gate whose value equals a literal over earlier wires can be deleted (size drops by one).
+* `bypass`: a gate whose value equals a literal over earlier wires can be deleted (size drops by one);
+  `bypass_many` deletes all such gates at once, `delete_dead` deletes a gate nothing reads.
 * `Circuit.eval_restrict`: fixing an input to a constant is a circuit of the same size.
 * `realizes_restrict`: restriction does not increase complexity.
+* `restrict_eliminates`: fixing input `z` deletes every gate that reads `z`.
 * `literal_extension`: if `g` is nonconstant and ignores input `z`, then every circuit for `g ∧ x_z`
   has at least one gate more than some circuit for `g`, i.e. `C(g ∧ z) ≥ C(g) + 1`.
 
@@ -250,6 +252,44 @@ theorem bypass (C : Circuit) (later earlier : List Gate) (gj : Gate) (L : Ref)
     subst hC
     rfl
 
+/-! ## Dead gates -/
+
+theorem Ref.eval_congr (v v' : ℕ → Bool) (p : ℕ) (r : Ref) (hr : ¬ r.Reads p)
+    (h : ∀ w, w ≠ p → v w = v' w) : r.eval v = r.eval v' := by
+  cases r with
+  | const b => rfl
+  | wire w neg => simp only [Ref.Reads] at hr; simp [Ref.eval, h w hr]
+
+/-- Replacing a gate that no later gate reads leaves every other wire unchanged. -/
+theorem val_replace_dead (n : ℕ) (x : ℕ → Bool) (earlier : List Gate) (gj g' : Gate) :
+    ∀ later : List Gate, (∀ g ∈ later, ¬ g.a.Reads (n + earlier.length) ∧ ¬ g.b.Reads (n + earlier.length)) →
+      ∀ w, w ≠ n + earlier.length →
+        val n x (later ++ g' :: earlier) w = val n x (later ++ gj :: earlier) w
+  | [], _, w, hw => by simp only [List.nil_append, val]; rw [if_neg hw, if_neg hw]
+  | g :: later, hdead, w, hw => by
+      have ih := val_replace_dead n x earlier gj g' later (fun g hg => hdead g (List.mem_cons_of_mem _ hg))
+      obtain ⟨ha, hb⟩ := hdead g List.mem_cons_self
+      simp only [List.cons_append, val, List.length_append, List.length_cons]
+      split_ifs
+      · simp only [Gate.eval]
+        rw [Ref.eval_congr _ _ _ g.a ha ih, Ref.eval_congr _ _ _ g.b hb ih]
+      · exact ih w hw
+
+/-- A gate that no later gate and not the output reads can be deleted. -/
+theorem delete_dead (C : Circuit) (later earlier : List Gate) (gj : Gate)
+    (hC : C.rgates = later ++ gj :: earlier)
+    (hdead : ∀ g ∈ later, ¬ g.a.Reads (C.n + earlier.length) ∧ ¬ g.b.Reads (C.n + earlier.length))
+    (hout : ¬ C.out.Reads (C.n + earlier.length)) :
+    ∃ C' : Circuit, C'.n = C.n ∧ C'.size + 1 = C.size ∧ ∀ x, C'.eval x = C.eval x := by
+  -- replace the dead gate by the constant gate `false ∧ false`, then bypass it
+  let g' : Gate := ⟨.const false, .const false⟩
+  obtain ⟨C', hn, hs, he⟩ := bypass ⟨C.n, later ++ g' :: earlier, C.out⟩ later earlier g' (.const false) rfl
+    (fun x => by simp [g', Gate.eval, Ref.eval])
+  refine ⟨C', hn, by simp [Circuit.size, hC] at hs ⊢; omega, fun x => ?_⟩
+  rw [he x]
+  simp only [Circuit.eval, hC]
+  exact Ref.eval_congr _ _ _ C.out hout (val_replace_dead C.n x earlier gj g' later hdead)
+
 /-! ## Deleting several gates -/
 
 /-- Gate `g`, placed after the gates `earlier`, equals a literal over earlier wires on every input. -/
@@ -411,7 +451,7 @@ theorem degCount_restrict (n z : ℕ) (b : Bool) :
           List.map_cons, degCount, hd] at ih ⊢
         omega
       · simp only [readers, List.filter_cons, hr, decide_false, List.map_cons, degCount] at ih ⊢
-        split_ifs <;> simp only [Bool.false_eq_true, if_false] at * <;> omega
+        split_ifs <;> simp only [Bool.false_eq_true] at * <;> omega
 
 /-- **Gate elimination by a constant.** Fixing input `z` deletes every gate that reads it. -/
 theorem restrict_eliminates (C : Circuit) (z : ℕ) (b : Bool) (hz : z < C.n) :

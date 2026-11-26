@@ -14,3 +14,4 @@ open CircuitLemmas
 #print axioms CircuitLemmas.GateElim.realizes_restrict
 #print axioms CircuitLemmas.GateElim.restrict_eliminates
 #print axioms CircuitLemmas.GateElim.literal_extension
+#print axioms CircuitLemmas.GateElim.delete_dead

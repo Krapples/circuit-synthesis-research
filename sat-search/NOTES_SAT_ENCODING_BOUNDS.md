@@ -118,13 +118,13 @@ It does not use the external project's `Circuit`. Comparing the two models (item
 | Theorem | Statement |
 | --- | --- |
 | `bypass`, `deleteGate_eval` | A gate equal to a literal over earlier wires on every input can be deleted: one gate fewer, same function. |
+| `delete_dead` | A gate that no later gate and not the output reads can be deleted. |
 | `bypass_many` | All degenerate gates (`degCount`) can be deleted together. The latest is deleted first, so earlier prefixes stay unchanged. |
 | `Circuit.eval_restrict`, `realizes_restrict` | Fixing an input to a constant gives a circuit of the same size, so restriction never increases complexity. |
 | `restrict_eliminates` | Fixing input `z` deletes every gate that reads `z`: `size' + readers z ≤ size`. |
 | `literal_extension` | If `g` is nonconstant and ignores `z`, a circuit for `g ∧ x_z` of size `s` gives one for `g` of size `s - 1`. This is claim 4 of the table. |
 
 **Not formalized yet:**
-- dead-gate deletion;
 - the first-gate funnel lemma and the three-gate absorbing elimination (claims 2-3). `restrict_eliminates`
   and `bypass_many` are their accounting core: the remaining steps are a reader of the earliest gate and the
   canalizing replacement;
