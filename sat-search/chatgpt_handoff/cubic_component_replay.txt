@@ -1,0 +1,15 @@
+{
+  "maps": 216,
+  "components": 11285,
+  "selected": 3635,
+  "strict_reductions": 203,
+  "walsh_convolutions": 3635,
+  "dual_checks": 491,
+  "max_components": 1201,
+  "max_selected": 385,
+  "largest_discard": 1176,
+  "biased_fiber_checks": 85817,
+  "count_reductions": 96,
+  "count_assignments": 141616
+}
+all assertions passed
