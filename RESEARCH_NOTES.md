@@ -25,6 +25,14 @@ a gate-criticality condition for minimum-size realizations.
 The unrestricted sub-63-gate case remains open.
 [Quadrangle tests, scoped bounds, and search records](sat-search/results/pg3_quadrangles_5258/README.md)
 
+For deleted-line Heawood incidence L-meta-9748, the merged full-graph
+bound gives a Lean-checked monotone minimum of 23 together with
+an independently evaluated upper bound. Even-path and source-count
+arguments exclude the 22-gate budget in the pinned right-star
+families with two or three stars left. The unrestricted counted-NOT
+budget remains open.
+[Basis-specific bounds and search records](sat-search/results/deleted_heawood_9748/README.md)
+
 For the eleven-vertex top-form graph in L-meta-4081, Lean checked the edge-charge inequality
 with at most four uncovered edges. It also checked that one mixing OR with support of size
 at least two forces all uncovered edges to share a vertex when there are no centreless tops.
