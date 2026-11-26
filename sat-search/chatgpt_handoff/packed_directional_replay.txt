@@ -1,0 +1,17 @@
+{
+  "packed_cases": 112,
+  "sat": 39,
+  "unsat": 73,
+  "grammar_checks": 112,
+  "coordinate_checks": 224,
+  "max_word": 238944,
+  "max_tables": 8,
+  "max_data_bits": 1024,
+  "protocols": 32,
+  "protocol_entries": 43680,
+  "rectangle_checks": 16600,
+  "richness_checks": 32,
+  "strategy_checks": 16,
+  "asymmetric_examples": []
+}
+all assertions passed
