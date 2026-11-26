@@ -9,3 +9,6 @@ import SatBridge
 #print axioms SatBridge.exists_unit_padding
 #print axioms CircuitLemmas.GateElim.exists_PS_logarithmic
 #print axioms SatBridge.sat_robust_restriction_lower
+#print axioms SatBridge.sat_robust_identifier_numeric
+#print axioms SatBridge.sat_robust_identifier_logarithmic_width
+#print axioms SatBridge.sat_robust_identifier_eventually

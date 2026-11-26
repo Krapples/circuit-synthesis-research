@@ -183,12 +183,8 @@ theorem exists_PS (V : Finset ℕ) (d : ℕ) (hd : d ≤ V.card)
     rwa [hx, hx]
 
 /-- A convenient numerical premise that avoids computing the number of complete truth tables. -/
-theorem exists_PS_of_four_mul_lt (V : Finset ℕ) (d : ℕ) (hd : d ≤ V.card)
-    (hV : 0 < V.card) (hpow : 4 * V.card < 2 ^ (d - 2)) :
-    ∃ φ, DepOn V φ ∧ PS d V φ := by
-  apply exists_PS V d hd
-  let r := V.card
-  change 3 ^ r * r * r * 2 < 2 ^ (2 ^ (d - 2))
+theorem pairSensitive_count_of_four_mul_lt {r d : ℕ} (hV : 0 < r) (hpow : 4 * r < 2 ^ (d - 2)) :
+    3 ^ r * r * r * 2 < 2 ^ (2 ^ (d - 2)) := by
   have hr : r ≤ 2 ^ r := Nat.lt_two_pow_self.le
   have hthree : 3 ^ r < 4 ^ r := Nat.pow_lt_pow_left (by decide) (by omega)
   calc
@@ -202,26 +198,68 @@ theorem exists_PS_of_four_mul_lt (V : Finset ℕ) (d : ℕ) (hd : d ≤ V.card)
       ring
     _ ≤ _ := Nat.pow_le_pow_right (by decide) (by omega)
 
-/-- Pair-sensitive tables exist with a logarithmic threshold for every width at least eight. -/
-theorem exists_PS_logarithmic (V : Finset ℕ) (hV : 8 ≤ V.card) :
-    ∃ φ, DepOn V φ ∧ PS (Nat.log2 V.card + 5) V φ := by
-  have hpos : 0 < V.card := by omega
+/-- The logarithmic threshold meets the finite counting condition for every width at least eight. -/
+theorem pairSensitive_logarithmic_parameters {r : ℕ} (hr : 8 ≤ r) :
+    let d := Nat.log2 r + 5
+    2 ≤ d ∧ d ≤ r ∧ 3 ^ r * r * r * 2 < 2 ^ (2 ^ (d - 2)) := by
+  have hpos : 0 < r := by omega
   have haux (t : ℕ) : 8 + t < 2 ^ (t + 4) := by
     induction t with
     | zero => decide
     | succ t ih =>
       rw [show t + 1 + 4 = t + 4 + 1 by omega, pow_succ]
       omega
-  have hwidth : Nat.log2 V.card + 5 ≤ V.card := by
-    have h := haux (V.card - 8)
-    rw [show 8 + (V.card - 8) = V.card by omega, show V.card - 8 + 4 = V.card - 4 by omega] at h
+  have hwidth : Nat.log2 r + 5 ≤ r := by
+    have h := haux (r - 8)
+    rw [show 8 + (r - 8) = r by omega, show r - 8 + 4 = r - 4 by omega] at h
     have := (Nat.log2_lt hpos.ne').mpr h
     omega
-  apply exists_PS_of_four_mul_lt V _ hwidth hpos
-  rw [show Nat.log2 V.card + 5 - 2 = (Nat.log2 V.card + 1) + 2 by omega, pow_add]
-  have h := Nat.lt_log2_self (n := V.card)
+  refine ⟨by omega, hwidth, pairSensitive_count_of_four_mul_lt hpos ?_⟩
+  rw [show Nat.log2 r + 5 - 2 = (Nat.log2 r + 1) + 2 by omega, pow_add]
+  have h := Nat.lt_log2_self (n := r)
   norm_num at *
   omega
+
+/-- Pair-sensitive tables exist with a logarithmic threshold for every width at least eight. -/
+theorem exists_PS_logarithmic (V : Finset ℕ) (hV : 8 ≤ V.card) :
+    ∃ φ, DepOn V φ ∧ PS (Nat.log2 V.card + 5) V φ :=
+  let ⟨_, hd, hcount⟩ := pairSensitive_logarithmic_parameters hV
+  exists_PS V _ hd hcount
+
+/-- Copy a pair-sensitive factor onto a renamed block, preserving its restriction property. -/
+theorem pairSensitive_reindex {d : ℕ} {V : Finset ℕ} {φ : (ℕ → Bool) → Bool}
+    (hdep : DepOn V φ) (hps : PS d V φ) (e : ℕ ↪ ℕ) :
+    DepOn (V.map e) (fun x => φ (x ∘ e)) ∧ PS d (V.map e) (fun x => φ (x ∘ e)) := by
+  classical
+  constructor
+  · intro x y h
+    exact hdep _ _ (fun i hi => h (e i) (Finset.mem_map.mpr ⟨i, hi, rfl⟩))
+  · intro ρ hfree u hu v hv huv c
+    have he : (freeIn V (ρ ∘ e)).map e = freeIn (V.map e) ρ := by
+      ext i
+      simp only [Finset.mem_map, mem_freeIn, Function.comp_apply]
+      constructor
+      · rintro ⟨j, ⟨hj, hρ⟩, rfl⟩
+        exact ⟨⟨j, hj, rfl⟩, hρ⟩
+      · rintro ⟨⟨j, hj, rfl⟩, hρ⟩
+        exact ⟨j, ⟨hj, hρ⟩, rfl⟩
+    rw [← he, Finset.card_map] at hfree
+    change u ∈ freeIn (V.map e) ρ at hu
+    change v ∈ freeIn (V.map e) ρ at hv
+    rw [← he] at hu hv
+    obtain ⟨i, hi, rfl⟩ := Finset.mem_map.mp hu
+    obtain ⟨j, hj, rfl⟩ := Finset.mem_map.mp hv
+    obtain ⟨z, hz⟩ := hps (ρ ∘ e) hfree i hi j hj (fun h => huv (congrArg e h)) c
+    let x := z ∘ Function.invFun e
+    have hread (b : Bool) :
+        (fixP ρ (upd (upd x (e j) b) (e i) c)) ∘ e =
+          fixP (ρ ∘ e) (upd (upd z j b) i c) := by
+      funext w
+      simp [fixP, upd, e.injective.eq_iff, x, Function.leftInverse_invFun e.injective w]
+    refine ⟨x, ?_⟩
+    change φ (fixP ρ (upd (upd x (e j) true) (e i) c) ∘ e) ≠
+      φ (fixP ρ (upd (upd x (e j) false) (e i) c) ∘ e)
+    rwa [hread, hread]
 
 end
 

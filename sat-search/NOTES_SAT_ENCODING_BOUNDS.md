@@ -174,8 +174,8 @@ The new files have no string literals, no `#` commands and no `set_option`. They
   They need no exact circuit minima and no Percy UNSAT certificates, so the finite weights can be checked
   by direct truth-table evaluation in the kernel.
 
-- the 2n-o(n) route (below): connect the encoded block positions to the coordinate restriction,
-  fit the blocks and padding at the target length, and prove the resulting asymptotic estimate.
+- the 2n-o(n) route is now checked at lengths divisible by six. The other even residues still
+  need a full-support theorem. See the robust identifier section for the checked finite loss.
 
 The claim-2/3 route (funnel lemma, absorbing elimination, canalizing replacement) is no longer needed for
 claim 5. The tails still need their own case analysis.
@@ -421,9 +421,31 @@ README's form.
   bound `n + q max(0, 2r-3d+3)` for the external counted AND/OR/NOT model at `n = 6Q`, `Q ≥ 2`.
   It uses the checked transfer, L037, and the disjoint-block elimination theorem. The coordinate
   identity relating the restricted input string to the block product is an explicit premise.
+- [IdentifierLayout.lean](lean/SatBridge/IdentifierLayout.lean) supplies that identity at the bit
+  level. It proves that the free positions in clause `j` are `p + jL + 3 + 2i`, where `p` is
+  the length of the helper prefix and `0 ≤ i < r`. It checks disjointness and the cardinality
+  of the complementary fixed set.
+- [RobustIdentifier.lean](lean/SatBridge/RobustIdentifier.lean) reindexes one common table onto
+  each query block, fits the helpers and padding, and proves the bound end to end. The numeric
+  theorem takes `r ≥ 8`, `L = 2r+8`, `d = floor(log₂ r)+5`, and
+  `q = floor(n/L) - 2^r - 1 ≥ 1`. The logarithmic-width theorem fixes
+  `r = floor(log₂ n)/2` (integer division) for every `n ≥ 2^16` divisible by six and checks
+  `2n ≤ D.size + floor(n/L)(3d+5) + (2^r+2)L`. The eventual theorem checks
+  `2mn ≤ m D.size + n` for every integer `m ≥ 1` and all sufficiently large multiples of six.
+
+For the explicit rate, the logarithmic-width choice has `L = Θ(log n)`, `d = O(log log n)`,
+and `2^r ≤ sqrt(n)`. The two verified loss terms therefore have orders
+`O(n log log n / log n)` and `O(sqrt(n) log n)`, respectively. This yields
+`D.size ≥ 2n - O(n log log n / log n)` on multiples of six by elementary asymptotic estimates.
+Lean checks the finite loss with this width and the eventual slope statement.
 
 Replay with the pinned Lean 4.36.0 Lake workspace using `lake build SatBridge` and
 `lake env lean SatBridgeAxioms.lean` from `sat-search/lean`.
+From the repository root, run
+`python -B sat-search/experiments/robust_identifier_layout_check.py` for the independent replay.
+It checks 4,848 coordinate layouts and SAT values on two- and three-bit tables, and 41,702
+feasible width and length combinations. As a numeric example, `n = 103,079,215,104` and `r = 24`
+give a bound of `146,853,368,352` counted gates, versus `146,028,888,060` for `floor(17n/12)-4`.
 
 **Weaker existence condition.** `PS_d` needs only `4 * C(d,2)` inequalities per `d`-dimensional
 subcube, not robustness's 6 per pair. The exact union bound `C(r,d) 2^(r-d) * 2d(d-1) * 2^(-2^(d-2)) < 1`
@@ -437,16 +459,16 @@ only like `1 - O(log log n / log n)`.
 
 **Obstacles toward L-clb-036 (superlinear, `n^1.01`).**
 - README(7) gives a sorting-network circuit of size `O(n log^2 n)` for the whole unit-clause restriction,
-  with arbitrary signs. The restriction is therefore never superlinear-hard, and no lower bound on it can
-  exceed that. The argument was checked on paper, and the bundle replay reports 9,624 evaluations.
+  with arbitrary signs. The circuit size is `o(n^1.01)` on that restriction. The argument was checked
+  on paper, and the bundle replay reports 9,624 evaluations.
 - Bounded treewidth: with free disable bits and template treewidth `t`, SAT has circuits of size
   `(2m + v) 2^t`. Families with `t <= 0.01 log2 n` are `O(n^1.01)`.
 - The joint residual cut `P_J <= 2^|C|` is sound, but superconcentrator topologies satisfy it, so it
   only excludes specific structures.
 - The clique activation family embeds `CLIQUE_(V,k)` with length `Theta(V^2 log V)`. A lower bound
   through it would need an unrestricted `Omega(V^(2.02+eps))` circuit bound for clique, which is open.
-- Golovnev et al. show that bounded-step gate elimination has linear barriers. Every result here is
-  linear: `2n - o(n)` is the limit of this restriction family.
+- Golovnev et al. show that bounded-step gate elimination has linear barriers. The lower bound
+  from the robust identifier argument approaches slope two.
 
 No route to L-clb-036 was found. The family-independent statement remains open, and no superlinear
 circuit lower bound is known for any explicit NP language.
