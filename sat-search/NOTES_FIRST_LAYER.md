@@ -2238,3 +2238,130 @@ python sat-search/experiments/determinism_check.py 166b 10 3 300
 
 `tier_extended_hybrid_targeted.jsonl` was produced by the first build (before the fallback rule). Its 1686
 rows are the current result; its 166b and 1669 rows are superseded by `tier_extended_hybrid_fallback.jsonl`.
+
+## Conditional restriction counters (opt-in `--restriction-conditional`)
+
+Source: ChatGPT's `conditional_restriction_native.zip` (untracked copy in `external/conditional-restriction/`).
+This adds a lightweight strengthening of the forward constant-restriction counters. The singleton
+clauses are implemented. The multi-gate conditional clauses and the joint-cofactor union counting are not
+implemented (deprioritized).
+
+### Rule and scope
+
+The rule applies to the free-NOT binary AIG basis and to complete four-input targets only (n = 4, no don't
+cares).
+
+- **Setup.** Fix x_i := b. The forward counter bounds U = k - D, where D counts the gates with a provably
+  constant operand (constant propagation).
+- **Survival.** A first-layer gate whose two operands are primaries other than x_i never gets a constant
+  operand, so it survives the bypass. The simplified circuit computes f|_rho and every such gate's function
+  h, which is a one-gate function of the three free inputs. Hence U >= M(f|_rho, H), the multi-output cost
+  with free output phases.
+- **Singleton clause.** M(f3, {h}) is L or L+1. For each (restriction, step, operand pair on two free
+  primaries, AIG op) whose h is *incompatible* (M = L+1), the encoder adds
+  `sel ∧ op → g`, then `g → (U >= L+1)`, encoded as a conditional cap of K-1 on the deletion counter:
+  `¬g ∨ ¬x_i ∨ ¬sv[i-1][K-2]` over the existing Sinz registers.
+- **Live/cone mode.** The forward conditional counter is added beside the cone cap. It counts surviving
+  gates whether or not the restricted output uses them. The cone version (first-layer presence restricted
+  to the live cone) is not implemented: it would need live-occurrence variables.
+
+The replay shows why that matters. Reusing forward presence with cone counts (the
+`cone_with_fwd_mask_UNSOUND` diagnostic) excludes more models, so it is not a safe shortcut.
+
+### Proofs and table checks
+
+- **Proved (Lean, `lean/CircuitLemmas/GateElim.lean`).**
+  - `conditional_restriction`: deleting degenerate gates keeps every function computed inside the circuit.
+  - `conditional_counter`: |C| - #readers(x_i) >= M(f|_rho, H) for every set H of x_i-independent
+    functions computed in C. This covers the singleton and full-mask forms.
+  - Scope: the theorem counts first-level readers of x_i. The encoder's D also counts cascaded constant
+    gates. That extension uses the same bypass argument (each such gate is degenerate after the earlier
+    deletions) but is not formalized.
+- **Table, verified computation.** `results/restriction_certificates/conditional_cost3.bin` (128 targets x
+  4096 masks):
+  - It reproduces byte for byte from `first_layer_cost.cpp` built with MSVC /std:c++20.
+  - The bundle checks were rerun via a scratchpad runner and match `raw_results.txt` exactly: 524,288
+    entries, 1,080 singleton-strengthened, 7,728 pair-strengthened, 32,000 circuit-oracle checks, and the
+    independent conditioned check of 9,984 entries in 5 orbits.
+  - `experiments/conditional_singleton_header.py` exports the singleton bits to
+    `native/src/conditional_cost3.hpp` and asserts every singleton entry is in {L, L+1}.
+  - `percy_run` checks `kCost3Normalized` against the restriction-counter lower bound at setup and exits
+    with code 2 on a mismatch.
+
+### Replay on captured Percy models (independent Python, `experiments/conditional_counter_replay.py`)
+
+There are 145,978 captured CEGAR models. Of these, 625 survive the eight constant counters (const8).
+
+| Rule | Excluded beyond const8 |
+| --- | ---: |
+| singleton forward (cond1) | 234 |
+| full mask forward (condall) | 265 |
+| live8 + ess8 (cone) | 556 |
+| cond1 + live8 + ess8 | 564 |
+| cone-conditional singleton (not implemented) | 463 |
+
+- cond1 beyond live8+ess8: 8.
+- Cone-conditional beyond live8+ess8: 11.
+- Singleton clause counts per target match the bundle README (0116 60, 1668 48, 1669 24, 166b 42,
+  1686 44, ...).
+- Records: `results/restriction_certificates/conditional_replay.jsonl`.
+
+### Correctness checks of the native encoding
+
+- **Oracle.** `first_layer_check.py check` covers the four `-cond` modes. There are 85 jobs with
+  expected verdicts, asserted by the harness, and all match (`results/baselines/conditional_counter_oracle.jsonl`,
+  `logs/conditional_oracle.out`).
+- **All NPN4 minima.** `experiments/conditional_counter_check.py` covers the 140 four-input NPN classes
+  with verified minimum <= 8, in mode lift1-const-cond. Each class runs at budget s (SAT, witness checked)
+  and at s-1 (UNSAT). Result: 280 jobs, 0 mismatches, 0 unknown
+  (`results/baselines/conditional_counter_npn4.jsonl`).
+
+### Fixed-budget ablation (verified UNSAT budgets; the optimum sets the budget only)
+
+Setup: one run per cell, satoko, 300 s / 2M conflicts per call, all UNSAT
+(`results/baselines/conditional_counter_ablation.jsonl`). Conflicts are summed over CEGAR calls. Counter
+clauses include the conditional clauses.
+
+| Target, k | lift1+const | +cond | lift1+const+cone (live+ess) | +cone+cond |
+| --- | --- | --- | --- | --- |
+| 0116, 8 | 2,886 / 0.1 s | 1,443 / 0.1 s | 2,301 / 0.1 s | 1,767 / 0.1 s |
+| 1668, 8 | 479 | 375 | 236 | 170 |
+| 1669, 9 | 89,187 / 3.8 s | 64,729 / 2.7 s | 26,386 / 0.8 s | 24,573 / 0.8 s |
+| 1686, 8 | 144,778 / 5.9 s | 69,185 / 2.8 s | 55,955 / 2.0 s | 52,205 / 1.9 s |
+| 166b, 9 | 280,750 / 15.5 s | 106,318 / 3.9 s | 77,628 / 2.5 s | 59,574 / 2.3 s |
+
+CNF overhead of the conditional clauses:
+
+| Target | Conditional clauses | Fresh variables |
+| --- | ---: | ---: |
+| 0116 | 536 | 8 |
+| 1668 | 440 | 8 |
+| 1669 | 248 | 4 |
+| 1686 | 353 | 7 |
+| 166b | 434 | 7 |
+
+- This adds +12-23% to the counter clauses and about 1-5% to the whole CNF.
+- Peak memory falls with the conflicts (166b: 52 -> 33 MB).
+
+### Assessment (experimental, single runs)
+
+- **Without the cone.** The singleton conditional clauses cut proof conflicts 1.3-2.6x relative to lift1+const
+  at negligible CNF cost. They are cone-free, so they can stay on in the witness pass of the proof-only
+  schedule. That is the use case: they strengthen the "discovery" configuration without the cone's
+  witness-side cost. In hybrid runs `ex_witness` keeps them on.
+- **With the cone.** On top of live+ess the gain is small (1.07-1.4x in conflicts, wall time unchanged
+  within noise). This matches the replay, where only 8 of 625 survivors are excluded beyond live8+ess8.
+- **Not done.** Blind ladders with the conditional witness pass were not rerun. The
+  witness side is heavy-tailed (three identical 166b k=10 controls all time out), so a single run would
+  not separate the configurations. The cone-conditional variant gains 11 more of 625 in the replay and
+  needs live-occurrence presence variables. Reopen it only if the cone path becomes the default proof path.
+
+### Conditional commands
+
+```
+python experiments/conditional_counter_replay.py results/restriction_certificates/trace_models results/restriction_certificates/aig_costs3.json results/restriction_certificates/conditional_cost3.bin
+python experiments/conditional_singleton_header.py results/restriction_certificates/conditional_cost3.bin native/src/conditional_cost3.hpp
+python baselines/first_layer_check.py check results/baselines/conditional_counter_oracle.jsonl --workers 8 --modes base-count-const-cond base-count-const-liveall-ess-cond slack-three-phase-set-lift1-count-const-cond slack-three-phase-set-lift1-count-const-liveall-ess-cond
+python experiments/conditional_counter_check.py results/baselines/conditional_counter_npn4.jsonl --modes slack-three-phase-set-lift1-count-const-cond
+python experiments/conditional_counter_ablation.py results/baselines/conditional_counter_ablation.jsonl
+```

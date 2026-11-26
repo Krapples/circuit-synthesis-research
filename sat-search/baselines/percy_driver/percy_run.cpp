@@ -70,6 +70,7 @@
 #include "slack_three_boundary.hpp"
 #include "reified_counter.hpp"
 #include "restriction_certificate.hpp"
+#include "conditional_cost3.hpp"
 // Optional extra constraints need the SSV encoder's variable layout (svar_map, nr_svar_map, get_*_var), which Percy
 // keeps private; open it for this driver only.
 #define private public
@@ -143,11 +144,16 @@ struct Extra {
     std::vector<std::vector<int>> counter_essential;
     int cone_slice = 0;  // > 0: guard the cone constraints and alternate guarded / unguarded solve slices
     int hybrid_witness = 0;  // > 0: per-budget conflict cap of the cone-free witness pass (see --hybrid-witness)
+    // Conditional singleton counters (--restriction-conditional): per counter, the restricted three-input target
+    // f o pi (bit s = value on the s-th free row, free inputs in increasing order), or -1 when not applicable.
+    bool restriction_conditional = false;
+    std::vector<int> counter_f3;
     bool complement_inputs = false;
 };
 
 // Per-budget restriction counter encoding size (set by encode_counters).
-struct CounterStats { int restrictions = 0, live = 0, essential = 0, vars = 0, clauses = 0, negative_cap = 0; double seconds = 0; };
+struct CounterStats { int restrictions = 0, live = 0, essential = 0, vars = 0, clauses = 0, negative_cap = 0;
+                      int conditional = 0, conditional_clauses = 0; double seconds = 0; };
 static CounterStats g_counter;
 // Guard literal a of the cone constraints when --restriction-cone-slice is on (else -1), and per-budget slice
 // statistics: slices run, and the phase (cone on / off) that decided each SAT or UNSAT answer.
@@ -188,6 +194,28 @@ struct ClauseSink {
             G({x[i] ^ 1, sv[i - 1][K - 1] ^ 1});
         }
         G({x[n - 1] ^ 1, sv[n - 2][K - 1] ^ 1});
+    }
+    // at_most(x, K), plus: literal g implies at most K - 1 of x. When the Sinz counter is built (1 <= K < n), the
+    // conditional cap reads its threshold literals: sv[i-1][K-2] is forced true once K - 1 of x_0..x_{i-1} hold, so
+    // !g | !x_i | !sv[i-1][K-2] forbids the K-th true literal. Returns the number of conditional clauses.
+    int at_most_cond(const std::vector<int>& x, int K, int g) {
+        const int n = (int)x.size();
+        if (K < 0) { add({}); return 0; }
+        if (K == 0) { at_most(x, 0); add({g ^ 1}); return 1; }
+        if (K >= n) {
+            if (K == n) { std::vector<int> c{g ^ 1}; for (int l : x) c.push_back(l ^ 1); add(std::move(c)); return 1; }
+            return 0;
+        }
+        const int first = next;
+        at_most(x, K);
+        // sv rows are allocated row by row: sv[i][j] = first + i * K + j (all positive literals)
+        const auto sv = [&](int i, int j) { return pabc::Abc_Var2Lit(first + i * K + j, 0); };
+        const size_t main = clauses.size();
+        for (int i = (K == 1 ? 0 : 1); i < n; ++i) {
+            if (K == 1) add({g ^ 1, x[i] ^ 1});
+            else add({g ^ 1, x[i] ^ 1, sv(i - 1, K - 2) ^ 1});
+        }
+        return int(clauses.size() - main);
     }
 };
 
@@ -404,8 +432,57 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
             z.push_back({Z0, Z1});
         }
         if (!essential.empty()) ++g_counter.essential;
+        // Deletion cap, with the conditional singleton strengthening when enabled. A first-layer gate on two free
+        // primaries has no constant operand, so it survives the bypass and the simplified K - D gate circuit
+        // computes both f o pi and its one-gate function h: K - D >= M(f o pi, {h}). If h is incompatible
+        // (M = L + 1), presence(h) -> D <= cap - 1. Presence is read from the step's selection and op literals.
+        const auto deletion_cap = [&] {
+            const int f3 = ri < ex.counter_f3.size() ? ex.counter_f3[ri] : -1;
+            const unsigned incompatible = f3 < 0 ? 0u : conditional_cost3::kIncompatible3[std::min(f3, 255 ^ f3)];
+            if (!incompatible) { cs.at_most(deleted, cap); return; }
+            int fixed = 0;
+            for (int i = 0; i < n; ++i) if (r.primary[i] < 2) fixed = i;
+            const auto column = [&](int v) {  // free primary v as a three-input column
+                const int t = v - (v > fixed);
+                return t == 0 ? 0xAA : t == 1 ? 0xCC : 0xF0;
+            };
+            const int g = fresh();
+            int added = 0;
+            for (int t = 0; t < k; ++t)
+                for (int s = start[t]; s < start[t + 1]; ++s) {
+                    const int a = enc.svar_map[s][0], b = enc.svar_map[s][1];
+                    if (a >= n || b >= n || a == fixed || b == fixed) continue;
+                    const int ca = column(a), cb = column(b), sel = pabc::Abc_Var2Lit(enc.get_sel_var(s), 0);
+                    std::vector<unsigned> bad;
+                    for (unsigned op : FirstLayer::aigs) {
+                        int h = 0;
+                        for (int row = 0; row < 8; ++row) {
+                            const int j = (ca >> row & 1) | (cb >> row & 1) << 1;
+                            h |= (j && (op >> j & 1)) << row;
+                        }
+                        h = std::min(h, 255 ^ h);
+                        int idx = -1;
+                        for (int q = 0; q < 12; ++q) if (conditional_cost3::kOneGate3[q] == h) idx = q;
+                        if (idx < 0) { fprintf(stderr, "internal: first-layer column %d is not a one-gate function\n", h); std::abort(); }
+                        if (incompatible >> idx & 1) bad.push_back(op);
+                    }
+                    if (bad.size() == FirstLayer::aigs.size()) { cs.add({sel ^ 1, g}); ++added; continue; }
+                    for (unsigned op : bad) {
+                        std::vector<int> c{sel ^ 1};
+                        for (int bit = 1; bit <= 3; ++bit)  // op var literal that is true when the bit differs
+                            c.push_back(pabc::Abc_Var2Lit(enc.get_op_var(sp, t, bit), (op >> bit & 1) != 0));
+                        c.push_back(g);
+                        cs.add(std::move(c));
+                        ++added;
+                    }
+                }
+            if (!added) { cs.at_most(deleted, cap); return; }
+            added += cs.at_most_cond(deleted, cap, g);
+            ++g_counter.conditional;
+            g_counter.conditional_clauses += added;
+        };
         if (!live && essential.empty()) {
-            cs.at_most(deleted, cap);
+            deletion_cap();
             ++g_counter.restrictions;
             continue;
         }
@@ -452,7 +529,7 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
             if (reach[j] == F) { g_counter.negative_cap = 1; return false; }  // cannot happen: every step reads inputs
             if (reach[j] != T) guarded({reach[j]});
         }
-        if (!live) { cs.at_most(deleted, cap); ++g_counter.restrictions; continue; }
+        if (!live) { deletion_cap(); ++g_counter.restrictions; continue; }
         std::vector<int> dropped;  // !kept_g, at most cap of them
         int lost = 0;              // gates that are never kept
         for (int t = 0; t < k; ++t) {
@@ -464,7 +541,10 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
         }
         if (cap - lost < 0) { g_counter.negative_cap = 1; return false; }
         cs.at_most(dropped, cap - lost, ga);
-        if (ga >= 0) cs.at_most(deleted, cap);  // the unguarded phase keeps the deletion cap
+        // The unguarded slice phase keeps the deletion cap. With --restriction-conditional the forward (deletion)
+        // counter is kept beside the cone cap too: its conditional clauses use forward presence, which is sound
+        // for the forward count only (a first-layer gate need not be in the restricted cone).
+        if (ga >= 0 || !ex.counter_f3.empty()) deletion_cap();
         ++g_counter.restrictions;
         ++g_counter.live;
     }
@@ -1059,6 +1139,7 @@ static int run_main(int argc, char** argv) {
             if (ex.restriction_live == 0 || ex.restriction_live < -1) { fprintf(stderr, "expected --restriction-live all or N > 0\n"); return 2; }
         }
         else if (a == "--restriction-essential") ex.restriction_essential = true;
+        else if (a == "--restriction-conditional") ex.restriction_conditional = true;
         else if (a == "--hybrid-witness") {
             ex.hybrid_witness = std::stoi(next());
             if (ex.hybrid_witness <= 0) { fprintf(stderr, "expected --hybrid-witness W > 0\n"); return 2; }
@@ -1195,6 +1276,11 @@ static int run_main(int argc, char** argv) {
         fprintf(stderr, "--restriction-live and --restriction-essential need --restriction-counters\n");
         return 2;
     }
+    if (ex.restriction_conditional && (!ex.restriction_counters || n != 4 || !dc_hex.empty())) {
+        // The table is for complete three-input restricted targets; a partial target needs its own justification.
+        fprintf(stderr, "--restriction-conditional needs --restriction-counters, 4 inputs and a complete table\n");
+        return 2;
+    }
     if (ex.restriction_counters && ex.restriction_cuts) {
         fprintf(stderr, "--restriction-counters is not combined with --restriction-cuts\n");
         return 2;
@@ -1250,6 +1336,27 @@ static int run_main(int argc, char** argv) {
             else ex.counters.push_back(rs[2 * i + (rs[2 * i + 1].lower > rs[2 * i].lower)]);
         }
         const size_t m = ex.counters.size();
+        if (ex.restriction_conditional) {
+            ex.counter_f3.assign(m, -1);
+            for (size_t c = 0; c < m; ++c) {
+                int i = -1, b = 0;
+                for (int v = 0; v < n; ++v) if (ex.counters[c].primary[v] < 2) { i = v; b = int(ex.counters[c].primary[v]); }
+                if (i < 0) continue;
+                int f3 = 0;
+                for (int s = 0; s < 8; ++s) {
+                    int row = b << i, t = 0;
+                    for (int v = 0; v < n; ++v) if (v != i) row |= (s >> t++ & 1) << v;
+                    f3 |= int(kitty::get_bit(tt, row)) << s;
+                }
+                // The table's empty-set cost must equal the counter's lower bound (exact kCost3 on complete tables).
+                if (conditional_cost3::kCost3Normalized[std::min(f3, 255 ^ f3)] != ex.counters[c].lower) {
+                    fprintf(stderr, "conditional table cost %d differs from counter bound %u\n",
+                            conditional_cost3::kCost3Normalized[std::min(f3, 255 ^ f3)], ex.counters[c].lower);
+                    return 2;
+                }
+                ex.counter_f3[c] = f3;
+            }
+        }
         ex.counter_live.assign(m, ex.restriction_live == -1);
         if (ex.restriction_live > 0) {
             std::vector<size_t> order(m);
@@ -1666,6 +1773,9 @@ static int run_main(int argc, char** argv) {
                        "\"counter_clauses\":%d,\"counter_seconds\":%.6f,\"counter_negative_cap\":%d,\"complement_mask\":%u",
                        g_counter.restrictions, g_counter.live, g_counter.essential, g_counter.vars, g_counter.clauses,
                        g_counter.seconds, g_counter.negative_cap, complement_mask);
+            if (ex.restriction_conditional)
+                printf(",\"counter_conditional\":%d,\"counter_conditional_clauses\":%d", g_counter.conditional,
+                       g_counter.conditional_clauses);
             if (ex.cone_slice)
                 printf(",\"cone_slices\":%d,\"cone_on_sat\":%d,\"cone_on_unsat\":%d,\"cone_off_sat\":%d,\"cone_off_unsat\":%d",
                        g_slice.slices, g_slice.on_sat, g_slice.on_unsat, g_slice.off_sat, g_slice.off_unsat);

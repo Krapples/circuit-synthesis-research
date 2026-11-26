@@ -17,6 +17,10 @@ Proved here:
 * `restrict_eliminates`: fixing input `z` deletes every gate that reads `z`.
 * `literal_extension`: if `g` is nonconstant and ignores input `z`, then every circuit for `g ∧ x_z`
   has at least one gate more than some circuit for `g`, i.e. `C(g ∧ z) ≥ C(g) + 1`.
+* `conditional_restriction`, `conditional_counter`: deleting gates keeps every function computed inside
+  the circuit (`Lit`), so fixing `z := b` gives `|C| - #readers(z) ≥ M(f|_{z=b}, H)` for every set `H` of
+  `z`-independent functions computed in `C` (multi-output cost with free phases, `RealizesWith`). This is
+  the soundness of the forward conditional restriction counters (singleton and full-mask forms).
 
 The other foundations of the six-bit SAT bound (three-gate absorbing elimination, excess monotonicity,
 `C(F_q) = 4q - 1`, the string identities) are not formalized yet.
@@ -290,6 +294,55 @@ theorem delete_dead (C : Circuit) (later earlier : List Gate) (gj : Gate)
   simp only [Circuit.eval, hC]
   exact Ref.eval_congr _ _ _ C.out hout (val_replace_dead C.n x earlier gj g' later hdead)
 
+/-! ## Functions computed inside a circuit -/
+
+/-- `h` is a literal (a constant, or a possibly complemented wire) over the wires of `rgs`: some input or
+gate computes `h` or its complement, or `h` is constant. -/
+def Lit (n : ℕ) (rgs : List Gate) (h : (ℕ → Bool) → Bool) : Prop :=
+  ∃ r : Ref, (∀ w neg, r = .wire w neg → w < n + rgs.length) ∧ ∀ x, r.eval (val n x rgs) = h x
+
+theorem Ref.negate_wire {c : Bool} {r : Ref} {w : ℕ} {neg : Bool} (h : r.negate c = .wire w neg) :
+    ∃ neg0, r = .wire w neg0 := by
+  cases r with
+  | const b => simp [Ref.negate] at h
+  | wire w' n' =>
+      simp only [Ref.negate, Ref.wire.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      exact ⟨n', rfl⟩
+
+/-- Deleting a gate that equals a literal keeps every function computed inside the circuit. -/
+theorem lit_delete (n : ℕ) (later earlier : List Gate) (gj : Gate) (L : Ref)
+    (hL : ∀ x, gj.eval (val n x earlier) = L.eval (val n x earlier)) (h : (ℕ → Bool) → Bool)
+    (hl : Lit n (later ++ gj :: earlier) h) :
+    Lit n (later.map (Gate.shift (n + earlier.length) (L.clip (n + earlier.length))) ++ earlier) h := by
+  set p := n + earlier.length with hp
+  obtain ⟨r, hb, hr⟩ := hl
+  refine ⟨r.shift p (L.clip p), ?_, fun x => ?_⟩
+  · intro w neg hw
+    simp only [List.length_append, List.length_map]
+    cases r with
+    | const c => simp [Ref.shift] at hw
+    | wire w0 neg0 =>
+        have hb0 := hb w0 neg0 rfl
+        simp only [List.length_append, List.length_cons] at hb0
+        simp only [Ref.shift] at hw
+        split_ifs at hw with h1 h2
+        · simp only [Ref.wire.injEq] at hw
+          obtain ⟨rfl, -⟩ := hw
+          omega
+        · obtain ⟨neg1, h3⟩ := Ref.negate_wire hw
+          have := Ref.clip_bound p L w neg1 h3
+          omega
+        · simp only [Ref.wire.injEq] at hw
+          obtain ⟨rfl, -⟩ := hw
+          omega
+  · have hL' : gj.eval (val n x earlier) = (L.clip p).eval (val n x earlier) := by
+      rw [hL x, Ref.clip_eval]
+    have hcb := Ref.clip_bound p L
+    rw [← hr x]
+    exact bypass_ref n x earlier gj (L.clip p) later (bypass_at n x earlier gj _ hL' hcb later)
+      (bypass_gt n x earlier gj _ hL' hcb later) r
+
 /-! ## Deleting several gates -/
 
 /-- Gate `g`, placed after the gates `earlier`, equals a literal over earlier wires on every input. -/
@@ -303,27 +356,29 @@ noncomputable def degCount (n : ℕ) : List Gate → ℕ
   | g :: rgs => (if Degenerate n g rgs then 1 else 0) + degCount n rgs
 
 /-- All degenerate gates can be deleted together: delete the latest first, which leaves the prefixes
-of the earlier ones unchanged. -/
+of the earlier ones unchanged. Every function computed inside the circuit stays computed. -/
 theorem bypass_many (n : ℕ) :
     ∀ (rest later : List Gate) (out : Ref), ∃ C' : Circuit, C'.n = n ∧
       C'.size + degCount n rest ≤ (later ++ rest).length ∧
-      ∀ x, C'.eval x = (Circuit.mk n (later ++ rest) out).eval x
-  | [], later, out => ⟨⟨n, later, out⟩, rfl, by simp [Circuit.size, degCount], fun _ => by simp⟩
+      (∀ x, C'.eval x = (Circuit.mk n (later ++ rest) out).eval x) ∧
+      ∀ h, Lit n (later ++ rest) h → Lit n C'.rgates h
+  | [], later, out => ⟨⟨n, later, out⟩, rfl, by simp [Circuit.size, degCount], fun _ => by simp,
+      fun _ hl => by simpa using hl⟩
   | g :: rest, later, out => by
       by_cases hd : Degenerate n g rest
       · have hd' := hd
         obtain ⟨L, hL⟩ := hd
         set p := n + rest.length
-        obtain ⟨C', hn, hs, he⟩ :=
+        obtain ⟨C', hn, hs, he, hlit⟩ :=
           bypass_many n rest (later.map (Gate.shift p (L.clip p))) (out.shift p (L.clip p))
-        refine ⟨C', hn, ?_, fun x => ?_⟩
+        refine ⟨C', hn, ?_, fun x => ?_, fun h hl => hlit h (lit_delete n later rest g L hL h hl)⟩
         · simp only [degCount, if_pos hd', List.length_append, List.length_map,
             List.length_cons] at hs ⊢
           omega
         · rw [he x, ← deleteGate_eval n later rest g out L hL x]
           rfl
-      · obtain ⟨C', hn, hs, he⟩ := bypass_many n rest (later ++ [g]) out
-        refine ⟨C', hn, ?_, fun x => ?_⟩
+      · obtain ⟨C', hn, hs, he, hlit⟩ := bypass_many n rest (later ++ [g]) out
+        refine ⟨C', hn, ?_, fun x => ?_, fun h hl => hlit h (by simpa using hl)⟩
         · simp only [degCount, if_neg hd, List.length_append, List.length_cons,
             List.length_nil] at hs ⊢
           omega
@@ -457,13 +512,70 @@ theorem degCount_restrict (n z : ℕ) (b : Bool) :
 theorem restrict_eliminates (C : Circuit) (z : ℕ) (b : Bool) (hz : z < C.n) :
     ∃ C' : Circuit, C'.n = C.n ∧ C'.size + readers z C.rgates ≤ C.size ∧
       ∀ x, C'.eval x = C.eval (upd x z b) := by
-  obtain ⟨C', hn, hs, he⟩ := bypass_many C.n (C.rgates.map (Gate.restrict z b)) [] (C.out.restrict z b)
+  obtain ⟨C', hn, hs, he, -⟩ := bypass_many C.n (C.rgates.map (Gate.restrict z b)) [] (C.out.restrict z b)
   refine ⟨C', hn, ?_, fun x => ?_⟩
   · have := degCount_restrict C.n z b C.rgates
     simp only [List.nil_append, List.length_map, Circuit.size] at hs ⊢
     omega
   · rw [he x, ← Circuit.eval_restrict C z b hz]
     rfl
+
+/-! ## Conditional restriction counters -/
+
+/-- Restriction maps a function computed inside the circuit to its restriction. -/
+theorem lit_restrict (n i : ℕ) (b : Bool) (hi : i < n) (rgs : List Gate) (h : (ℕ → Bool) → Bool)
+    (hl : Lit n rgs h) : Lit n (rgs.map (Gate.restrict i b)) (fun x => h (upd x i b)) := by
+  obtain ⟨r, hb, hr⟩ := hl
+  refine ⟨r.restrict i b, fun w neg hw => ?_, fun x => ?_⟩
+  · cases r with
+    | const c => simp [Ref.restrict] at hw
+    | wire w0 neg0 =>
+        by_cases h1 : w0 = i <;> simp [Ref.restrict, h1] at hw
+        obtain ⟨rfl, rfl⟩ := hw
+        simpa using hb w0 neg0 rfl
+  · rw [restrict_ref n x i b hi rgs (restrict_val n x i b hi rgs) r, hr]
+
+/-- **Restriction with surviving functions.** Fixing input `z` deletes every reader of `z`, and every
+function computed inside the circuit survives, restricted. -/
+theorem conditional_restriction (C : Circuit) (z : ℕ) (b : Bool) (hz : z < C.n) :
+    ∃ C' : Circuit, C'.n = C.n ∧ C'.size + readers z C.rgates ≤ C.size ∧
+      (∀ x, C'.eval x = C.eval (upd x z b)) ∧
+      ∀ h, Lit C.n C.rgates h → Lit C.n C'.rgates (fun x => h (upd x z b)) := by
+  obtain ⟨C', hn, hs, he, hlit⟩ :=
+    bypass_many C.n (C.rgates.map (Gate.restrict z b)) [] (C.out.restrict z b)
+  refine ⟨C', hn, ?_, fun x => ?_, fun h hl => hlit _ (by simpa using lit_restrict C.n z b hz C.rgates h hl)⟩
+  · have := degCount_restrict C.n z b C.rgates
+    simp only [List.nil_append, List.length_map, Circuit.size] at hs ⊢
+    omega
+  · rw [he x, ← Circuit.eval_restrict C z b hz]
+    rfl
+
+/-- `f` has a circuit with at most `s` gates inside which every `h ∈ H` is computed (as a literal over its
+wires): the multi-output cost `M(f, H)` with free output phases is the least such `s`. -/
+def RealizesWith (n : ℕ) (f : (ℕ → Bool) → Bool) (H : Set ((ℕ → Bool) → Bool)) (s : ℕ) : Prop :=
+  ∃ C : Circuit, C.n = n ∧ C.size ≤ s ∧ (∀ x, C.eval x = f x) ∧ ∀ h ∈ H, Lit n C.rgates h
+
+/-- A gate of the circuit computes a function inside it. -/
+theorem lit_of_gate (n : ℕ) (rgs : List Gate) (w : ℕ) (hw : w < n + rgs.length) :
+    Lit n rgs (fun x => val n x rgs w) :=
+  ⟨.wire w false, fun w' neg h => by simp only [Ref.wire.injEq] at h; omega, fun x => by simp [Ref.eval]⟩
+
+/-- **Conditional restriction counter.** Let `C` compute `f`, fix input `z := b`, and let `H` be functions
+computed inside `C` that do not depend on `z` (for example first-layer gates on two other inputs). Then
+`|C| - #readers(z) ≥ M(f|_{z=b}, H)`. In the SAT encoding the left side is at most `k - D`, where `D`
+counts gates with a provably constant operand, and those gates read `z` or are later readers of constants;
+this file proves the first-level form. With `H = {h}` and `M(f|, {h}) = L + 1` this is the singleton clause
+`¬presence(h) ∨ survivors ≥ L + 1`. -/
+theorem conditional_counter {n : ℕ} {f : (ℕ → Bool) → Bool} (C : Circuit) (hn : C.n = n)
+    (hf : ∀ x, C.eval x = f x) (z : ℕ) (b : Bool) (hz : z < n) (H : Set ((ℕ → Bool) → Bool))
+    (hH : ∀ h ∈ H, Lit n C.rgates h) (hindep : ∀ h ∈ H, ∀ x c, h (upd x z c) = h x) :
+    RealizesWith n (fun x => f (upd x z b)) H (C.size - readers z C.rgates) := by
+  subst hn
+  obtain ⟨C', hn', hs, he, hlit⟩ := conditional_restriction C z b hz
+  refine ⟨C', hn', by omega, fun x => by rw [he, hf], fun h hh => ?_⟩
+  have hl := hlit h (hH h hh)
+  have e : (fun x => h (upd x z b)) = h := funext fun x => hindep h hh x b
+  rwa [e] at hl
 
 /-! ## Independent literal extension -/
 

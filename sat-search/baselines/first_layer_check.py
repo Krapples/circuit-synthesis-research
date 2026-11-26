@@ -99,6 +99,19 @@ HYBRID_VARIANTS = {'hyb': ('--hybrid-witness', '100000'),
 for suffix, flags in HYBRID_VARIANTS.items():
     RESIDUAL_MODES[f'slack-three-phase-set-lift1-count-const-liveall-ess-{suffix}'] = (
         *RESIDUAL_MODES['slack-three-phase-set-lift1-count-const-liveall-ess'], *flags)
+# Conditional singleton counters (--restriction-conditional; four-input complete targets only): a present
+# first-layer gate whose one-gate function is incompatible with every minimum circuit of f o pi lowers the
+# deletion cap by one. '-cond' modes are the conditional constant counters; the '-liveall-ess-cond-hyb' mode is
+# the combined proof-only configuration (forward conditional clauses in both passes, cone only in proofs).
+COUNTER_MODES['base-count-const-cond'] = (*COUNTER_MODES['base-count-const'], '--restriction-conditional')
+COUNTER_MODES['base-count-const-liveall-ess-cond'] = (
+    *COUNTER_MODES['base-count-const-liveall-ess'], '--restriction-conditional')
+for base in ('slack-three-phase-set-lift1-count-const', 'slack-three-phase-set-lift1-count-const-liveall-ess',
+             'slack-three-phase-set-lift1-count-const-liveall-ess-hyb'):
+    stem = base.replace('-hyb', '')
+    RESIDUAL_MODES[f'{stem}-cond' + ('-hyb' if base.endswith('-hyb') else '')] = (
+        *RESIDUAL_MODES[base], '--restriction-conditional')
+CONDITIONAL_MODES = {mode for mode in (*COUNTER_MODES, *RESIDUAL_MODES) if '-cond' in mode}
 
 
 def exact_tables(n, steps):
@@ -192,6 +205,15 @@ def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, s
 
 
 def check_jobs(exe, modes):
+    """All check jobs; conditional modes only on four-input complete targets (percy_run rejects the rest)."""
+    for args, expected in _check_jobs(exe, modes):
+        mode, n, care = args[1], args[3], args[5]
+        if mode in CONDITIONAL_MODES and (n != 4 or care != 0xffff):
+            continue
+        yield args, expected
+
+
+def _check_jobs(exe, modes):
     n = 3
     # Complete AND, multiplexer, majority, parity, and their output phases.
     complete_targets = [0x80, 0x7f, 0xca, 0xe8, 0x96, 0x69]
