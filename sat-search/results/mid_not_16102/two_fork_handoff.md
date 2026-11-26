@@ -1,0 +1,74 @@
+# L-meta-16102: two-fork binary lower bound and the final nine-gate core
+
+Date: 2026-11-26. Read [README.md](README.md) for the archived direct and normalized UNSAT searches. This note adds an independent paper reduction and a dependency-free exact finite checker. It proves a stronger basis-specific fact than the prior small-budget SAT searches: the target requires at least eight binary AND/OR gates even if arbitrarily many unary NOT gates are free. The general graph reduction is not yet formalized in Lean. The nine-total-gate internal-NOT question remains open at the formal-certification level; the earlier SAT exclusions cover it computationally. No upstream closure or PR claimed. The public desk exact statement was not retrievable in this session, and no matching open PR was returned by the attempted search; the latter is not proof no open PR exists.
+
+## 1. Function and read-once obstruction
+
+Let f be the six-input little-endian table 18445899635892944896. It is monotone, all six variables are essential, and its minimal positive masks are 19,21,22,24,34,36,40. In any read-once AND/OR formula on disjoint variable sets, every minimal positive certificate and every minimal zero certificate intersect in exactly one variable. Proof by induction: for AND the positive certificate is the union of children's minimal positive certificates, while a minimal zero certificate comes from one child. OR is dual. Constants and inessential variables can be removed first. A read-once formula with signed leaves and a monotone output reduces to such a monotone formula: pushing negations to leaves preserves the read-once property, and every essential variable must have positive polarity, since a single negative occurrence makes the function antitone in that variable.
+
+For f, minimal positive mask 19 and maximal negative mask 20 intersect after complementing the latter in two variables (mask 3). Thus f is not read-once. More strongly, for each primary i there is a non-read-once cofactor. The following masks are on the OTHER coordinates (the fixed primary is omitted from both masks):
+i | fixed phase | minimal positive | maximal negative
+0 | 0 | 22 | 48
+1 | 0 | 40 | 20
+2 | 0 | 40 | 18
+3 | 0 | 19 | 20
+4 | 1 | 3 | 4
+5 | 0 | 19 | 20
+The checker independently verifies these certificates (it finds the first obstruction; the displayed masks agree with replay). In the i=4 row the fixed bit 16 is not included in the displayed masks. Complement the negative mask only in the remaining variables.
+
+Another finite fact: for every nonempty subset U of the six primaries, form the residual truth tables on the complement as the U assignment varies. The subsets with EXACTLY TWO different residuals are precisely the six singleton subsets and the full six-variable set (63 subset tests). In particular there is no proper subset of size 2..5 through which all dependence can be compressed into one Boolean bit independent of the other variables. This is a residual-count statement, not merely pair-cofactor dependence.
+
+## 2. Semantic live graph and fanout excess
+
+Consider any AND/OR/NOT circuit computing f, with arbitrary many unary NOTs. Constants, nullary and unary AND/OR, duplicate operands, and other constant/identity aliases can be simplified; drop all semantically dead vertices, count only proper binary AND/OR and unary NOT gates in the remaining output cone. (For the external at-most-two syntax the second NOT operand is semantically ignored.) No simplification increases binary count. All six primaries remain in the cone by essentiality. Let b be proper binary gates and u unary NOT gates. Count operand occurrences, including parallel occurrences if not simplified. The live graph has 6+b+u vertices, 2b+u edges, and every nonoutput vertex has at least one outgoing operand occurrence. Thus
+
+    sum_(v != output)(outdeg(v)-1) = b-5.
+
+Call a vertex a fork when its outdegree is at least two. With b<=7, total excess is <=2, so possibilities are zero forks, one fork of degree two or three, or two forks of degree two. The proof below excludes all of them. It also excludes a circuit with syntactic dead gates before simplification, since simplification gives one of these cases or fewer binary gates. If b<5, essentiality already fails by the same counting.
+
+Zero forks means the circuit is a read-once formula, impossible by Section 1. For the first fork in any topological order, its ancestors are a read-once tree; every primary in its ancestor cone has every path to the output passing through that fork. Indeed, any escaping path must diverge at an earlier fork. Therefore f factors through one bit on exactly that set U of primaries. Full support makes the number of residuals at least two, hence exactly two. By Section 1, U is a singleton or all six. If all six, the rest of the circuit depends only on this one bit, so f equals the read-once upstream tree or its complement (constant impossible). This contradicts the read-once obstruction. Thus the first fork has singleton support in the structural ancestor sense. Its value is that primary or its complement: essentiality excludes a constant, and no earlier fork makes its upstream a unary chain when only one primary is present. We can absorb its sign into later formula leaves.
+
+If there is only one fork, even if its degree is three, fixing this singleton primary eliminates its sharing. All remaining variables then occur at most once in the unfolded formula. Simplifying constants and pushing NOT to leaves makes each cofactor a read-once signed formula, hence monotone read-once after removing inessential variables. This contradicts the six cofactor certificates. This gives the simpler paper bound b>=7 without any formula enumeration beyond the residual and cofactor tests.
+
+## 3. Two forks
+
+Suppose there are exactly two forks, each with two outgoing occurrences. Let the first fork carry the signed value of primary x_i. Cut that fork, viewing its two uses as two separate leaf positions labelled x_i, with arbitrary signs; cut the second fork g as well. In the ancestor formula of g, every other primary occurs exactly once if present; no other forks are available. Let U be the non-i primaries in that ancestor formula, V the remaining primaries, and t in {0,1,2} the number of the first fork's two uses reaching g. The cut forest consists of g's formula on U plus t occurrences of x_i, and the output formula on V plus 2-t occurrences of x_i and two occurrences of g. Every non-i primary outside U appears only once downstream. This follows from the original DAG by removing the two shared vertices as formula boundaries; no unaccounted reconvergence remains.
+
+If U is empty, g depends only on x_i. Fixing x_i eliminates both forks and forces both cofactors read-once, contradiction. Thus U is nonempty.
+
+### t=0: independent forks
+
+No first-fork path reaches g. Every U primary has every path to output through g, so the original residual-count fact forces U to be a singleton (U cannot be all six because x_i is outside). Hence g is a signed second primary. The output is a signed formula on eight leaf positions, with the two fork variables each occurring twice and the four others once. Push all negations to leaves. Each once-occurring essential variable must be positive by monotonicity. The two repeated labels may use arbitrary signs, a relaxation of counted-NOT syntax. The exact finite DP below excludes every such formula for each of the 15 choices of unordered repeated variables.
+
+### t=2: all first-fork reads go into g
+
+Then all primaries in U union {i} reach the output only through g, so residual counting forces this set to be all six (size at least two). The final function must equal g or its complement. The upstream g formula has x_i twice and all other variables once. Fixing x_i leaves a read-once signed formula on the other five variables, contradicting the cofactor certificate. No enumeration required.
+
+### t=1: nested forks
+
+The g formula is signed read-once on x_i and U; the output formula is on x_i once, g twice, and each V primary once. Only the x_i and g leaves may have arbitrary signs, since every V primary is essential and g does not depend on V. The g formula may use arbitrary signs on every leaf (a deliberate relaxation).
+
+Necessary filters for each of the two fixed x_i phases:
+- at most two residuals on V as U varies;
+- every such residual on V is monotone read-once or constant, since it is the output formula with x_i and g fixed;
+- if there are two distinct residuals, their row-class indicator on U (larger row mapped to one) is monotone read-once up to a global complement. The two residuals are ordered coordinatewise: the all-zero and all-one U rows bound every row by monotonicity. Thus the row-class indicator is monotone and equals g's cofactor or its complement. Since g is read-once, the indicator must pass the read-once obstruction test.
+
+The checker only uses absence of the intersection obstruction as a NECESSARY filter; it does not assert sufficiency. It examines all 6*(2^5-1)=186 pairs (i,U), retaining 17. All retained U have size one or two. Enumerate every signed read-once g on x_i,U. Compute the partial truth specification for downstream output on (x_i,g,V): for every original assignment, set that coordinate to f's value. If two original assignments require different values at the same coordinate, reject this g. Otherwise unknown coordinates (unreachable x_i,g combinations) stay genuinely unspecified. There are 14 consistent upstream tables across the retained cases, yielding 8 distinct partial specifications on six effective variables and 2 on five. Enumerate every signed downstream formula with two occurrences of g and one of x_i, each V variable once (positive). Compare on the specified mask only; none matches.
+
+### Formula DP completeness
+
+For a finite list of leaf POSITIONS with specified variable labels, D[J] contains all truth tables of binary AND/OR formulas using precisely the positions in nonempty J once. Initialize singleton positions with the positive table and, when allowed, its complement. For a larger J, enumerate unordered nonempty partitions J=I disjoint-union K, and insert a AND b and a OR b for all a in D[I], b in D[K]. This is exact by induction on the binary root, and repeated labels remain distinct positions. Pushing all unary NOTs to leaves preserves binary count, so this signed formula enumeration is a sound overapproximation for the original circuit. No SAT solver, heuristic pruning, random sampling, or truth-table hashing collisions are involved. For direct pair test, stream root outputs against 11 distinct relabelled target tables covering all 15 repeated-variable pairs, rather than retaining the root set. Counts: 12,774,316 pair/op comparisons, 656,940 stored proper-subset non-singleton tables. For nested tests, the full outer sets have sizes 5,543 and 87,042. Every comparison is exact using BigInt. Independent preliminary implementations in Python (nested) and C++ (direct pair) produced the same counts and no match; final standalone JS replay is committed.
+
+Thus all excess<=2 cases are excluded and every circuit for f needs **at least eight proper binary gates**, regardless of how many unary NOT gates are allowed. The existing eight-gate monotone witness attains eight, so the binary-gate minimum in the free-negation AND/OR model is exactly eight (signed AIG size equivalent gate-for-gate).
+
+## 4. Consequence for the posted internal-NOT question
+
+Any original at-most-nine-gate candidate with the required syntactically internal NOT has at most eight non-NOT gates. The lower bound forces precisely eight proper, live binary AND/OR gates and exactly one NOT. No nullary, unary, duplicate-operand or semantically dead binary gate can survive: otherwise simplify it and use at most seven binary gates. No semantic constant or earlier signed-equivalent binary gate is possible either, since replacing it by that constant or signed earlier signal would use <=7 binary gates with unrestricted free negations. All six primaries and all binary gates belong to the semantic output cone.
+
+The single NOT must itself be semantically live. Otherwise the required later syntactic reader (unless it is output) would be a binary gate with both operands semantically read, since there is no other NOT and no spare degenerate/dead gate; that makes it live, contradiction. It cannot be the output, since the remaining circuit is monotone and f is nonconstant monotone, so its complement cannot equal f. It reads an internal gate as required. Drop its semantically ignored second operand if present: all vertices are semantically live, hence doing so preserves the actual reader condition. Consequently only a normalized nine-gate circuit with eight genuine binary gates and one internal, non-output NOT remains. Its live graph has excess exactly three.
+
+Every primary must have a directed path to output avoiding the unique NOT: if all paths from a primary pass through the NOT, fixing all other primaries makes the output antitone in that primary (before the NOT all gates monotone; after it the primary can affect output only through the inverted bit). A monotone, essential function cannot have this property. The NOT operand cannot be constant or a signed primary, by the eight-binary lower bound and free-negation alias elimination. Both of these are useful sound pruning constraints. These structural restrictions substantially narrow the remaining certificate search, but we have not excluded its final case by a new proof. The older full-syntax nine-gate SAT runs already report UNSAT, but no retained certificates.
+
+## 5. Verification and upstream status
+
+Run `node two_fork_check.js`; compare stdout to [two_fork_replay.json](two_fork_replay.json). The finite checker is fully executed and all assertions passed. The graph/fork proof is a new paper argument, not a Lean check. The reduction must be formalized against the EXACT posted statement; the current contribution rules also require one Lean file, permitted imports, standard axioms, and a 512 KiB limit. A numerical DRAT trace or JS result cannot be submitted directly. Z3 4.13.3 in the chat runtime had a failed internal DRAT validation on a preliminary six-gate full-syntax CNF; disabling several simplifications left the query unresolved after 15 seconds. No proof from that attempt is claimed. The runtime lacks Lean, PySAT, and an independent DRAT checker. A native agent should use proof-producing PySAT/Glucose or another proof-capable solver and an independently checked LRAT/DRAT certificate, or formalize the remaining three-excess case directly. Confirm posted statement, reduction eligibility and no open PR before submitting. No upstream PR opened; L-meta-16102 is not formally closed. L-clb-036 remains our long-term objective.
