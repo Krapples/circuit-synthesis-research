@@ -1,3 +1,56 @@
+# Research handoff — cubic cluster series and simultaneous high-degree hub compression
+
+Updated 2026-11-26. Base [540e540](https://github.com/Krapples/circuit-synthesis-research/commit/540e540d239e881d2eb39695d94234ef95efb0fc). **L-clb-036 remains open.** This round strengthens the exact connected cubic kernel with a deterministic single-exponential marginal algorithm, a common kernel for high-degree hubs, and one batched Walsh acceptance-table transform. All asymptotic circuit bounds are paper arguments supported by finite algebraic checks, not synthesized AIG counts or Lean-checked results.
+
+## Current results
+
+- Packed/permutable Andreev: near-cubic De Morgan formula lower bound Omega(n^3/(log^2 n log log n)) conditional on Tal's revised Lemma 7.1; Omega(n) distinct gates with Omega(n^1.99/(log^2 n log log n)) output paths for hypothetical O(n^1.01)-gate AIGs. Prior permutable and affine promises have deterministic quasi-linear circuits. The deterministic quadratic promise upper bound remains subject to independent audit of the sparse-rank circuit cost. Cubic character sums are #P-hard, not a decision lower bound.
+- Prior cubic neighborhood theorem: degree-three map with graph degree Delta has an exact coordinate kernel of at most 8k^2(1+Delta+Delta^2+Delta^3) variables. Its full image is the inverse image of an exceptional marginal of dimension t. The kernel can be built in near-linear gates up to polynomials in k; the former support enumeration algorithm was quasi-linear for t of order k/log k at constant Delta.
+- **New exact connected-cluster algorithm:** for each scalar character of a t-output marginal P with P(0)=0, form Z_U(z)=sum_(S subset U) (-1)^(lambda dot P(1_S)) z^|S| and H_U=z Z'_U/Z_U. Mobius inclusion-exclusion contributions C_U vanish on disconnected sets and below degree |U|. Hence only connected sets of size <=d contribute to H_[Q] through degree d. Subset zeta transforms calculate local series; exact integer recurrences recover Z, and Walsh inversion gives weight/address counts. No zero-free or approximation assumption. This specializes the established Patel-Regts connected-subgraph technique. On a poly(k)-size kernel the cost is 2^t(2 max(1,Delta)^2)^d poly(k). Every attained marginal has a witness of weight <=3t, so d=min(Q,3t) suffices. For constant Delta this improves the tractable t from order k/log k to a constant fraction of k.
+- **Common high-degree hub kernel:** if deleting s hubs leaves maximum degree Delta, expand F(u,y)=C(u)+sum_(|B|<=2)u_B G_B(y) and collect joint map G with k'=k(1+s+binom(s,2)) outputs. Apply the neighborhood theorem once to G, giving a coordinate kernel of <=8(k')^2(1+Delta+Delta^2+Delta^3) nonhub variables. This preserves the image of EVERY hub-conditioned map simultaneously. For s=O(k), constant Delta, the common kernel has O(k^6) variables, independent of original hub degrees and total witness count. It is constructible in near-linear gates up to poly(k), without enumerating hub assignments. Hubs can be supplied or obtained by a deterministic degree-threshold selection satisfying the residual promise.
+- **One acceptance-table transform:** for each hub assignment construct a branch residual projection pi_u and marginal support indicator g_u, padded to dimension t_max. With unnormalized Walsh transforms, 2^t sum_a h(a)g_u(pi_u(a))=sum_w ghat_u(w) hhat(pi_u^T(w)). Precompute hhat once and route all frequency queries by sorting/segmented copy. Avoids the 2^s factor on both the original input scan and length-M table scan. For fixed s<=s_max=O(k) and all branch marginal dimensions <=t_max, the full deterministic promise-circuit cost is O((M+2^s_max 2^t_max(2D^2)^(3t_max)) poly(k)), D=max(1,Delta), M=2^k=Theta(n). Quasi-linear whenever s_max+(1+3 log_2(2D^2))t_max<=k. For Delta<=4 this is s_max+16t_max<=k. If every branch exceptional marginal is quadratic, dense pair elimination gives the stronger sufficient condition s_max+t_max<=k. These are sufficient subpromise regimes, not a general cubic algorithm.
+- **Remaining targets:** graphs without a small hub modulator, or branches with large genuinely cubic marginals beyond the cluster bound; and, more fundamentally, a new lower-bound bridge charging distinct gates rather than path counts, counting hardness or structural kernel sizes.
+
+## Current files and replay
+
+| File | Scope |
+|---|---|
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Complete new proofs, arithmetic/circuit costs, common kernel, batched Walsh table query |
+| [cubic_cluster_check.js](cubic_cluster_check.js), [replay](cubic_cluster_replay.txt) | Executed exact low-weight count and cluster cancellation regression |
+| [cubic_hub_check.js](cubic_hub_check.js), [replay](cubic_hub_replay.txt) | Executed common-kernel, conditioned image and Walsh table-query checks |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md), [checker](cubic_neighborhood_check.js), [replay](cubic_neighborhood_replay.txt) | Earlier connected coordinate kernel and Fourier marginal lifting |
+| [cubic_component_handoff.md](cubic_component_handoff.md), [checker](cubic_component_check.js), [replay](cubic_component_replay.txt) | Earlier cubic counting obstruction and component compression |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md), [checker](deterministic_quadratic_check.py), [replay](deterministic_quadratic_replay.txt) | Prior sparse rank and deterministic quadratic compression |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md), [checker](quadratic_witness_check.py), [replay](quadratic_witness_replay.txt) | Prior quadratic grammar, random compression, fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md), [checker](affine_witness_check.py), [replay](affine_witness_replay.txt) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md), [checker](permutable_andreev_check.py), [replay](permutable_andreev_replay.txt) | Delta-free path theorem |
+| [PackedAndreevLemmas.lean](PackedAndreevLemmas.lean) | Unverified Lean draft |
+
+Run from this directory:
+
+```sh
+node cubic_cluster_check.js
+node cubic_hub_check.js
+node cubic_neighborhood_check.js
+node cubic_component_check.js
+python -B deterministic_quadratic_check.py
+python -B quadratic_witness_check.py
+python -B affine_witness_check.py
+python -B permutable_andreev_check.py
+```
+
+New seed 870013: 80 small maps, 8 longer connected maps, 12,753 connected sets, 1,436,556 local series, 153,336 exact low-degree cancellations, 2,434 weight/address count comparisons, 424 full-image comparisons; max q=160. Seed 870014: 112 maps, 264 hub branches, 108 joint-image comparisons, 264 branch-image comparisons, 1,212 marginal-lift checks, 792 exact Walsh queries, 4 detected large hub sets, 32 strict joint reductions; largest total variable reduction 3,002 -> 450 (s=2, k=1). All assertions passed. Long tests use path-structured residual graphs with independent exact finite-state DP. The new checks are algebraic, not full packed cubic SAT grammar or AIG routing/synthesis tests.
+
+## Native-agent priority
+
+Read [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) before the archive. Audit the formal-series cancellation, exact integer bounds, common joint kernel and Walsh table-query identity, and the fixed-array bounded-fanin cost. Related literature: Patel-Regts DOI 10.1137/16M1101003 and arXiv:1707.05186; no claim of novelty of the cluster method. Continue audit of the prior deterministic quadratic sparse rank and neighborhood kernel proofs. Implement the outstanding actual cubic paired-grammar replay and, if useful, sorting-network and bounded-fanin circuit regressions. Reuse checked LookupProjection, ParityLookup and Unfold where appropriate. Investigate irreducible high-degree/high-marginal systems and heterogeneous full-SAT restrictions. No production solver or verified Lean modifications, no new Lean theorem, no unrestricted SAT size bound.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and status statements refer to their own revisions.
+
 # Research handoff — connected cubic neighborhood kernels and marginal lifting
 
 Updated 2026-11-26. Base handoff [56c61b1](https://github.com/Krapples/circuit-synthesis-research/commit/56c61b1a906230f9bb872d7a2a7ff5a02ce2aa02). **L-clb-036 remains open.** This round removes the independent-component requirement for structural compression of bounded-degree witness graphs. It proves an exact coordinate kernel and two new deterministic quasi-linear subpromise bounds. These are paper theorems with finite algorithm checks, not unrestricted SAT lower bounds or Lean-checked results.
