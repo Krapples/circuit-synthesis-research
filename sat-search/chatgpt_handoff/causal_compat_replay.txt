@@ -1,0 +1,619 @@
+{
+ "instances": 170,
+ "vertices": 1036,
+ "plus_below_old": 1,
+ "chi_below_minTG": 7,
+ "chi_below_plus": 107,
+ "G_below_T": 32,
+ "T_below_G": 40,
+ "cuts_tested": 859,
+ "decoder_evaluations": 142760,
+ "joint_below_product": 265,
+ "mincut_plus_below_old": 0,
+ "mincut_chi_below_plus": 6,
+ "injective_instances": 32,
+ "charge_plus_above_old": 0,
+ "charge_chi_above_plus": 0,
+ "max_charge_old": 21,
+ "max_charge_plus": 21,
+ "max_charge_chi": 21,
+ "controls": [
+  {
+   "label": "echo k=2 g=2",
+   "data": 4,
+   "gates": 28,
+   "ports": 4,
+   "reverse": 2,
+   "need": 4,
+   "portCap": {
+    "old": 6,
+    "plus": 6
+   },
+   "mincut": {
+    "old": 4,
+    "plus": 4
+   },
+   "rejects": {
+    "old": false,
+    "plus": false
+   },
+   "log2N": 1
+  },
+  {
+   "label": "echo k=3 g=2",
+   "data": 6,
+   "gates": 43,
+   "ports": 6,
+   "reverse": 2,
+   "need": 6,
+   "portCap": {
+    "old": 9,
+    "plus": 9
+   },
+   "mincut": {
+    "old": 6,
+    "plus": 6
+   },
+   "rejects": {
+    "old": false,
+    "plus": false
+   },
+   "log2N": 1
+  },
+  {
+   "label": "echo k=4 g=4",
+   "data": 16,
+   "gates": 130,
+   "ports": 8,
+   "reverse": 4,
+   "need": 16,
+   "portCap": {
+    "old": 20,
+    "plus": 12
+   },
+   "mincut": {
+    "old": 16,
+    "plus": 12
+   },
+   "rejects": {
+    "old": false,
+    "plus": true
+   }
+  },
+  {
+   "label": "echo k=5 g=7",
+   "data": 35,
+   "gates": 298,
+   "ports": 10,
+   "reverse": 5,
+   "need": 35,
+   "portCap": {
+    "old": 40,
+    "plus": 15
+   },
+   "mincut": {
+    "old": 35,
+    "plus": 15
+   },
+   "rejects": {
+    "old": false,
+    "plus": true
+   }
+  },
+  {
+   "label": "echo k=6 g=11",
+   "data": 66,
+   "gates": 574,
+   "ports": 12,
+   "reverse": 6,
+   "need": 66,
+   "portCap": {
+    "old": 72,
+    "plus": 18
+   },
+   "mincut": {
+    "old": 66,
+    "plus": 18
+   },
+   "rejects": {
+    "old": false,
+    "plus": true
+   }
+  },
+  {
+   "label": "echo k=7 g=19",
+   "data": 133,
+   "gates": 1174,
+   "ports": 14,
+   "reverse": 7,
+   "need": 133,
+   "portCap": {
+    "old": 140,
+    "plus": 21
+   },
+   "mincut": {
+    "old": 133,
+    "plus": 21
+   },
+   "rejects": {
+    "old": false,
+    "plus": true
+   }
+  },
+  {
+   "label": "local-feedback k=4",
+   "data": 16,
+   "gates": 51,
+   "ports": 4,
+   "reverse": 4,
+   "need": 16,
+   "portCap": {
+    "old": 8,
+    "plus": 8
+   },
+   "mincut": {
+    "old": 4,
+    "plus": 4
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "all-feedback k=4",
+   "data": 16,
+   "gates": 60,
+   "ports": 4,
+   "reverse": 4,
+   "need": 16,
+   "portCap": {
+    "old": 16,
+    "plus": 8
+   },
+   "mincut": {
+    "old": 4,
+    "plus": 4
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "local-feedback k=5",
+   "data": 32,
+   "gates": 100,
+   "ports": 5,
+   "reverse": 5,
+   "need": 32,
+   "portCap": {
+    "old": 10,
+    "plus": 10
+   },
+   "mincut": {
+    "old": 5,
+    "plus": 5
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "all-feedback k=5",
+   "data": 32,
+   "gates": 112,
+   "ports": 5,
+   "reverse": 5,
+   "need": 32,
+   "portCap": {
+    "old": 32,
+    "plus": 10
+   },
+   "mincut": {
+    "old": 5,
+    "plus": 5
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "local-feedback k=6",
+   "data": 64,
+   "gates": 197,
+   "ports": 6,
+   "reverse": 6,
+   "need": 64,
+   "portCap": {
+    "old": 12,
+    "plus": 12
+   },
+   "mincut": {
+    "old": 6,
+    "plus": 6
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "all-feedback k=6",
+   "data": 64,
+   "gates": 212,
+   "ports": 6,
+   "reverse": 6,
+   "need": 64,
+   "portCap": {
+    "old": 64,
+    "plus": 12
+   },
+   "mincut": {
+    "old": 6,
+    "plus": 6
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "local-feedback k=7",
+   "data": 128,
+   "gates": 390,
+   "ports": 7,
+   "reverse": 7,
+   "need": 128,
+   "portCap": {
+    "old": 14,
+    "plus": 14
+   },
+   "mincut": {
+    "old": 7,
+    "plus": 7
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "all-feedback k=7",
+   "data": 128,
+   "gates": 408,
+   "ports": 7,
+   "reverse": 7,
+   "need": 128,
+   "portCap": {
+    "old": 128,
+    "plus": 14
+   },
+   "mincut": {
+    "old": 7,
+    "plus": 7
+   },
+   "rejects": {
+    "old": true,
+    "plus": true
+   }
+  },
+  {
+   "label": "INDEX mux tree in A, k=1",
+   "data": 2,
+   "bob": 1,
+   "gatesA": 3,
+   "gates": 4,
+   "log2N": 2,
+   "mincut": {
+    "old": 2,
+    "plus": 2,
+    "chi": 2
+   },
+   "portCap": {
+    "old": 2,
+    "plus": 2,
+    "chi": 2
+   },
+   "charges": {
+    "old": 3,
+    "plus": 3,
+    "chi": 3
+   }
+  },
+  {
+   "label": "INDEX mux, level>=1 in B, k=1",
+   "data": 2,
+   "bob": 1,
+   "gatesA": 3,
+   "gates": 4,
+   "log2N": 2,
+   "mincut": {
+    "old": 2,
+    "plus": 2,
+    "chi": 2
+   },
+   "portCap": {
+    "old": 2,
+    "plus": 2,
+    "chi": 2
+   },
+   "charges": {
+    "old": 3,
+    "plus": 3,
+    "chi": 3
+   }
+  },
+  {
+   "label": "INDEX mux tree in A, k=2",
+   "data": 4,
+   "bob": 2,
+   "gatesA": 9,
+   "gates": 10,
+   "log2N": 4,
+   "mincut": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "portCap": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "charges": {
+    "old": 9,
+    "plus": 9,
+    "chi": 9
+   }
+  },
+  {
+   "label": "INDEX mux, level>=1 in B, k=2",
+   "data": 4,
+   "bob": 2,
+   "gatesA": 6,
+   "gates": 10,
+   "log2N": 4,
+   "mincut": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "portCap": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "charges": {
+    "old": 6,
+    "plus": 6,
+    "chi": 6
+   }
+  },
+  {
+   "label": "INDEX mux tree in A, k=3",
+   "data": 8,
+   "bob": 3,
+   "gatesA": 21,
+   "gates": 22,
+   "log2N": 8,
+   "mincut": {
+    "old": 8,
+    "plus": 8,
+    "chi": 8
+   },
+   "portCap": {
+    "old": 8,
+    "plus": 8,
+    "chi": 8
+   },
+   "charges": {
+    "old": 21,
+    "plus": 21,
+    "chi": 21
+   }
+  },
+  {
+   "label": "INDEX mux, level>=1 in B, k=3",
+   "data": 8,
+   "bob": 3,
+   "gatesA": 12,
+   "gates": 22,
+   "log2N": 8,
+   "mincut": {
+    "old": 8,
+    "plus": 8,
+    "chi": 8
+   },
+   "portCap": {
+    "old": 8,
+    "plus": 8,
+    "chi": 8
+   },
+   "charges": {
+    "old": 12,
+    "plus": 12,
+    "chi": 12
+   }
+  },
+  {
+   "label": "INDEX mux tree in A (structural), k=4",
+   "data": 16,
+   "gates": 46,
+   "ports": 1,
+   "reverse": 4,
+   "need": 16,
+   "portCap": {
+    "old": 16,
+    "plus": 16
+   },
+   "mincut": {
+    "old": 16,
+    "plus": 16
+   },
+   "rejects": {
+    "old": false,
+    "plus": false
+   }
+  },
+  {
+   "label": "INDEX mux tree in A (structural), k=5",
+   "data": 32,
+   "gates": 94,
+   "ports": 1,
+   "reverse": 5,
+   "need": 32,
+   "portCap": {
+    "old": 32,
+    "plus": 32
+   },
+   "mincut": {
+    "old": 32,
+    "plus": 32
+   },
+   "rejects": {
+    "old": false,
+    "plus": false
+   }
+  },
+  {
+   "label": "INDEX mux tree in A (structural), k=6",
+   "data": 64,
+   "gates": 190,
+   "ports": 1,
+   "reverse": 6,
+   "need": 64,
+   "portCap": {
+    "old": 64,
+    "plus": 64
+   },
+   "mincut": {
+    "old": 64,
+    "plus": 64
+   },
+   "rejects": {
+    "old": false,
+    "plus": false
+   }
+  },
+  {
+   "label": "INDEX mux tree in A (structural), k=7",
+   "data": 128,
+   "gates": 382,
+   "ports": 1,
+   "reverse": 7,
+   "need": 128,
+   "portCap": {
+    "old": 128,
+    "plus": 128
+   },
+   "mincut": {
+    "old": 128,
+    "plus": 128
+   },
+   "rejects": {
+    "old": false,
+    "plus": false
+   }
+  },
+  {
+   "label": "programmable 4-wire network, switches in A",
+   "data": 4,
+   "bob": 6,
+   "gatesA": 36,
+   "gates": 37,
+   "log2N": 4,
+   "mincut": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "portCap": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "charges": {
+    "old": 11,
+    "plus": 11,
+    "chi": 11
+   }
+  },
+  {
+   "label": "enabled lookup r=2 M=2 (fixed pi)",
+   "data": 4,
+   "bob": 4,
+   "gatesA": 6,
+   "gates": 9,
+   "log2N": 4,
+   "mincut": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "portCap": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "charges": {
+    "old": 6,
+    "plus": 6,
+    "chi": 6
+   }
+  },
+  {
+   "label": "INDEX k=2 with tautology padding",
+   "data": 4,
+   "bob": 2,
+   "gatesA": 17,
+   "gates": 26,
+   "log2N": 4,
+   "mincut": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "portCap": {
+    "old": 4,
+    "plus": 4,
+    "chi": 4
+   },
+   "charges": {
+    "old": 17,
+    "plus": 17,
+    "chi": 17
+   }
+  },
+  {
+   "label": "tautology-inflated local feedback, 8 data",
+   "data": 8,
+   "bob": 3,
+   "gatesA": 35,
+   "gates": 40,
+   "log2N": 3,
+   "mincut": {
+    "old": 8,
+    "plus": 8,
+    "chi": 3
+   },
+   "portCap": {
+    "old": 8,
+    "plus": 8,
+    "chi": 3
+   },
+   "charges": null,
+   "need": 8
+  }
+ ],
+ "random_instances": 160,
+ "sweep": {
+  "circuits": 1500,
+  "plus_tight": 150,
+  "plus_below_old": 0,
+  "max_gates": 25
+ }
+}
+all assertions passed

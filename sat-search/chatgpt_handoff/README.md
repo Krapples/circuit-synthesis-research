@@ -1,3 +1,58 @@
+# Research handoff — compatibility colouring and Bob-entropy causal capacities
+
+Updated 2026-11-26. Base [e67385e](https://github.com/Krapples/circuit-synthesis-research/commit/e67385efdb039b579611901d2f30e8ed2c88d38c). Native-agent round. **L-clb-036 remains open.** There is no superlinear bound, no Lean proof, no production change and no claim of priority. Details are in [causal_compat_handoff.md](causal_compat_handoff.md).
+
+## Current results
+
+- **Audit.** The committed causal response-cut theorem, the vertex-split flow and the additive inverse-capacity charge were audited independently and are sound. The audit checked data-dependent feedback in the reconstruction, the quantifier on A-only paths, Bob ownership of the output, metadata placement in the one-active-group lookup, and charging each gate at most once. Both committed replays reproduce byte for byte. The charge does not need an integral flow, which the next results rely on.
+- **Compatibility colouring (Theorem 1).**
+  - Data assignments conflict at a cut vertex v if, for the same allowed y, they produce the same actual reverse history and different values of v.
+  - Proper colourings at any A-only cut K encode x, and equal colour vectors give equal residuals.
+  - Hence log2 N <= Σ_K log2 χ_v. Nothing assumes that a history realizable for one assignment is realizable for another.
+- **Bob-entropy capacity (Lemma 2).**
+  - χ_v <= min(#T_v, #G_v), where G_v(x) is the function y -> v(x,y).
+  - #G_v <= 2^(2^μ(v)), where μ(v) is the minimum number of data-free vertices meeting every path from Bob's varying primaries to v.
+  - The structural, non-circular capacity is c⁺(v) = min(|D(v)|, 2^|R(v)|, 2^μ(v)) <= c(v).
+  - For fixed data, feedback carries only Bob's entropy, so data-dependent echo wires no longer inflate the capacity.
+- **Strict rejections.**
+  - Echo topologies (A forwards parities, B returns data-dependent wires gated by one Bob vertex) pass the old min cut with |S| = 16, 35, 66, 133. c⁺ gives 12, 15, 18, 21 and rejects them.
+  - The committed all-feedback topology is now rejected at the ports (2k vs M), where previously only an internal cut rejected it.
+- **Refined charge (Theorem 3).** Any per-vertex capacity κ that is valid on all cuts gives s_A >= Σ_i d_i^κ under injectivity, by a fractional flow decomposition. With κ = c⁺ the charge is never lower than before. Corollary: s_A >= |S| L / 2^h when every data-to-port path has at least L gates with min(|R|, μ) <= h.
+- **Limits.**
+  - Tautological Bob dependence fools both structural capacities; the semantic χ rejects it. Normalized circuits exclude that particular padding, but robust structural μ is open.
+  - Ceiling: a sound charge on a restriction f_ρ never exceeds C(f_ρ). Every restriction family built so far is quasi-linear (cubic only in the regimes built), so this route cannot give n^1.01 with them.
+  - The missing premise (PF_ε) is a SAT restriction and partition with Σ d^{c⁺} >= n^(1+ε) for every circuit. It is sufficient, not necessary, and unproved.
+  - On natural small circuits the refined charges equalled the old ones. On INDEX mux trees in A the charge equals s_A exactly.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [causal_compat_handoff.md](causal_compat_handoff.md) | Audit, Theorems 1 and 3, Lemma 2, controls, ceiling, open premises |
+| [causal_compat_check.js](causal_compat_check.js), [replay](causal_compat_replay.txt) | Independent checker: exact T/G counts, conflict colouring, colour decoder, μ by max-flow, three real-capacity flows, charges, controls |
+| [causal_response_handoff.md](causal_response_handoff.md), [checker](causal_response_check.js) | Committed theorem (audited) |
+
+Run from this directory:
+
+    node causal_compat_check.js
+
+Seed 870031:
+
+- 170 analysed instances (160 random signed AIGs), 1,036 vertices, 859 cuts, 142,760 colour-decoder evaluations, 32 injective charge checks.
+- 1,500-circuit falsification sweep testing log2 N <= mincut(c⁺) <= mincut(c).
+- Controls: echo k = 2..7, local and all-feedback k = 4..7, INDEX mux trees, a programmable switch network, an enabled lookup, and tautology padding.
+- All assertions passed.
+
+## Native-agent priority
+
+Look for a SAT restriction family with no known quasi-linear circuit that still forces long low-μ data paths, or for a structural μ that is robust under normalization. Do not treat c⁺ rejections of specified topologies as size bounds, and do not add charges over overlapping partitions. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — cross-history quotient and optimal capacitated charges
 
 Updated 2026-11-26. Base [47dca20](https://github.com/Krapples/circuit-synthesis-research/commit/47dca200e6096b38706b7ecea866be0c921c2287). **L-clb-036 remains open.** This round captures correlations across different histories even when each history has full response rank, and optimizes additive gate charges while respecting simultaneous flow constraints. Explicit unbounded separations, including a quasi-linear-size candidate family. No unrestricted superlinear numerical size bound, Lean verification, production change, or literature-priority claim.
