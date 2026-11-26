@@ -91,6 +91,14 @@ for suffix, flags in CONE_VARIANTS.items():
     COUNTER_MODES[f'base-count-const-{suffix}'] = (*COUNTER_MODES['base-count-const'], *flags)
     RESIDUAL_MODES[f'slack-three-phase-set-lift1-count-const-{suffix}'] = (
         *RESIDUAL_MODES['slack-three-phase-set-lift1-count-const'], *flags)
+# Hybrid (--hybrid-witness W): cone-free witness pass with W conflicts per budget, then cone proofs of the
+# skipped budgets below the verified upper bound. W = 100k is fixed a priori (5% of the extended per-call
+# limit), not tuned on the targets. 'hyb-slice' runs the proof pass with guarded cone-on / cone-off slices.
+HYBRID_VARIANTS = {'hyb': ('--hybrid-witness', '100000'),
+                   'hyb-slice': ('--hybrid-witness', '100000', '--restriction-cone-slice', '20000')}
+for suffix, flags in HYBRID_VARIANTS.items():
+    RESIDUAL_MODES[f'slack-three-phase-set-lift1-count-const-liveall-ess-{suffix}'] = (
+        *RESIDUAL_MODES['slack-three-phase-set-lift1-count-const-liveall-ess'], *flags)
 
 
 def exact_tables(n, steps):
@@ -166,13 +174,19 @@ def run(exe, mode, name, n, tt, care, method, seconds, conflicts, budget=None, s
         open_budget = final.get('last_k', (budgets[-1] + 1) if budgets else None)
     else:
         status, reason = final['final'], final.get('reason', '')
-        pending = incomplete_record(rows)
+        # A hybrid SAT run has capped witness-pass records below the minimum; they were proved later.
+        pending = incomplete_record(rows) if status != 'SAT' else None
         open_budget = pending['k'] if pending else None
-    if status == 'SAT':
+    upper_bound = None
+    if status == 'SAT' or final.get('upper_bound', -1) >= 0:
+        # A hybrid TIMEOUT also carries the witness of its verified upper bound.
         gates, output = parse_percy_chain(n, final)
-        assert final['aig'] and len(gates) == final['steps'] and verify(n, tt, care, gates, output), (cmd, final)
+        steps = final['steps'] if status == 'SAT' else final['upper_bound']
+        assert final['aig'] and len(gates) == steps and verify(n, tt, care, gates, output), (cmd, final)
+        upper_bound = steps
     return dict(name=name, n=n, tt=hexstr(n, tt), care=hexstr(n, care), mode=mode, budget=budget, start=start,
-                method=method, status=status, reason=reason, open_budget=open_budget, wall_seconds=elapsed,
+                method=method, status=status, reason=reason, open_budget=open_budget, upper_bound=upper_bound,
+                wall_seconds=elapsed,
                 peak_bytes=peak, conflicts_limit=conflicts, conflict_scope=conflict_scope, wall_limit=seconds,
                 driver_deadline=driver_deadline, records=rows)
 

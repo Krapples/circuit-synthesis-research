@@ -2093,9 +2093,9 @@ Conflicts on the hard UNSAT budgets:
 - **Default.** Keep `--restriction-live` and `--restriction-essential` opt-in. The pruning is real on
   refutations, but the SAT-side variance makes the end-to-end result mixed, and the direction is not
   archived.
-- **Budget-phase activation.** Use the cone constraints only on budgets below a known upper bound, or
-  only after the first CEGAR model at a budget fails. This targets the proving side without slowing the
-  witness search. It needs no new soundness argument.
+- **Budget-phase activation.** Implemented as `--hybrid-witness` (next section). The cone is used only on
+  budgets below a verified upper bound; the end-to-end result is inconclusive because the witness side
+  is heavy-tailed.
 - **Coupled restrictions (A5).** The 69 models still surviving live8+ess8 are the test set. The
   candidates are joint surviving cones over restriction pairs, overlap of eliminated gates and pair
   budgets.
@@ -2116,3 +2116,125 @@ python sat-search/baselines/first_layer_check.py check sat-search/results/baseli
 python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_long_cone.jsonl --logs sat-search/logs/tier_long_cone --tier long --workers 8 --modes slack-three-phase-set-lift1-count-const slack-three-phase-set-lift1-count-const-ess slack-three-phase-set-lift1-count-const-live2-ess slack-three-phase-set-lift1-count-const-liveall-ess
 python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_extended_cone.jsonl --logs sat-search/logs/tier_extended_cone --tier extended --workers 10 --modes slack-three-phase-set-lift1-count-const-liveall-ess
 ```
+
+## Proof-only cone activation: witness / proof schedule (opt-in, inconclusive end to end)
+
+This follows the budget-phase item above. Witness discovery and lower-bound certification are separate:
+
+- lift1 + constant counters search for a verified upper bound;
+- the cone counters and essential reachability are used only to prove budgets below that upper bound
+  infeasible.
+
+The default stays off. The plain ladder (no `--hybrid-witness`) is the unrestricted fallback configuration
+and is unchanged.
+
+### Schedule (`percy_run --hybrid-witness W`)
+
+Percy builds a fresh encoding and solver for each budget k, so each phase gets its own solver instance. No
+permanent clause is disabled.
+
+1. **Witness pass.** Budgets run in ascending order, cone-free (lift1 + const only), with a per-budget
+   conflict cap W (`reason: witness_cap`).
+   - A capped budget is put on a skipped list.
+   - The first SAT budget gives the upper bound U, and its chain is checked independently by the harness.
+   - If no budget was skipped, U is the minimum, exactly as in the plain ladder.
+2. **Second pass.** The skipped budgets run in ascending order with the normal per-call limits.
+   - When U exists and k < U, the cone constraints are on (`phase: proof`).
+   - Otherwise the run is cone-free and has no cap (`phase: fallback`). This happens when no witness was
+     found, or for the skipped budgets above U, which are never run because U already bounds them.
+   - The first SAT budget in this pass is the minimum.
+   - If every skipped budget below U is UNSAT, the result is U.
+3. **Timeout.** A run that times out reports `upper_bound` (the chain is printed and verified) and leaves
+   the budgets between the last UNSAT and U open.
+
+**Soundness.** The cone constraints hold in every chain of size k that computes f (the cone section above
+proves this). So an UNSAT answer with them is a valid UNSAT for budget k. U comes from a verified chain.
+Neither phase ever reads unknown as UNSAT.
+
+**Optional slicing (`--restriction-cone-slice S`).** This is the assumption-literal variant, tried inside
+one solver.
+- Every cone clause is guarded as `(¬a ∨ C)`.
+- Solving alternates slices: a assumed (cone on) for S conflicts, then ¬a (cone off). The slice doubles
+  after each off slice.
+- UNSAT under a is UNSAT for the budget, because the guarded clauses are valid. SAT under ¬a is an
+  ordinary chain, and CEGAR checks it as usual.
+- Learned clauses that depend on the cone carry ¬a, so they are inert in off slices.
+
+**Benchmark caps.** W = 100k (5% of the extended tier's 2M per-call limit) and S = 20k were fixed before
+any run. Known optima were not used.
+
+### Verification
+
+`experiments/hybrid_ladder_check.py` covers 16 targets with known minima: 8 three-input and 8 four-input,
+including 0116, 6996, 1668 and 1ee1. It compares four configurations:
+
+- the control;
+- W = 1, which forces every non-trivial budget through the skip / proof path;
+- W = 1 with slicing at S = 50;
+- W = 100.
+
+All minima match the control: 64 jobs and 0 mismatches, in two runs (`logs/hybrid_ladder_check*.out`). The
+harness verifies the chain of every SAT result and of every timeout that carries `upper_bound`.
+
+### Targeted extended-tier runs (300 s, 2M per call)
+
+These cover the three priority targets. `L` is `slack-three-phase-set-lift1-count-const`, and the hybrid
+modes add `-liveall-ess-hyb` and `-liveall-ess-hyb-slice`.
+
+| Target | Mode | Result | Wall s | Key budgets (conflicts) |
+| --- | --- | --- | ---: | --- |
+| 1686 | L (archived control) | SAT 9 | 224 | k=8 UNSAT 246k |
+| 1686 | hyb | SAT 9 | 151 | witness gives U=10; proof k=8 UNSAT 138k; proof k=9 SAT 1.30M |
+| 1686 | hyb-slice | SAT 9 | 101 | proof k=8 UNSAT 197k; proof k=9 SAT 739k |
+| 1669 | L (archived control) | SAT 10 | 66 | k=9 UNSAT 61k |
+| 1669 | hyb (fallback build) | SAT 10 | 72 | witness k=9 UNSAT 61k (cone-free); k=10-12 capped; fallback k=10 SAT 773k |
+| 1669 | hyb-slice (fallback build) | SAT 10 | 72 | identical to hyb |
+| 166b | L (archived control) | SAT 10 | 66 | k=9 UNSAT 308k; k=10 SAT 184k |
+| 166b | hyb (fallback build) | SAT 10 | 88 | fallback k=9 UNSAT 290k; k=10 SAT 679k; 86 MiB |
+| 166b | hyb-slice (fallback build) | TIMEOUT, 10 open | 300 | same as hyb up to k=10; fallback k=10 at 1.82M (wall deadline) |
+
+The first build sent skipped budgets through the cone even without an upper bound, which violates the
+proof-only rule.
+- In that build, the proof k=9 for 166b was UNSAT in 83k (hyb) and 147k (hyb-slice), but k=10 stayed open.
+- 1669 found 10 in 73 s and 133 s.
+- The fallback rule was then added, and 166b and 1669 were rerun. 1686 was not rerun, since it had U from
+  the witness pass and is unchanged.
+
+**Witness-pass overhead.** Every capped budget up to the ladder maximum is tried before the second pass.
+- On 166b, k=9-12 cost 542k conflicts and give no witness. On 1669, k=10-12 cost 309k.
+- A capped budget's recorded conflicts exceed W by up to 60%, at 160k for 166b k=9. The cause is not
+  investigated.
+- A cheaper schedule would stop the witness pass after a few capped budgets, or grow W geometrically.
+
+**Heavy tail on the witness side.** Three identical fixed-budget control runs (166b, k=10, lift1 + const,
+300 s each) all timed out, at 2.33M, 2.22M and 2.63M conflicts (`logs/determinism_166b_k10.out`).
+- The control's 184k in the archived tier run was therefore a lucky draw, not typical.
+- hyb-slice's timeout on the identical cone-free fallback call is the same tail.
+- `percy_run.cpp` has no randomized or time-dependent decisions. The variation comes from the
+  solver-side state: memory differed from run to run (70-91 MB), and the runs share CPU time.
+
+### Assessment
+
+- **Proving side.** Where the schedule reaches a proof budget, the cone cuts conflicts as before (1686 k=8:
+  246k down to 138k and 197k). 1686 also reaches its minimum faster.
+- **End to end.** The witness side dominates and is heavy-tailed.
+  - With W = 100k, 166b and 1669 find no witness, so they fall back to cone-free search and gain nothing.
+  - The result is 1 faster, 1 equal and 1 mixed. That is no clear success, so the planned ten-target
+    extended evaluation was not run.
+- **Next.** A matched comparison needs repeated runs per target, because single runs cannot separate the
+  configurations.
+  - The more useful lever is an upper bound that does not come from the ladder, such as a heuristic or
+    construction chain, so that every hard budget becomes a proof budget.
+  - The schedule already accepts that case unchanged, through the `upper` path.
+
+### Hybrid commands
+
+```powershell
+python sat-search/experiments/hybrid_ladder_check.py
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_extended_hybrid_targeted.jsonl --logs sat-search/logs/tier_extended_hybrid_targeted --tier extended --workers 6 --targets npn4-166b npn4-1669 npn4-1686 --modes slack-three-phase-set-lift1-count-const-liveall-ess-hyb slack-three-phase-set-lift1-count-const-liveall-ess-hyb-slice
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_extended_hybrid_fallback.jsonl --logs sat-search/logs/tier_extended_hybrid_fallback --tier extended --workers 4 --targets npn4-166b npn4-1669 --modes slack-three-phase-set-lift1-count-const-liveall-ess-hyb slack-three-phase-set-lift1-count-const-liveall-ess-hyb-slice
+python sat-search/experiments/determinism_check.py 166b 10 3 300
+```
+
+`tier_extended_hybrid_targeted.jsonl` was produced by the first build (before the fallback rule). Its 1686
+rows are the current result; its 166b and 1669 rows are superseded by `tier_extended_hybrid_fallback.jsonl`.

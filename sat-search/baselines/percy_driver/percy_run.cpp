@@ -33,6 +33,15 @@
 //                    provably constant operand are at least L(f o pi)
 //   --restriction-essential : with --restriction-counters, every input essential in all completions of f o pi
 //                    must be reached from the output through gates that are not provably constant
+//   --restriction-cone-slice S : guard the cone caps and essential units by a literal a (live counters keep their
+//                    deletion cap unguarded) and alternate every SAT call between slices assuming a and assuming !a,
+//                    S conflicts each, doubling after each pair; both phases share learned clauses
+//   --hybrid-witness W : separate witness discovery from lower-bound proofs. Pass 1 runs the budgets upward with
+//                    the cone constraints off (the plain counters), each budget capped at W conflicts; a capped
+//                    budget is skipped until a verified witness gives an upper bound U. Pass 2 then proves the
+//                    skipped budgets below U in increasing order with the cone constraints on (a new encoding
+//                    per budget). Without a witness up to --max, pass 2 runs the skipped budgets cone-free
+//                    and uncapped (the unrestricted fallback).
 //   --complement-inputs auto : synthesize f with every input complemented whose x_i := 1 cofactor costs more than
 //                    its x_i := 0 cofactor (puts the stronger bound at zero); the chain is mapped back
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
@@ -132,12 +141,19 @@ struct Extra {
     bool restriction_essential = false;
     std::vector<bool> counter_live;
     std::vector<std::vector<int>> counter_essential;
+    int cone_slice = 0;  // > 0: guard the cone constraints and alternate guarded / unguarded solve slices
+    int hybrid_witness = 0;  // > 0: per-budget conflict cap of the cone-free witness pass (see --hybrid-witness)
     bool complement_inputs = false;
 };
 
 // Per-budget restriction counter encoding size (set by encode_counters).
 struct CounterStats { int restrictions = 0, live = 0, essential = 0, vars = 0, clauses = 0, negative_cap = 0; double seconds = 0; };
 static CounterStats g_counter;
+// Guard literal a of the cone constraints when --restriction-cone-slice is on (else -1), and per-budget slice
+// statistics: slices run, and the phase (cone on / off) that decided each SAT or UNSAT answer.
+static int g_cone_guard = -1;
+struct SliceStats { int slices = 0, on_sat = 0, on_unsat = 0, off_sat = 0, off_unsat = 0; };
+static SliceStats g_slice;
 
 // Per-budget restriction certificate counters.
 struct RestrictionStats {
@@ -296,6 +312,7 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
                             const Extra& ex) {
     const auto t0 = clk::now();
     g_counter = {};
+    g_cone_guard = -1;
     const int vars0 = cs.next;
     const size_t clauses0 = cs.clauses.size();
     const int n = sp.get_nr_in(), k = sp.nr_steps;
@@ -305,6 +322,9 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
     bool any_reach = false;
     for (size_t r = 0; r < ex.counters.size(); ++r)
         any_reach |= ex.counter_live[r] || !ex.counter_essential[r].empty();
+    if (any_reach && ex.cone_slice > 0) g_cone_guard = fresh();
+    const int ga = g_cone_guard >= 0 ? g_cone_guard ^ 1 : -1;  // !a, prepended to every guarded clause
+    const auto guarded = [&](std::vector<int> c) { if (ga >= 0) c.insert(c.begin(), ga); cs.add(std::move(c)); };
     // use[t][pos][w] is implied by every pair of step t whose operand pos is wire w (shared by all restrictions).
     std::vector<std::array<std::vector<int>, 2>> use(k);
     for (int t = 0; t < k; ++t) {
@@ -430,7 +450,7 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
         }
         for (int j : essential) {
             if (reach[j] == F) { g_counter.negative_cap = 1; return false; }  // cannot happen: every step reads inputs
-            if (reach[j] != T) cs.add({reach[j]});
+            if (reach[j] != T) guarded({reach[j]});
         }
         if (!live) { cs.at_most(deleted, cap); ++g_counter.restrictions; continue; }
         std::vector<int> dropped;  // !kept_g, at most cap of them
@@ -443,7 +463,8 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
             dropped.push_back(kept ^ 1);
         }
         if (cap - lost < 0) { g_counter.negative_cap = 1; return false; }
-        cs.at_most(dropped, cap - lost);
+        cs.at_most(dropped, cap - lost, ga);
+        if (ga >= 0) cs.at_most(deleted, cap);  // the unguarded phase keeps the deletion cap
         ++g_counter.restrictions;
         ++g_counter.live;
     }
@@ -1038,6 +1059,14 @@ static int run_main(int argc, char** argv) {
             if (ex.restriction_live == 0 || ex.restriction_live < -1) { fprintf(stderr, "expected --restriction-live all or N > 0\n"); return 2; }
         }
         else if (a == "--restriction-essential") ex.restriction_essential = true;
+        else if (a == "--hybrid-witness") {
+            ex.hybrid_witness = std::stoi(next());
+            if (ex.hybrid_witness <= 0) { fprintf(stderr, "expected --hybrid-witness W > 0\n"); return 2; }
+        }
+        else if (a == "--restriction-cone-slice") {
+            ex.cone_slice = std::stoi(next());
+            if (ex.cone_slice <= 0) { fprintf(stderr, "expected --restriction-cone-slice S > 0\n"); return 2; }
+        }
         else if (a == "--complement-inputs") {
             if (next() != "auto") { fprintf(stderr, "expected --complement-inputs auto\n"); return 2; }
             ex.complement_inputs = true;
@@ -1151,6 +1180,15 @@ static int run_main(int argc, char** argv) {
     }
     if ((ex.restriction_counters || ex.complement_inputs) && (n < 2 || n > 6)) {
         fprintf(stderr, "--restriction-counters and --complement-inputs need 2-6 inputs\n");
+        return 2;
+    }
+    if (ex.hybrid_witness && !ex.restriction_live && !ex.restriction_essential) {
+        fprintf(stderr, "--hybrid-witness needs --restriction-live or --restriction-essential\n");
+        return 2;
+    }
+    if (ex.hybrid_witness && budget >= 0) { fprintf(stderr, "--hybrid-witness needs a ladder, not --budget\n"); return 2; }
+    if (ex.cone_slice && !ex.restriction_live && !ex.restriction_essential) {
+        fprintf(stderr, "--restriction-cone-slice needs --restriction-live or --restriction-essential\n");
         return 2;
     }
     if ((ex.restriction_live || ex.restriction_essential) && !ex.restriction_counters) {
@@ -1306,6 +1344,7 @@ static int run_main(int argc, char** argv) {
     sp.preprocess();
     std::string final_status = "UNSAT";
     int found = -1;
+    int upper = -1;  // hybrid: smallest budget with a verified witness so far
     if (sp.nr_triv == sp.get_nr_out()) {        // constant or projection: zero steps
         c.reset(sp.get_nr_in(), sp.get_nr_out(), 0, sp.fanin);
         c.set_output(0, (sp.triv_func(0) << 1) + (sp.out_inv & 1));
@@ -1328,8 +1367,29 @@ static int run_main(int argc, char** argv) {
             capture.reset(fopen(ex.capture_models.c_str(), "wx"));
             if (!capture) { fprintf(stderr, "cannot create %s\n", ex.capture_models.c_str()); return 2; }
         }
-        for (int k = lo; k <= hi; k++) {
+        // Hybrid schedule (--hybrid-witness): pass 0 is the plain ladder; pass 1 the cone-free witness pass, pass 2
+        // the cone proofs of the budgets pass 1 skipped. ex_witness is ex with every cone constraint removed.
+        Extra ex_witness = ex;
+        ex_witness.counter_live.assign(ex.counter_live.size(), false);
+        for (auto& e : ex_witness.counter_essential) e.clear();
+        ex_witness.cone_slice = 0;
+        int pass = ex.hybrid_witness ? 1 : 0;
+        std::vector<int> skipped;
+        size_t next_skipped = 0;
+        for (int k = lo;;) {
+            if (pass == 2) {
+                if (next_skipped == skipped.size()) break;
+                k = skipped[next_skipped++];
+            } else if (k > hi) {
+                if (pass == 1 && !skipped.empty()) { pass = 2; continue; }
+                break;
+            }
+            // The cone constraints are used only to prove budgets below a verified upper bound. Without one,
+            // pass 2 runs the skipped budgets with the unrestricted (cone-free) fallback, uncapped.
+            const bool proving = pass == 2 && upper >= 0 && k < upper;
+            const Extra& exk = pass == 0 || proving ? ex : ex_witness;
             g_current_k = k;
+            g_slice = {};
             auto tk = clk::now();
             sp.nr_steps = k;
             solver->restart();
@@ -1349,10 +1409,38 @@ static int run_main(int argc, char** argv) {
                     limit -= solver->nr_conflicts() - conflicts_before;
                     if (limit <= 0) { reason = "conflict_limit"; return timeout; }
                 }
+                bool capped = false;  // the witness-pass cap is the binding limit of this call
+                if (pass == 1) {
+                    const int left = ex.hybrid_witness - (solver->nr_conflicts() - conflicts_before);
+                    if (left <= 0) { reason = "witness_cap"; return timeout; }
+                    if (limit <= 0 || left <= limit) { limit = left; capped = true; }
+                }
                 ++sat_calls;
-                const auto result = solver->solve(limit);
+                synth_result result;
+                if (g_cone_guard < 0) result = solver->solve(limit);
+                else {
+                    // Alternate cone-on (assume a) and cone-off (assume !a) slices. UNSAT under a is UNSAT: the
+                    // guarded clauses hold in every chain. Learned clauses that use them carry !a.
+                    int slice = ex.cone_slice, used = 0;
+                    bool on = true;
+                    while (true) {
+                        int lim = slice;
+                        if (limit > 0) lim = std::min(lim, limit - used);
+                        if (lim <= 0) { result = timeout; break; }
+                        pabc::lit assume = on ? g_cone_guard : g_cone_guard ^ 1;
+                        const int c0 = solver->nr_conflicts();
+                        ++g_slice.slices;
+                        result = solver->solve(&assume, &assume + 1, lim);
+                        used += solver->nr_conflicts() - c0;
+                        if (result == success) { ++(on ? g_slice.on_sat : g_slice.off_sat); break; }
+                        if (result == failure) { ++(on ? g_slice.on_unsat : g_slice.off_unsat); break; }
+                        if (out_of_time()) break;
+                        if (!on) slice = slice > (1 << 29) ? slice : 2 * slice;
+                        on = !on;
+                    }
+                }
                 if (result != success && result != failure)
-                    reason = out_of_time() ? "wall_deadline" : "conflict_limit";
+                    reason = out_of_time() ? "wall_deadline" : capped ? "witness_cap" : "conflict_limit";
 #ifdef USE_SATOKO
                 if (satoko_backend) decisions += satoko::satoko_stats(satoko_backend->solver)->n_decisions;
 #endif
@@ -1376,7 +1464,7 @@ static int run_main(int argc, char** argv) {
             double residual_seconds = residual ? since(residual_start) : 0;
             if (!cegar) {
                 const bool encoded = enc.encode(sp) &&
-                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features, typed_steps, thresholds);
+                    add_extra(enc, sp, *solver, exk, layer, extra_clauses, layer_features, typed_steps, thresholds);
                 encoding_seconds = since(tk);
                 if (!encoded) st = "UNSAT";
                 else {
@@ -1386,7 +1474,7 @@ static int run_main(int argc, char** argv) {
                 }
             } else {
                 const bool encoded = enc.cegar_encode(sp) &&
-                    add_extra(enc, sp, *solver, ex, layer, extra_clauses, layer_features, typed_steps, thresholds);
+                    add_extra(enc, sp, *solver, exk, layer, extra_clauses, layer_features, typed_steps, thresholds);
                 encoding_seconds = since(tk);
                 if (!encoded) st = "UNSAT";
                 else {
@@ -1518,6 +1606,7 @@ static int run_main(int argc, char** argv) {
                    "\"conflict_limit\":%d,\"conflict_scope\":\"%s\",\"wall_limit\":%.3f,",
                    k, st.c_str(), reason.c_str(), since(g_run_start), sat_calls, sp.conflict_limit,
                    budget_conflicts ? "budget" : "call", wall_seconds);
+            if (ex.hybrid_witness) printf("\"phase\":\"%s\",", pass == 1 ? "witness" : proving ? "proof" : "fallback");
             printf("\"seconds\":%.6f,\"extra_clauses\":%d,"
                    "\"encoding_seconds\":%.6f,\"cegar_rows\":%d,\"conflicts\":%d,\"vars\":%d,\"clauses\":%d",
                    since(tk), extra_clauses, encoding_seconds, cegar_rows,
@@ -1577,6 +1666,9 @@ static int run_main(int argc, char** argv) {
                        "\"counter_clauses\":%d,\"counter_seconds\":%.6f,\"counter_negative_cap\":%d,\"complement_mask\":%u",
                        g_counter.restrictions, g_counter.live, g_counter.essential, g_counter.vars, g_counter.clauses,
                        g_counter.seconds, g_counter.negative_cap, complement_mask);
+            if (ex.cone_slice)
+                printf(",\"cone_slices\":%d,\"cone_on_sat\":%d,\"cone_on_unsat\":%d,\"cone_off_sat\":%d,\"cone_off_unsat\":%d",
+                       g_slice.slices, g_slice.on_sat, g_slice.on_unsat, g_slice.off_sat, g_slice.off_unsat);
             if (slack_two && ex.decoder_phase)
                 printf(",\"two_decoder\":[%llu,%llu,%llu,%llu,%llu]",
                        static_cast<unsigned long long>(residual->two_decoder.screens),
@@ -1637,16 +1729,30 @@ static int run_main(int argc, char** argv) {
 #endif
             printf("}\n");
             fflush(stdout);
+            if (pass == 1) {
+                if (st == "SAT") {
+                    upper = k;
+                    if (skipped.empty()) { final_status = "SAT"; final_reason = "sat"; found = k; break; }
+                    pass = 2;  // c keeps the witness at U unless a skipped budget turns out SAT
+                    continue;
+                }
+                if (st == "TIMEOUT" && reason == "witness_cap") { skipped.push_back(k); ++k; continue; }
+            }
             if (st == "SAT") { final_status = "SAT"; final_reason = "sat"; found = k; break; }
             if (st == "TIMEOUT") { final_status = "TIMEOUT"; final_reason = reason; break; }
+            if (pass != 2) ++k;
         }
+        // Every skipped budget below U is UNSAT: U is the minimum.
+        if (upper >= 0 && found < 0 && final_status != "TIMEOUT") { final_status = "SAT"; final_reason = "sat"; found = upper; }
     }
     double total = since(t0);
     if (found == 0) final_reason = "sat";
     printf("{\"final\":\"%s\",\"reason\":\"%s\",\"last_k\":%d,\"steps\":%d,\"seconds\":%.6f,"
            "\"target_constraints_seconds\":%.6f,\"distinction_clauses\":%zu", final_status.c_str(),
            final_reason.c_str(), g_current_k, found, total, target_constraints_seconds, layer.clauses.size());
-    if (found >= 0 && complement_mask) {
+    if (ex.hybrid_witness) printf(",\"upper_bound\":%d", found >= 0 ? found : upper);
+    const bool have_chain = found >= 0 || upper >= 0;
+    if (have_chain && complement_mask) {
         // Map the chain of f(x ^ mask) back to f: complementing an operand that reads a complemented input
         // permutes the operator's truth table (operand 0 = index bit 0, operand 1 = index bit 1). Verified
         // against the given table and care set; operators stay AND-type but need not be normal.
@@ -1680,7 +1786,7 @@ static int run_main(int argc, char** argv) {
         for (size_t i = 0; i < mapped.size(); i++)
             printf("%s[%d,%d,%d]", i ? "," : "", mapped[i][0], mapped[i][1], mapped[i][2]);
         printf("],\"out\":[%d,%d]", out >> 1, out & 1);
-    } else if (found >= 0) {
+    } else if (have_chain) {
         auto sim = c.simulate()[0];
         bool ok = dc_hex.empty() ? sim == tt : ((sim ^ tt) & ~dc) == kitty::create<kitty::dynamic_truth_table>(n);
         printf(",\"aig\":%s,\"verified\":%s,\"chain\":[", c.is_aig() ? "true" : "false", ok ? "true" : "false");
