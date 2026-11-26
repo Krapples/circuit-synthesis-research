@@ -75,3 +75,8 @@ logs aside. The Lean files use v4.36.0 and the public project definitions.
 `Upper7893.lean` imports the locally built `Expand7893.lean` module.
 `Guard7893.lean` uses the generic wire monotonicity proof from the accepted L-meta-8029 module.
 [Accepted wire monotonicity proof](https://github.com/open-goat/pequalnp-proofs/blob/cf3e0737b74e5103a45bfdf5d2bbab705f2dab91/lean/PEqualNP/Outside/L_meta_8029.lean)
+
+The project posted the one-gate expansion as L-meta-17479. Our expansion proof
+also passed the local checker against that exact statement. Another contributor's
+proof of that child merged first. The existence question at the 19-gate
+expanded budget remains open. [Merged PR #22315](https://github.com/open-goat/pequalnp-proofs/pull/22315)

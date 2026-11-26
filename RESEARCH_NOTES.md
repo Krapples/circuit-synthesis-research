@@ -6,6 +6,11 @@ The project uses exact synthesis and analytical lower bounds to study small Bool
 latest cross-family benchmark shows that frontier bounds transfer beyond graph functions, including
 to 3-uniform hypergraphs. The main open shard is L-meta-1343 at size 19.
 
+For the cubic-graph case L-meta-5020, Lean checked that a false restriction at the
+designated two-reader input saves four gates or leaves one of two local reader
+patterns. An exclusive internal operand of the AND reader also yields a
+four-gate saving. [Reader analysis and proof scope](sat-search/results/cubic_gate_elimination_5020/README.md)
+
 For the eleven-vertex top-form graph in L-meta-4081, Lean checked the edge-charge inequality
 with at most four uncovered edges. It also checked that one mixing OR with support of size
 at least two forces all uncovered edges to share a vertex when there are no centreless tops.
@@ -34,9 +39,10 @@ factorized star-cover form. The unrestricted budget of 27 remains open.
 [Proof, witness, and search coverage](sat-search/results/fano_final_and_4874/README.md)
 
 The order-three projective-plane step L-meta-9063 has a merged reduction
-to two six-line circuits with budgets 28 and 29. Lean checked the 29-gate witness.
-The 28-gate budget remains open under L-meta-17641. The project posted the
-29-gate obligation as L-meta-17643. [Merged PR #22166](https://github.com/open-goat/pequalnp-proofs/pull/22166).
+to two six-line circuits with budgets 28 and 29. The 29-gate child L-meta-17643
+has a merged proof. The 28-gate child L-meta-17641 and the 14-gate probe of its
+smaller seeded grid remain open. [Merged reduction](https://github.com/open-goat/pequalnp-proofs/pull/22166)
+[Merged 29-gate proof](https://github.com/open-goat/pequalnp-proofs/pull/22337)
 [Reduction, search coverage, and related accepted methods](sat-search/results/pg3_seeded_boundary_9063/README.md)
 
 **Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%

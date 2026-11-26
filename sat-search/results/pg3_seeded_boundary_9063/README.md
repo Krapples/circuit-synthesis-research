@@ -33,6 +33,8 @@ It uses three OR gates and one AND for each four-point line, then five OR
 gates to join the six stars. The proof evaluates the circuit on symbolic inputs
 and checks that the list of 24 expanded edges is exactly the modular incidence
 relation. The supplied point-pair OR is unused in this witness.
+The project's 29-gate child closed when another contributor's proof merged.
+[Merged PR #22337](https://github.com/open-goat/pequalnp-proofs/pull/22337)
 
 ## Search coverage
 
@@ -48,6 +50,26 @@ output path.
 
 ```powershell
 python -B sat-search/results/pg3_seeded_boundary_9063/search-half.py new-half-search.jsonl
+```
+
+The 28-gate half consists of three retained lines through point 1 and three
+through point 2. The only intersection between two lines of the same family
+is their hub. Opposite families meet in the nine cells of a 3 × 3 grid.
+Each six-line star implementation uses 24 gates for its stars and five for
+the final OR.
+
+The 2 × 2 subgrid has four lines and two hub inputs, four grid inputs,
+and the supplied hub OR. Its four three-point stars give a 15-gate upper
+bound. The 14-gate AND/OR query has 12 positive and 12 negative boundary
+rows. Independent permutations of the two rows and two columns, together with
+transposition, give 13 orbits of first-gate input pairs. Each orbit was tested
+with both operations. All 26 shards timed out under a 75-second limit per
+active solve using 22 workers. The logs record 28,142,429 conflicts and
+40,491,986 decisions across the shards. Peak memory was not measured.
+[Raw records](seeded-grid2-14.jsonl)
+
+```powershell
+python -B sat-search/results/pg3_seeded_boundary_9063/search-grid2.py new-grid2-14.jsonl
 ```
 
 ## Patterns from accepted PRs
