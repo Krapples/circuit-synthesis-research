@@ -15,6 +15,10 @@
 //   --cost-aware M  cost-aware second encoders (cost_aware.py Marginal with full-cone reuse): 1 = reference
 //                   construction only (mode 0 / mode 1 replace native b and reuse), 2 = portfolio added to the native
 //                   modes (default 0 = off); --ca-branch K splits explored per Marginal.solve node (default 2)
+//   --reduce        exact standalone partial reductions (zero section / literal peel / signed pair module) before the
+//                   partial oracle
+//   --reduce-wide   with --reduce, also pass 7..8-input queries to the oracle (used when their core has <= 6 inputs)
+//   --canon         cache oracle cores by incomplete signed-permutation / output-phase normalization
 //   --audit         per target, aggregate the feature-quotient audit of every tested first encoder ("audit" key)
 // Fallback: the smaller of FALLBACK_SPEC (verified) and the native witness (lifted for n > 6); partial Shannon if
 // neither. Every emitted witness is evaluated row by row against the target before it is printed. Native,
@@ -31,6 +35,7 @@
 
 #include "../src/cofactor_witness.hpp"
 #include "../src/orientation_witness.hpp"
+#include "../src/partial_reduce.hpp"
 
 using Clock = std::chrono::steady_clock;
 static double since(Clock::time_point t) { return std::chrono::duration<double>(Clock::now() - t).count(); }
@@ -38,6 +43,7 @@ static double since(Clock::time_point t) { return std::chrono::duration<double>(
 int main(int argc, char** argv) {
   int first_cap = -1, pair_cap = 8, reuse = -1, root_slack = 2, depth = 7, partial_sites = 0, cost_aware = 0,
       ca_branch = 2;
+  bool reduce = false, canon = false, reduce_wide = false;
   bool native = true, from_stdin = false, min_support_orient = false, support_project = false, audit = false;
   for (int i = 1; i < argc; ++i) {
     std::string a = argv[i];
@@ -54,6 +60,9 @@ int main(int argc, char** argv) {
     else if (a == "--audit") audit = true;
     else if (a == "--cost-aware" && i + 1 < argc) cost_aware = std::stoi(argv[++i]);
     else if (a == "--ca-branch" && i + 1 < argc) ca_branch = std::stoi(argv[++i]);
+    else if (a == "--reduce") reduce = true;
+    else if (a == "--canon") canon = true;
+    else if (a == "--reduce-wide") reduce = reduce_wide = true;
     else if (a == "--stdin") from_stdin = true;
     else { std::cerr << "unknown option " << a << "\n"; return 2; }
   }
@@ -68,17 +77,67 @@ int main(int argc, char** argv) {
       }
       return *T;
     };
-    std::map<std::tuple<int, cofactor::u64, cofactor::u64>, orient::Witness> partial_memo;
-    double partial_seconds = 0;
+    // Partial oracle: optional exact reductions to a core, optional normalized core cache, native constructor on the
+    // core (3..6 inputs) or Shannon (<= 2 inputs), lift, and an independent care-set check of the lifted chain.
+    std::map<std::tuple<int, orient::TT, orient::TT>, std::optional<orient::Witness>> partial_memo;
+    std::map<std::tuple<int, orient::TT, orient::TT>, cofactor::Witness> core_cache;
+    double partial_seconds = 0, reduce_seconds = 0;
+    long rq_calls = 0, rq_reduced = 0, rq_removed = 0, rq_trivial = 0, rq_wide = 0, rq_misses = 0, rq_offset = 0;
+    std::array<long, 9> rq_in{}, rq_core{};
     auto partial = [&](const orient::TT& p, const orient::TT& c, int k) -> std::optional<orient::Witness> {
-      auto key = std::make_tuple(k, p.w[0], c.w[0]);
+      auto key = std::make_tuple(k, p & c, c);
       if (auto it = partial_memo.find(key); it != partial_memo.end()) return it->second;
       auto t0 = Clock::now();
-      cofactor::Witness w = cofactor::synthesize(table(), k, p.w[0], c.w[0], true, 8, root_slack);
+      ++rq_calls;
+      ++rq_in[k];
+      preduce::Core core;
+      if (reduce) {
+        auto r0 = Clock::now();
+        core = preduce::greedy(p, c, k);
+        reduce_seconds += since(r0);
+      } else {
+        core.n0 = core.n = k; core.p0 = core.p = p & c; core.c0 = core.c = c;
+      }
+      ++rq_core[core.n];
+      if (!core.steps.empty()) { ++rq_reduced; rq_removed += long(core.steps.size()); rq_offset += core.offset(); }
+      if (core.trivial()) ++rq_trivial;
+      std::optional<orient::Witness> res;
+      if (core.n > 6) {
+        ++rq_wide;
+      } else {
+        auto solve_core = [&](orient::AIG& aig, const orient::TT& q, const orient::TT& d, const std::vector<int>& vs) {
+          int m = int(vs.size());
+          if (m < 3 || !(q & d).any() || (q & d) == d) return aig.solve(q, d, vs);
+          if (canon) {
+            preduce::Canon K = preduce::canonical(q, d, m);
+            auto ck = std::make_tuple(m, K.q, K.d);
+            auto it = core_cache.find(ck);
+            if (it == core_cache.end()) {
+              ++rq_misses;
+              it = core_cache.emplace(ck, cofactor::synthesize(table(), m, K.q.w[0], K.d.w[0], true, 8, root_slack)).first;
+            }
+            return aig.import(orient::Witness{m, it->second.gates, it->second.output}, preduce::canon_inputs(K, vs)) ^
+                   K.phase;
+          }
+          auto ck = std::make_tuple(m, q & d, d);
+          auto it = core_cache.find(ck);
+          if (it == core_cache.end()) {
+            ++rq_misses;
+            it = core_cache.emplace(ck, cofactor::synthesize(table(), m, q.w[0], d.w[0], true, 8, root_slack)).first;
+          }
+          return aig.import(orient::Witness{m, it->second.gates, it->second.output}, vs);
+        };
+        orient::AIG aig(k);
+        std::vector<int> vs;
+        for (int i = 0; i < k; ++i) vs.push_back(aig.lit(i));
+        int out = preduce::construct(aig, core, 0, vs, solve_core);
+        orient::Witness w = aig.export_cone(out);
+        if (((orient::simulate(w) ^ p) & c).any()) throw std::logic_error("lifted partial witness fails on the care set");
+        res = w;
+      }
       partial_seconds += since(t0);
-      orient::Witness out{k, w.gates, w.output};
-      partial_memo.emplace(key, out);
-      return out;
+      partial_memo.emplace(key, res);
+      return res;
     };
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -126,8 +185,16 @@ int main(int argc, char** argv) {
       opt.first_cap = first_cap > 0 ? first_cap : n <= 6 ? 6 : n == 7 ? 3 : 2;
       opt.pair_cap = pair_cap;
       opt.reuse = reuse < 0 ? n <= 6 : reuse == 1;
-      if (partial_sites) { opt.partial = partial; opt.partial_sites = partial_sites; }
+      if (partial_sites) {
+        opt.partial = partial;
+        opt.partial_sites = partial_sites;
+        if (reduce_wide) opt.partial_max_k = 8;
+      }
       partial_seconds = 0;
+      reduce_seconds = 0;
+      rq_calls = rq_reduced = rq_removed = rq_trivial = rq_wide = rq_misses = rq_offset = 0;
+      rq_in.fill(0);
+      rq_core.fill(0);
       opt.min_support_orient = min_support_orient;
       opt.support_project = support_project;
       opt.cost_aware = cost_aware;
@@ -170,6 +237,19 @@ int main(int argc, char** argv) {
                 << r.stats.ca_calls[0] << "," << r.stats.ca_calls[1] << "],\"ca_better\":" << r.stats.ca_better
                 << ",\"ca_worse\":" << r.stats.ca_worse << ",\"ca_savings\":" << r.stats.ca_savings
                 << "},\"cost_aware\":" << cost_aware << ",\"mode1_size\":" << r.mode1_size << ",\"partial_sites\":" << partial_sites << ",\"partial_seconds\":" << partial_seconds
+                << ",\"reduce\":" << (reduce ? "true" : "false") << ",\"canon\":" << (canon ? "true" : "false")
+                << ",\"reduce_wide\":" << (reduce_wide ? "true" : "false")
+                << ",\"oracle\":{\"calls\":" << rq_calls << ",\"misses\":" << rq_misses << ",\"reduced\":" << rq_reduced
+                << ",\"removed\":" << rq_removed << ",\"offset\":" << rq_offset << ",\"trivial\":" << rq_trivial
+                << ",\"wide\":" << rq_wide << ",\"reduce_seconds\":" << reduce_seconds << ",\"in_width\":[" << [&] {
+                     std::string h;
+                     for (int i = 0; i <= 8; ++i) h += (i ? "," : "") + std::to_string(rq_in[i]);
+                     return h;
+                   }() << "],\"core_width\":[" << [&] {
+                     std::string h;
+                     for (int i = 0; i <= 8; ++i) h += (i ? "," : "") + std::to_string(rq_core[i]);
+                     return h;
+                   }() << "]}"
                 << ",\"min_support_orient\":" << (min_support_orient ? "true" : "false")
                 << ",\"support_project\":" << (support_project ? "true" : "false");
       if (audit)

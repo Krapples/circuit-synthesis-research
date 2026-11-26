@@ -516,6 +516,7 @@ struct Options {
   // (1 = first-encoder bank, 2 = second encoder b, 4 = decoder); the cheaper of oracle and Shannon is kept.
   std::function<std::optional<Witness>(const TT&, const TT&, int)> partial;
   int partial_sites = 7;
+  int partial_max_k = 6;  // widest query passed to the oracle (an oracle with a reduction pre-pass may take 7..8)
   // Opt-in minimum-support orientation filter: compute the orientation-free minimum Y-support s* of b over the
   // two-class buckets (quotient theorem, conflict-directed search) and build b only for orientations whose own
   // fixed-target minimum support equals s* (a nonempty subset; all orientations when the search is not feasible).
@@ -553,7 +554,8 @@ inline Result search(const TT& t, int n, const Witness& fallback, const Options&
   auto synth = [&](int site, const TT& p, const TT& c, const std::vector<int>& lits) {
     int q = aig.solve(p, c, lits);
     int k = int(lits.size());
-    if (opt.partial && (opt.partial_sites & site) && k >= 3 && k <= 6 && (p & c).any() && (p & c) != c) {
+    if (opt.partial && (opt.partial_sites & site) && k >= 3 && k <= opt.partial_max_k && (p & c).any() &&
+        (p & c) != c) {
       if (auto w = opt.partial(p & c, c, k)) {
         if (w->n != k) throw std::logic_error("partial oracle returned a chain of the wrong width");
         int q2 = aig.import(*w, lits);

@@ -264,13 +264,96 @@ to report. These are upper bounds only.
 
 Records: `results/orientation/bench_*_{ca2,ca2p7}.jsonl` and `logs/orientation/bench_*_{ca2,ca2p7}.out`.
 
+## Phase 5: exact partial reductions and a normalized core cache before the oracle (native follow-up handoff)
+
+Source: the follow-up handoff `README(1).md`, items 1 and 2. Before the port, the partial-oracle path had no partial
+or module preprocessing. The `module` code in `regional_kernel` / `restriction_certificate` concerns graph
+modules, not this path.
+
+**Rules** (`native/src/partial_reduce.hpp`). Each rule removes one input i, with an exact offset for *standalone*
+minima K (independent primary inputs, free complements):
+
+* **zero**, offset 0: the two cofactors agree on their overlap, and a constant or signed surviving literal covers the
+  merged care. Consistency alone only gives an upper bound.
+* **peel**, offset 1: i is mandatory, the neutral slice is nonconstant on care, and the opposite slice is constant
+  on care.
+* **module**, offset 1: i is mandatory, the neutral slice g is nonconstant, and the opposite slice, with its two x_j
+  slices merged, is covered by the x_j = v slice of g with equal labels.
+
+`greedy` repeats the least rule in the reference order. `construct` lifts any core chain: a module adds its gate
+before the core and a peel after it; a zero rule only drops the input. `canonical` / `inverse` give the incomplete
+signed-permutation and output-phase normalization: input statistics are sorted with ties kept and complete masks
+compared, so normalization never merges inequivalent tables, though it can miss equivalences.
+
+**Hook** (`orientation_synth`, all opt-in). In the partial oracle:
+
+* `--reduce` reduces, then solves the core: native constructor for 3..6 inputs, Shannon for <= 2 inputs or
+  constants.
+* `--canon` caches cores by canonical key.
+* `--reduce-wide` also passes 7..8-input queries; the oracle returns nothing when the core still has more than
+  6 inputs.
+
+The lifted chain is checked on the original care set before it is returned. The existing synth site still keeps the
+cheaper of oracle and Shannon. The raw memo key now uses the full table, not `w[0]`. Per target, the JSON `oracle`
+key records calls, constructor misses, reduced queries, removed inputs, offsets, wide rejections, reduction time,
+and input and core width histograms.
+
+**Checks.**
+
+* *Proved here by exhaustive computation:* `preduce_check --exact3` computes exact standalone minima of all 256
+  three-input functions by breadth-first search over column sets modulo complement (max K = 6). It then checks
+  every partial table on 1..3 inputs (6,651 tables):
+  * every applicable rule satisfies K(f) = K(g) + offset: 6,252 zero, 5,984 peel and 4,832 module rules, the
+    handoff's counts exactly;
+  * every completion of every reduced table lifts row by row to agree with f on care (148,952 rows);
+  * the greedy core lifts to a valid chain;
+  * canonical keys round-trip and preserve K.
+
+  All checks pass with 0 failures.
+* *Differential:* `experiments/partial_reduce_check.py` compares 4,000 random and planted queries on 4..8 inputs
+  (seed 1) with the handoff's Python `greedy` / `canonical`. Core width, table, steps, offset and canonical key
+  match with 0 mismatches, and every lifted Shannon chain is valid on care. Planted (random-AIG) queries reduce
+  78-89% of the time; uniform random 7..8-input queries never reduce.
+
+**Benchmarks.** Matched sets, same seeds, run concurrently in two waves. Baseline is the strongest native mode,
+`--native-partial 7 --support-project`. Each cell gives total verified gates, oracle seconds, and constructor
+misses:
+
+| Set | baseline | `--reduce` | `--canon` | both |
+| --- | --- | --- | --- | --- |
+| n5 random (60) | 806, 201 s, 59,944 | 806, 191 s, 51,761 | 805 (2 wins, 1 loss), 173 s, 36,086 | 805, 155 s, 32,632 |
+| n7 random (12) | 655, 292 s, 14,136 | 655, 185 s, 13,155 | 655 (3 wins, 3 losses), 229 s, 12,301 | 655, 170 s, 12,239 |
+| n7 bundle (15) | 357, 131 s, 9,799 | 357, 69 s, 5,744 | **361** (1 win, 3 losses), 91 s, 5,632 | 361, 62 s, 4,813 |
+| n8 bundle (6) | 280, 19 s, 2,824 | 280, 1.7 s, 408 | 280, 3.1 s, 711 | 280, 0.8 s, 236 |
+
+* Reduction time is 0.04-0.37 s per set.
+* `--reduce` left every witness size unchanged on all 93 targets. This is measured, not guaranteed: the core is
+  solved by the same heuristic constructor. Core width histograms are in the records; for example, the n7 bundle's
+  6,392 six-input queries leave 2,985 six-input cores.
+* `--canon` changes heuristic quality in both directions, net +4 gates on the n7 bundle, as the handoff warned.
+  Keep it off for quality runs.
+* `--reduce-wide` on the n8 bundle passed 3,584 seven-input queries. 1,435 stayed wider than 6, the oracle time rose
+  19 -> 32 s, and no size changed. It stays separate and off.
+* Recommendation: use `--reduce` with `--native-partial` (37-91% less oracle time on the three non-n5 sets, and a
+  lossless measurement). All three flags stay opt-in.
+
+**Not implemented:** handoff items 3 (decoder-aware ranking) and 4 (deadline pruning). The handoff marks them
+optional. The orientation path has no small-budget exact encoder enumerator for item 4 to prune, and item 3 would
+need near-minimal encoder candidates that the current bank does not rank. The AND/XOR split was omitted, as advised.
+
+Records: `results/orientation/bench_*_{p7spB,rd,cn,rdcn}.jsonl` and `bench_n8_bundle_rdw.jsonl`, with logs beside
+them.
+
 ## Limits and open questions
 
 * The partial oracle covers only 3..6 inputs, so the n = 8 b and bank stages (7 inputs) need a 7-input partial
-  constructor, or a lift on care sets.
+  constructor, or a lift on care sets. Exact reductions bring 60% of the n8-bundle 7-input queries down to <= 6, with
+  no size gain so far.
 * A constructive AND-split backend for b is open: build the two operands over Y_A and Y_B from a passing root
   partition.
-* The oracle time is the bottleneck. Its memo hit rate across targets is not yet tuned.
+* The oracle time is still the bottleneck on random targets, where reductions rarely apply. A canonical cache that
+  keeps the better of the canonical and raw witness would avoid the `--canon` quality losses, at the cost of extra
+  misses.
 
 ## Reproduction
 
@@ -284,6 +367,9 @@ python -B sat-search/experiments/orientation_check.py bench OUT --input <td>/inp
 python -B sat-search/experiments/orientation_check.py replay OUT --input ... --exe-args="--audit"
 python -B sat-search/experiments/orientation_check.py replay OUT --input <td>/input_pilot.jsonl <td>/input_heldout.jsonl <td>/eight_generated.jsonl --reference <ca outputs> --exe-args="--cost-aware 1 --first-cap 3 --pair-cap 5 --reuse"
 python -B sat-search/experiments/orientation_check.py bench OUT --random 5:60:5101 --exe-args="--cost-aware 2 --native-partial 7"
+sat-search/native/preduce_check.exe --exact3
+python -B sat-search/experiments/partial_reduce_check.py --reference <dir with the handoff reduce.py> --count 400 --seed 1
+python -B sat-search/experiments/orientation_check.py bench OUT --input <td>/input_pilot.jsonl <td>/input_heldout.jsonl --min-n 7 --max-n 7 --with-spec --exe-args="--native-partial 7 --support-project --reduce"
 ```
 
 Random seeds: 5101 / 6101 / 7101 / 8101 for n = 5 / 6 / 7 / 8.
