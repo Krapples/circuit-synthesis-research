@@ -174,8 +174,8 @@ The new files have no string literals, no `#` commands and no `set_option`. They
   They need no exact circuit minima and no Percy UNSAT certificates, so the finite weights can be checked
   by direct truth-table evaluation in the kernel.
 
-- the 2n-o(n) route (below): existence of a `PS_d` table by counting, the unit-clause helper identity,
-  and the explicit finite inequality. The gate-elimination part is `block_restriction_lower`.
+- the 2n-o(n) route (below): connect the encoded block positions to the coordinate restriction,
+  fit the blocks and padding at the target length, and prove the resulting asymptotic estimate.
 
 The claim-2/3 route (funnel lemma, absorbing elimination, canalizing replacement) is no longer needed for
 claim 5. The tails still need their own case analysis.
@@ -402,7 +402,28 @@ word is `L = 2r + 8` bits. The SAT value is then `AND_j g(x_j)`, and padding use
 theorem, which is not formalized. That theorem is not needed. Robustness implies `PS_d`: two distinct
 cofactors on `x_v`, given `x_u = c`, mean `x_v` still matters. `block_restriction_lower` then gives
 `B(SAT_n) >= (n - qr) + 3q(r - d + 1) = n + q(2r - 3d + 3)` directly, which is one gate better than the
-README's form. Only the gate elimination is Lean-checked. The SAT-side premises are not (see the gaps list).
+README's form.
+
+**Lean milestones for the robust route (2026-11-26).**
+
+- [PairSensitiveCounting.lean](lean/CircuitLemmas/PairSensitiveCounting.lean) proves
+  `exists_PS_logarithmic`. For every block of width `r ≥ 8`, there is a table that depends only on
+  that block and is `PS_d` for `d = floor(log₂ r) + 5`. The proof overcounts the events by
+  `3^r · r² · 2`, including all partial assignments. For each valid event it counts disjoint pairs
+  of truth-table entries forced to agree by injecting the bad tables into tables with one endpoint
+  of each pair removed. This supplies a convenient sufficient threshold and does not certify the
+  optimized threshold reported below.
+- [UnitClauses.lean](lean/SatBridge/UnitClauses.lean) proves the helper identity against external
+  `encodeCNF` and `SAT`. The fixed-high-one identifiers are injective and their units have length
+  `2r+8`. Positive units on identifiers 0, 1 and 2 fill every even remainder of at least six, and
+  avoid the fixed-high-one identifiers for `r ≥ 2`.
+- [RobustRestriction.lean](lean/SatBridge/RobustRestriction.lean) proves the conditional finite
+  bound `n + q max(0, 2r-3d+3)` for the external counted AND/OR/NOT model at `n = 6Q`, `Q ≥ 2`.
+  It uses the checked transfer, L037, and the disjoint-block elimination theorem. The coordinate
+  identity relating the restricted input string to the block product is an explicit premise.
+
+Replay with the pinned Lean 4.36.0 Lake workspace using `lake build SatBridge` and
+`lake env lean SatBridgeAxioms.lean` from `sat-search/lean`.
 
 **Weaker existence condition.** `PS_d` needs only `4 * C(d,2)` inequalities per `d`-dimensional
 subcube, not robustness's 6 per pair. The exact union bound `C(r,d) 2^(r-d) * 2d(d-1) * 2^(-2^(d-2)) < 1`
@@ -410,7 +431,7 @@ gives a smaller `d`: for example `d = 7` at `r = 16` and `d = 8` at `r = 24`, ag
 `ceil(log2(4r)) + 2`.
 
 **Finite threshold.** `experiments/ps_block_threshold.py` (`logs/ps_block_threshold.out`) maximizes the
-explicit bound over `r`. It first beats `floor(17n/12) - 4` at `n = 2^32` with the union-bound `d`, and at
+explicit bound over `r` at powers of two. It first beats `floor(17n/12) - 4` at `n = 2^32` with the union-bound `d`, and at
 `2^35` with the README `d`. Below that, 17n/12 remains the best proved bound. The coefficient tends to 2
 only like `1 - O(log log n / log n)`.
 
