@@ -73,6 +73,43 @@ omitting `0,2,7,8,31,32,37,39`, verifies its incidences in the kernel, and prove
 argument. This is a scoped bound for the L-meta-8267 model. Combined mathematically with the
 checked simulation, it also lower-bounds the number of OR gates in the original model.
 
+**Symmetry strengthens the bound to 34.** For any first instruction, one can choose a cyclic
+translate of that 34-vertex cover on which its first operand cannot contribute a label merger.
+If that operand contains two distinct incidence edges, it either has no common center or has
+one unique common center. Some translate omits that center, so the operand is unavailable.
+If it contains just one incidence edge, another translate keeps both endpoints in the cover.
+That edge is then absent from the private-edge set. An operand containing no incidence edges
+is disjoint from the private set on every cover. The first instruction preserves all 34
+distinct labels on the chosen cover, and the remaining list still needs at least 33 merges.
+Lean checks the translated covers and the proof. This addresses the first instruction only.
+
+**Exact scope with independent operand centers.** Mark a center if one of the program's
+operands lies in its star and contains at least two incidences. If the marked centers form an
+independent set, choose their complement as the vertex cover. The only initial sets queried
+by the program contain at most one incidence. Initial availability of all other sets can be
+discarded because each instruction consults exactly its two named operands. Lean checks this
+equivalence along the fold and obtains 104 using the full set of 105 incidences as distinct labels.
+Thus every sub-104 program must use star operands on two adjacent centers.
+
+The mathematical extension replaces each endpoint outside the marked centers by a fresh leaf
+for its incidence. The resulting graph has 105 edges, and its non-leaf subgraph lies inside the
+marked center subgraph. Any cover of the new graph induces a cover of the old graph by taking
+the same marked centers and all unmarked original vertices. Project each operand to the new
+edges corresponding to its original incidences. A queried set that was initially available and
+contained two or more incidences had a marked center, and that center remains available in the
+new graph. A singleton incidence is always available. Subset and union implications are
+preserved throughout the fold.
+
+If the marked center subgraph is a forest, so is the new graph. The converse cover simulation
+would turn its projected program into a monotone circuit using at most one OR per instruction.
+For a nontrivial forest, delete a leaf while some edge remains. Along a path from that leaf input
+to the output, the first OR can be removed under the zero restriction, since the preceding ANDs
+hold the operand at false. Such a path must contain an OR, or the restricted function would be
+identically false. Induction on edges gives at least `|E|−1` ORs for the forest. This proves on
+paper that a sub-104 program must have a cycle of marked centers. The independent-center case
+above is checked in Lean and the forest extension still needs formalization. The next counting
+problem concerns programs with an induced center core containing a cycle.
+
 **Low merges can be shared even when every OR operand is critical.** Choose two different points
 on each of the 21 lines. Build one OR tree from the first chosen edge on each line and another
 from the second. Merge the two outputs with one OR. At each one-hot line restriction this gate
@@ -91,7 +128,8 @@ At a center with `t` participating AND gates and `m` assigned edges, at least `m
 are needed. Otherwise merging the initial singleton labels could not make the `m` leaves lie in
 the at most `t` output components. Top OR gates need at least the number of participating AND
 outputs minus one. Summing proves 104 for this form and allows arbitrary sharing inside a center.
-The missing step for this route is an OR-cost-preserving normalization of arbitrary circuits.
+`output_cover_lower_bound` in Lean proves the shared multi-output `m−t` count. The missing step
+for the two-level route is an OR-cost-preserving normalization of arbitrary circuits.
 
 **Converse to the cover simulation.** For a fixed instruction list, write `A_i(S,Z)` for the
 availability of `S` after `i` instructions on `Z`. Then
@@ -103,7 +141,8 @@ predicate is a conjunction of its initial failure and all applicable instruction
 realizes `¬A_final(E,Z)` with one OR per instruction. On a cover the final availability assumption
 makes failure false. On a noncover each available set contains only covered edges, so failure is
 true. Thus the union formulation preserves the exact OR objective in both directions. The
-relabelling lemma above is checked locally. This converse is currently a mathematical argument.
+relabelling lemma and the complemented step identity are checked locally. The full circuit
+construction in this converse is currently a mathematical argument.
 
 ## Bounded diagnostics and proof transfer
 

@@ -93,6 +93,69 @@ theorem private_edge_lower_bound (P : Finset α) (F : Set (Set α)) (R : List (S
   rw [Finset.image_id] at bound
   omega
 
+theorem output_cover_lower_bound (P : Finset α) (F : Set (Set α)) (R : List (Set α × Set α))
+    (initial : Consistent P F id) (outputs : Finset (Finset α))
+    (available : ∀ S ∈ outputs, (S : Set α) ∈ R.foldl step F)
+    (cover : ∀ a ∈ P, ∃ S ∈ outputs, a ∈ S) : P.card ≤ R.length + outputs.card := by
+  classical
+  obtain ⟨g, hg, bound⟩ := fold_labels P F R id initial
+  let labels (S : Finset α) := (P.filter fun a => a ∈ S).image g
+  have small (S : Finset α) (hS : S ∈ outputs) : (labels S).card ≤ 1 := by
+    apply Finset.card_le_one.mpr
+    intro a ha b hb
+    obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp ha
+    obtain ⟨y, hy, rfl⟩ := Finset.mem_image.mp hb
+    obtain ⟨hx, hx'⟩ := Finset.mem_filter.mp hx
+    obtain ⟨hy, hy'⟩ := Finset.mem_filter.mp hy
+    exact hg S (available S hS) x hx y hy hx' hy'
+  have contain : P.image g ⊆ outputs.biUnion labels := by
+    intro a ha
+    obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp ha
+    obtain ⟨S, hS, hx'⟩ := cover x hx
+    exact Finset.mem_biUnion.mpr ⟨S, hS, Finset.mem_image.mpr ⟨x, Finset.mem_filter.mpr ⟨hx, hx'⟩, rfl⟩⟩
+  have final : (P.image g).card ≤ outputs.card := calc
+    _ ≤ (outputs.biUnion labels).card := Finset.card_le_card contain
+    _ ≤ ∑ S ∈ outputs, (labels S).card := Finset.card_biUnion_le
+    _ ≤ ∑ S ∈ outputs, 1 := Finset.sum_le_sum small
+    _ = outputs.card := by simp
+  rw [Finset.image_id] at bound
+  omega
+
+omit [DecidableEq α] in
+theorem availability_complement_step (F : Set (Set α)) (r : Set α × Set α) (S : Set α) :
+    S ∉ step F r ↔ S ∉ F ∧ (S ⊆ r.1 ∪ r.2 → r.1 ∉ F ∨ r.2 ∉ F) := by
+  classical
+  change ¬ (S ∈ F ∨ _) ↔ _
+  tauto
+
+omit [DecidableEq α] in
+theorem first_idle (P : Finset α) (F : Set (Set α)) (r : Set α × Set α)
+    (initial : Consistent P F id) (inactive : r.1 ∉ F ∨ ∀ x ∈ P, x ∉ r.1) :
+    Consistent P (step F r) id := by
+  intro S hS x hx y hy hx' hy'
+  rcases hS with old | ⟨ha, hb, add⟩
+  · exact initial S old x hx y hy hx' hy'
+  · rcases inactive with no | avoid
+    · exact (no ha).elim
+    · exact initial r.2 hb x hx y hy
+        ((add hx').resolve_left (avoid x hx)) ((add hy').resolve_left (avoid y hy))
+
+omit [DecidableEq α] in
+theorem restrict_start (R : List (Set α × Set α)) (F G : Set (Set α)) (T : Set α)
+    (matchTarget : T ∈ F ↔ T ∈ G)
+    (matchOperands : ∀ r ∈ R, (r.1 ∈ F ↔ r.1 ∈ G) ∧ (r.2 ∈ F ↔ r.2 ∈ G)) :
+    T ∈ R.foldl step F ↔ T ∈ R.foldl step G := by
+  induction R generalizing F G with
+  | nil => exact matchTarget
+  | cons r R ih =>
+    obtain ⟨a, b⟩ := matchOperands r (by simp)
+    have update (S : Set α) (same : S ∈ F ↔ S ∈ G) : S ∈ step F r ↔ S ∈ step G r := by
+      change (_ ∨ _) ↔ (_ ∨ _)
+      rw [same, a, b]
+    exact ih (step F r) (step G r) (update T matchTarget) (fun s hs => by
+      obtain ⟨h₁, h₂⟩ := matchOperands s (by simp [hs])
+      exact ⟨update s.1 h₁, update s.2 h₂⟩)
+
 abbrev Vertex := Fin 42
 abbrev Edge := Vertex × Vertex
 
@@ -114,6 +177,17 @@ def privateEdges : Finset Edge :=
 
 def start (Z : Set Vertex) : Set (Set Edge) :=
   {S | S = ∅ ∨ ∃ v ∈ Z, ∀ e ∈ S, e.1 = v ∨ e.2 = v}
+
+theorem selected_cover : ∀ e : Edge, incidence e → selected e.1 ∨ selected e.2 := by decide +kernel
+
+theorem private_per_center : ∀ v : Vertex, selected v →
+    (privateEdges.filter fun e => e.1 = v ∨ e.2 = v).card ≤ 1 := by decide +kernel
+
+theorem private_incident : ∀ e ∈ privateEdges, incidence e := by decide +kernel
+
+theorem private_size : privateEdges.card = 34 := by decide +kernel
+
+theorem private_not_both : ∀ e ∈ privateEdges, ¬ (selected e.1 ∧ selected e.2) := by decide +kernel
 
 theorem rectangle_equality_shape (s t : Fin 22)
     (bound : 25 * s.val ≤ (21 - t.val) * (s.val + 4))
@@ -139,19 +213,187 @@ theorem pg4_union_lower_bound (R : List (Set Edge × Set Edge))
     (hR : ∀ Z : Set Vertex,
       (∀ e : Edge, incidence e → e.1 ∈ Z ∨ e.2 ∈ Z) →
       {e | incidence e} ∈ R.foldl step (start Z)) : 33 ≤ R.length := by
-  have isCover : ∀ e : Edge, incidence e → selected e.1 ∨ selected e.2 := by decide +kernel
-  have privateCount : ∀ v : Vertex, selected v →
-      (privateEdges.filter fun e => e.1 = v ∨ e.2 = v).card ≤ 1 := by decide +kernel
-  have hP : ∀ e ∈ privateEdges, incidence e := by decide +kernel
-  have hcard : privateEdges.card = 34 := by decide +kernel
   have init : Consistent privateEdges (start {v | selected v}) id := by
     intro S hS a ha b hb ha' hb'
     rcases hS with empty | ⟨v, hv, hv'⟩
     · exact (empty ▸ ha').elim
-    · exact Finset.card_le_one.mp (privateCount v hv) a
+    · exact Finset.card_le_one.mp (private_per_center v hv) a
         (Finset.mem_filter.mpr ⟨ha, hv' a ha'⟩) b (Finset.mem_filter.mpr ⟨hb, hv' b hb'⟩)
   have lower := private_edge_lower_bound privateEdges _ R init {e | incidence e}
-    (fun _ he => hP _ he) (hR {v | selected v} isCover)
+    private_incident (hR {v | selected v} selected_cover)
+  rw [private_size] at lower
+  omega
+
+def cyclicShift (k : Fin 21) : Equiv.Perm Vertex :=
+  finSumFinEquiv.symm.trans (((Equiv.addRight k).sumCongr (Equiv.addRight k)).trans finSumFinEquiv)
+
+def edgeShift (k : Fin 21) : Equiv.Perm Edge :=
+  (cyclicShift k).prodCongr (cyclicShift k)
+
+theorem shift_incidence (k : Fin 21) (e : Edge) : incidence (edgeShift k e) ↔ incidence e := by
+  exact (by decide +kernel : ∀ t : Fin 21, ∀ a b : Vertex,
+    incidence (edgeShift t (a, b)) ↔ incidence (a, b)) k e.1 e.2
+
+theorem shift_can_omit (v : Vertex) : ∃ k : Fin 21, ¬ selected (cyclicShift k v) :=
+  (by decide +kernel : ∀ a : Vertex, ∃ k : Fin 21, ¬ selected (cyclicShift k a)) v
+
+theorem shift_can_keep (e : Edge) : ∃ k : Fin 21,
+    selected (cyclicShift k e.1) ∧ selected (cyclicShift k e.2) :=
+  (by decide +kernel : ∀ a b : Vertex, ∃ k : Fin 21,
+    selected (cyclicShift k a) ∧ selected (cyclicShift k b)) e.1 e.2
+
+theorem unique_common_center {x y : Edge} (hx : incidence x) (hy : incidence y) (neq : x ≠ y)
+    {a b : Vertex} (xa : x.1 = a ∨ x.2 = a) (ya : y.1 = a ∨ y.2 = a)
+    (xb : x.1 = b ∨ x.2 = b) (yb : y.1 = b ∨ y.2 = b) : a = b := by
+  have leftRight (u : Vertex) : u = x.1 → u = y.2 → False := by
+    intro hu hv
+    have h := congrArg Fin.val (hu.symm.trans hv)
+    have := hx.1
+    have := hy.2.1
+    omega
+  have rightLeft (u : Vertex) : u = x.2 → u = y.1 → False := by
+    intro hu hv
+    have h := congrArg Fin.val (hu.symm.trans hv)
+    have := hx.2.1
+    have := hy.1
+    omega
+  have same (u : Vertex) (h₁ : x.1 = u ∨ x.2 = u) (h₂ : y.1 = u ∨ y.2 = u) :
+      (x.1 = u ∧ y.1 = u) ∨ (x.2 = u ∧ y.2 = u) := by
+    rcases h₁ with g | g <;> rcases h₂ with h | h
+    · exact Or.inl ⟨g, h⟩
+    · exact (leftRight u g.symm h.symm).elim
+    · exact (rightLeft u g.symm h.symm).elim
+    · exact Or.inr ⟨g, h⟩
+  rcases same a xa ya with ⟨ha, ha'⟩ | ⟨ha, ha'⟩ <;>
+    rcases same b xb yb with ⟨hb, hb'⟩ | ⟨hb, hb'⟩
+  · exact ha.symm.trans hb
+  · exact (neq (Prod.ext (ha.trans ha'.symm) (hb.trans hb'.symm))).elim
+  · exact (neq (Prod.ext (hb.trans hb'.symm) (ha.trans ha'.symm))).elim
+  · exact ha.symm.trans hb
+
+def shiftedCover (k : Fin 21) : Set Vertex := {v | selected (cyclicShift k v)}
+
+def shiftedPrivate (k : Fin 21) : Finset Edge := privateEdges.map (edgeShift k).symm.toEmbedding
+
+theorem mem_shifted_private (k : Fin 21) (e : Edge) :
+    e ∈ shiftedPrivate k ↔ edgeShift k e ∈ privateEdges := by
+  simp [shiftedPrivate]
+
+theorem shifted_private_incidence (k : Fin 21) {e : Edge} (he : e ∈ shiftedPrivate k) : incidence e := by
+  exact (shift_incidence k e).mp (private_incident _ ((mem_shifted_private k e).mp he))
+
+theorem shifted_private_not_both (k : Fin 21) {e : Edge} (he : e ∈ shiftedPrivate k) :
+    ¬ (e.1 ∈ shiftedCover k ∧ e.2 ∈ shiftedCover k) := by
+  exact private_not_both _ ((mem_shifted_private k e).mp he)
+
+theorem shifted_cover_valid (k : Fin 21) (e : Edge) (he : incidence e) :
+    e.1 ∈ shiftedCover k ∨ e.2 ∈ shiftedCover k := by
+  exact selected_cover (edgeShift k e) ((shift_incidence k e).mpr he)
+
+theorem shifted_initial (k : Fin 21) : Consistent (shiftedPrivate k) (start (shiftedCover k)) id := by
+  intro S hS a ha b hb ha' hb'
+  rcases hS with empty | ⟨v, hv, hv'⟩
+  · exact (empty ▸ ha').elim
+  have both (e : Edge) (he : e ∈ shiftedPrivate k) (he' : e ∈ S) :
+      edgeShift k e ∈ privateEdges.filter (fun p => p.1 = cyclicShift k v ∨ p.2 = cyclicShift k v) := by
+    refine Finset.mem_filter.mpr ⟨(mem_shifted_private k e).mp he, ?_⟩
+    exact (hv' e he').imp (congrArg (cyclicShift k)) (congrArg (cyclicShift k))
+  exact (edgeShift k).injective
+    (Finset.card_le_one.mp (private_per_center _ hv) _ (both a ha ha') _ (both b hb hb'))
+
+theorem operand_idle_for_some_shift (A : Set Edge) : ∃ k : Fin 21,
+    A ∉ start (shiftedCover k) ∨ ∀ e ∈ shiftedPrivate k, e ∉ A := by
+  classical
+  by_cases two : ∃ e ∈ A, ∃ f ∈ A, incidence e ∧ incidence f ∧ e ≠ f
+  · obtain ⟨e, he, f, hf, eInc, fInc, distinct⟩ := two
+    by_cases centered : ∃ v : Vertex, ∀ j ∈ A, j.1 = v ∨ j.2 = v
+    · obtain ⟨v, hv⟩ := centered
+      obtain ⟨k, excluded⟩ := shift_can_omit v
+      refine ⟨k, Or.inl ?_⟩
+      intro available
+      rcases available with empty | ⟨u, hu, isCenter⟩
+      · exact (empty ▸ he).elim
+      · have same := unique_common_center eInc fInc distinct (isCenter e he) (isCenter f hf) (hv e he) (hv f hf)
+        exact excluded (same ▸ hu)
+    · refine ⟨0, Or.inl ?_⟩
+      intro available
+      rcases available with empty | ⟨u, _, hu⟩
+      · exact (empty ▸ he).elim
+      · exact centered ⟨u, hu⟩
+  · by_cases single : ∃ e ∈ A, incidence e
+    · obtain ⟨e, he, eInc⟩ := single
+      obtain ⟨k, he₁, he₂⟩ := shift_can_keep e
+      refine ⟨k, Or.inr ?_⟩
+      intro f hf hf'
+      have same : e = f := by
+        by_contra h
+        exact two ⟨e, he, f, hf', eInc, shifted_private_incidence k hf, h⟩
+      exact shifted_private_not_both k hf (same ▸ ⟨he₁, he₂⟩)
+    · exact ⟨0, Or.inr (fun e he ha => single ⟨e, ha, shifted_private_incidence 0 he⟩)⟩
+
+theorem pg4_union_lower_bound_34 (R : List (Set Edge × Set Edge))
+    (hR : ∀ Z : Set Vertex,
+      (∀ e : Edge, incidence e → e.1 ∈ Z ∨ e.2 ∈ Z) →
+      {e | incidence e} ∈ R.foldl step (start Z)) : 34 ≤ R.length := by
+  cases R with
+  | nil => have impossible := pg4_union_lower_bound [] hR; simp at impossible
+  | cons r R =>
+    obtain ⟨k, idle⟩ := operand_idle_for_some_shift r.1
+    have full := hR (shiftedCover k) (shifted_cover_valid k)
+    have cost := private_edge_lower_bound (shiftedPrivate k) (step (start (shiftedCover k)) r)
+      R (first_idle _ _ _ (shifted_initial k) idle) {e | incidence e}
+      (fun _ hx => shifted_private_incidence k hx) full
+    simpa [shiftedPrivate, private_size, Nat.add_comm] using cost
+
+def allEdges : Finset Edge := Finset.univ.filter incidence
+
+def operandCenters (R : List (Set Edge × Set Edge)) : Set Vertex :=
+  {v | ∃ r ∈ R, ∃ A : Set Edge, (A = r.1 ∨ A = r.2) ∧
+    (∃ e ∈ A, ∃ f ∈ A, incidence e ∧ incidence f ∧ e ≠ f) ∧
+    ∀ e ∈ A, e.1 = v ∨ e.2 = v}
+
+theorem not_all_initial (Z : Set Vertex) : {e | incidence e} ∉ start Z := by
+  intro h
+  have e : ((0, 21) : Edge) ∈ {e | incidence e} := by decide +kernel
+  have f : ((1, 22) : Edge) ∈ {e | incidence e} := by decide +kernel
+  rcases h with empty | ⟨v, _, center⟩
+  · exact (empty ▸ e).elim
+  · rcases center (0, 21) e with h | h <;> rcases center (1, 22) f with k | k
+    all_goals exact (by decide +kernel : (0 : Vertex) ≠ 1 ∧ (0 : Vertex) ≠ 22 ∧
+      (21 : Vertex) ≠ 1 ∧ (21 : Vertex) ≠ 22).elim (fun h₁ h₂ => by
+        first | exact h₁ (h.trans k.symm) | exact h₂.1 (h.trans k.symm) |
+          exact h₂.2.1 (h.trans k.symm) | exact h₂.2.2 (h.trans k.symm))
+
+theorem independent_operand_centers_lower_bound (R : List (Set Edge × Set Edge))
+    (independent : ∀ e : Edge, incidence e → ¬ (e.1 ∈ operandCenters R ∧ e.2 ∈ operandCenters R))
+    (hR : ∀ Z : Set Vertex,
+      (∀ e : Edge, incidence e → e.1 ∈ Z ∨ e.2 ∈ Z) →
+      {e | incidence e} ∈ R.foldl step (start Z)) : 104 ≤ R.length := by
+  classical
+  let Z : Set Vertex := (operandCenters R)ᶜ
+  let T : Set Edge := {e | incidence e}
+  let thin (A : Set Edge) := ∀ e ∈ A, ∀ f ∈ A, incidence e → incidence f → e = f
+  let F : Set (Set Edge) := {A | A ∈ start Z ∧ thin A}
+  have cover (e : Edge) (he : incidence e) : e.1 ∈ Z ∨ e.2 ∈ Z := not_and_or.mp (independent e he)
+  have transfer : ∀ r ∈ R, (r.1 ∈ start Z ↔ r.1 ∈ F) ∧ (r.2 ∈ start Z ↔ r.2 ∈ F) := by
+    intro r hr
+    have test (A : Set Edge) (hA : A = r.1 ∨ A = r.2) : A ∈ start Z ↔ A ∈ F := by
+      constructor
+      · intro ha
+        refine ⟨ha, ?_⟩
+        intro e he f hf eInc fInc
+        by_contra distinct
+        rcases ha with empty | ⟨v, hv, centered⟩
+        · exact (empty ▸ he).elim
+        · exact hv ⟨r, hr, A, hA, ⟨e, he, f, hf, eInc, fInc, distinct⟩, centered⟩
+      · exact fun h => h.1
+    exact ⟨test r.1 (Or.inl rfl), test r.2 (Or.inr rfl)⟩
+  have final : T ∈ R.foldl step F :=
+    (restrict_start R (start Z) F T ⟨fun h => (not_all_initial Z h).elim, fun h => h.1⟩ transfer).mp (hR Z cover)
+  have init : Consistent allEdges F id := fun A hA e he f hf he' hf' =>
+    hA.2 e he' f hf' (Finset.mem_filter.mp he).2 (Finset.mem_filter.mp hf).2
+  have count := private_edge_lower_bound allEdges F R init T (fun _ he => (Finset.mem_filter.mp he).2) final
+  have concrete : allEdges.card = 105 := by decide +kernel
   omega
 
 end CoverUnion4653
