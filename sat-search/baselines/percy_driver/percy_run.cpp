@@ -28,6 +28,11 @@
 //                    constant restriction pi (x_i := 0 for zero; both constants for const; per input the constant
 //                    with the larger restricted cost for anchor) the gates with a provably constant operand
 //                    are counted and capped at K - L(f o pi); a negative cap is UNSAT without solving
+//   --restriction-live all|N : with --restriction-counters, replace the deletion cap of all (or the N strongest)
+//                    counters by the restricted-output cone cap: gates reached from the output under pi with no
+//                    provably constant operand are at least L(f o pi)
+//   --restriction-essential : with --restriction-counters, every input essential in all completions of f o pi
+//                    must be reached from the output through gates that are not provably constant
 //   --complement-inputs auto : synthesize f with every input complemented whose x_i := 1 cofactor costs more than
 //                    its x_i := 0 cofactor (puts the stronger bound at zero); the chain is mapped back
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
@@ -122,11 +127,16 @@ struct Extra {
     // Eager restriction counters: 0 off, 1 zero, 2 const, 3 anchor; the restrictions they encode.
     int restriction_counters = 0;
     std::vector<restriction_certificate::Restriction> counters;
+    // Per counter: cone cap instead of the deletion cap (--restriction-live), essential inputs to reach.
+    int restriction_live = 0;  // 0 off, N > 0: the N counters with the largest lower bounds, -1 all
+    bool restriction_essential = false;
+    std::vector<bool> counter_live;
+    std::vector<std::vector<int>> counter_essential;
     bool complement_inputs = false;
 };
 
 // Per-budget restriction counter encoding size (set by encode_counters).
-struct CounterStats { int restrictions = 0, vars = 0, clauses = 0, negative_cap = 0; double seconds = 0; };
+struct CounterStats { int restrictions = 0, live = 0, essential = 0, vars = 0, clauses = 0, negative_cap = 0; double seconds = 0; };
 static CounterStats g_counter;
 
 // Per-budget restriction certificate counters.
@@ -272,6 +282,16 @@ struct FirstLayer {
 // gate g = AND(a ^ na, b ^ nb) ^ (na & nb) with na = op bit 2 and nb = op bit 1 (ops 2, 4, 8, 14). For x_i := 0
 // every provably constant wire is 0 (each wire is 0 on row zero), so one flag per wire suffices:
 // D = A | B and Z = (A & !na) | (B & !nb) | (A & B). x_i := 1 uses two flags (provably 0, provably 1).
+//
+// Restricted-output cone (--restriction-live) and essential-input reachability (--restriction-essential). Let K_w
+// say wire w is provably constant under pi and D_g that gate g has a provably constant operand. Walk back from the
+// output through the operands of visited gates that are not provably constant: reach_w. A visited gate with no
+// constant operand stays a binary gate, every other gate is bypassed (alias), folded (constant) or unvisited, so f o pi
+// has a chain of sum(reach_g & !D_g) gates: at most K - L(f o pi) gates have kept_g false. An input on which every
+// completion of f o pi depends must be reached. Percy selects exactly one fanin pair per step (create_op_clauses
+// plus create_cardinality_constraints), so every model is a chain; the one-way flags below have the exact
+// propagation as their least (for K, D) or greatest (for reach, active, kept) assignment, and use[t][pos][w] is
+// tied both ways to the selections when reachability is encoded.
 static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start,
                             const Extra& ex) {
     const auto t0 = clk::now();
@@ -282,25 +302,42 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
     for (const auto& r : ex.counters)
         if (int(r.lower) > k) { g_counter.negative_cap = 1; return false; }  // negative cap: UNSAT, no clause
     const auto fresh = [&] { return pabc::Abc_Var2Lit(cs.var(), 0); };
+    bool any_reach = false;
+    for (size_t r = 0; r < ex.counters.size(); ++r)
+        any_reach |= ex.counter_live[r] || !ex.counter_essential[r].empty();
     // use[t][pos][w] is implied by every pair of step t whose operand pos is wire w (shared by all restrictions).
     std::vector<std::array<std::vector<int>, 2>> use(k);
     for (int t = 0; t < k; ++t) {
-        for (int pos = 0; pos < 2; ++pos) use[t][pos].assign(n + t, -1);
+        std::array<std::vector<std::vector<int>>, 2> back;
+        for (int pos = 0; pos < 2; ++pos) { use[t][pos].assign(n + t, -1); back[pos].resize(n + t); }
         for (int s = start[t]; s < start[t + 1]; ++s) {
             const int sel = pabc::Abc_Var2Lit(enc.get_sel_var(s), 0);
             for (int pos = 0; pos < 2; ++pos) {
-                int& u = use[t][pos][enc.svar_map[s][pos]];
+                const int w = enc.svar_map[s][pos];
+                int& u = use[t][pos][w];
                 if (u < 0) u = fresh();
                 cs.add({sel ^ 1, u});
+                back[pos][w].push_back(sel);
             }
         }
+        if (any_reach)  // use -> some selected pair with that operand (reachability wants use true)
+            for (int pos = 0; pos < 2; ++pos)
+                for (int w = 0; w < n + t; ++w) {
+                    if (use[t][pos][w] < 0) continue;
+                    std::vector<int> c{use[t][pos][w] ^ 1};
+                    c.insert(c.end(), back[pos][w].begin(), back[pos][w].end());
+                    cs.add(std::move(c));
+                }
     }
     const auto opv = [&](int t, int bit) { return pabc::Abc_Var2Lit(enc.get_op_var(sp, t, bit), 0); };
     std::vector<int> inv(k, -1);
     constexpr int F = -1, T = -2;  // statically false / true flags
-    for (const auto& r : ex.counters) {
+    for (size_t ri = 0; ri < ex.counters.size(); ++ri) {
+        const auto& r = ex.counters[ri];
+        const bool live = ex.counter_live[ri];
+        const auto& essential = ex.counter_essential[ri];
         const int cap = k - int(r.lower);
-        if (cap >= k) continue;
+        if (cap >= k && essential.empty()) continue;
         std::vector<std::array<int, 2>> z;  // per wire: provably 0, provably 1
         bool zero = true;
         for (int i = 0; i < n; ++i) {
@@ -346,8 +383,69 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
             cs.add({ao ^ 1, bo ^ 1, I, Z1}); cs.add({az ^ 1, I ^ 1, Z1}); cs.add({bz ^ 1, I ^ 1, Z1});
             z.push_back({Z0, Z1});
         }
-        cs.at_most(deleted, cap);
+        if (!essential.empty()) ++g_counter.essential;
+        if (!live && essential.empty()) {
+            cs.at_most(deleted, cap);
+            ++g_counter.restrictions;
+            continue;
+        }
+        // Reachability over the restricted output cone (backwards from the output, the last step).
+        const int N = n + k;
+        std::vector<int> reach(N, F), active(N, F);
+        for (int w = N - 1; w >= 0; --w) {
+            if (w == N - 1) reach[w] = T;
+            else {
+                std::vector<int> paths;
+                for (int t = std::max(0, w - n + 1); t < k; ++t) {
+                    const int a = active[n + t], u0 = use[t][0][w], u1 = use[t][1][w];
+                    if (a == F || (u0 < 0 && u1 < 0)) continue;
+                    const int p = fresh();
+                    if (a != T) cs.add({p ^ 1, a});
+                    std::vector<int> c{p ^ 1};
+                    if (u0 >= 0) c.push_back(u0);
+                    if (u1 >= 0) c.push_back(u1);
+                    cs.add(std::move(c));
+                    paths.push_back(p);
+                }
+                if (!paths.empty()) {
+                    reach[w] = fresh();
+                    paths.insert(paths.begin(), reach[w] ^ 1);
+                    cs.add(std::move(paths));
+                }
+            }
+            // provably constant: K = Z0 | Z1 (one-way)
+            int K = F;
+            if (z[w][0] == T || z[w][1] == T) K = T;
+            else if (z[w][0] != F || z[w][1] != F) {
+                K = fresh();
+                for (int c = 0; c < 2; ++c) if (z[w][c] != F) cs.add({z[w][c] ^ 1, K});
+            }
+            if (reach[w] == F || K == T) active[w] = F;
+            else if (reach[w] == T && K == F) active[w] = T;
+            else {
+                active[w] = fresh();
+                if (reach[w] != T) cs.add({active[w] ^ 1, reach[w]});
+                if (K != F) cs.add({active[w] ^ 1, K ^ 1});
+            }
+        }
+        for (int j : essential) {
+            if (reach[j] == F) { g_counter.negative_cap = 1; return false; }  // cannot happen: every step reads inputs
+            if (reach[j] != T) cs.add({reach[j]});
+        }
+        if (!live) { cs.at_most(deleted, cap); ++g_counter.restrictions; continue; }
+        std::vector<int> dropped;  // !kept_g, at most cap of them
+        int lost = 0;              // gates that are never kept
+        for (int t = 0; t < k; ++t) {
+            if (reach[n + t] == F) { ++lost; continue; }
+            const int kept = fresh();
+            if (reach[n + t] != T) cs.add({kept ^ 1, reach[n + t]});
+            cs.add({kept ^ 1, deleted[t] ^ 1});
+            dropped.push_back(kept ^ 1);
+        }
+        if (cap - lost < 0) { g_counter.negative_cap = 1; return false; }
+        cs.at_most(dropped, cap - lost);
         ++g_counter.restrictions;
+        ++g_counter.live;
     }
     g_counter.vars = cs.next - vars0;
     g_counter.clauses = int(cs.clauses.size() - clauses0);
@@ -934,6 +1032,12 @@ static int run_main(int argc, char** argv) {
             else if (mode == "anchor") ex.restriction_counters = 3;
             else { fprintf(stderr, "expected --restriction-counters zero, const or anchor\n"); return 2; }
         }
+        else if (a == "--restriction-live") {
+            const auto v = next();
+            ex.restriction_live = v == "all" ? -1 : std::stoi(v);
+            if (ex.restriction_live == 0 || ex.restriction_live < -1) { fprintf(stderr, "expected --restriction-live all or N > 0\n"); return 2; }
+        }
+        else if (a == "--restriction-essential") ex.restriction_essential = true;
         else if (a == "--complement-inputs") {
             if (next() != "auto") { fprintf(stderr, "expected --complement-inputs auto\n"); return 2; }
             ex.complement_inputs = true;
@@ -1049,6 +1153,10 @@ static int run_main(int argc, char** argv) {
         fprintf(stderr, "--restriction-counters and --complement-inputs need 2-6 inputs\n");
         return 2;
     }
+    if ((ex.restriction_live || ex.restriction_essential) && !ex.restriction_counters) {
+        fprintf(stderr, "--restriction-live and --restriction-essential need --restriction-counters\n");
+        return 2;
+    }
     if (ex.restriction_counters && ex.restriction_cuts) {
         fprintf(stderr, "--restriction-counters is not combined with --restriction-cuts\n");
         return 2;
@@ -1102,6 +1210,31 @@ static int run_main(int argc, char** argv) {
             if (ex.restriction_counters == 1) ex.counters.push_back(rs[2 * i]);
             else if (ex.restriction_counters == 2) { ex.counters.push_back(rs[2 * i]); ex.counters.push_back(rs[2 * i + 1]); }
             else ex.counters.push_back(rs[2 * i + (rs[2 * i + 1].lower > rs[2 * i].lower)]);
+        }
+        const size_t m = ex.counters.size();
+        ex.counter_live.assign(m, ex.restriction_live == -1);
+        if (ex.restriction_live > 0) {
+            std::vector<size_t> order(m);
+            for (size_t c = 0; c < m; ++c) order[c] = c;
+            std::stable_sort(order.begin(), order.end(),
+                             [&](size_t x, size_t y) { return ex.counters[x].lower > ex.counters[y].lower; });
+            for (size_t c = 0; c < m && c < size_t(ex.restriction_live); ++c) ex.counter_live[order[c]] = true;
+        }
+        ex.counter_essential.assign(m, {});
+        // Input j is essential in every completion of f o (x_i := b) if two cared rows that differ only in j differ.
+        for (size_t c = 0; c < m && ex.restriction_essential; ++c) {
+            int i = 0, b = 0;
+            for (int v = 0; v < n; ++v) if (ex.counters[c].primary[v] < 2) { i = v; b = int(ex.counters[c].primary[v]); }
+            for (int j = 0; j < n; ++j) {
+                if (j == i) continue;
+                bool dep = false;
+                for (int r = 0; r < (1 << n) && !dep; ++r) {
+                    if ((r >> i & 1) != b || (r >> j & 1)) continue;
+                    const int q = r | 1 << j;
+                    dep = !kitty::get_bit(dc, r) && !kitty::get_bit(dc, q) && kitty::get_bit(tt, r) != kitty::get_bit(tt, q);
+                }
+                if (dep) ex.counter_essential[c].push_back(j);
+            }
         }
     }
     if ((ex.pairs != synthesis::PairScope::none || ex.first_layer_budget) && kitty::get_bit(dc, 0)) {
@@ -1440,10 +1573,10 @@ static int run_main(int argc, char** argv) {
                 printf("]");
             }
             if (ex.restriction_counters || ex.complement_inputs)
-                printf(",\"counter_restrictions\":%d,\"counter_vars\":%d,\"counter_clauses\":%d,"
-                       "\"counter_seconds\":%.6f,\"counter_negative_cap\":%d,\"complement_mask\":%u",
-                       g_counter.restrictions, g_counter.vars, g_counter.clauses, g_counter.seconds,
-                       g_counter.negative_cap, complement_mask);
+                printf(",\"counter_restrictions\":%d,\"counter_live\":%d,\"counter_essential\":%d,\"counter_vars\":%d,"
+                       "\"counter_clauses\":%d,\"counter_seconds\":%.6f,\"counter_negative_cap\":%d,\"complement_mask\":%u",
+                       g_counter.restrictions, g_counter.live, g_counter.essential, g_counter.vars, g_counter.clauses,
+                       g_counter.seconds, g_counter.negative_cap, complement_mask);
             if (slack_two && ex.decoder_phase)
                 printf(",\"two_decoder\":[%llu,%llu,%llu,%llu,%llu]",
                        static_cast<unsigned long long>(residual->two_decoder.screens),

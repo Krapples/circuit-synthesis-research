@@ -82,6 +82,15 @@ for counters in ('zero', 'const', 'anchor'):
         *RESIDUAL_MODES['slack-three-phase-set-lift1'], '--restriction-counters', counters)
     RESIDUAL_MODES[f'slack-three-phase-set-lift1-renorm-count-{counters}'] = (
         *RESIDUAL_MODES['slack-three-phase-set-lift1-renorm'], '--restriction-counters', counters)
+# Restricted-output cone caps and essential-input reachability on top of the constant counters.
+CONE_VARIANTS = {'ess': ('--restriction-essential',), 'live2': ('--restriction-live', '2'),
+                 'live4': ('--restriction-live', '4'), 'liveall': ('--restriction-live', 'all'),
+                 'liveall-ess': ('--restriction-live', 'all', '--restriction-essential'),
+                 'live2-ess': ('--restriction-live', '2', '--restriction-essential')}
+for suffix, flags in CONE_VARIANTS.items():
+    COUNTER_MODES[f'base-count-const-{suffix}'] = (*COUNTER_MODES['base-count-const'], *flags)
+    RESIDUAL_MODES[f'slack-three-phase-set-lift1-count-const-{suffix}'] = (
+        *RESIDUAL_MODES['slack-three-phase-set-lift1-count-const'], *flags)
 
 
 def exact_tables(n, steps):

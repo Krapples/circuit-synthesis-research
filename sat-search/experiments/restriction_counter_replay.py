@@ -9,7 +9,12 @@ excludes the model when its deletion count exceeds k - L(f o pi). Configurations
   (constant deletions are invariant under complementing an input);
 - ids20: representative-ID (alias) counters on all 20 restrictions, without structural hashing;
 - ids_zero10: representative-ID counters on the 10 restrictions that contain row zero;
-- cert20: the earlier certificate rule (alias closure with structural hashing, all 20).
+- cert20: the earlier certificate rule (alias closure with structural hashing, all 20);
+- live8: restricted-output cone caps on the eight constant restrictions (gates reached from the output
+  through gates that are not provably constant, with no provably constant operand, must be >= L);
+- ess8: every input on which f o pi depends must be reached through gates that are not constant;
+- live2: cone caps on the two constant restrictions with the largest L (ties: lower index), as
+  percy_run --restriction-live 2 selects them; the others keep their deletion caps.
 Constant-only deletions are recomputed here by direct propagation (gates with a provably constant
 operand), independently of the native CNF encoding.
 """
@@ -33,6 +38,31 @@ def constant_deletions(n, init, gates):
         z = 0 if x == 0 or y == 0 else (1 if x == 1 and y == 1 else None)
         value.append(None if z is None else z ^ inv)
     return deleted
+
+
+def cone(n, init, gates):
+    """(kept gates, reached nonconstant inputs) of the restricted output cone."""
+    value = [entry[1] if entry[0] == 'const' else None for entry in init]
+    for a, b, pa, pb, inv in gates:
+        x, y = value[a], value[b]
+        x = None if x is None else x ^ (1 - pa)
+        y = None if y is None else y ^ (1 - pb)
+        z = 0 if x == 0 or y == 0 else (1 if x == 1 and y == 1 else None)
+        value.append(None if z is None else z ^ inv)
+    live, kept = {n + len(gates) - 1}, 0
+    for t in range(len(gates) - 1, -1, -1):
+        g = n + t
+        if g not in live or value[g] is not None:
+            continue
+        a, b = gates[t][:2]
+        live.update(w for w in (a, b) if value[w] is None)
+        kept += value[a] is None and value[b] is None
+    return kept, {i for i in live if i < n and value[i] is None}
+
+
+def essential(tt, n, rows, skip):
+    return {j for j in range(n) if j != skip
+            and any(not r >> j & 1 and (tt >> r & 1) != (tt >> (r | 1 << j) & 1) for r in rows)}
 
 
 def alias_deletions(n, init, gates, hashing):
@@ -69,6 +99,9 @@ def coverage(job):
     zero4 = [0, 2, 4, 6]
     anchor4 = [2 * i + (rs[2 * i + 1][2] > rs[2 * i][2]) for i in range(4)]
     zero10 = zero4 + [j for j in range(8, 20) if j % 2 == 0]
+    tt = int(target, 16)
+    need = {j: essential(tt, 4, rs[j][3], j // 2) for j in const}
+    top2 = sorted(const, key=lambda j: -rs[j][2])[:2]
     stats = Counter()
     for line in path.read_text().splitlines():
         gates = [(a, b, *OPS[op]) for op, a, b in json.loads(line)['chain']]
@@ -84,6 +117,20 @@ def coverage(job):
         flags['ids_zero10'] = any(cut(j, ids[j]) for j in zero10)
         flags['ids20'] = any(cut(j, ids[j]) for j in range(20))
         flags['cert20'] = any(cut(j, alias_deletions(4, rs[j][1], gates, True)) for j in range(20))
+        cones = {j: cone(4, rs[j][1], gates) for j in const}
+        live_cut = {j: cones[j][0] < rs[j][2] for j in const}
+        ess_cut = {j: bool(need[j] - cones[j][1]) for j in const}
+        flags['live8'] = any(live_cut.values())
+        flags['ess8'] = any(ess_cut.values())
+        flags['live8_ess8'] = flags['live8'] or flags['ess8']
+        flags['const8_ess8'] = flags['const8'] or flags['ess8']
+        flags['live2'] = any(live_cut[j] if j in top2 else cut(j, cdel[j]) for j in const)
+        flags['live2_ess8'] = flags['live2'] or flags['ess8']
+        for j in const:
+            assert cones[j][0] <= k - cdel[j], (target, k, j)  # cone cap implies the deletion cap
+        for name in ('live8', 'ess8', 'live8_ess8', 'const8_ess8', 'live2', 'live2_ess8'):
+            stats[f'{name}_beyond_const8'] += flags[name] and not flags['const8']
+        stats['live8_ess8_not_cert'] += flags['live8_ess8'] and not flags['cert20']
         for j in const:
             assert cdel[j] <= ids[j], (target, k, j)  # constants are a sub-abstraction of IDs
         for name, hit in flags.items():

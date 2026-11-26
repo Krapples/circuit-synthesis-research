@@ -1804,11 +1804,10 @@ every budget's CNF caps the deletions of each constant restriction directly:
   a one-way implication.
   - On a model with one selected pair per step, the least flag assignment is exactly the
     propagation above.
-  - Percy has no at-most-one constraint on selections. Models with several selected pairs get
-    over-approximated flags, which are excluded more often but never wrongly admitted.
-  - Soundness therefore assumes that every feasible budget keeps a single-selection model of a
-    valid chain under Percy's symmetry breaking. The checks below test this; it is not proven
-    separately.
+  - Percy's `ssv_encoder` also has pairwise at-most-one clauses on each step's selections
+    (`create_cardinality_constraints`), so every model has exactly one selected pair per step and
+    the flags are exact on every model. (Corrected 2026-11-25; an earlier version of this note said
+    Percy had no at-most-one constraint. See the cone section below.)
 - **Cap.** The cap uses the existing Sinz `at_most`. A negative cap (`L > K`) returns UNSAT before
   any clause is added, so Satoko never receives an empty clause. Caps of K or more are skipped.
 - **Input-complement normalization.** `--complement-inputs auto` complements every input whose
@@ -1958,4 +1957,162 @@ python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_wall
 python sat-search/baselines/tier_bench.py <out> --logs <dir> --tier extended --modes base-count-const slack-three-phase-set-lift1-count-const
 python sat-search/baselines/tier_summary.py sat-search/results/baselines/tier_extended.jsonl sat-search/results/baselines/tier_extended_counters_const.jsonl
 python sat-search/experiments/restriction_counter_summary.py sat-search/results/baselines/tier_long_counters.jsonl
+```
+
+## Restricted-output cone counters and essential reachability (opt-in, mixed end to end)
+
+The cone follow-up to the eager counters, from the `restriction_live_native.zip` bundle (extracted to
+`external/restriction-live`, not committed). Every option requires `--restriction-counters`.
+
+- `--restriction-live all|N` replaces the deletion cap of all restrictions, or the N with the largest L,
+  by a cone cap.
+- `--restriction-essential` forces every input that is essential in all completions of `f o pi` to reach
+  the output.
+
+The default stays off.
+
+### Single selection under Percy's symmetry breaks (A1)
+
+Percy's `ssv_encoder` has exactly one selected fanin pair per step in both encode paths (`encode` and
+`cegar_encode`):
+
+- `create_op_clauses` contributes the at-least-one clause over each step's selection variables;
+- `create_cardinality_constraints` (`ssv_encoder.hpp`, around line 883) contributes pairwise
+  at-most-one clauses over the same variables.
+
+So every model is a chain, whatever symmetry breaks are active. The single-selection representation is a
+constraint of the CNF, not an assumption about which models survive symmetry breaking. The active breaks
+for the AIG primitive are:
+
+- alonce, colex, lex_func and symvar;
+- nontriv and primitive (noreapply is disabled for the AIG primitive).
+
+Because they only remove chains, single selection is preserved in combination, not merely rule by rule.
+The earlier "no at-most-one constraint" remark in the eager-counter section was wrong and is corrected
+there.
+
+### Rule (proven on chains)
+
+For a constant restriction pi:
+
+- **Constant flags.** Forward constant propagation gives `K_w` (wire w is provably constant) and `D_g`
+  (gate g has a provably constant operand); in the normalized AIG, `K ⊆ D`.
+- **Reach.** Walk back from the output through the operands of visited gates that are not provably
+  constant; this gives `R_w`.
+- **Cone cap.** A visited gate with no constant operand stays binary. Every other gate is bypassed,
+  folded or unvisited, so `f o pi` has a chain of `sum_g (R_g AND NOT D_g)` gates. Hence
+  `sum_g (R_g AND NOT D_g) >= L(f o pi)`, which implies the deletion cap.
+- **Essential reachability.** An input on which every completion of `f o pi` depends must be reached.
+  Input j is essential when two cared rows of `f o pi` that differ only in j have different values.
+
+Encoding (`encode_counters` in `percy_run.cpp`):
+
+- The flags are one-way. K and D are forced true, so their least assignment is the exact propagation.
+  reach, active and kept are bounded above, so their greatest assignment is exact.
+- `use[t][pos][w]` is tied both ways to the selections when reach is encoded.
+- The cap is `at_most(NOT kept, cap - lost)`, where `lost` counts the gates that are statically
+  unreachable.
+- A negative cap returns UNSAT without adding an empty clause.
+
+### Verification
+
+- **Bundle reproduction.** `restriction_live_check.cpp` (MSVC C++20) gives 4,800 cap, 49,200 flag and
+  4,800 essential checks. The Python reference gives 32,000 oracle checks, of which 12,357 are stronger.
+- **Bundle bench.** It is reproduced exactly:
+
+  | Budget | Bundle bench |
+  | --- | --- |
+  | B=8 | 1,240 / 1,274 / 1,258 / 1,274 |
+  | B=9 | 2,284 / 2,411 / 2,382 / 2,412 |
+
+- **Fixed-budget oracle** (`results/baselines/restriction_live_check.jsonl`): 160/160 verdicts as
+  expected.
+  - Modes: base-count-const, -ess, -live2, -liveall and -liveall-ess.
+  - Coverage: the three-input exact tables, plus 0116/8 U, 016a/8 S, 6996/8 U, 1668/8 U, 0116/9 S and
+    1699/8 S.
+- **Independent replay.** `experiments/restriction_counter_replay.py` adds a Python cone (`cone`,
+  `essential`) on the 145,978 captured models and asserts `cone kept <= k - deletions` on every model.
+  Output: `results/restriction_certificates/live_replay.jsonl`.
+
+### Coverage on the 145,978 captured models
+
+| Rule | Excluded | Beyond const8 |
+| --- | ---: | ---: |
+| const8 (eager counters) | 145,353 | - |
+| live2 (cone on the 2 strongest, cap on the rest) | 145,481 | 128 |
+| ess8 | 142,875 | 500 |
+| live8 | 145,757 | 404 |
+| live2 + ess8 | 145,882 | 529 |
+| const8 + ess8 | 145,853 | 500 |
+| live8 + ess8 | 145,909 | 556 of 625 survivors |
+| cert20 (alias + hashing certificates) | 145,818 | - |
+
+live8+ess8 excludes 125 models that cert20 misses.
+
+### CNF and bounded single-budget comparisons (conflicts to verdict)
+
+| Budget | const | +ess | +live2 | +liveall | +liveall+ess |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 0116 k=8 U | 45,449 | 34,178 | 49,496 | 53,051 | 38,682 |
+| 1668 k=8 U | 401 | 433 | 351 | 379 | 181 |
+| 6996 k=8 U | 274 | 211 | 274 | 300 | 221 |
+| counter vars / clauses, 0116 k=8 | 816 / 2,362 | 1,536 / 3,778 | 1,012 / 2,810 | 1,600 / 3,874 | 1,600 / 3,898 |
+
+### End-to-end tiers (10 hard targets, lift1 + const as the control)
+
+| Limits | Mode | Minima | Wall s | Conflicts | UNSAT-side conflicts | Peak MiB |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 60 s / 200k | lift1-const (fresh control) | 8 | 132 | 2.31M | 639k | 80 |
+| 60 s / 200k | +ess | 7 | 89 | 1.55M | 204k | 77 |
+| 60 s / 200k | +live2+ess | 8 | 122 | 2.01M | 329k | 123 |
+| 60 s / 200k | +liveall+ess | 9 | 115 | 1.85M | 236k | 77 |
+| 300 s / 2M | lift1-const (archived) | 10 | 372 | 2.69M | 631k | 125 |
+| 300 s / 2M | +liveall+ess | 9 | 372 | 2.47M | 236k | 472 |
+
+Conflicts on the hard UNSAT budgets:
+
+| Budget | control | +ess | +live2+ess | +liveall+ess |
+| --- | ---: | ---: | ---: | ---: |
+| 1686 k=8 | 253,199 (300 s: 246,053) | 125,525 | 32,200 | 112,958 |
+| 166b k=9 | 308,029 | open | 227,607 | 83,554 |
+| 1669 k=9 | 60,666 | 60,907 | 53,909 | 20,270 |
+
+- **Proving side.** The cone cap with essential reachability consistently cuts the conflicts needed to
+  prove the hard budgets UNSAT, by 2.2-3.7x at 300 s. At 60 s, liveall+ess found 1686 = 9 and 1669 = 10,
+  which the control did not.
+- **Witness side.** The final SAT calls are noisy and sometimes much worse.
+  - 166b k=10 stays open at 300 s (1.1M conflicts, 472 MiB). The control finds it in 66 s.
+  - 0196 and 16a9 take 5-10x more conflicts at k=9.
+  - The net result is 9/10 versus 10/10, in the same total wall time.
+- **Timing scope.** Both cone tiers ran while the machine was contended (desktop and game processes,
+  8-10 workers), and the 300 s control is archived. Wall times are therefore indicative only; the
+  conflict counts are the matched measurement.
+
+### Status and next questions
+
+- **Default.** Keep `--restriction-live` and `--restriction-essential` opt-in. The pruning is real on
+  refutations, but the SAT-side variance makes the end-to-end result mixed, and the direction is not
+  archived.
+- **Budget-phase activation.** Use the cone constraints only on budgets below a known upper bound, or
+  only after the first CEGAR model at a budget fails. This targets the proving side without slowing the
+  witness search. It needs no new soundness argument.
+- **Coupled restrictions (A5).** The 69 models still surviving live8+ess8 are the test set. The
+  candidates are joint surviving cones over restriction pairs, overlap of eliminated gates and pair
+  budgets.
+- **Identification restrictions.** Cones under `x_j := x_i ^ b` need alias flags. They are not
+  implemented.
+- **More than four inputs.** L must come from certified restricted costs rather than `kCost3`.
+  Restricted bounds for five-input targets can use the disjoint-conjunction weights from the SAT-gadget
+  review (`NOTES_SAT_ENCODING_BOUNDS.md`); the essential-input reachability above already applies at any
+  arity.
+
+### Cone commands
+
+```powershell
+Expand-Archive -LiteralPath "$env:USERPROFILE\Downloads\restriction_live_native.zip" -DestinationPath external/restriction-live
+# From vcvars64, in a separate directory: cl /std:c++20 /O2 /EHsc <bundle>\restriction_live_check.cpp; run it; run the bundle's restriction_live_bench.py with python -I
+python sat-search/experiments/restriction_counter_replay.py sat-search/logs/restriction_capture sat-search/results/restriction_certificates/aig_costs3.json > sat-search/results/restriction_certificates/live_replay.jsonl
+python sat-search/baselines/first_layer_check.py check sat-search/results/baselines/restriction_live_check.jsonl --workers 8 --modes base-count-const base-count-const-ess base-count-const-live2 base-count-const-liveall base-count-const-liveall-ess
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_long_cone.jsonl --logs sat-search/logs/tier_long_cone --tier long --workers 8 --modes slack-three-phase-set-lift1-count-const slack-three-phase-set-lift1-count-const-ess slack-three-phase-set-lift1-count-const-live2-ess slack-three-phase-set-lift1-count-const-liveall-ess
+python sat-search/baselines/tier_bench.py sat-search/results/baselines/tier_extended_cone.jsonl --logs sat-search/logs/tier_extended_cone --tier extended --workers 10 --modes slack-three-phase-set-lift1-count-const-liveall-ess
 ```
