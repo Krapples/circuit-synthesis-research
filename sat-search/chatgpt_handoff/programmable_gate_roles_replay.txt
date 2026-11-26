@@ -1,0 +1,15 @@
+{
+  "source_bits": 6,
+  "context_bits": 15,
+  "live_and_gates": 99,
+  "bank_gates": 3,
+  "contexts": 720,
+  "output_checks": 46080,
+  "role_checks": 138240,
+  "role_ranks": [
+    15,
+    15,
+    15
+  ]
+}
+all assertions passed
