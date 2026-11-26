@@ -113,7 +113,7 @@ leaves an edge saves one OR, including in graphs with a cyclic core. Thus any sa
 `|E|−1` must survive leaf deletion all the way to the remaining core. `LeafOrElimination.lean`
 checks the elimination and the induction for any finite certificate of leaf deletions. To
 apply this to the surrogate still requires a graph theorem producing the leaf certificate
-and a construction of the circuit from a cover-union program.
+and a proof relating the compiler's forward evaluator to the elimination model.
 
 **Uniform bound of 40 in the straight-line circuit model.** The same elimination applies to
 any vertex incident to an edge if deletion leaves some edge. An edge using the vertex
@@ -125,8 +125,8 @@ spanning-tree traversal rooted at the incidence `(0,21)` gives 40 such deletions
 the explicit deletion order and `LeafOrElimination.PG4.lower_bound_40` for straight-line
 AND/OR circuits with variable and constant sources. The 34-instruction union bound and the
 104-instruction independent-center bound remain checked in their own model. The exact
-104-OR statement and the bridge needed to use the 40 bound in the common-union model remain
-open here. Both local proofs checked with Lean 4.36.0 under the locked `sat-search/lean`
+104-OR statement and the model equivalence needed to use the 40 bound in the common-union
+model remain open here. Both local proofs checked with Lean 4.36.0 under the locked `sat-search/lean`
 environment, in 58.862 s for the transport and 34.893 s for the elimination and order.
 
 **Low merges can be shared even when every OR operand is critical.** Choose two different points
@@ -159,9 +159,12 @@ Each instruction yields one shared OR of the two prior failure predicates. Each 
 predicate is a conjunction of its initial failure and all applicable instruction outputs. This
 realizes `¬A_final(E,Z)` with one OR per instruction. On a cover the final availability assumption
 makes failure false. On a noncover each available set contains only covered edges, so failure is
-true. Thus the union formulation preserves the exact OR objective in both directions. The
-relabelling lemma and the complemented step identity are checked locally. The full circuit
-construction in this converse is currently a mathematical argument.
+true. `ConjunctionCompiler.lean` checks this converse for all finite vertex sets. Each rule
+emits exactly one OR and otherwise only ANDs, the initial failure of a star is a conjunction
+of its possible centers, and the compiled output agrees with the edge signal on all Boolean
+assignments. The compiler uses a forward gate list and explicit constant sources. Its Lean
+4.36.0 check finished in 32.721 s under the locked workspace. The proof that this evaluator
+agrees with the reverse-list elimination evaluator is the remaining implementation link.
 
 ## Bounded diagnostics and proof transfer
 
@@ -196,4 +199,5 @@ python -B sat-search/results/pg4_or_4653/search_or_budget.py --profile-cnf
 python -B sat-search/results/pg4_or_4653/search_or_budget.py --output sat-search/results/pg4_or_4653/profiles.jsonl
 python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/CoverUnion4653.lean --timeout 100
 python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/LeafOrElimination.lean --timeout 100
+python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/ConjunctionCompiler.lean --timeout 90
 ```
