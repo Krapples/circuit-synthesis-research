@@ -1,3 +1,49 @@
+# Research handoff — arbitrary terminal cuts, fixed matching demands and routing gaps
+
+Updated 2026-11-26. Base [3340781](https://github.com/Krapples/circuit-synthesis-research/commit/3340781f4d41f4d27bad347a94a39627fbe5f3cd). **L-clb-036 remains open.** Strengthens the balanced terminal separator theorem to arbitrary cuts, derives exact simultaneous matching cut conditions, geometric wirelength tradeoffs, and a linear-size bounded-degree graph counterexample to a cut-to-routing inference. Paper theorems and finite replay, no new Lean theorem or production solver changes.
+
+## Current results
+
+- **Arbitrary terminal cuts.** Same packed unit layout with T=m ell=Theta(n) fixed single-copy physical pattern coordinates. For terminal counts a_i,b_i,c_i per slot set u=min(sum a_i,sum b_i), z=sum c_i, M=sum min(a_i,b_i). If z<=u/64, a restriction has log real communication rank >=u/128. If M>=u/32, use a shared random quadratic dictionary: expected cross rank >=min(a_i,b_i)/2, hence one dictionary has total cross rank >=M/2, and some sign per slot yields indicator log-rank >=half its cross rank, including rank one by a two-bit minor. Otherwise discard C-heavy slots (<=8z total bits) and mixed slots (<=8M bits), leaving >=u/(2ell) dominant slots on each side with >3ell/4 dominant bits; pair them on >ell/2 common positions. Their product inequality rank gives log-rank >=u/4.
+- **No output-announcement loss.** Deterministic transcript rectangles remain accepting rectangles when output is computed by just one party, by restricting that party's local factor. Rank <=2^cost, with <=one bit per crossing wire or <=two bits per separator vertex. Thus every edge cut has |delta(A)|>=min(|T intersect A|,|T minus A|)/128, and every separator A,B,C without A--B edges has |C|>=min(|T intersect A|,|T intersect B|)/256. All restrictions concern original physical coordinates and work at all sufficiently large even lengths using prior padding.
+- **Well-linkedness.** By set-to-set Menger, any two disjoint r-element terminal sets have >=ceil(r/257) vertex-disjoint paths between them, with partners not prescribed. This is constant-factor terminal linkage, not exact node-well-linkedness.
+- **Fixed matching demand theorem.** For any whole-slot matching, fix tags/signs/dictionary once to compute the conjunction of paired word inequalities. Demand a connection for each aligned coordinate pair. Under ANY edge cut or vertex separator, fix only pattern bits: keep crossed aligned pairs free, set all others zero in active factors, and set no-cross pairs to distinct constants. Each factor has full rank 2^(number crossed), including mixed crossing orientations. Thus number of crossing matching demands <=|delta(A)| for every edge cut and <=2|C| for every separator, simultaneously for all matchings. This is a cut condition, not prescribed-pair routing.
+- **Graph-only routing-gap counterexample.** A union of 32 random permutations on T vertices has, with positive probability, external vertex expansion >=1/2 on all sets of size <=T/2 (explicit union bound in proof). Keep each simple edge and add a fresh length-two path parallel to it. The resulting bounded-degree graph has O(T) edges and satisfies ALL exact matching edge and vertex cut conditions, plus the constant-factor terminal inequalities. Yet some slot matching has total pair distance Omega(T log m), by random matching and bounded-degree ball growth. Any integral or fractional path routing has congestion Omega(log m). This refutes deriving constant-congestion prescribed routing from those cut conditions alone. It does NOT realize a SAT circuit or rule out stronger semantic lemmas.
+- **Wirelength tradeoff.** For any real placement, total L1 edge length >=(1/128) sum of terminal L1 distances to a coordinatewise median, by integrating all level cuts. For a fixed matching it is also >=sum of geometric distances of matched pairs. Distinct terminal cells in Z^d (fixed d) imply Omega_d(n^(1+1/d)) total wirelength; max endpoint wire length L and fan-in two imply s L=Omega_d(n^(1+1/d)). Fixed-range local circuits thus have superlinear size (d=1: n^2; d=2: n^1.5; d=3: n^(4/3)). For s=O(n^1.01) some wire has length Omega_d(n^(1/d-0.01)) if d<100. This is a restricted placement model, not an unrestricted size, VLSI energy or delay theorem.
+- Prior planar/minor/genus/crossing and treewidth consequences remain valid. The actual unit-clause promise still has O(n log^2 n) general circuits via sorting, so broad connectivity alone is not a lower-bound proxy. Topology does not automatically transfer to the guarded Hamming slice through the size compiler. Next target remains distinct computational work beyond cut constraints.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [packed_welllinked_handoff.md](packed_welllinked_handoff.md) | Proofs: unbalanced cuts, exact matching, bounded-degree graph obstruction, wirelength, protocol |
+| [packed_welllinked_check.js](packed_welllinked_check.js), [replay](packed_welllinked_replay.txt) | Exact small dictionary average/rank, arbitrary cuts, fixed matching grammar, transcript rectangles, coarea |
+| [packed_separator_handoff.md](packed_separator_handoff.md), [checker](packed_separator_check.js) | Earlier balanced separator and architecture bounds |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling and two-primary-read compiler |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Prior peeling lower bound |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress count limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable gate rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component kernel and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and fixed-sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run `node packed_welllinked_check.js` in this directory. Seed 870020. 50 exact dictionary expectation checks, 3,200 local rank comparisons, 320 partition contexts (142 unbalanced, min smaller side one, 64 trivial large-separator cases, 180 local and 76 dominant), 1,536 grammar checks. Fixed matching: 120 partitions, 1,353 pair rank checks, 1,964 crossing bits, 261 mixed-orientation pairs, 960 grammar checks. 300 coarea identities. Actual random AIGs: 447 edge and 306 vertex protocol checks, 13,056 transcript rectangle checks. All passed. The initial matching test was strengthened to keep metadata unchanged and fix no-cross patterns distinct. No new padding/slice replay, actual expander routing, SAT AIG synthesis, physical layout measurement or Lean verification. Graph obstruction proved separately.
+
+## Native-agent priority
+
+Audit [packed_welllinked_handoff.md](packed_welllinked_handoff.md) and replay, especially rank-one case, unbalanced counting, output-owner rectangles, fixed metadata quantifier, expansion union bound and graph-only scope. Reuse prior unit grammar and signed AIG proofs. Cut inequalities alone cannot supply constant-congestion prescribed routing, even when all hold simultaneously. Seek a circuit-semantic invariant charging internal signal coordination beyond graph cuts; test against actual quasi-linear sorting and earlier controls. Do not equate graph-only counterexample with a SAT circuit or promote restricted architecture bounds to unrestricted lower bounds. No production integration or priority claim. L-clb-036 remains open.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — packed terminal separators and SAT circuit architecture
 
 Updated 2026-11-26. Base [23ba6d4](https://github.com/Krapples/circuit-synthesis-research/commit/23ba6d465525d8ce82d977b81e6cc0062a26e14a). **L-clb-036 remains open.** New paper theorem: every paired SAT circuit at every sufficiently large even word length has a linear-size terminal-balanced vertex separator lower bound. This gives quadratic gate lower bounds for planar or fixed-minor-free circuits, and size/genus and size/crossing tradeoffs. The same packed unit-clause promise has quasi-linear unrestricted circuits. No unrestricted superlinear gate bound, new Lean theorem, or production solver changes.
