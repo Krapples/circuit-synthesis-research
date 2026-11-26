@@ -12,6 +12,10 @@
   "rectangle_checks": 16600,
   "richness_checks": 32,
   "strategy_checks": 16,
-  "asymmetric_examples": []
+  "aig_cuts": 90,
+  "aig_assignments": 113040,
+  "aig_rectangles": 50658,
+  "aig_forward_only": 8,
+  "aig_max_gates": 21
 }
 all assertions passed
