@@ -1,0 +1,12 @@
+k= 1 M=   2 ell= 1 J=  2 r=  2 n=    526 n/M=263.000
+k= 2 M=   4 ell= 1 J=  2 r=  2 n=   1332 n/M=333.000
+k= 3 M=   8 ell= 1 J=  2 r=  2 n=   2850 n/M=356.250
+k= 4 M=  16 ell= 2 J=  2 r=  4 n=   3446 n/M=215.375
+k= 5 M=  32 ell= 2 J=  3 r=  6 n=   7936 n/M=248.000
+k= 6 M=  64 ell= 2 J=  5 r= 10 n=  18354 n/M=286.781
+k= 7 M= 128 ell= 2 J=  9 r= 18 n=  42340 n/M=330.781
+k= 8 M= 256 ell= 4 J=  8 r= 32 n=  47064 n/M=183.844
+k= 9 M= 512 ell= 4 J= 14 r= 56 n=  98790 n/M=192.949
+{'semantic': 248, 'balanced': 248, 'permutations': 248, 'source_flip_probes': 184, 'selected_row_sat': 36, 'balancing_profiles': 3970}
+reader_transfer, explicit_unfolding, multiple_witnesses (3000, 1000, 1463)
+padding_checks 476
