@@ -16,6 +16,7 @@ a 12.8M-comparison formula DP) and the nine-gate core (22 DRUP-certified SAT sha
 `core9_certificate_audit.md` for the obstruction to formalizing them within upstream limits.
 -/
 import PEqualNP.Defs
+import SatBridge.Transfer
 
 namespace SatBridge.Meta16102
 
@@ -212,5 +213,104 @@ theorem fb_certificates :
     fb true true true true false false = false ∧ fb false true false false true false = false ∧
     fb false false true false true false = false ∧ fb true false false false true true = false := by
   decide
+
+/-! ### Binary-gate transfer and the reduction to the core -/
+
+/-- A proper binary AND or OR gate (exactly two inputs). -/
+def isBin (g : Gate) : Bool :=
+  match g.op, g.inputs with
+  | GateOp.and, [_, _] => true
+  | GateOp.or, [_, _] => true
+  | _, _ => false
+
+theorem tstep_len (n : ℕ)
+    (st : List CircuitLemmas.GateElim.Gate × List CircuitLemmas.GateElim.Ref) (g : Gate) :
+    (SatBridge.step n st g).1.length = st.1.length + (if isBin g then 1 else 0) := by
+  rcases g with ⟨op, ins⟩
+  cases op <;> rcases ins with _ | ⟨i, _ | ⟨j, _ | ⟨k, rest⟩⟩⟩ <;> simp [SatBridge.step, isBin]
+
+theorem tfoldl_len (n : ℕ) : ∀ (gs : List Gate)
+    (st : List CircuitLemmas.GateElim.Gate × List CircuitLemmas.GateElim.Ref),
+    (gs.foldl (SatBridge.step n) st).1.length = st.1.length + gs.countP isBin
+  | [], st => by simp
+  | g :: gs, st => by
+    rw [List.foldl_cons, tfoldl_len n gs, tstep_len, List.countP_cons]
+    split <;> omega
+
+/-- The transfer, counting only proper binary gates: NOT, unary and nullary gates are free. -/
+theorem transfer_binary (n : ℕ) (C : Circuit) (hC : ∀ g ∈ C.gates, SatBridge.Ok g) :
+    CircuitLemmas.GateElim.Realizes n (fun x => C.eval (List.ofFn fun i : Fin n => x i))
+      (C.gates.countP isBin) := by
+  refine ⟨SatBridge.translate n C, rfl, ?_, ?_⟩
+  · simp [SatBridge.translate, CircuitLemmas.GateElim.Circuit.size, tfoldl_len]
+  · intro x
+    have := (SatBridge.inv_foldl C.gates _ _ hC (SatBridge.inv_init n x)).1.2.2 C.output
+    simpa [SatBridge.translate, CircuitLemmas.GateElim.Circuit.eval, Circuit.eval,
+      Circuit.wires] using this
+
+theorem countP_split {α : Type} (l : List α) (p r : α → Bool) :
+    l.countP p = l.countP (fun h => p h && r h) + l.countP (fun h => p h && !r h) := by
+  induction l with
+  | nil => simp
+  | cons a l ih =>
+    simp only [List.countP_cons, ih]
+    cases p a <;> cases r a <;> simp <;> omega
+
+theorem countP_compl {α : Type} (l : List α) (r : α → Bool) :
+    l.countP r + l.countP (fun h => !r h) = l.length := by
+  induction l with
+  | nil => simp
+  | cons a l ih =>
+    simp only [List.countP_cons, List.length_cons]
+    cases r a <;> simp <;> omega
+
+/-- The posted L-meta-16102 statement, verbatim up to naming the table. -/
+def Posted : Prop :=
+  ∃ C : PEqualNP.CircuitLowerBounds.Circuit, PEqualNP.MetaComplexity.FanInTwo C ∧
+    PEqualNP.MetaComplexity.NestedCover.ReadsBack 6 C ∧ C.size ≤ 9 ∧
+    (∀ x : Fin 6 → Bool, C.eval (List.ofFn x) = PEqualNP.MetaComplexity.tableFun 6 table16102 x) ∧
+    (∀ j < C.size, C.output = 6 + j ∨ ∃ i < C.size, j < i ∧
+      6 + j ∈ (C.gates.getD i ⟨GateOp.and, []⟩).inputs) ∧
+    (∀ g ∈ C.gates, g.op = GateOp.not → 6 ≤ g.inputs.headD 0 →
+      (C.gates.getD (g.inputs.headD 0 - 6) ⟨GateOp.and, []⟩).op ≠ GateOp.not) ∧
+    (∃ g ∈ C.gates, g.op = GateOp.not ∧ 6 ≤ g.inputs.headD 0)
+
+/-- The target as a function of `ℕ`-indexed inputs, for the AIG model. -/
+def F (x : ℕ → Bool) : Bool := f16102 (fun i : Fin 6 => x i)
+
+/-- **Reduction.** If the target has no free-NOT AIG with 7 gates, every posted candidate has exactly
+nine gates: eight proper binary AND/OR gates and one NOT. In particular it is an AND/OR/NOT circuit
+with one NOT, so `sandwich` applies. The hypothesis `hA` is the eight-binary-gate lower bound, which is
+checked here only on paper. -/
+theorem posted_core (hA : ¬ CircuitLemmas.GateElim.Realizes 6 F 7) (C : Circuit)
+    (hfan : PEqualNP.MetaComplexity.FanInTwo C) (hsize : C.size ≤ 9)
+    (heval : ∀ x : Fin 6 → Bool, C.eval (List.ofFn x) = f16102 x)
+    (hnot : ∃ g ∈ C.gates, g.op = GateOp.not ∧ 6 ≤ g.inputs.headD 0) :
+    C.size = 9 ∧ C.gates.countP isBin = 8 ∧ C.gates.countP (fun g => isNot g.op) = 1 ∧
+      (∀ g ∈ C.gates, AndOrNot g.op) := by
+  have hR := transfer_binary 6 C (fun g hg => hfan g hg)
+  have h8 : 8 ≤ C.gates.countP isBin := by
+    by_contra hlt
+    obtain ⟨D, hD, hDs, hDf⟩ := hR
+    exact hA ⟨D, hD, by omega, fun x => by rw [hDf]; exact heval (fun i => x i)⟩
+  obtain ⟨g, hg, hgnot, -⟩ := hnot
+  have hgb : isBin g = false := by rcases g with ⟨op, ins⟩; simp only at hgnot; subst hgnot; rfl
+  have hsplit := countP_compl C.gates isBin
+  have hsplit2 := countP_split C.gates (fun h => !isBin h) (fun h => isNot h.op)
+  have hpos : 0 < C.gates.countP (fun h => !isBin h && isNot h.op) :=
+    List.countP_pos_iff.2 ⟨g, hg, by simp [hgb, hgnot, isNot]⟩
+  have hsz : C.size = C.gates.length := rfl
+  have hrest : C.gates.countP (fun h => !isBin h && !isNot h.op) = 0 := by omega
+  have hnb : C.gates.countP (fun h => !isBin h) = 1 := by omega
+  have hnotle : C.gates.countP (fun h => isNot h.op) ≤ 1 := by
+    rw [← hnb]
+    refine List.countP_mono_left fun h _ hh => ?_
+    rcases h with ⟨op, ins⟩; cases op <;> simp_all [isNot, isBin]
+  refine ⟨by omega, by omega, le_antisymm hnotle ?_, ?_⟩
+  · exact List.countP_pos_iff.2 ⟨g, hg, by simp [hgnot, isNot]⟩
+  · intro h hh
+    have h0 := (List.countP_eq_zero.1 hrest) h hh
+    rcases h with ⟨op, ins⟩
+    cases op <;> simp_all [AndOrNot, isNot, isBin]
 
 end SatBridge.Meta16102

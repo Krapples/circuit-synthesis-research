@@ -93,6 +93,18 @@ stated for the upstream model (`PEqualNP.CircuitLowerBounds`, imported from `PEq
 `f16102_mono`, which says the posted table is monotone in every input; and `fb_certificates`, the minimal positive and maximal negative certificates.
 These are the first premises of the structural route below. They do **not** prove the negation.
 
+**Reduction to two named gaps (Lean, same file).** `transfer_binary` refines `SatBridge.transfer`: an upstream fan-in-two circuit
+gives a free-NOT AIG whose gate count is the number of *proper binary* gates (NOT, unary and nullary gates are free).
+`posted_core` proves the following. Assume `hA : ¬ Realizes 6 F 7`, the eight-binary-gate bound in the AIG model. Then every circuit meeting the posted
+fan-in, size, function and internal-NOT conditions has size exactly 9, exactly 8 proper binary gates, exactly one NOT, and only
+AND/OR/NOT gates, so `sandwich` applies. The refutation therefore reduces to (A) `hA` and (B) the one-NOT nine-gate core.
+
+**Attempt on (A).** [first_gate_lb.py](first_gate_lb.py) implements a first-gate recursion with three steps. The first is fan-out ≥ 2 restriction (`conditional_restriction`
+in `CircuitLemmas.GateElim` is already formalized). The second is contraction of a fan-out-1 first gate, which requires checking that the function factors through an AND of two literals. The third is the connectivity floor.
+It certifies only **B(f) ≥ 7** ([first_gate_lb.out](first_gate_lb.out)), one short of the 8 needed. Closing (A) therefore needs the stronger cascade casework
+(a fan-out-2 input whose controlled first gate has a reader outside its readers, or the non-minimal two-gate pair), which the paper
+proof replaces with forks, the read-once lemma and the DP.
+
 Kernel-budget estimate for a direct search. Enumerating 8-gate prefixes and looking up the final gate leaves about
 2·10^10 canonical prefixes per NOT placement, about 2·10^11 in all, against a kernel budget of roughly 10^8 reductions in 20 minutes. A brute-force
 `decide` refutation of even the core is therefore infeasible, and so is any search that does not first use the structural reduction.
