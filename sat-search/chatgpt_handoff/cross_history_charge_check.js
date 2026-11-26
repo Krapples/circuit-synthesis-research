@@ -177,7 +177,7 @@ function run(){
   let data=Array.from({length:C.n},(_,i)=>i).filter(i=>C.side[i]===0),P=structure(C,data),Ts=Array.from({length:2**P.Q.length},(_,h)=>specialize(C,P,h,true)),G=graph(C,P,Ts,false),Q=graph(C,P,Ts,true);
   return {P,Ts,G,Q,flow:mincost(G,Array(G.copies.length).fill(0)).f,quotient:mincost(Q,Array(Q.copies.length).fill(0)).f,charge:opt?optimize(G):null,quotientCharge:opt?optimize(Q):null};
  }
- let S={chain:[],dilution:[],crossHistory:[],randomCircuits:0,quotientEvaluations:0,strictQuotientCuts:0,injectiveRandom:0,randomOptimizations:0,strictOptimization:0,strictCongestion:0,maxIterations:0,orbitChecks:0};
+ let S={chain:[],dilution:[],crossHistory:[],sharedPermutation:[],randomCircuits:0,quotientEvaluations:0,strictQuotientCuts:0,injectiveRandom:0,randomOptimizations:0,strictOptimization:0,strictCongestion:0,maxIterations:0,orbitChecks:0};
  for(let L of [2,4,8,16,32]){
   let d=L+2,k=Math.ceil(Math.log2(d)),C=builder(d+k,Array.from({length:d+k},(_,i)=>+(i>=d))),g=C.xor(0,2,0),h=0;
   for(let i=0;i<L;i++)h=C.xor(h,2*(i+2),0);
@@ -190,10 +190,17 @@ function run(){
   ok(R.flow===d&&Math.abs(R.charge.uniform-2/2**k)<1e-7&&Math.abs(R.charge.opt-2)<1e-7,"dilution gap");
   S.dilution.push({histories:2**k,uniform:R.charge.uniform,optimized:R.charge.opt,quotientUniform:R.quotientCharge.uniform,iterations:R.charge.iterations});
  }
- for(let k=1;k<=3;k++){
+ for(let shared of [false,true])for(let k=1;k<=3;k++){
   let r=2**k,M=r,d=r*M,n=d+2*k,C=builder(n,Array.from({length:n},(_,i)=>+(i>=d))),F=[];
   function muxTable(j,shift){let V=Array.from({length:M},(_,i)=>2*(j*M+i));for(let t=0;t<k;t++){let W=[];for(let i=0;i<V.length;i+=2)W.push(C.mux(2*(d+t)^((shift>>t)&1),V[i],V[i+1],0));V=W;}return V[0];}
-  for(let i=0;i<r;i++){let p=muxTable(i,0);for(let j=0;j<r;j++)if(j!==i)p=C.xor(p,muxTable(j,i^j),0);F.push(p);}
+  if(shared){
+   let rows=[];
+   for(let j=0;j<r;j++){let V=Array.from({length:M},(_,i)=>2*(j*M+(i^j)));
+    for(let t=0;t<k;t++)V=V.map((v,i)=>C.mux(2*(d+t),v,V[i^(1<<t)],0));
+    rows.push(V);
+   }
+   for(let i=0;i<r;i++){let p=rows[i][i];for(let j=0;j<r;j++)if(j!==i)p=C.xor(p,rows[j][i],0);F.push(p);}
+  }else{for(let i=0;i<r;i++){let p=muxTable(i,0);for(let j=0;j<r;j++)if(j!==i)p=C.xor(p,muxTable(j,i^j),0);F.push(p);}}
   let out=select(C,F,d+k),R=statsFor(C,false);ok(R.flow===d&&R.quotient===r,"cross history gap");
   let P=R.P,N=C.side.length,cap=Array(N).fill(0);
   for(let i=0;i<r;i++){
@@ -209,7 +216,7 @@ function run(){
   let old=oldFlow(C,Array.from({length:d},(_,i)=>i),P,cap);ok(old===d,"old full");
   for(let t=0;t<80;t++){let V=Array.from({length:d},()=>rnd(2)),q=rnd(M),i=rnd(r),want=0;for(let j=0;j<r;j++)want^=V[j*M+(q^i^j)];
    V.push(...Array.from({length:k},(_,j)=>q>>j&1),...Array.from({length:k},(_,j)=>i>>j&1));for(let [a,b] of C.E)V.push((V[a>>1]^(a&1))&(V[b>>1]^(b&1)));ok((V[out>>1]^(out&1))===want,"orbit semantics");S.orbitChecks++;}
-  S.crossHistory.push({k,data:d,oldIndividualFlow:old,disjointHistoryFlow:R.flow,quotientFlow:R.quotient,gates:C.E.length});
+  (shared?S.sharedPermutation:S.crossHistory).push({k,data:d,oldIndividualFlow:old,disjointHistoryFlow:R.flow,quotientFlow:R.quotient,gates:C.E.length});
  }
  for(let t=0;t<220;t++){
   let n=3+rnd(4),C=builder(n,Array.from({length:n},()=>rnd(2))),g=3+rnd(9);
