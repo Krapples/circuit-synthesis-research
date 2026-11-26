@@ -1,3 +1,47 @@
+# Research handoff — packed terminal separators and SAT circuit architecture
+
+Updated 2026-11-26. Base [23ba6d4](https://github.com/Krapples/circuit-synthesis-research/commit/23ba6d465525d8ce82d977b81e6cc0062a26e14a). **L-clb-036 remains open.** New paper theorem: every paired SAT circuit at every sufficiently large even word length has a linear-size terminal-balanced vertex separator lower bound. This gives quadratic gate lower bounds for planar or fixed-minor-free circuits, and size/genus and size/crossing tradeoffs. The same packed unit-clause promise has quasi-linear unrestricted circuits. No unrestricted superlinear gate bound, new Lean theorem, or production solver changes.
+
+## Current results
+
+- **Packed unit-only projection.** For k large, m=2^k slots, ell=floor(k/4), P=2^ell, common-width IDs Q+tag*P+pattern with Q a suitable power of two. P tag-zero dictionary unit clauses force h(pattern). Each slot has ell designated physical pattern bits, independent of tags/signs. A tag-zero slot tests h(x_i)=s_i, two distinct slots with one unique nonzero tag and opposite signs test x_i!=x_j, inactive slots use unique tags. Word length n=Theta(k 2^k), T=m ell=Theta(n) single-copy terminals. Existing 10/14 tautology padding extends to every sufficiently large even length.
+- **Uniform dictionary rank.** Choose a symmetric zero-diagonal binary matrix R with independent upper-triangle entries. For all disjoint I,J of size >=ell/8, cross rank >floor(ell/16) simultaneously exists by the union bound 3^ell 2^ell 2^(-ell^2/256)<1 eventually. h(x)=XOR_(i<j)R_ij x_i x_j. After fixing other bits, the signed communication matrix has real rank 2^rho for rho=rank_GF2 R[I,J]. At least one acceptance phase has rank >=2^(rho-1). Opposite-dominant slot pairs test inequality on their common position bits, with full-rank J-I. Independent factors multiply ranks.
+- **Terminal-separator lower bound.** For any original vertex partition A,B,C with no A--B edges, each side having >=T/4 terminals and |C|<=T/256, discard slots having >=ell/8 C bits (at most m/32). If >=m/32 mixed slots have >=ell/8 free bits on both sides, use local dictionary tests. Otherwise at least m/16 slots on each side are >3ell/4 dominant; pair across sides and use inequality on >ell/2 common positions. Fix all metadata and unused bits publicly. The restricted communication matrix has log real rank >=T/1024. A topological simulation exchanges at most two operand bits per separator gate plus the output, even with arbitrary fanout, so 2|C|+1>=T/1024. This proves |C|=Omega(n) for every separator leaving components with <=2T/3 terminals. All restrictions are single-copy physical coordinate restrictions of the original SAT inputs.
+- **Architecture consequences.** For s gates and graph genus g, treewidth tw and ordinary crossing number X: tw=Omega(n), (g+1)(s+n)=Omega(n^2), s+n+X=Omega(n^2), using standard weighted graph separator theorems and planarization. Planar, bounded-genus, or fixed-excluded-minor circuit graphs require Omega(n^2) gates. If s=O(n^1.01), then g=Omega(n^0.99), X=Omega(n^2), and a clique minor of order Omega(n^0.33) is necessary by the classical Alon-Seymour-Thomas h-dependent bound. These are restrictions on the circuit graph, not on the input formula graph. The topology conclusions do NOT automatically transfer through the guarded Hamming-slice compiler.
+- **Negative control and interpretation.** The entire fixed-width unit-clause promise is decidable with O(n log^2 n) signed AIG gates by sorting identifiers and detecting opposite-polarity collisions. Thus high treewidth, linear terminal separator complexity and quadratic crossings can coexist with quasi-linear unrestricted circuits. They are not an unrestricted superlinear gate-count proxy. Any successful next argument must charge distinct computational work inside the wide core, beyond routing and ID consistency. The preceding normalized two-primary-read compiler remains asymptotically equivalent; primary read counts alone cannot force a superlinear bound.
+- External premises: classical weighted Lipton-Tarjan, Gilbert-Hutchinson-Tarjan, and Alon-Seymour-Thomas separator theorems; no novelty claim for graph separators or communication/bisection methods. Details and precise proof constants in the new handoff.
+
+## Files and replay
+
+| File | Scope |
+|---|---|
+| [packed_separator_handoff.md](packed_separator_handoff.md) | Full packed grammar, rank proof, balanced cut lemma, circuit simulation, architecture tradeoffs and limitations |
+| [packed_separator_check.js](packed_separator_check.js), [replay](packed_separator_replay.txt) | Exact local rank and paired unit grammar regression |
+| [guard_read_normal_form_handoff.md](guard_read_normal_form_handoff.md), [checker](guard_read_normal_form_check.js) | Exact peeling and normalized two-primary-read compiler |
+| [guard_dependency_handoff.md](guard_dependency_handoff.md), [checker](guard_dependency_check.js) | Prior peeling distinct-gate linear bound |
+| [gate_role_ledger_handoff.md](gate_role_ledger_handoff.md), [checker](gate_role_ledger_check.js) | Ingress count relaxation limitation |
+| [programmable_gate_roles.js](programmable_gate_roles.js) | Programmable gate role-rank control |
+| [witness_compatibility_synthesis.md](witness_compatibility_synthesis.md), [checker](joint_witness_control_check.js) | Joint Andreev-Tseitin control |
+| [cubic_cluster_hub_handoff.md](cubic_cluster_hub_handoff.md) | Exact cluster/hub bounds, independently audited |
+| [cubic_neighborhood_handoff.md](cubic_neighborhood_handoff.md) | Connected coordinate kernel |
+| [cubic_component_handoff.md](cubic_component_handoff.md) | Component compression and counting barrier |
+| [deterministic_quadratic_handoff.md](deterministic_quadratic_handoff.md) | Deterministic quadratic compressor, independently audited |
+| [quadratic_compression_handoff.md](quadratic_compression_handoff.md) | Random compression and oblivious sketch barrier |
+| [coupled_existential_handoff.md](coupled_existential_handoff.md) | Affine coupling |
+| [permutable_andreev_handoff.md](permutable_andreev_handoff.md) | Delta-free path theorem |
+
+Run `node packed_separator_check.js` from this directory. Seed 870019. 844 local cut rank checks, 18 pair rank checks, 72 partition contexts on 192 terminals (60 meeting finite balance thresholds), 1,296 packed instances (288 SAT, 1,008 UNSAT), 720 fixed-coordinate mutation checks, max word 3,072 bits. 197 sampled larger cross-rank checks. The exact finite rank computations are modulo 101 for communication matrices, GF(2) for cross blocks. Small dictionaries are resampled for their selected mixed cuts; asymptotic all-cut guarantee follows from the paper union bound, not finite enumeration. Final checker passed after correcting an initial syntax error and a planted positive-pair assignment bug. No new AIG synthesis, graph separator/genus/crossing measurements, actual padding or slice replay, or Lean verification.
+
+## Native-agent priority
+
+Read [packed_separator_handoff.md](packed_separator_handoff.md) first. Independently audit namespace semantics, invariant physical terminal positions, rank union bound, mixed/dominant classification, communication simulation and graph-separator consequences; reuse existing paired grammar and signed AIG proofs. The graph separator theorems can be external premises. Distinguish original physical SAT circuit topology from guarded-slice size transfer. Future lower-bound direction: quantify the distinct computational work inside the necessary wide terminal core, separating ID routing from arbitrary shared existential consistency. Do not sum overlapping cut demands without a valid capacity theorem; the quasi-linear unit control already refutes naive inferences. Do not integrate a topology filter as an unrestricted size lower bound. No production solver changes, new Lean verification, or literature priority claim.
+
+---
+
+# Historical archive — previous handoffs
+
+The previous README is preserved verbatim below; older instructions and statuses refer to their own revisions.
+
 # Research handoff — exact guard peeling and two-primary-read normal form
 
 Updated 2026-11-26. Base [8b797db](https://github.com/Krapples/circuit-synthesis-research/commit/8b797db4eca0873dc7b2fa680d31b301a8778b57). **L-clb-036 remains open.** New converse to guard-cylinder peeling, and a constant-factor compiler reducing every primary to at most two reads without primary-equivalent internal buffers. The latter is a fundamental limitation on a superlinear primary-read-only argument. No new Lean theorem or production solver changes.
