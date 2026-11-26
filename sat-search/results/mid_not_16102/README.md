@@ -91,3 +91,7 @@ python certify-nine-gate.py --out proof-shards --solver glucose4 --timeout 300 -
 ````
 
 The runner supports repeated `--job 0` through `--job 21` in separate fresh output directories. A complete proof must cover all 22, including any timed-out shards, and prove the circuit-to-CNF mapping under the posted syntax, or replace the CNF route with a formal three-excess argument. No upstream PR opened: live desk exact statement unavailable in this session, open PR search found no match but did not certify absence, and no Lean toolchain here. Z3's initial internal DRAT validation failed; with several simplifications disabled a six-gate query timed out. Neither is claimed as a certificate. Continue L-clb-036 separately.
+
+## Optional additional pruning (2026-11-26)
+
+[Proof and cofactor reader bounds](cofactor_reader_handoff.md), [checker](cofactor_reader_check.js), [replay](cofactor_reader_replay.json). Exact zero/one-fork classifier on 728 nonempty restrictions. Four primary reader caps 2, other two 3; five pair-union caps 3. Single-NOT monotone replacement theorem excludes five raw-pair operands and gives two boundary witness clauses for every NOT operand. Paper proofs and finite replay, not Lean checked; not integrated into the 22-shard runner. Use only with audited/formalized reduction. No upstream closure.
