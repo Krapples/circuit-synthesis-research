@@ -33,6 +33,13 @@ families with two or three stars left. The unrestricted counted-NOT
 budget remains open.
 [Basis-specific bounds and search records](sat-search/results/deleted_heawood_9748/README.md)
 
+For order-four incidence L-meta-4653, the checked conjunction-list
+normalization preserves the number of OR gates and exposes the exact
+monotone boundary. The 105 positive rows pair with 25,237 maximal
+negative rows. Lean checked a 33-instruction lower bound in the common
+vertex-cover union model. The required unrestricted bound is 104.
+[Reduction audit, geometry, proof, and diagnostics](sat-search/results/pg4_or_4653/README.md)
+
 For the eleven-vertex top-form graph in L-meta-4081, Lean checked the edge-charge inequality
 with at most four uncovered edges. It also checked that one mixing OR with support of size
 at least two forces all uncovered edges to share a vertex when there are no centreless tops.
