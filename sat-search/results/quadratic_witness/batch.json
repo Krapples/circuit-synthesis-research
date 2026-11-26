@@ -1,0 +1,36 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check exact and rank-truncated signed Fourier inversion and neutral quotients on identical quadratic maps, and compare single and joint lookup feasibility.",
+  "jobs": [
+    {
+      "id": "quadratic-witness-check",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/quadratic_witness_check.py", "check"],
+      "query": {"scope": "signed character counts, neutral cosets, shared witnesses and paired SAT grammar", "basis": "GF(2) degree at most two"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    },
+    {
+      "id": "quadratic-witness-bench",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/quadratic_witness_check.py", "bench"],
+      "query": {"scope": "matched histogram calculations on 16 to 192 witnesses, quotient enumeration capped at dimension 14", "basis": "GF(2) degree at most two"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    },
+    {
+      "id": "permutable-handoff-replay",
+      "kind": "command",
+      "argv": ["python", "-B", "permutable_andreev_check.py"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "packed/permutable handoff", "basis": "paired SAT and signed AIG"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    },
+    {
+      "id": "affine-handoff-replay",
+      "kind": "command",
+      "argv": ["python", "-B", "affine_witness_check.py"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "affine coupled witness handoff", "basis": "paired SAT and GF(2)"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    }
+  ]
+}

@@ -28,3 +28,9 @@ import CircuitLemmas.Unfold
 #print axioms CircuitLemmas.GateElim.Circuit.unfold_paths
 
 #print axioms SatBridge.andreev_padded_at_scale
+#print axioms SatBridge.PackedAndreev.chunkPattern_eval
+#print axioms SatBridge.PackedAndreev.chunkPattern_sources
+#print axioms SatBridge.PackedAndreev.chunkPatterns_positions
+#print axioms SatBridge.PackedAndreev.chunk_block_length
+#print axioms SatBridge.PackedAndreev.gapChain_sum
+#print axioms SatBridge.PackedAndreev.reader_above_of_degree_cap

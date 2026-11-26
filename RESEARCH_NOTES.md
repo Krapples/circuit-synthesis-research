@@ -94,6 +94,21 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+For quadratic witness lookups, signed Fourier elimination has an exact
+support cutoff at polar rank `4k+2` for `k` address bits, using the
+minimum size of a nonempty Boolean fiber. Polar ranks and absolute biases
+alone fail to determine the image. Two equal-length paired SAT words show
+that shared witness IDs can change joint satisfiability while both
+individual lookups stay satisfiable. Coupled one-bit quadratic checks
+express 3-CNF with unique witness extension per satisfying assignment.
+Lean checks the local packed layout and its source-position invariance.
+The affine compression handoff replay also reproduced the rare-fiber
+misses and the fixed-sketch obstruction. The input-dependent deterministic
+checker passed its finite image tests. A distinct-gate circuit bound for
+variable incidence remains the next analysis target.
+[Proofs, controls, and matched experiments](sat-search/results/quadratic_witness/README.md)
+
+
 The audited Andreev projection gives a near-cubic De Morgan formula lower
 bound for paired SAT at all sufficiently large even lengths, using Tal's
 published shrinkage theorem. A linear-size AIG for that exact restriction

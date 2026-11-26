@@ -1,0 +1,4 @@
+{"random_maps": 216, "signed_character_checks": 2370, "neutral_directions_checked": 1488, "support_checks": 7782, "support_unknown": 2920, "guaranteed_cutoff_checks": 2432}
+{"matched_profiles": [[[4, 1, 2, 1, 1, 2, 1, 4], [16, 0, 0, 4, 0, 8, 4, 0], [0, 2, 2, 4, 2, 2, 4, 2]], [[3, 0, 3, 2, 2, 3, 0, 3], [16, 0, 0, 4, 0, 8, -4, 0], [0, 2, 2, 4, 2, 2, 4, 2]]]}
+{"paired_sat_context_length": 300, "changed_bits": [163, 165, 197, 199, 231, 233, 265, 267]}
+{"three_cnf_lookup_systems": 72}

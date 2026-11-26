@@ -470,3 +470,17 @@ bound to every sufficiently large even length. A linear-size realizing AIG can
 concentrate the high multiplicities in selector-only gates, with exactly one
 output path per gate having a data ancestor. This gives a barrier for a sharing
 argument based on the Andreev restriction. [Proofs and replay](results/andreev_projection/README.md)
+
+## Quadratic witness images and shared SAT incidence
+
+An exact support test for the degree-two witness promise uses signed
+character sums and a lower bound on the size of every nonempty fiber.
+A common neutral quotient sometimes reduces witness enumeration, but
+connected sparse systems can have full quotient dimension. In an exact
+paired-grammar example, equal-width renaming of one shared witness
+switches joint satisfiability at the same word length. This gives a test
+for cross-context accounting while leaving the distinct-gate charge open.
+Lean checks the local source layout when auxiliary and tag widths stay
+fixed. The affine compression replay reproduced both the rare-fiber
+misses and the obstruction to a fixed sketch list.
+[Proofs, benchmark data, and paired SAT replay](results/quadratic_witness/README.md)

@@ -1,0 +1,22 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Replay the quadratic affine-compression handoff against its independent paired grammar parser and exhaustive small-map controls.",
+  "jobs": [
+    {
+      "id": "quadratic-compression-handoff-replay",
+      "kind": "command",
+      "argv": ["python", "-B", "quadratic_witness_check.py"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "quadratic affine compression at afe3753, including oblivious sketch-list controls", "basis": "paired SAT and GF(2)"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    },
+    {
+      "id": "deterministic-quadratic-handoff-replay",
+      "kind": "command",
+      "argv": ["python", "-B", "deterministic_quadratic_check.py"],
+      "cwd": "sat-search/chatgpt_handoff",
+      "query": {"scope": "simultaneous orthogonal blocks at a3fb7b7", "basis": "paired SAT and GF(2)"},
+      "workers": 1, "memory_mib": 256, "timeout": {"initial": 45, "maximum": 45}
+    }
+  ]
+}
