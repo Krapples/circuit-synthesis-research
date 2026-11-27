@@ -5114,4 +5114,475 @@ theorem indispensableCarrierClass {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms lostRoutedTop
 #print axioms indispensableCarrierClass
 
+
+/-- Site-specific erasure: every read of the deleted gate receives its
+    own earlier wire. No gate is added. -/
+private def siteBypass (n : ℕ) (C : Circuit) (r : ℕ) (ρ : ℕ → ℕ) : Circuit :=
+  ⟨(List.range (C.gates.length-1)).map (fun k =>
+      if k < r then gateAt C k else aliasGate (n+r) (ρ (k+1)) (gateAt C (k+1))),
+    aliasWire (n+r) 0 C.output⟩
+
+private lemma siteBypassLength (n : ℕ) (C : Circuit) (r : ℕ) (ρ : ℕ → ℕ) :
+    (siteBypass n C r ρ).gates.length = C.gates.length-1 := by simp [siteBypass]
+
+private lemma siteBypassGate {n : ℕ} {C : Circuit} {r k : ℕ} {ρ : ℕ → ℕ}
+    (hk : k < C.gates.length-1) :
+    gateAt (siteBypass n C r ρ) k =
+      if k < r then gateAt C k else aliasGate (n+r) (ρ (k+1)) (gateAt C (k+1)) := by
+  have hk' : k < (siteBypass n C r ρ).gates.length := by rw [siteBypassLength]; exact hk
+  rw [gateAt_eq hk']
+  simp [siteBypass]
+
+private lemma siteBypassAO {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r : ℕ} {ρ : ℕ → ℕ} (hρ : ∀ j, ρ j < n+r) :
+    IsAO2 n (siteBypass n C r ρ) := by
+  have memGate (g : Gate) (hg : g ∈ (siteBypass n C r ρ).gates) :
+      ∃ g' ∈ C.gates, g.op = g'.op ∧ g.inputs.length = g'.inputs.length := by
+    simp only [siteBypass,List.mem_map,List.mem_range] at hg
+    obtain ⟨k,hk,rfl⟩ := hg
+    split_ifs with he
+    · exact ⟨gateAt C k,gateAt_mem (by omega),rfl,rfl⟩
+    · exact ⟨gateAt C (k+1),gateAt_mem (by omega),rfl,by simp [aliasGate]⟩
+  refine ⟨?_,?_,?_⟩
+  · intro g hg
+    obtain ⟨g',hg',he,_⟩ := memGate g hg
+    rw [he]
+    exact h.1 g' hg'
+  · intro k hk w hw
+    rw [siteBypassLength] at hk
+    rw [siteBypassGate hk] at hw
+    split_ifs at hw with he
+    · exact h.2.1 k (by omega) w hw
+    · simp only [aliasGate,List.mem_map] at hw
+      obtain ⟨u,hu,rfl⟩ := hw
+      have hlt := h.2.1 (k+1) (by omega) u hu
+      exact aliasWire_lt (hρ (k+1)) (by omega) (by omega)
+  · intro g hg
+    obtain ⟨g',hg',_,he⟩ := memGate g hg
+    rw [he]
+    exact h.2.2 g' hg'
+
+private lemma siteBypassBefore {n : ℕ} {C : Circuit} {r : ℕ} {ρ : ℕ → ℕ}
+    (hr : r < C.gates.length) (x : Fin n → Bool) :
+    ∀ w < n+r, val (siteBypass n C r ρ) (List.ofFn x) w = val C (List.ofFn x) w := by
+  apply val_prefix (n := n) (by simp) (by omega) (by rw [siteBypassLength]; omega)
+  intro k hk
+  rw [siteBypassGate (by omega),ite_eq_left hk]
+
+private abbrev SiteVal {n : ℕ} (C : Circuit) (r : ℕ) (ρ : ℕ → ℕ) :=
+  fun (x : Fin n → Bool) w => val (siteBypass n C r ρ) (List.ofFn x) (aliasWire (n+r) 0 w)
+
+private lemma siteValRaw {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r : ℕ} {ρ : ℕ → ℕ} (hr : r < C.gates.length) (x : Fin n → Bool) (v : Fin n) :
+    SiteVal C r ρ x v.val = x v := by
+  change val (siteBypass n C r ρ) (List.ofFn x) (aliasWire (n+r) 0 v.val) = x v
+  rw [aliasWire_lt_self (by omega : v.val < n+r),siteBypassBefore hr x v.val (by omega)]
+  exact (originalEvalExcept h r).1 x v
+
+private lemma siteValGate {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r : ℕ} {ρ : ℕ → ℕ} (hr : r < C.gates.length) (hρ : ∀ j, ρ j < n+r)
+    (x : Fin n → Bool) {j : ℕ} (hj : j < C.gates.length) (hjr : j ≠ r) :
+    SiteVal C r ρ x (n+j) = (gateAt C j).op.eval ((gateAt C j).inputs.map fun w =>
+      if w = n+r then val C (List.ofFn x) (ρ j) else SiteVal C r ρ x w) := by
+  dsimp only [SiteVal]
+  by_cases hlt : j < r
+  · rw [aliasWire_lt_self (by omega : n+j < n+r),siteBypassBefore hr x (n+j) (by omega)]
+    rw [(originalEvalExcept h r).2 x j hj hjr]
+    congr 1
+    apply List.map_congr_left
+    intro w hw
+    have hwb := h.2.1 j hj w hw
+    rw [ite_eq_right (by omega : w ≠ n+r),aliasWire_lt_self (by omega : w < n+r),
+      siteBypassBefore hr x w (by omega)]
+  · obtain ⟨k,rfl⟩ : ∃ k, j = k+1 := ⟨j-1,by omega⟩
+    have hk : k < C.gates.length-1 := by omega
+    have hkD : k < (siteBypass n C r ρ).gates.length := by rw [siteBypassLength]; exact hk
+    rw [aliasWire_gt_self (by omega : n+r < n+(k+1)),
+      show n+(k+1)-1 = n+k by omega,val_gate (n := n) (by simp) hkD,
+      siteBypassGate hk,ite_eq_right (by omega : ¬ k < r)]
+    simp only [aliasGate,List.map_map]
+    congr 1
+    apply List.map_congr_left
+    intro w hw
+    have hwb := h.2.1 (k+1) hj w hw
+    have hren := aliasWire_lt (hρ (k+1)) (by omega : n+r ≤ n+k)
+      (by omega : w < n+k+1)
+    simp only [Function.comp_apply]
+    rw [ite_eq_left hren]
+    by_cases he : w = n+r
+    · rw [if_pos he,he,aliasWire_self,siteBypassBefore hr x _ (hρ _)]
+    · rw [if_neg he]
+      congr 1
+      by_cases hwlt : w < n+r
+      · rw [aliasWire_lt_self hwlt,aliasWire_lt_self hwlt]
+      · rw [aliasWire_gt_self (by omega : n+r < w),aliasWire_gt_self (by omega : n+r < w)]
+
+private lemma routeReadSite {n : ℕ} {C : Circuit} {r i w : ℕ}
+    (p : OrCarrierRoute n C r i w) :
+    i < C.gates.length ∧ (gateAt C i).op = GateOp.or ∧ n+r ∈ (gateAt C i).inputs := by
+  induction p with
+  | direct hi ho hm => exact ⟨hi,ho,hm⟩
+  | extend _ _ _ _ _ ih => exact ih
+
+private lemma routeAfterHole {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r i w : ℕ} (p : OrCarrierRoute n C r i w) : n+r < w := by
+  induction p with
+  | direct hi _ hm => exact h.2.1 i hi _ hm
+  | extend _ hj _ _ hm ih => exact ih.trans (h.2.1 _ hj _ hm)
+
+private lemma routeFlag {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r i w : ℕ} (path : OrCarrierRoute n C r i w)
+    {S : Finset (Fin n)} {f : Bool} (hS : RawForm C r w S f) : f = true := by
+  obtain ⟨V,hV,hfill⟩ := existsEvalExceptWithJunk C h r (fun _ => true)
+  obtain ⟨hi,hor,hm⟩ := routeReadSite path
+  have hri : i ≠ r := by have := h.2.1 i hi _ hm; omega
+  let x : Fin n → Bool := fun _ => false
+  have ht := carrierRouteFires path hV x
+    ((evalExcept_or hV hi hri hor x).mpr ⟨n+r,hm,hfill x⟩)
+  simpa [x,hfill] using (hS.2 V hV x).mp ht
+
+private lemma routeExistsOfFlag {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r w : ℕ} (hJ : junk G C = {r}) (hw : w < n+C.gates.length)
+    (hne : w ≠ n+r) (hd : ¬ CleanWire G C w)
+    {S : Finset (Fin n)} (hS : RawForm C r w S true) :
+    ∃ i, OrCarrierRoute n C r i w := by
+  obtain ⟨V,hV,htrue⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => true)
+  obtain ⟨W,hW,hfalse⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
+  let x : Fin n → Bool := fun _ => false
+  have hv : V x w = true := (hS.2 V hV x).mpr (Or.inr ⟨rfl,htrue x⟩)
+  have hf : W x w = false := by
+    cases he : W x w
+    · rfl
+    · have ht := (hS.2 W hW x).mp he
+      simp [x,hfalse] at ht
+  obtain ⟨i,_,_,_,hp⟩ := lostDirtyWireRoute G C h hl hJ hV hW x w hw hne hd hv hf
+  exact ⟨i,hp⟩
+
+/-- Dirty wires after a site-specific erasure retain the raw part
+    of their false suspension and receive exactly the OR-route fills. -/
+private theorem siteDirtySemantics {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) (ρ : ℕ → ℕ) (hρ : ∀ j, ρ j < n+r)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n+r) = false) (x : Fin n → Bool) :
+    ∀ w < n+C.gates.length, w ≠ n+r → ¬ CleanWire G C w →
+      (SiteVal C r ρ x w = true ↔ W x w = true ∨
+        ∃ i, OrCarrierRoute n C r i w ∧ val C (List.ofFn x) (ρ i) = true) := by
+  have hr := (junkMember G C hJ).1
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw hne hd
+    by_cases hn : w < n
+    · let v : Fin n := ⟨w,hn⟩
+      have he : SiteVal C r ρ x w = W x w :=
+        (siteValRaw h.1 hr x v).trans (hW.1 x v).symm
+      rw [he]
+      constructor
+      · exact Or.inl
+      · rintro (ht | ⟨i,path,_⟩)
+        · exact ht
+        · have := routeAfterHole h.1 path
+          omega
+    obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+    have hj : j < C.gates.length := by omega
+    have hjr : j ≠ r := by omega
+    have hor : (gateAt C j).op = GateOp.or := by
+      rcases h.1.1 _ (gateAt_mem hj) with hand | hor
+      · exact (hjr (uniqueDirtyAnd G C hJ hj hd hand)).elim
+      · exact hor
+    rw [siteValGate h.1 hr hρ x hj hjr,hor]
+    simp only [GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply,id_eq]
+    constructor
+    · rintro ⟨p,hp,hpt⟩
+      by_cases he : p = n+r
+      · exact Or.inr ⟨j,.direct hj hor (he ▸ hp),by simpa [he] using hpt⟩
+      · rw [if_neg he] at hpt
+        have hp' := h.1.2.1 j hj p hp
+        rcases (ih p hp' (by omega) he
+          (fun hc => hd (cleanWireReader G C h hl hj hp hc).2)).mp hpt with ht | ⟨i,path,hfill⟩
+        · exact Or.inl ((evalExcept_or hW hj hjr hor x).mpr ⟨p,hp,ht⟩)
+        · exact Or.inr ⟨i,.extend path hj hjr hor hp,hfill⟩
+    · rintro (ht | ⟨i,path,hfill⟩)
+      · obtain ⟨p,hp,hpt⟩ := (evalExcept_or hW hj hjr hor x).mp ht
+        have he : p ≠ n+r := by
+          intro he
+          rw [he,hzero] at hpt
+          cases hpt
+        refine ⟨p,hp,?_⟩
+        rw [if_neg he]
+        exact (ih p (h.1.2.1 j hj p hp) (by omega) he
+          (fun hc => hd (cleanWireReader G C h hl hj hp hc).2)).mpr (Or.inl hpt)
+      · cases path with
+        | direct hi ho hm =>
+          exact ⟨n+r,hm,by simpa using hfill⟩
+        | extend path hk hkr ho hm =>
+          have hne' : _ ≠ n+r := Nat.ne_of_gt (routeAfterHole h.1 path)
+          refine ⟨_,hm,?_⟩
+          rw [if_neg hne']
+          exact (ih _ (h.1.2.1 j hj _ hm) (by omega) hne'
+            (fun hc => hd (cleanWireReader G C h hl hj hm hc).2)).mpr (Or.inr ⟨i,path,hfill⟩)
+
+/-- A clean OR collector uses only clean equations. Site-specific
+    redirection cannot change any of those OR read sites. -/
+private theorem siteCollector {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) (ρ : ℕ → ℕ) (hρ : ∀ j, ρ j < n+r)
+    (x : Fin n → Bool) :
+    SiteVal C r ρ x C.output = true ↔ ∃ j < C.gates.length,
+      (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧ SiteVal C r ρ x (n+j) = true := by
+  have hr := (junkMember G C hJ).1
+  have orEq (j) (hj : j < C.gates.length) (hor : (gateAt C j).op = GateOp.or)
+      (hc : BelowF G C j) :
+      SiteVal C r ρ x (n+j) = true ↔
+        ∃ w ∈ (gateAt C j).inputs, SiteVal C r ρ x w = true := by
+    have hno : n+r ∉ (gateAt C j).inputs :=
+      fun hm => (junkMember G C hJ).2.2 (cleanOrOperands G C h.1 hj hor hc hm)
+    rw [siteValGate h.1 hr hρ x hj (cleanDifferent G C hJ hc),hor]
+    simp only [GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply,id_eq]
+    exact exists_congr (fun w => and_congr_right (fun hm => by rw [if_neg (fun he => hno (he ▸ hm))]))
+  have down : ∀ j < C.gates.length, BelowF G C j → SiteVal C r ρ x (n+j) = true →
+      ∃ k < C.gates.length, (gateAt C k).op = GateOp.and ∧
+        BelowF G C k ∧ SiteVal C r ρ x (n+k) = true := by
+    intro j
+    induction j using Nat.strong_induction_on with
+    | _ j ih =>
+      intro hj hc ht
+      rcases h.1.1 _ (gateAt_mem hj) with ha | ho
+      · exact ⟨j,hj,ha,hc,ht⟩
+      · obtain ⟨w,hm,hw⟩ := (orEq j hj ho hc).mp ht
+        have hcw := cleanOrOperands G C h.1 hj ho hc hm
+        have hlt := h.1.2.1 j hj w hm
+        by_cases hn : w < n
+        · exact (rawNotClean G C ⟨w,hn⟩ hcw).elim
+        · obtain ⟨k,rfl⟩ : ∃ k, w = n+k := ⟨w-n,by omega⟩
+          exact ih k (by omega) (by omega) hcw hw
+  have up : ∀ d : ℕ, ∀ j < C.gates.length, C.gates.length-j = d →
+      BelowF G C j → SiteVal C r ρ x (n+j) = true → SiteVal C r ρ x C.output = true := by
+    intro d
+    induction d using Nat.strong_induction_on with
+    | _ d ih =>
+      intro j hj hd hc ht
+      by_cases he : C.output = n+j
+      · rwa [he]
+      · obtain ⟨a,b,hab⟩ := twoOperands h.1 hj
+        have ha := h.1.2.1 j hj a (by simp [hab])
+        obtain ⟨k,hjk,hk,hm⟩ := noUnreadGate G C h j a hj ha he
+        obtain ⟨hor,hck⟩ := cleanReader G C h hl hj hc (allLive G C h k hk) hm
+        exact ih _ (by omega) k hk rfl hck ((orEq k hk hor hck).mpr ⟨n+j,hm,ht⟩)
+  constructor
+  · intro ht
+    have ho := outputLast G C h (by omega : 0 < C.gates.length)
+    have hc : BelowF G C (C.gates.length-1) := by
+      intro y hy
+      have he : C.eval (List.ofFn y) = graphFun G ∅ y := congrFun h.2.1 y
+      rw [← he]
+      change val C (List.ofFn y) C.output = true
+      rwa [ho]
+    rw [ho] at ht
+    exact down _ (by omega) hc ht
+  · rintro ⟨j,hj,_,hc,ht⟩
+    exact up _ j hj rfl hc ht
+
+/-- General strict site-bypass criterion. Safety is checked against
+    each routed top's pure opposite support; completeness only requires
+    fills on genuinely lost positive inputs. -/
+theorem noOneJunkSiteReplacement {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → n+r ∉ (gateAt C j).inputs)
+    (ρ : ℕ → ℕ) (hρ : ∀ j, ρ j < n+r)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n+r) = false)
+    (hsafe : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → BelowF G C j →
+      ∀ (p q : ℕ) (S T : Finset (Fin n)),
+        ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) →
+        RawForm C r p S true → RawForm C r q T false →
+        ∀ i, OrCarrierRoute n C r i p → ∀ x : Fin n → Bool,
+          val C (List.ofFn x) (ρ i) = true → hits T x → graphFun G ∅ x = true)
+    (hfill : ∀ u v, G.Adj u v → W (pairInput u v) C.output = false →
+      ∀ i, OrCarrierRoute n C r i (n+i) → val C (List.ofFn (pairInput u v)) (ρ i) = true) :
+    False := by
+  have hr := (junkMember G C hJ).1
+  let D := siteBypass n C r ρ
+  let Z := SiteVal C r ρ
+  have hD : IsAO2 n D := siteBypassAO h.1 hρ
+  have hlen : D.gates.length = C.gates.length-1 := siteBypassLength n C r ρ
+  have hfun (x : Fin n → Bool) : circuitFun n D x = Z x C.output := rfl
+  have topEq (x : Fin n → Bool) (j) (hj : j < C.gates.length)
+      (ha : (gateAt C j).op = GateOp.and) (hc : BelowF G C j) {p q : ℕ}
+      (hpq : (gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) :
+      Z x (n+j) = true ↔ Z x p = true ∧ Z x q = true := by
+    have hp : p ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+    have hq : q ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+    have hnp : p ≠ n+r := fun he => hno j hj ha (he ▸ hp)
+    have hnq : q ≠ n+r := fun he => hno j hj ha (he ▸ hq)
+    change SiteVal C r ρ x (n+j) = true ↔ _
+    rw [siteValGate h.1 hr hρ x hj (cleanDifferent G C hJ hc),ha]
+    rcases hpq with he | he <;> simp [he,GateOp.eval,hnp,hnq,Z,and_comm]
+  have wireEq (x : Fin n → Bool) (j) (hj : j < C.gates.length)
+      (ha : (gateAt C j).op = GateOp.and) {p : ℕ} (hp : p ∈ (gateAt C j).inputs) :
+      Z x p = true ↔ W x p = true ∨
+        ∃ i, OrCarrierRoute n C r i p ∧ val C (List.ofFn x) (ρ i) = true :=
+    siteDirtySemantics G C h hl hJ ρ hρ hW hzero x p
+      ((h.1.2.1 j hj p hp).trans (Nat.add_lt_add_left hj n))
+      (fun he => hno j hj ha (he ▸ hp)) (noCleanAndOperand G C h j p hj hp ha)
+  have pure (x : Fin n → Bool) (j) (hj : j < C.gates.length)
+      (ha : (gateAt C j).op = GateOp.and) {p : ℕ} (hp : p ∈ (gateAt C j).inputs)
+      {S : Finset (Fin n)} (hS : RawForm C r p S false) :
+      Z x p = true ↔ hits S x := by
+    rw [wireEq x j hj ha hp]
+    constructor
+    · rintro (ht | ⟨i,path,_⟩)
+      · simpa [hits] using (hS.2 W hW x).mp ht
+      · cases routeFlag h.1 path hS
+    · intro ht
+      exact Or.inl ((hS.2 W hW x).mpr (Or.inl ht))
+  have sound (x : Fin n → Bool) (hz : Z x C.output = true) : graphFun G ∅ x = true := by
+    obtain ⟨j,hj,ha,hc,ht⟩ := (siteCollector G C h hl hJ ρ hρ x).mp hz
+    obtain ⟨a,b,A,B,f,g,hab,hA,hB,hfg⟩ := topProduct G C h hl hJ hj ha hc
+    have orient {p q : ℕ} {S T : Finset (Fin n)} {k : Bool}
+        (hpq : (gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p])
+        (hS : RawForm C r p S k) (hT : RawForm C r q T false) : graphFun G ∅ x = true := by
+      have hp : p ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+      have hq : q ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+      obtain ⟨hzp,hzq⟩ := (topEq x j hj ha hc hpq).mp ht
+      have hTx := (pure x j hj ha hq hT).mp hzq
+      rcases (wireEq x j hj ha hp).mp hzp with hwp | ⟨i,path,hv⟩
+      · have hwq := (hT.2 W hW x).mpr (Or.inl hTx)
+        have hwj : W x (n+j) = true := by
+          rcases hpq with he | he
+          · exact (evalExcept_and hW hj (cleanDifferent G C hJ hc) ha he x).mpr ⟨hwp,hwq⟩
+          · exact (evalExcept_and hW hj (cleanDifferent G C hJ hc) ha he x).mpr ⟨hwq,hwp⟩
+        exact suspendedFalseSound G C h hl hJ hW hzero x
+          ((collectorSemantics G C h hl hJ hW x).mpr ⟨j,hj,ha,hc,hwj⟩)
+      · exact hsafe j hj ha hc p q S T hpq (routeFlag h.1 path hS ▸ hS) hT i path x hv hTx
+    rcases hfg with hf | hg
+    · exact orient (Or.inr hab) hB (hf ▸ hA)
+    · exact orient (Or.inl hab) hA (hg ▸ hB)
+  have edge (u v : Fin n) (huv : G.Adj u v) : Z (pairInput u v) C.output = true := by
+    let x := pairInput u v
+    by_cases hw : W x C.output = true
+    · obtain ⟨j,hj,ha,hc,ht⟩ := (collectorSemantics G C h hl hJ hW x).mp hw
+      obtain ⟨p,q,hpq⟩ := twoOperands h.1 hj
+      obtain ⟨hp,hq⟩ := (evalExcept_and hW hj (cleanDifferent G C hJ hc) ha hpq x).mp ht
+      exact (siteCollector G C h hl hJ ρ hρ x).mpr ⟨j,hj,ha,hc,
+        (topEq x j hj ha hc (Or.inl hpq)).mpr
+          ⟨(wireEq x j hj ha (by simp [hpq])).mpr (Or.inl hp),
+           (wireEq x j hj ha (by simp [hpq])).mpr (Or.inl hq)⟩⟩
+    · have hf : W x C.output = false := by cases he : W x C.output <;> simp_all
+      obtain ⟨i,j,p,q,S,T,hi,hio,hir,hj,hja,hjc,hpq,hS,hT,path,hTx⟩ :=
+        lostRoutedTop G C h hl hJ hno hW x (pair_true G u v huv) hf
+      have hp : p ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+      have hq : q ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+      exact (siteCollector G C h hl hJ ρ hρ x).mpr ⟨j,hj,hja,hjc,
+        (topEq x j hj hja hjc hpq).mpr
+          ⟨(wireEq x j hj hja hp).mpr (Or.inr ⟨i,path,hfill u v huv hf (.direct hi hio hir)⟩),
+            (pure x j hj hja hq hT).mpr hTx⟩⟩
+  have hcorrect : circuitFun n D = graphFun G ∅ := by
+    funext x
+    apply Bool.eq_iff_iff.mpr
+    constructor
+    · rw [hfun]
+      exact sound x
+    · intro hx
+      obtain ⟨u,v,huv,hu,hv⟩ := (graph_true G x).mp hx
+      apply circuit_monotone n D (ao_mono hD) (pairInput u v) x ?_ ((hfun _).trans (edge u v huv))
+      intro z hz
+      rcases (show z = u ∨ z = v by simpa [pairInput] using hz) with rfl | rfl
+      · exact hu
+      · exact hv
+  have hm := h.2.2 D hD hcorrect
+  change C.gates.length ≤ D.gates.length at hm
+  omega
+
+/-- Both indispensable stars with at most two readers force separate
+    carrier classes. Replacing each read by the opposite junk provider
+    preserves every edge and creates none, strictly erasing the junk. -/
+theorem noTwoOrReadersBothStars {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a,b])
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → n+r ∉ (gateAt C j).inputs)
+    (hcount : ((Finset.range C.gates.length).filter (fun j => n+r ∈ (gateAt C j).inputs)).card ≤ 2)
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (hcardA : 1 < A.card) (hcardB : 1 < B.card)
+    {s d u v : Fin n} (hs : s ∈ A) (hd : d ∈ B) (hu : u ∈ A) (hv : v ∈ B)
+    (hus : u ≠ s) (hvd : v ≠ d)
+    (hstarA : ∀ z ∈ B, G.Adj s z) (hstarB : ∀ z ∈ A, G.Adj d z)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n+r) = false)
+    (hmissA : W (pairInput s v) C.output = false)
+    (hmissB : W (pairInput u d) C.output = false) : False := by
+  classical
+  obtain ⟨hr,hand,_⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  have hprod' (x : Fin n → Bool) : val C (List.ofFn x) (n+r) = true ↔ hits B x ∧ hits A x :=
+    (hprod x).trans and_comm
+  obtain ⟨i,hi,hio,hir,wi,hclassI⟩ := indispensableCarrierClass G C h hl h4 colour hcolour hJ
+    hno hprod hcardA hs hv hvd hstarA hstarB hW hmissA
+  have hmissB' : W (pairInput d u) C.output = false := by simpa [pairInputComm] using hmissB
+  obtain ⟨k,hk,hko,hkr,wk,hclassK⟩ := indispensableCarrierClass G C h hl h4 colour hcolour hJ
+    hno hprod' hcardB hd hu hus hstarB hstarA hW hmissB'
+  have hik : i ≠ k := by
+    intro he
+    obtain ⟨j,hj,hja,hjc,p,q,S,T,hpq,hS,hT,path,hsT⟩ := wi
+    exact (G.ne_of_adj (hstarA d hd))
+      (hclassK j hj hja hjc p q S T hpq hS hT (he ▸ path) s hsT)
+  let R := (Finset.range C.gates.length).filter (fun j => n+r ∈ (gateAt C j).inputs)
+  have classify (j) (hj : j < C.gates.length) (hm : n+r ∈ (gateAt C j).inputs) : j = i ∨ j = k := by
+    by_contra! hn
+    have hsub : ({i,k,j} : Finset ℕ) ⊆ R := by
+      intro t ht
+      rcases (show t = i ∨ t = k ∨ t = j by simpa using ht) with rfl | rfl | rfl <;>
+        simp [R,Finset.mem_range,*]
+    have hle := Finset.card_le_card hsub
+    have hthree : ({i,k,j} : Finset ℕ).card = 3 := by simp [hik,hn.1.symm,hn.2.symm]
+    rw [hthree] at hle
+    change R.card ≤ 2 at hcount
+    omega
+  have hal := h.1.2.1 r hr a (by simp [hab])
+  have hbl := h.1.2.1 r hr b (by simp [hab])
+  let ρ := fun j => if j = i then b else a
+  apply noOneJunkSiteReplacement G C h hl hJ hno ρ
+    (fun j => by dsimp [ρ]; split_ifs <;> assumption) hW hzero
+  · intro j hj hja hjc p q S T hpq hS hT t path x hf ht
+    obtain ⟨htl,_,htm⟩ := routeReadSite path
+    obtain ⟨z,hz,hzx⟩ := ht
+    rcases classify t htl htm with he | he
+    · have hzs := hclassI j hj hja hjc p q S T hpq hS hT (he ▸ path) z hz
+      have hb : val C (List.ofFn x) b = true := by simpa [ρ,he] using hf
+      obtain ⟨w,hw,hwx⟩ := ((hB.2 _ (originalEvalExcept h.1 r) x).mp hb).resolve_right (by simp)
+      exact (graph_true G x).mpr ⟨s,w,hstarA w hw,hzs ▸ hzx,hwx⟩
+    · have hzd := hclassK j hj hja hjc p q S T hpq hS hT (he ▸ path) z hz
+      have ha : val C (List.ofFn x) a = true := by simpa [ρ,he,hik.symm] using hf
+      obtain ⟨w,hw,hwx⟩ := ((hA.2 _ (originalEvalExcept h.1 r) x).mp ha).resolve_right (by simp)
+      exact (graph_true G x).mpr ⟨d,w,hstarB w hw,hzd ▸ hzx,hwx⟩
+  · intro u' v' huv hm t _
+    let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+    let x := pairInput u' v'
+    have hV := originalEvalExcept h.1 r
+    have ho : V x C.output = true := (congrFun h.2.1 x).trans (pair_true G u' v' huv)
+    obtain ⟨j,hj,hja,hjc,hjv⟩ := (collectorSemantics G C h hl hJ hV x).mp ho
+    obtain ⟨S,T,f,ht⟩ := orientedTop G C h hl hJ hj hja hjc
+    obtain ⟨hp,hq⟩ := (ht V hV x).mp hjv
+    have hjunk : V x (n+r) = true := by
+      rcases hp with hp | hp
+      · have hw := (collectorSemantics G C h hl hJ hW x).mpr
+          ⟨j,hj,hja,hjc,(ht W hW x).mpr ⟨Or.inl hp,hq⟩⟩
+        rw [hm] at hw
+        cases hw
+      · exact hp.2
+    obtain ⟨ha,hb⟩ := (hprod x).mp hjunk
+    have hva := (hA.2 V hV x).mpr (Or.inl ha)
+    have hvb := (hB.2 V hV x).mpr (Or.inl hb)
+    change V x (ρ t) = true
+    dsimp [ρ]
+    split_ifs <;> assumption
+
+#print axioms noOneJunkSiteReplacement
+#print axioms noTwoOrReadersBothStars
+
 end ResearchVerification.OneJunkErase
