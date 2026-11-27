@@ -4740,4 +4740,89 @@ theorem noOneJunkWithMixedProviderAndTrim {n : ℕ} (G : SimpleGraph (Fin n))
 
 #print axioms noOneJunkWithMixedProviderAndTrim
 
+
+/-- The decisive geometry of an indispensable noncentral star edge.
+    Two tops sharing a raw carrier leaf, one exposing the centre s,
+    must both use only s on their opposite side.  Unlike a bare
+    common-neighbour condition, this uses the actual suspended output:
+    the shared raw leaf cannot already cover the missing edge s-v.
+    No claim about identifying the shared carrier path is assumed here. -/
+theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a,b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false)
+    (hB : RawForm C r b B false) (hcardA : 1 < A.card)
+    {s d v : Fin n} (hs : s ∈ A) (hv : v ∈ B) (hvd : v ≠ d)
+    (hstarA : ∀ z ∈ B, G.Adj s z) (hstarB : ∀ z ∈ A, G.Adj d z)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hmiss : W (pairInput s v) C.output = false)
+    {i j : ℕ} (hi : i < C.gates.length) (hia : (gateAt C i).op = GateOp.and)
+    (hic : BelowF G C i) (hjc : BelowF G C j)
+    {P Q S T : Finset (Fin n)}
+    (hiTop : OrientedTop C r i P Q true) (hjTop : OrientedTop C r j S T true)
+    (hsQ : s ∈ Q) {e : Fin n} (heP : e ∈ P) (heS : e ∈ S) :
+    ∀ c ∈ T, c = s := by
+  classical
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  have rawCross {k : ℕ} {R U : Finset (Fin n)} (hc : BelowF G C k)
+      (ht : OrientedTop C r k R U true) {p q : Fin n}
+      (hp : p ∈ R) (hq : q ∈ U) : G.Adj p q := by
+    exact adjOfPair G (hc _ ((ht _ (originalEvalExcept h.1 r) (pairInput p q)).mpr
+      ⟨Or.inl ⟨p,hp,by simp [pairInput]⟩, ⟨q,hq,by simp [pairInput]⟩⟩))
+  have hes : G.Adj s e := (rawCross hic hiTop heP hsQ).symm
+  have hev : e ≠ v := by
+    intro he
+    have ht : W (pairInput s v) (n+i) = true :=
+      (hiTop W hW _).mpr
+        ⟨Or.inl ⟨e,heP,by simp [pairInput,he]⟩, ⟨s,hsQ,by simp [pairInput]⟩⟩
+    have ho := (collectorSemantics G C h hl hJ hW _).mpr ⟨i,hi,hia,hic,ht⟩
+    rw [hmiss] at ho
+    cases ho
+  have hn : ∃ u ∈ A, ¬ G.Adj u v := by
+    by_contra! hall
+    obtain ⟨p,hp,q,hq,hpq⟩ := Finset.one_lt_card.mp hcardA
+    exact hvd (commonNeighborUnique G h4 hpq (hstarB p hp).symm
+      (hstarB q hq).symm (hall p hp) (hall q hq))
+  obtain ⟨u,hu,huv⟩ := hn
+  have sameColour (p q z : Fin n) (hp : colour p ≠ colour z)
+      (hq : colour q ≠ colour z) : colour p = colour q := by
+    generalize colour p = cp at hp ⊢
+    generalize colour q = cq at hq ⊢
+    generalize colour z = cz at hp hq
+    cases cp <;> cases cq <;> cases cz <;> simp_all
+  have hus : colour u = colour s :=
+    sameColour u s d (hcolour u d (hstarB u hu).symm)
+      (hcolour s d (hstarB s hs).symm)
+  intro c hc
+  have hce : G.Adj c e := (rawCross hjc hjTop heS hc).symm
+  have hsc : colour s = colour c :=
+    sameColour s c e (hcolour s e hes) (hcolour c e hce)
+  have huc : colour u = colour c := hus.trans hsc
+  let x : Fin n → Bool := fun z => decide (z = u ∨ z = v ∨ z = c)
+  have hx : graphFun G ∅ x = true := hjc x
+    ((hjTop _ (originalEvalExcept h.1 r) x).mpr
+      ⟨Or.inr ⟨rfl,(hprod x).mpr
+        ⟨⟨u,hu,by simp [x]⟩,⟨v,hv,by simp [x]⟩⟩⟩,⟨c,hc,by simp [x]⟩⟩)
+  obtain ⟨p,q,hpq,hp,hq⟩ := (graph_true G x).mp hx
+  have hp' : p = u ∨ p = v ∨ p = c := by simpa [x] using hp
+  have hq' : q = u ∨ q = v ∨ q = c := by simpa [x] using hq
+  have hcv : G.Adj c v := by
+    rcases hp' with rfl | rfl | rfl <;> rcases hq' with rfl | rfl | rfl
+    · exact (G.ne_of_adj hpq rfl).elim
+    · exact (huv hpq).elim
+    · exact (hcolour u c hpq huc).elim
+    · exact (huv hpq.symm).elim
+    · exact (G.ne_of_adj hpq rfl).elim
+    · exact hpq.symm
+    · exact (hcolour c u hpq huc.symm).elim
+    · exact hpq
+    · exact (G.ne_of_adj hpq rfl).elim
+  by_contra hcs
+  exact hev (commonNeighborUnique G h4 (Ne.symm hcs) (hstarA v hv) hcv hes hce)
+
+#print axioms indispensableCarrierOppositeSingleton
+
 end ResearchVerification.OneJunkErase
