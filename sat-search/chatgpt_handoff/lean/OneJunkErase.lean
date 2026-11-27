@@ -6079,19 +6079,22 @@ theorem everyGateHasLostEdge {n : ℕ} (G : SimpleGraph (Fin n))
 private lemma memJunkIff {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     (C : Circuit) (j : ℕ) :
     j ∈ junk G C ↔ j < C.gates.length ∧ (gateAt C j).op = GateOp.and ∧ ¬ BelowF G C j := by
-  classical
-  simp only [junk,gatesWhere,Finset.mem_filter,Finset.mem_range,PEqualNP.CleanedNonEdge.IsDirtyAnd,PEqualNP.CleanedNonEdge.IsDirty]
   constructor
-  · rintro ⟨hj,ha,_,x,hx,hf⟩
-    exact ⟨hj,ha,fun hc => Bool.false_ne_true (hf.symm.trans (hc x hx))⟩
-  · rintro ⟨hj,ha,hc⟩
-    refine ⟨hj,ha,hj,?_⟩
-    by_contra hn
-    apply hc
-    intro x hx
-    cases he : graphFun G ∅ x
-    · exact (hn ⟨x,hx,he⟩).elim
-    · rfl
+  · intro hm
+    simp only [junk, gatesWhere, Finset.mem_filter, Finset.mem_range] at hm
+    obtain ⟨hj, ha, _, x, hx, hf⟩ := hm
+    exact ⟨hj, ha, fun hc => by have hh := hc x hx; rw [hf] at hh; contradiction⟩
+  · rintro ⟨hj, ha, hd⟩
+    have hdirty : PEqualNP.CleanedNonEdge.IsDirty n G C j := by
+      refine ⟨hj, ?_⟩
+      by_contra hn
+      apply hd
+      intro x hx
+      cases hf : graphFun G ∅ x with
+      | true => rfl
+      | false => exact (hn ⟨x, hx, hf⟩).elim
+    simp only [junk, gatesWhere, Finset.mem_filter, Finset.mem_range]
+    exact ⟨hj, ha, hdirty⟩
 
 /-- Replace one gate by a raw edge conjunction, keeping all other indices.
     If false suspension loses only that edge, this is an exact same-size
