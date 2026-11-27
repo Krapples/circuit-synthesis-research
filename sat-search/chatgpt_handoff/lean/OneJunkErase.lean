@@ -6940,4 +6940,337 @@ theorem lastJunkOneProductDescent {n : ℕ} (G : SimpleGraph (Fin n)) [Decidable
 #print axioms lastJunkCleanRepairDescent
 #print axioms lastJunkOneProductDescent
 
+
+/-! Multi-hole suspension with exclusive-cone accounting. Unlike
+    prefix-preserving descent, a strict repair may discard earlier junk. -/
+
+def EvalHoles {n : ℕ} (C : Circuit) (holes : Finset ℕ)
+    (W : (Fin n → Bool) → ℕ → Bool) : Prop :=
+  (∀ x (v : Fin n), W x v.val = x v) ∧
+  (∀ x j, j < C.gates.length → j ∈ holes → W x (n+j) = false) ∧
+  ∀ x j, j < C.gates.length → j ∉ holes →
+    W x (n+j) = (gateAt C j).op.eval ((gateAt C j).inputs.map (W x))
+
+private def holesValue {n : ℕ} (C : Circuit) (holes : Finset ℕ)
+    (x : Fin n → Bool) (w : ℕ) : Bool :=
+  if hw : w < n then x ⟨w,hw⟩
+  else if w-n ∈ holes then false
+  else (gateAt C (w-n)).op.eval ((gateAt C (w-n)).inputs.attach.map fun v =>
+    if _hv : v.val < w then holesValue C holes x v.val else false)
+termination_by w
+
+theorem existsEvalHoles {n : ℕ} (C : Circuit) (h : IsAO2 n C) (holes : Finset ℕ) :
+    ∃ W, EvalHoles C holes W := by
+  refine ⟨holesValue C holes,?_,?_,?_⟩
+  · intro x v
+    rw [holesValue,dite_eq_left v.isLt]
+  · intro x j _ hj
+    rw [holesValue,dite_eq_right (by omega),Nat.add_sub_cancel_left,ite_eq_left hj]
+  · intro x j hj hn
+    rw [holesValue,dite_eq_right (by omega),Nat.add_sub_cancel_left,ite_eq_right hn]
+    congr 1
+    conv => rhs; rw [← List.attach_map_val]
+    apply List.map_congr_left
+    intro v _
+    rw [dite_eq_left (h.2.1 j hj v.val v.property)]
+
+/-- All selected zero fillings are below the original evaluation. The
+    valuation itself is monotone, so testing the all-true input detects
+    functions that are identically false. -/
+private theorem holesCompare {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {holes : Finset ℕ} {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalHoles C holes W) (x : Fin n → Bool) :
+    ∀ w < n+C.gates.length,
+      (W x w = true → val C (List.ofFn x) w = true) ∧
+      (W x w = true → W (fun _ => true) w = true) := by
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw
+    by_cases hn : w < n
+    · let v : Fin n := ⟨w,hn⟩
+      rw [hW.1 x v,hW.1 (fun _ => true) v,(originalEvalExcept h 0).1 x v]
+      exact ⟨id,fun _ => rfl⟩
+    obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+    have hj : j < C.gates.length := by omega
+    by_cases hm : j ∈ holes
+    · rw [hW.2.1 x j hj hm]
+      exact ⟨fun hf => by cases hf,fun hf => by cases hf⟩
+    have he := (originalEvalExcept h C.gates.length).2 x j hj (by omega)
+    dsimp only at he
+    rw [hW.2.2 x j hj hm,hW.2.2 (fun _ => true) j hj hm,he]
+    constructor
+    · apply opMono_imp _ (h.1 _ (gateAt_mem hj))
+      intro p hp
+      have hb := h.2.1 j hj p hp
+      exact (ih p hb (by omega)).1
+    · apply opMono_imp _ (h.1 _ (gateAt_mem hj))
+      intro p hp
+      have hb := h.2.1 j hj p hp
+      exact (ih p hb (by omega)).2
+
+private lemma holesZero {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {holes : Finset ℕ} {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalHoles C holes W) {w : ℕ} (hw : w < n+C.gates.length)
+    (hz : W (fun _ => true) w = false) : ∀ x, W x w = false := by
+  intro x
+  cases he : W x w
+  · rfl
+  · have ht := (holesCompare h hW x w hw).2 he
+    rw [hz] at ht
+    cases ht
+
+/-- A selected residual compiler. Only needed, nonzero functions must
+    be realized; a zero operand is free and unneeded nonzero cones may
+    be discarded. A gate is paid for only if selected and not simplified.
+    The finite paid set need not be restricted to a suffix. -/
+theorem compileExclusiveHoles {n : ℕ} (C : Circuit) (h : IsAO2 n C)
+    {holes : Finset ℕ} {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalHoles C holes W) (need : ℕ → Prop) (paid : Finset ℕ)
+    (hclosed : ∀ j < C.gates.length, need (n+j) →
+      W (fun _ => true) (n+j) = true → ∀ w ∈ (gateAt C j).inputs,
+        w < n ∨ need w ∨ W (fun _ => true) w = false)
+    (hpay : ∀ j < C.gates.length, need (n+j) →
+      W (fun _ => true) (n+j) = true → j ∉ paid →
+        ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false) :
+    ∃ D : Circuit, IsAO2 n D ∧ D.gates.length ≤ paid.card ∧
+      ∀ w < n+C.gates.length, w < n ∨ need w ∨ W (fun _ => true) w = false →
+        WireAvailable D (fun x => W x w) := by
+  classical
+  let budget := fun k => ((Finset.range k).filter fun j => j ∈ paid).card
+  let requested := fun w => w < n ∨ need w ∨ W (fun _ => true) w = false
+  have main : ∀ k ≤ C.gates.length, ∃ D : Circuit, IsAO2 n D ∧
+      D.gates.length ≤ budget k ∧
+      ∀ w < n+k, requested w → WireAvailable D (fun x => W x w) := by
+    intro k
+    induction k with
+    | zero =>
+      intro _
+      let D : Circuit := ⟨[],0⟩
+      have hD : IsAO2 n D := by
+        refine ⟨fun g hg => ?_,fun j hj => ?_,fun g hg => ?_⟩ <;> simp [D] at *
+      refine ⟨D,hD,by simp [D],?_⟩
+      intro w hw _
+      have hn : w < n := by omega
+      let v : Fin n := ⟨w,hn⟩
+      refine Or.inr ⟨w,by simpa [D] using hn,?_⟩
+      intro x
+      exact ((originalEvalExcept hD 0).1 x v).trans (hW.1 x v).symm
+    | succ k ih =>
+      intro hk
+      obtain ⟨D,hD,hlen,havail⟩ := ih (by omega)
+      have hj : k < C.gates.length := by omega
+      have hcount : budget (k+1) = budget k + if k ∈ paid then 1 else 0 := by
+        by_cases hm : k ∈ paid
+        · simp [budget,Finset.range_add_one,Finset.filter_insert,hm]
+        · simp [budget,Finset.range_add_one,Finset.filter_insert,hm]
+      have finish (E : Circuit) (hE : IsAO2 n E) (hkeep : PreservesWires n D E)
+          (hbound : E.gates.length ≤ D.gates.length+1)
+          (hfree : k ∉ paid → E.gates.length ≤ D.gates.length)
+          (hw : requested (n+k) → WireAvailable E (fun x => W x (n+k))) :
+          ∃ F : Circuit, IsAO2 n F ∧ F.gates.length ≤ budget (k+1) ∧
+            ∀ w < n+(k+1), requested w → WireAvailable F (fun x => W x w) := by
+        refine ⟨E,hE,?_,?_⟩
+        · by_cases hm : k ∈ paid
+          · simp only [hm,ite_true] at hcount
+            omega
+          · have := hfree hm
+            simp only [hm,ite_false,Nat.add_zero] at hcount
+            omega
+        · intro w hwlt hn
+          by_cases he : w = n+k
+          · subst w
+            exact hw hn
+          · exact wireAvailablePreserved hkeep (havail w (by omega) hn)
+      cases htop : W (fun _ => true) (n+k)
+      · exact finish D hD ⟨le_rfl,fun _ _ _ => rfl⟩ (by omega) (fun _ => le_rfl)
+          (fun _ => Or.inl (holesZero h hW (by omega) htop))
+      by_cases hn : need (n+k)
+      · have hnot : k ∉ holes := by
+          intro hm
+          have hh := hW.2.1 (fun _ => true) k hj hm
+          rw [htop] at hh
+          cases hh
+        obtain ⟨p,q,hpq⟩ := twoOperands h hj
+        have hp : p ∈ (gateAt C k).inputs := by simp [hpq]
+        have hq : q ∈ (gateAt C k).inputs := by simp [hpq]
+        have hP := havail p (h.2.1 k hj p hp) (hclosed k hj hn htop p hp)
+        have hQ := havail q (h.2.1 k hj q hq) (hclosed k hj hn htop q hq)
+        have hfree (hm : k ∉ paid) :
+            (∀ x, W x p = false) ∨ (∀ x, W x q = false) := by
+          obtain ⟨w,hw,hz⟩ := hpay k hj hn htop hm
+          rcases (show w = p ∨ w = q by simpa [hpq] using hw) with rfl | rfl
+          · exact Or.inl (wireAvailableFalseOfTop hD hP hz)
+          · exact Or.inr (wireAvailableFalseOfTop hD hQ hz)
+        rcases h.1 _ (gateAt_mem hj) with ha | ho
+        · obtain ⟨E,hE,hkeep,hbound,hfree',hw⟩ := appendAvailableAnd D hD hP hQ
+          have he : (fun x => W x p && W x q) = fun x => W x (n+k) := by
+            funext x
+            simpa [ha,hpq,GateOp.eval] using (hW.2.2 x k hj hnot).symm
+          exact finish E hE hkeep hbound (fun hm => hfree' (hfree hm)) (fun _ => he ▸ hw)
+        · obtain ⟨E,hE,hkeep,hbound,hfree',hw⟩ := appendAvailableOr D hD hP hQ
+          have he : (fun x => W x p || W x q) = fun x => W x (n+k) := by
+            funext x
+            simpa [ho,hpq,GateOp.eval] using (hW.2.2 x k hj hnot).symm
+          exact finish E hE hkeep hbound (fun hm => hfree' (hfree hm)) (fun _ => he ▸ hw)
+      · exact finish D hD ⟨le_rfl,fun _ _ _ => rfl⟩ (by omega) (fun _ => le_rfl)
+          (fun hw => by
+            rcases hw with hw | hw | hw
+            · omega
+            · exact (hn hw).elim
+            · rw [htop] at hw
+              cases hw)
+  obtain ⟨D,hD,hlen,hw⟩ := main C.gates.length le_rfl
+  have hb : ((Finset.range C.gates.length).filter fun j => j ∈ paid) ⊆ paid := by
+    intro j hj
+    exact (Finset.mem_filter.mp hj).2
+  exact ⟨D,hD,hlen.trans (Finset.card_le_card hb),hw⟩
+
+/-- A global strict budget excludes a least circuit. All suspended
+    holes can be selected simultaneously; the unused true-valued gates
+    need not be retained, in contrast to the earlier suffix compiler. -/
+theorem noExclusiveConeRepair {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C)
+    (hpos : 0 < C.gates.length)
+    {holes : Finset ℕ} {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalHoles C holes W) (need : ℕ → Prop) (paid : Finset ℕ)
+    (hclosed : ∀ j < C.gates.length, need (n+j) →
+      W (fun _ => true) (n+j) = true → ∀ w ∈ (gateAt C j).inputs,
+        w < n ∨ need w ∨ W (fun _ => true) w = false)
+    (hpay : ∀ j < C.gates.length, need (n+j) →
+      W (fun _ => true) (n+j) = true → j ∉ paid →
+        ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false)
+    (houtNeed : C.output < n ∨ need C.output ∨ W (fun _ => true) C.output = false)
+    (ps : List (ℕ × ℕ))
+    (hbound : ∀ p ∈ ps, p.1 < n+C.gates.length ∧ p.2 < n+C.gates.length)
+    (hneed : ∀ p ∈ ps,
+      (p.1 < n ∨ need p.1 ∨ W (fun _ => true) p.1 = false) ∧
+      (p.2 < n ∨ need p.2 ∨ W (fun _ => true) p.2 = false))
+    (hc : ∀ p ∈ ps, ∀ x, repairProduct W p x = true → graphFun G ∅ x = true)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      ps.any (fun p => repairProduct W p (pairInput u v)) = true)
+    (hbudget : paid.card+2*ps.length < C.gates.length ∨
+      (ps ≠ [] ∧ W (fun _ => true) C.output = false ∧
+        paid.card+2*ps.length ≤ C.gates.length)) : False := by
+  have hout := outputLast G C h hpos
+  have hob : C.output < n+C.gates.length := by omega
+  obtain ⟨B,hB,hBl,hw⟩ := compileExclusiveHoles C h.1 hW need paid hclosed hpay
+  obtain ⟨D₀,hD₀,_,hDl,hbonus,hres⟩ :=
+    appendCleanRepairs G B hB W (fun x => W x C.output) (hw _ hob houtNeed) ps
+      (fun p hp => ⟨hw _ (hbound p hp).1 (hneed p hp).1,
+        hw _ (hbound p hp).2 (hneed p hp).2⟩) hc
+  have hsize : D₀.gates.length < C.gates.length := by
+    rcases hbudget with hlt | ⟨hne,hf,hle⟩
+    · omega
+    · have := hbonus hne hf
+      omega
+  rcases hres with hfalse | ⟨w,_,hv⟩
+  · have hno (a b : Fin n) (hab : G.Adj a b) : False := by
+      have hh := hfalse (pairInput a b)
+      change (W (pairInput a b) C.output || ps.any (fun p => repairProduct W p (pairInput a b))) = false at hh
+      have ht : (W (pairInput a b) C.output || ps.any (fun p => repairProduct W p (pairInput a b))) = true := by
+        rw [Bool.or_eq_true]
+        exact hcover a b hab
+      rw [ht] at hh
+      cases hh
+    have he := emptyGraphNoGates G C h hno
+    omega
+  · let D : Circuit := ⟨D₀.gates,w⟩
+    have hD : IsAO2 n D := hD₀
+    have hval (x : Fin n → Bool) : circuitFun n D x =
+        (W x C.output || ps.any (fun p => repairProduct W p x)) := hv x
+    have hcorrect : circuitFun n D = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      constructor
+      · intro hx
+        rw [hval,Bool.or_eq_true] at hx
+        rcases hx with hq | hp
+        · have he := (holesCompare h.1 hW x C.output hob).1 hq
+          exact (congrFun h.2.1 x).symm ▸ he
+        · obtain ⟨p,hp,ht⟩ := List.any_eq_true.mp hp
+          exact hc p hp x ht
+      · intro hx
+        obtain ⟨a,b,hab,ha,hb⟩ := (graph_true G x).mp hx
+        apply circuit_monotone n D (ao_mono hD) (pairInput a b) x ?_ ?_
+        · intro z hz
+          rcases (show z = a ∨ z = b by simpa [pairInput] using hz) with rfl | rfl
+          · exact ha
+          · exact hb
+        · change circuitFun n D (pairInput a b) = true
+          rw [hval,Bool.or_eq_true]
+          exact hcover a b hab
+    have hm := h.2.2 D hD hcorrect
+    change C.gates.length ≤ D₀.gates.length at hm
+    omega
+
+/-- Concrete raw-edge version: keep only the residual output cone;
+    each uncovered edge costs one AND and at most one collector OR.
+    The inequality is a necessary global constraint on every least
+    circuit, not merely on the last dirty gate or its reader count. -/
+theorem exclusiveConeRawEdgeLowerBound {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C)
+    (hpos : 0 < C.gates.length)
+    {holes : Finset ℕ} {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalHoles C holes W) (need : ℕ → Prop) (paid : Finset ℕ)
+    (hclosed : ∀ j < C.gates.length, need (n+j) →
+      W (fun _ => true) (n+j) = true → ∀ w ∈ (gateAt C j).inputs,
+        w < n ∨ need w ∨ W (fun _ => true) w = false)
+    (hpay : ∀ j < C.gates.length, need (n+j) →
+      W (fun _ => true) (n+j) = true → j ∉ paid →
+        ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false)
+    (houtNeed : C.output < n ∨ need C.output ∨ W (fun _ => true) C.output = false)
+    (es : List (Fin n × Fin n))
+    (hadj : ∀ e ∈ es, G.Adj e.1 e.2)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = false →
+      ∃ e ∈ es, pairInput e.1 e.2 = pairInput u v) :
+    C.gates.length ≤ paid.card+2*es.length ∧
+      (es ≠ [] → W (fun _ => true) C.output = false →
+        C.gates.length < paid.card+2*es.length) := by
+  classical
+  let ps := es.map (fun e => (e.1.val,e.2.val))
+  have hplen : ps.length = es.length := by simp [ps]
+  have hbound (p) (hp : p ∈ ps) : p.1 < n+C.gates.length ∧ p.2 < n+C.gates.length := by
+    obtain ⟨e,he,rfl⟩ := List.mem_map.mp hp
+    have h1 := e.1.isLt
+    have h2 := e.2.isLt
+    exact ⟨by omega,by omega⟩
+  have hneed (p) (hp : p ∈ ps) :
+      (p.1 < n ∨ need p.1 ∨ W (fun _ => true) p.1 = false) ∧
+      (p.2 < n ∨ need p.2 ∨ W (fun _ => true) p.2 = false) := by
+    obtain ⟨e,he,rfl⟩ := List.mem_map.mp hp
+    exact ⟨Or.inl e.1.isLt,Or.inl e.2.isLt⟩
+  have hc (p) (hp : p ∈ ps) (x : Fin n → Bool)
+      (ht : repairProduct W p x = true) : graphFun G ∅ x = true := by
+    obtain ⟨e,he,rfl⟩ := List.mem_map.mp hp
+    have hh : x e.1 = true ∧ x e.2 = true := by
+      simpa [repairProduct,hW.1 x e.1,hW.1 x e.2] using ht
+    exact (graph_true G x).mpr ⟨e.1,e.2,hadj e he,hh.1,hh.2⟩
+  have hcov (u v : Fin n) (huv : G.Adj u v) :
+      W (pairInput u v) C.output = true ∨
+        ps.any (fun p => repairProduct W p (pairInput u v)) = true := by
+    cases he : W (pairInput u v) C.output
+    · obtain ⟨e,he',heq⟩ := hcover u v huv he
+      refine Or.inr (List.any_eq_true.mpr ⟨(e.1.val,e.2.val),List.mem_map.mpr ⟨e,he',rfl⟩,?_⟩)
+      rw [← heq]
+      simp [repairProduct,hW.1 (pairInput e.1 e.2) e.1,
+        hW.1 (pairInput e.1 e.2) e.2,pairInput]
+    · exact Or.inl rfl
+  have no := noExclusiveConeRepair G C h hpos hW need paid hclosed hpay houtNeed ps hbound hneed hc hcov
+  constructor
+  · by_contra hn
+    exact no (Or.inl (by omega))
+  · intro hne hf
+    by_contra hn
+    have hpne : ps ≠ [] := by
+      intro he
+      have hz : ps.length = 0 := by simp [he]
+      exact hne (List.length_eq_zero_iff.mp (hplen.symm.trans hz))
+    exact no (Or.inr ⟨hpne,hf,by omega⟩)
+
+#print axioms existsEvalHoles
+#print axioms compileExclusiveHoles
+#print axioms noExclusiveConeRepair
+#print axioms exclusiveConeRawEdgeLowerBound
+
 end ResearchVerification.OneJunkErase
