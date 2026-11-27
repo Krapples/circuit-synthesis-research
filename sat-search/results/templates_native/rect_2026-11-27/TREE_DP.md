@@ -9,8 +9,9 @@ it skips the others.
 
 ## Claim
 
-Let every input be essential. For S <= 2, the DP decides whether a circuit with at most n-1+S gates
-exists. If it finds no structure for any s <= S, the minimum size exceeds n-1+S.
+Let every input be essential. For S <= 3, the DP decides whether a circuit with at most n-1+S gates
+exists. If it finds no structure for any s <= S, the minimum size exceeds n-1+S. When it finds one, it
+prints a witness circuit, which the tool checks by simulation on the cared rows.
 
 ## Proof
 
@@ -43,6 +44,14 @@ exists. If it finds no structure for any s <= S, the minimum size exceeds n-1+S.
    reads h1 c times (c = 0, 1 or 2) and the output tree reads it the other 2−c times. Both reads of h2
    are in the output tree, because h1's tree has no gate leaves and h2 cannot read itself.
 
+   **General shapes (s <= 3, the code since 2026-11-27).** Since every f_h >= 2, p <= s. Order H
+   topologically as h_0, ..., h_{p-1}. A shape fixes the fanouts (each >= 2, Σ(f−1) <= s), the input
+   multiset M with e = s − Σ(f−1) extra copies, and r[t][j], the number of reads of h_j by tree t. Here
+   t < p is the tree of h_t, t = p is the output tree, r[t][j] = 0 unless j < t, and Σ_t r[t][j] = f_j.
+   Every tree needs at least 2 leaves: an H gate is a gate, and the output is a gate that nothing reads.
+   For s = 3 this gives p = 0 (e = 3); p = 1 with f = 2, 3 or 4; p = 2 with f = (2,2), (3,2) or (2,3);
+   and p = 3 with f = (2,2,2). The s <= 2 cases above are the same enumeration.
+
 4. **Placeholder tables.**
    - Gates act bitwise on cared-row vectors, and they are monotone. A tree containing placeholder leaves
      h1 and h2 is therefore exactly described by its 4 vectors, one for each value of (h1, h2), which
@@ -56,7 +65,15 @@ exists. If it finds no structure for any s <= S, the minimum size exceeds n-1+S.
 
 5. **Checks.** Each structure is checked exactly over every split of the input multiset, as in the
    code:
-   - S1 is h1's tree, S2 is h2's tree and C is the output tree.
+   - S_t is the input multiset of tree t. With p placeholders a table has 2^p entries and evaluates to
+     OR_i (e[i] AND v_j for j in i).
+   - The values v_0, ..., v_{p-2} are enumerated in order (distinct, nonconstant), each from its tree's
+     tables at the earlier values. The output tree, evaluated at these values with v_{p-1} free, gives
+     lo ⊆ hi, and the last value is matched as in step 4. If h_{p-1}'s tree reads no placeholder, its
+     values are fixed and the D sets of all earlier value choices are pooled.
+   - Witness: the chosen tables are expanded back into trees by searching for a production of each table
+     (any production gives a tree with that leaf multiset). The trees are then assembled into one
+     circuit, with the H trees in order and the output tree last.
    - D sets are reduced to the inclusion-minimal ones. If v agrees with T on D, it also agrees on any
      subset of D.
    - The tables R(key) depend only on the input wires, not on T. Units with the same n and cared-row wires

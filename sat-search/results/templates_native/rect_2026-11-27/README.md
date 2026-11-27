@@ -14,7 +14,7 @@ checked proofs.
 
 | template | UNSAT at budget (SAT) | + closed by tree DP | open |
 | --- | --- | --- | --- |
-| rect45b | 13 | 4 | 3 (21279, 21288, 21319: min ≥ 11, budget 11) |
+| rect45b | 13 | 7 (3 of them at s = 3: 21279, 21288, 21319 have min ≥ 12, budget 11) | 0 |
 | rect46 | 11 | 7 | 2 (22162, 22172: min ≥ 12, budget 12) |
 
 The tree-DP column is a separate exact method with its own grade (section "Tree DP"). `verdicts.jsonl`
@@ -66,19 +66,29 @@ Input line format: `ID N GENERAL START BUDGET hexrow:target,...`.
 ## Tree DP (2026-11-27)
 
 `sat-search/native/tools/tree_dp.cpp` is an exact enumeration of every circuit with at most n-1+S gates,
-S ≤ 2, for units whose n inputs are all essential. The proof and scope are in [TREE_DP.md](TREE_DP.md).
+S ≤ 3 (S ≤ 2 before the generic version), for units whose n inputs are all essential. The proof and scope are in [TREE_DP.md](TREE_DP.md).
 It is a program verdict, not a checked proof, and it is independent of the SAT encoding.
 
 - Results: `tree_dp_rect45b.jsonl` (`--smax 2`) and `tree_dp_rect46.jsonl` (`--smax 2 --to-budget`).
-  `min_k` means a circuit of that size exists (no witness is printed). `gt: g` means no circuit with at
+  `min_k` means a circuit of that size exists (the generic version also prints a checked witness). `gt: g` means no circuit with at
   most g gates exists. L-meta-20888, 20892 and 23850 have an inessential input and are skipped; all three
   are already UNSAT by SAT.
 - Newly closed at budget:
   - rect45b, budget 10: 21127, 21140, 21143, 21160.
   - rect46, budget 10: 23530, 23570, 23680, 23832.
   - rect46, budget 11: 23606, 23625, 23659.
-- Raised floors on still-open units: 21279, 21288 and 21319 have min ≥ 11 (SAT had ≥ 10). 22162 and
-  22172 have min ≥ 12 (SAT had ≥ 10 and ≥ 11). Their budgets need S = 3, which is not implemented.
+- Raised floors: 22162 and 22172 have min ≥ 12 (SAT had ≥ 10 and ≥ 11). Their budget 12 needs S = 3.
+- **S = 3 (generic shapes, witness output).** `tree_dp_rect45b_s3.jsonl` (log `tree_dp_rect45b_s3_log.txt`,
+  input `units_rect45b_open.txt`) was run with `--smax 3 --to-budget --threads 11 --heavy 3 --verbose`
+  and took 1950 s. 21279, 21288 and 21319 have **no circuit with at most 11 gates**, so they are closed at
+  budget. The largest DP had 313M tables, about 5 GB per heavy shape. Validation is in
+  `tree_dp_checks/README.md`, section "s ≤ 3". All s ≤ 2 verdicts are reproduced, 1656 exhaustive
+  3x3/3x4 targets agree with SAT minima, and every witness passes an independent simulation. The s = 3
+  lower-bound direction has no SAT cross-check: SAT at k = 10 timed out on every 4x4 unit the DP called
+  > 10.
+- rect46 at S = 3 was not run. Going from 4x5 to 4x6 multiplied the p = 2 table counts by about 13 at
+  S = 2, so an S = 3 p = 2 DP for 4x6 would hold about 4G tables (over 64 GB). Closing it needs a smaller
+  state, for example meeting in the middle on the output tree instead of storing every key.
 - Consistency: wherever both methods decided a size, they agree. For example, 21050 and 21051 have DP
   min 10 above their SAT-UNSAT budget, and 22172 is SAT-UNSAT at 10 and DP min > 11.
 - Differential checks (`tree_dp_checks/`): on 146 random all-essential 4x5 units with the same rows, the
@@ -95,8 +105,8 @@ Reproduce from `sat-search/native` (built with `build_tree_dp.bat`):
 
 ## Open obligation
 
-After the tree DP, 5 units stay open: 21279, 21288, 21319 at size 11, and 22162, 22172 at sizes 12. SAT
-sizes 10 and 11 take more than 500 s per size. This needs pruning for
+After the tree DP (S ≤ 3 on rect45b, S ≤ 2 on rect46), 2 units stay open: rect46 22162 and 22172 at
+size 12. SAT sizes 10 and 11 take more than 500 s per size. This needs pruning for
 partial labels that is shown to be sound, such as row/column permutations that preserve the mask
 or partial-label reader bounds (`cube_search.py --partial*`, monotone only). It also needs
 certificates (LRAT) before any of these verdicts are used as proofs.

@@ -19,3 +19,22 @@ with native `template_synth` SAT minima. The check is an exact match when min �
 
 These checks have no `gt` cases. The `gt` direction is checked against the SAT-UNSAT sizes of the rect
 units themselves (see `../README.md`, section "Tree DP").
+
+## s ≤ 3 (generic shapes, 2026-11-27)
+
+The generic version (`--smax 3`, witness output) reproduces every s ≤ 2 verdict above, on `rand80`,
+`hard45_sel`, and the 26-unit 4x5 batch of rect45 and random units. Folder `s3/`:
+
+| set | units | reference | result |
+| --- | --- | --- | --- |
+| `a33` (all 3x3 targets, `gen_all.py 3 3`) | 156 | SAT minima 5-7 | 156 agree |
+| `a34` (all 3x4 targets, `gen_all.py 3 4`) | 1500 | SAT minima 6-8 | 1500 agree |
+| `t44` (`gen_randT.py 120 11 4 4`) | 120 | 46 SAT minima 7-9, 74 timeouts at 9 | 46 agree; DP gives 9 (42), 10 (26), > 10 (6) |
+| `t44b` (`gen_randT.py 1000 12 4 4`) | 1000 | — | DP min 7-9 (768), 10 (193), > 10 (39) |
+
+- Every DP witness (1770 for a33/a34/t44, 961 for t44b) passes the independent row-by-row simulation in
+  `check_wit.py`. That settles the upper-bound direction.
+- The s = 3 witnesses of `t44b` use every shape family: (p, e) = (0, 3) 27, (1, 2) 20, (2, 1) 88, (3, 0) 58.
+- Not checked: the s = 3 lower-bound direction. No 3x3 or 3x4 target needs s = 3. On the 39 `t44b` units
+  with DP > 10, `template_synth` at exactly k = 10 (`t44b_gt10_k10.txt`) timed out after 120 s on all 39,
+  so SAT cannot confirm them.

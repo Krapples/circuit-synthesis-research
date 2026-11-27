@@ -1,0 +1,130 @@
+3 units in 1 wire groups
+level s=0: 1 tasks
+level s=0 done
+level s=1: 10 tasks
+shape p1 M111111111 r0=0 r1=2 dp 1.68s total 1.70s tables 7321927 max 101021 sat 0/3
+level s=1 done
+level s=2: 58 tasks
+shape p2 M111111111 r0=00 r1=00 r2=22 dp 11.09s total 12.60s tables 27772612 max 105560 sat 0/3
+shape p2 M111111111 r0=00 r1=20 r2=02 dp 8.55s total 13.96s tables 14368170 max 101021 sat 0/3
+shape p1 M111111121 r0=0 r1=2 dp 17.33s total 17.46s tables 24851537 max 680005 sat 0/3
+shape p1 M211111111 r0=0 r1=2 dp 17.19s total 17.32s tables 25813871 max 680005 sat 0/3
+shape p2 M111111111 r0=00 r1=10 r2=12 dp 33.08s total 40.40s tables 56047862 max 424991 sat 0/3
+shape p1 M111111111 r0=0 r1=3 dp 5.42s total 5.49s tables 12035049 max 109781 sat 0/3
+shape p1 M121111111 r0=0 r1=2 dp 19.27s total 19.43s tables 25813871 max 680005 sat 0/3
+shape p1 M111112111 r0=0 r1=2 dp 20.71s total 20.85s tables 24851537 max 680005 sat 0/3
+shape p1 M111121111 r0=0 r1=2 dp 21.28s total 21.42s tables 24851537 max 680005 sat 0/3
+shape p1 M111111211 r0=0 r1=2 dp 17.89s total 18.07s tables 24851537 max 680005 sat 0/3
+shape p1 M111111112 r0=0 r1=2 dp 17.65s total 17.78s tables 24851537 max 680005 sat 0/3
+shape p1 M112111111 r0=0 r1=2 dp 18.37s total 18.50s tables 25813871 max 680005 sat 0/3
+shape p1 M111211111 r0=0 r1=2 dp 21.00s total 21.13s tables 25813871 max 680005 sat 0/3
+level s=2 done
+level s=3: 272 tasks
+shape p3 M111111111 r0=000 r1=000 r2=000 r3=222 dp 10.05s total 49.16s tables 10921571 max 46492 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=020 r3=202 dp 27.28s total 53.11s tables 28233787 max 105560 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=010 r3=212 dp 52.38s total 163.03s tables 62087582 max 270736 sat 0/3
+shape p3 M111111111 r0=000 r1=100 r2=020 r3=102 dp 54.25s total 120.49s tables 58186929 max 424991 sat 0/3
+shape p3 M111111111 r0=000 r1=100 r2=100 r3=022 dp 10.48s total 42.19s tables 28597761 max 105560 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=100 r3=122 dp 19.24s total 80.46s tables 62087582 max 270736 sat 0/3
+shape p3 M111111111 r0=000 r1=200 r2=000 r3=022 dp 9.98s total 18.71s tables 28233787 max 105560 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=120 r3=102 dp 3.91s total 23.94s tables 17619899 max 43087 sat 0/3
+shape p3 M111111111 r0=000 r1=100 r2=110 r3=012 dp 22.75s total 115.81s tables 72269289 max 424991 sat 0/3
+shape p3 M111111111 r0=000 r1=100 r2=010 r3=112 dp 128.11s total 304.91s tables 200927937 max 1049455 sat 0/3
+shape p3 M111111111 r0=000 r1=200 r2=010 r3=012 dp 19.41s total 62.60s tables 58186929 max 424991 sat 0/3
+shape p3 M111111111 r0=000 r1=200 r2=020 r3=002 dp 8.62s total 58.39s tables 21414413 max 101021 sat 0/3
+shape p2 M211111111 r0=00 r1=20 r2=02 dp 19.05s total 26.33s tables 51035086 max 680005 sat 0/3
+shape p2 M211111111 r0=00 r1=00 r2=22 dp 73.79s total 79.34s tables 226641115 max 1294498 sat 0/3
+shape p2 M121111111 r0=00 r1=20 r2=02 dp 20.12s total 27.83s tables 51035086 max 680005 sat 0/3
+shape p3 M111111111 r0=000 r1=100 r2=120 r3=002 dp 21.52s total 111.60s tables 58186929 max 424991 sat 0/3
+shape p2 M211111111 r0=00 r1=10 r2=12 dp 105.42s total 116.43s tables 313313667 max 3955999 sat 0/3
+shape p2 M112111111 r0=00 r1=20 r2=02 dp 20.56s total 27.75s tables 51035086 max 680005 sat 0/3
+shape p2 M112111111 r0=00 r1=00 r2=22 dp 77.39s total 82.85s tables 226641115 max 1294498 sat 0/3
+shape p2 M121111111 r0=00 r1=10 r2=12 dp 110.53s total 121.65s tables 313313667 max 3955999 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=210 r3=012 dp 4.24s total 27.25s tables 17619899 max 43087 sat 0/3
+shape p2 M111211111 r0=00 r1=10 r2=12 dp 105.03s total 116.19s tables 313313667 max 3955999 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=110 r3=112 dp 73.89s total 161.72s tables 199646897 max 1049455 sat 0/3
+shape p3 M111111111 r0=000 r1=100 r2=000 r3=122 dp 20.12s total 87.66s tables 62087582 max 270736 sat 0/3
+shape p2 M111211111 r0=00 r1=20 r2=02 dp 20.90s total 28.61s tables 51035086 max 680005 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=220 r3=002 dp 9.98s total 34.47s tables 28233787 max 105560 sat 0/3
+shape p2 M111121111 r0=00 r1=00 r2=22 dp 74.94s total 80.25s tables 222904447 max 1294498 sat 0/3
+shape p2 M111211111 r0=00 r1=00 r2=22 dp 75.40s total 80.83s tables 226641115 max 1294498 sat 0/3
+shape p2 M111111211 r0=00 r1=00 r2=22 dp 76.99s total 82.12s tables 222904447 max 1294498 sat 0/3
+shape p2 M111112111 r0=00 r1=10 r2=12 dp 109.22s total 119.51s tables 305413928 max 3955999 sat 0/3
+shape p2 M111111211 r0=00 r1=10 r2=12 dp 109.35s total 119.58s tables 305413928 max 3955999 sat 0/3
+shape p2 M111121111 r0=00 r1=20 r2=02 dp 19.66s total 26.38s tables 49132104 max 680005 sat 0/3
+shape p2 M111111211 r0=00 r1=20 r2=02 dp 19.63s total 26.49s tables 49132104 max 680005 sat 0/3
+shape p2 M111112111 r0=00 r1=00 r2=22 dp 74.77s total 80.00s tables 222904447 max 1294498 sat 0/3
+shape p2 M111112111 r0=00 r1=20 r2=02 dp 20.07s total 26.68s tables 49132104 max 680005 sat 0/3
+shape p2 M111111121 r0=00 r1=00 r2=22 dp 75.86s total 80.98s tables 222904447 max 1294498 sat 0/3
+shape p2 M112111111 r0=00 r1=10 r2=12 dp 110.70s total 121.84s tables 313313667 max 3955999 sat 0/3
+shape p2 M111111112 r0=00 r1=20 r2=02 dp 19.69s total 26.32s tables 49132104 max 680005 sat 0/3
+shape p2 M111111112 r0=00 r1=10 r2=12 dp 108.18s total 118.16s tables 305413928 max 3955999 sat 0/3
+shape p2 M111111121 r0=00 r1=20 r2=02 dp 20.19s total 26.94s tables 49132104 max 680005 sat 0/3
+shape p2 M111111111 r0=00 r1=20 r2=03 dp 5.46s total 7.37s tables 19081292 max 109781 sat 0/3
+shape p2 M111111111 r0=00 r1=00 r2=32 dp 13.22s total 14.20s tables 49309253 max 125880 sat 0/3
+shape p2 M111111112 r0=00 r1=00 r2=22 dp 74.56s total 79.59s tables 222904447 max 1294498 sat 0/3
+shape p2 M111111111 r0=00 r1=10 r2=13 dp 26.92s total 29.51s tables 97957362 max 493847 sat 0/3
+shape p1 M311111111 r0=0 r1=2 dp 25.88s total 26.05s tables 59824747 max 5114855 sat 0/3
+shape p2 M111111121 r0=00 r1=10 r2=12 dp 107.60s total 117.93s tables 305413928 max 3955999 sat 0/3
+shape p2 M111111111 r0=00 r1=00 r2=23 dp 13.60s total 14.60s tables 49309253 max 125880 sat 0/3
+shape p1 M221111111 r0=0 r1=2 dp 41.51s total 41.76s tables 86625668 max 5114855 sat 0/3
+shape p1 M211112111 r0=0 r1=2 dp 39.54s total 39.78s tables 82671537 max 5114855 sat 0/3
+shape p2 M111111111 r0=00 r1=20 r2=12 dp 83.54s total 88.00s tables 236182754 max 3955999 sat 0/3
+shape p2 M121111111 r0=00 r1=00 r2=22 dp 76.72s total 82.34s tables 226641115 max 1294498 sat 0/3
+shape p1 M211111211 r0=0 r1=2 dp 38.54s total 38.79s tables 82671537 max 5114855 sat 0/3
+shape p2 M111111111 r0=00 r1=30 r2=02 dp 5.27s total 7.15s tables 19081292 max 109781 sat 0/3
+shape p1 M212111111 r0=0 r1=2 dp 40.48s total 40.73s tables 86625668 max 5114855 sat 0/3
+shape p3 M111111111 r0=000 r1=000 r2=200 r3=022 dp 10.50s total 22.20s tables 28233787 max 105560 sat 0/3
+shape p1 M122111111 r0=0 r1=2 dp 39.07s total 39.32s tables 86625668 max 5114855 sat 0/3
+shape p2 M111111111 r0=00 r1=10 r2=22 dp 63.81s total 68.11s tables 196366726 max 1294498 sat 0/3
+shape p1 M131111111 r0=0 r1=2 dp 25.74s total 25.92s tables 59824747 max 5114855 sat 0/3
+shape p1 M211121111 r0=0 r1=2 dp 38.33s total 38.57s tables 82671537 max 5114855 sat 0/3
+shape p1 M211111121 r0=0 r1=2 dp 38.57s total 38.81s tables 82671537 max 5114855 sat 0/3
+shape p1 M121111211 r0=0 r1=2 dp 38.63s total 38.87s tables 82671537 max 5114855 sat 0/3
+shape p1 M121112111 r0=0 r1=2 dp 38.31s total 38.55s tables 82671537 max 5114855 sat 0/3
+shape p1 M121111112 r0=0 r1=2 dp 38.36s total 38.60s tables 82671537 max 5114855 sat 0/3
+shape p1 M112211111 r0=0 r1=2 dp 40.29s total 40.52s tables 86625668 max 5114855 sat 0/3
+shape p1 M112121111 r0=0 r1=2 dp 38.43s total 38.67s tables 82671537 max 5114855 sat 0/3
+shape p1 M112112111 r0=0 r1=2 dp 38.42s total 38.66s tables 82671537 max 5114855 sat 0/3
+shape p1 M121121111 r0=0 r1=2 dp 38.28s total 38.53s tables 82671537 max 5114855 sat 0/3
+shape p1 M112111121 r0=0 r1=2 dp 38.98s total 39.21s tables 82671537 max 5114855 sat 0/3
+shape p1 M112111112 r0=0 r1=2 dp 39.02s total 39.24s tables 82671537 max 5114855 sat 0/3
+shape p1 M111311111 r0=0 r1=2 dp 26.39s total 26.55s tables 59824747 max 5114855 sat 0/3
+shape p1 M111221111 r0=0 r1=2 dp 38.96s total 39.18s tables 82671537 max 5114855 sat 0/3
+shape p1 M111212111 r0=0 r1=2 dp 38.79s total 39.02s tables 82671537 max 5114855 sat 0/3
+shape p1 M111211211 r0=0 r1=2 dp 38.59s total 38.81s tables 82671537 max 5114855 sat 0/3
+shape p1 M111131111 r0=0 r1=2 dp 23.98s total 24.14s tables 55848977 max 5114855 sat 0/3
+shape p1 M111211121 r0=0 r1=2 dp 38.93s total 39.15s tables 82671537 max 5114855 sat 0/3
+shape p1 M211211111 r0=0 r1=2 dp 39.54s total 39.78s tables 86625668 max 5114855 sat 0/3
+shape p1 M111122111 r0=0 r1=2 dp 35.92s total 36.15s tables 79182946 max 5114855 sat 0/3
+shape p1 M111121211 r0=0 r1=2 dp 36.62s total 36.84s tables 79182946 max 5114855 sat 0/3
+shape p1 M111121121 r0=0 r1=2 dp 36.39s total 36.61s tables 79182946 max 5114855 sat 0/3
+shape p1 M111113111 r0=0 r1=2 dp 24.34s total 24.51s tables 55848977 max 5114855 sat 0/3
+shape p1 M111121112 r0=0 r1=2 dp 36.11s total 36.33s tables 79182946 max 5114855 sat 0/3
+shape p1 M111112211 r0=0 r1=2 dp 37.20s total 37.43s tables 79182946 max 5114855 sat 0/3
+shape p1 M211111112 r0=0 r1=2 dp 39.37s total 39.60s tables 82671537 max 5114855 sat 0/3
+shape p1 M111111311 r0=0 r1=2 dp 24.59s total 24.74s tables 55848977 max 5114855 sat 0/3
+shape p1 M111111221 r0=0 r1=2 dp 37.00s total 37.22s tables 79182946 max 5114855 sat 0/3
+shape p1 M111111212 r0=0 r1=2 dp 36.84s total 37.05s tables 79182946 max 5114855 sat 0/3
+shape p1 M111111122 r0=0 r1=2 dp 37.01s total 37.23s tables 79182946 max 5114855 sat 0/3
+shape p1 M111211112 r0=0 r1=2 dp 39.32s total 39.54s tables 82671537 max 5114855 sat 0/3
+shape p2 M111121111 r0=00 r1=10 r2=12 dp 105.96s total 116.31s tables 305413928 max 3955999 sat 0/3
+shape p1 M111111113 r0=0 r1=2 dp 24.17s total 24.31s tables 55848977 max 5114855 sat 0/3
+shape p1 M111111131 r0=0 r1=2 dp 24.06s total 24.22s tables 55848977 max 5114855 sat 0/3
+shape p1 M111112112 r0=0 r1=2 dp 35.08s total 35.30s tables 79182946 max 5114855 sat 0/3
+shape p1 M121111111 r0=0 r1=3 dp 14.91s total 15.00s tables 43756470 max 760429 sat 0/3
+shape p1 M111211111 r0=0 r1=3 dp 14.77s total 14.86s tables 43756470 max 760429 sat 0/3
+shape p1 M112111111 r0=0 r1=3 dp 14.76s total 14.84s tables 43756470 max 760429 sat 0/3
+shape p1 M111112121 r0=0 r1=2 dp 35.01s total 35.24s tables 79182946 max 5114855 sat 0/3
+shape p1 M111112111 r0=0 r1=3 dp 14.41s total 14.50s tables 41954546 max 760429 sat 0/3
+shape p1 M111111121 r0=0 r1=3 dp 14.43s total 14.51s tables 41954546 max 760429 sat 0/3
+shape p1 M111111111 r0=0 r1=4 dp 4.41s total 4.44s tables 16752251 max 109973 sat 0/3
+shape p1 M211111111 r0=0 r1=3 dp 14.68s total 14.77s tables 43756470 max 760429 sat 0/3
+shape p1 M111121111 r0=0 r1=3 dp 14.49s total 14.57s tables 41954546 max 760429 sat 0/3
+shape p1 M111111112 r0=0 r1=3 dp 15.05s total 15.14s tables 41954546 max 760429 sat 0/3
+shape p1 M112111211 r0=0 r1=2 dp 39.82s total 40.05s tables 82671537 max 5114855 sat 0/3
+shape p1 M121211111 r0=0 r1=2 dp 41.28s total 41.53s tables 86625668 max 5114855 sat 0/3
+shape p1 M121111121 r0=0 r1=2 dp 39.55s total 39.78s tables 82671537 max 5114855 sat 0/3
+shape p1 M111111211 r0=0 r1=3 dp 13.17s total 13.25s tables 41954546 max 760429 sat 0/3
+shape p1 M113111111 r0=0 r1=2 dp 23.47s total 23.64s tables 59824747 max 5114855 sat 0/3
+level s=3 done

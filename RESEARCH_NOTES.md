@@ -15,8 +15,11 @@ the circuit to ordinary or once-shared read-once formulas.
 
 For 40 desk rect templates (rect46/rect45b, one-hot promise rows, monotone; solver verdicts only,
 no certificates), the native exact search finds 24 steps UNSAT at budget and 16 open at sizes
-10-11. An exact tree-decomposition DP for at most n+1 gates (all inputs essential; program verdict,
-146/146 agreement with SAT minima) closes 11 more. Five stay open: three at size 11 and two at size 12.
+10-11. An exact tree-decomposition DP (all inputs essential; program verdict) closes 11 more at
+n-1+2 gates, with 146/146 agreement with SAT minima. Its generic s ≤ 3 version with checked witnesses
+agrees on all 1656 3x3/3x4 targets and shows rect45b 21279, 21288 and 21319 have no circuit of ≤ 11
+gates, so all 20 rect45b steps are unreachable at budget. The s = 3 lower-bound direction has no SAT
+cross-check. Open: rect46 22162 and 22172 at size 12, where s = 3 needs more than 64 GB.
 [Verdicts, scope and runs](sat-search/results/templates_native/rect_2026-11-27/README.md),
 [DP proof](sat-search/results/templates_native/rect_2026-11-27/TREE_DP.md)
 
