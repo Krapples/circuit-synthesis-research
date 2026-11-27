@@ -32,6 +32,8 @@
 //          --no-used --no-distinct --no-colex --no-essential (ablations; all four = plain control encoding).
 //   --no-essential: otherwise every input that any correct circuit must read (essential_input) is read.
 //   --no-slots:     otherwise (with used and essential) at most k + 1 - E extra reads (read-slot count).
+//   --split-reads:  after the probe, split a size on S = the exact set of wires with an extra read (all
+//                   |S| <= k + 1 - E) instead of on gate 0; wires outside S get exactly their one read.
 //   --congruence:   re-enable CaDiCaL congruence closure (off: it crashes on some cube formulas).
 //   --dump DIR:     write each whole-size CNF (DIR/<id>_k<k>.cnf) and report UNSAT without solving.
 //   --solve-cnf F:  solve one DIMACS file with this build (respects --seconds, --congruence); prints JSON.
@@ -113,6 +115,7 @@ static std::deque<std::function<void()>> g_cubes;
 static bool g_congruence = false;
 static std::string g_dump;      // --dump DIR: write each whole-size CNF as DIR/<id>_k<k>.cnf instead of solving
 static double g_probe = 10.0;   // seconds on the whole size before splitting it into gate-0 cubes (0 = never)
+static bool g_split_reads = false;  // --split-reads: split on the set of multiply-read wires instead of gate 0
 
 static bool run_one_cube(bool wait) {
   std::function<void()> f;
@@ -157,7 +160,8 @@ static bool essential_input(const Unit& u, int w) {
 
 // Returns 10 SAT (gates filled), 20 UNSAT, 0 timeout.
 static int solve_k(const Unit& u, int k, const Clock::time_point& end, std::vector<Choice>& gates,
-                   int cube = -1, const std::atomic<bool>* stop = nullptr) {
+                   int cube = -1, const std::atomic<bool>* stop = nullptr,
+                   const std::vector<int>* multi = nullptr) {
   if ((stop && stop->load()) || Clock::now() >= end) return 0;
   const int n = u.n, R = (int)u.rows.size(), W = n + k;
   CaDiCaL::Solver s;
@@ -231,18 +235,40 @@ static int solve_k(const Unit& u, int k, const Clock::time_point& end, std::vect
     int slack = k + 1 - E;
     if (slack < 0) return 20;
     std::vector<int> extra;
+    std::vector<std::vector<int>> mx(W - 1);  // per wire: its extra-read vars
     for (int w = 0; w < W - 1; ++w) {
       int first = w < n ? 0 : w - n + 1;  // first gate that may read wire w
       int prev = 0;                       // var: some gate before h reads w
       for (int h = first; h < k; ++h) {
         int rd = reads[h][w];
         if (!rd) continue;
-        if (w < n && !ess[w]) { extra.push_back(rd); continue; }
-        if (prev) { int x = fresh(); cl({-rd, -prev, x}); extra.push_back(x); }
+        if (w < n && !ess[w]) { extra.push_back(rd); mx[w].push_back(rd); continue; }
+        if (prev) {
+          int x = fresh();
+          cl({-rd, -prev, x});
+          if (multi) { cl({-x, rd}); cl({-x, prev}); }  // x <-> (h reads w and an earlier gate does)
+          extra.push_back(x);
+          mx[w].push_back(x);
+        }
         int p = fresh();
         cl({-rd, p});
         if (prev) cl({-prev, p});
         prev = p;
+      }
+    }
+    if (multi) {
+      // Cube: S = *multi is exactly the set of wires with an extra read (a second reader of an essential
+      // input or gate, or any reader of a non-essential input). Every other wire has no extra read.
+      std::vector<char> in(W - 1, 0);
+      for (int w : *multi) in[w] = 1;
+      for (int w = 0; w < W - 1; ++w) {
+        if (in[w]) {
+          if (mx[w].empty()) return 20;
+          for (int x : mx[w]) s.add(x);
+          s.add(0);
+        } else {
+          for (int x : mx[w]) cl({-x});
+        }
       }
     }
     // at most `slack` of `extra` true (sequential counter)
@@ -323,8 +349,28 @@ static int solve_k(const Unit& u, int k, const Clock::time_point& end, std::vect
 }
 
 // Split size k on the choice of gate 0 (every circuit makes one): SAT if some cube is SAT, UNSAT if all are.
+// With --split-reads, split instead on S = the set of wires with an extra read (see the read-slot count):
+// every circuit has exactly one such S, |S| <= slack = k + 1 - E, so the cubes partition the size.
 static int solve_cubes(const Unit& u, int k, const Clock::time_point& end, std::vector<Choice>& gates) {
-  int n0 = (u.general ? u.n : 0) + u.n * (u.n - 1);  // gate-0 choices, in solve_k's order
+  std::vector<std::vector<int>> subsets;
+  if (g_split_reads) {
+    int E = 0;
+    for (int w = 0; w < u.n; ++w) E += essential_input(u, w);
+    int slack = k + 1 - E, nw = u.n + k - 1;  // wires 0..nw-1 (all but the output)
+    if (slack < 0) return 20;
+    std::vector<int> cur;
+    std::function<void(int)> rec = [&](int from) {
+      subsets.push_back(cur);
+      if ((int)cur.size() == slack) return;
+      for (int w = from; w < nw; ++w) { cur.push_back(w); rec(w + 1); cur.pop_back(); }
+    };
+    rec(0);
+    // larger S first: fewer forced-single wires, usually the slowest cubes
+    std::stable_sort(subsets.begin(), subsets.end(),
+                     [](const std::vector<int>& a, const std::vector<int>& b) { return a.size() > b.size(); });
+  }
+  int n0 = g_split_reads ? (int)subsets.size()
+                         : (u.general ? u.n : 0) + u.n * (u.n - 1);  // gate-0 choices, in solve_k's order
   std::atomic<bool> stop{false};
   std::atomic<int> remaining{n0};
   std::vector<int> res(n0, 0);
@@ -333,7 +379,8 @@ static int solve_cubes(const Unit& u, int k, const Clock::time_point& end, std::
     std::lock_guard<std::mutex> lk(g_qmu);
     for (int c = 0; c < n0; ++c)
       g_cubes.push_back([&, c] {
-        res[c] = solve_k(u, k, end, wit[c], c, &stop);
+        res[c] = g_split_reads ? solve_k(u, k, end, wit[c], -1, &stop, &subsets[c])
+                               : solve_k(u, k, end, wit[c], c, &stop);
         if (res[c] == 10) stop = true;
         --remaining;
       });
@@ -445,7 +492,12 @@ int main(int argc, char** argv) {
       return 0;
     }
     else if (a == "--probe" && i + 1 < argc) g_probe = std::atof(argv[++i]);
+    else if (a == "--split-reads") g_split_reads = true;
     else { std::fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
+  }
+  if (g_split_reads && !(g_slots && g_essential && g_used)) {
+    std::fprintf(stderr, "--split-reads needs the read-slot count (used, essential, slots)\n");
+    return 2;
   }
   std::vector<Unit> units;
   std::string line;

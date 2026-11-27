@@ -1,0 +1,8 @@
+{"id": "L-meta-23530", "status": "UNSAT", "k": 10, "seconds": 102.624, "ks": [[10, "UNSAT", 102.624]], "mode": "split", "cap_s": 600, "flags": "--threads 22 --split-reads"}
+{"id": "L-meta-23530", "status": "UNSAT", "k": 10, "seconds": 130.063, "ks": [[10, "UNSAT", 130.063]], "mode": "gate0", "cap_s": 163, "flags": "--threads 22"}
+{"id": "L-meta-23570", "status": "UNSAT", "k": 10, "seconds": 85.5696, "ks": [[10, "UNSAT", 85.5696]], "mode": "split", "cap_s": 600, "flags": "--threads 22 --split-reads"}
+{"id": "L-meta-23570", "status": "TIMEOUT", "k": 10, "seconds": 138.026, "ks": [[10, "TIMEOUT", 138.026]], "mode": "gate0", "cap_s": 138, "flags": "--threads 22"}
+{"id": "L-meta-23832", "status": "UNSAT", "k": 10, "seconds": 126.054, "ks": [[10, "UNSAT", 126.054]], "mode": "split", "cap_s": 600, "flags": "--threads 22 --split-reads"}
+{"id": "L-meta-23832", "status": "UNSAT", "k": 10, "seconds": 150.06, "ks": [[10, "UNSAT", 150.06]], "mode": "gate0", "cap_s": 199, "flags": "--threads 22"}
+{"id": "L-meta-21127", "status": "UNSAT", "k": 10, "seconds": 536.085, "ks": [[10, "UNSAT", 536.085]], "mode": "split", "cap_s": 600, "flags": "--threads 22 --split-reads"}
+{"id": "L-meta-21127", "status": "UNSAT", "k": 10, "seconds": 527.921, "ks": [[10, "UNSAT", 527.921]], "mode": "gate0", "cap_s": 814, "flags": "--threads 22"}

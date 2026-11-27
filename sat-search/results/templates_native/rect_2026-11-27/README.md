@@ -103,6 +103,39 @@ Reproduce from `sat-search/native` (built with `build_tree_dp.bat`):
 `tree_dp.exe --smax 2 --to-budget --threads 22 --heavy 4 < UNITS`, where UNITS is the rect46 lines of
 `units.txt`.
 
+## Read-set cubes: `template_synth --split-reads` (2026-11-27, opt-in)
+
+This option is motivated by the tree DP's slack s = k − (n − 1). After the probe, a size is split on
+S, the exact set of wires that carry an extra read. An extra read is a second or later reader of an
+essential input or a gate, or any reader of a non-essential input. Two cases make up a cube:
+
+- Each wire in S has at least one extra read.
+- Each wire outside S has none. Gates and essential inputs then have exactly one reader, and the
+  other inputs have none.
+
+Every circuit determines one S, and the read-slot count gives |S| ≤ k + 1 − E. So the cubes
+partition the size: 20 cubes at rect46 k = 10, and 172 at rect45b k = 10. Without the flag the
+encoding is unchanged.
+
+- **Check** (`split_reads_check.jsonl`): 11 rect45b units with DP-known minimum m (9 or 10), sizes
+  m−1 and m, `--probe 0.01` to force the cube path. Both modes give UNSAT at m−1 and SAT at m,
+  and every witness is re-simulated. Wall time: 62 s split vs 85 s gate-0.
+- **Matched bench** (`split_reads_bench.jsonl`): one unit at a time, 22 threads, single size
+  k = 10. Gate-0 is capped at 1.5× the split time + 10 s.
+
+  | unit | split | gate-0 |
+  | --- | --- | --- |
+  | 23530 | UNSAT 102.6 s | UNSAT 130.1 s |
+  | 23570 | UNSAT 85.6 s | TIMEOUT at 138 s |
+  | 23832 | UNSAT 126.1 s | UNSAT 150.1 s |
+  | 21127 | UNSAT 536.1 s | UNSAT 527.9 s |
+
+  The split gains 1.2–1.6× at slack 1 and is neutral at slack 2. Run alone, gate-0 also closes these
+  sizes. The earlier 600 s timeouts came from units that shared the cube pool. The SAT verdicts at
+  k = 10 agree with the tree DP: 23530, 23570 and 23832 (budget 10) and 21127 (budget 10).
+- Reproduce: `template_synth.exe --threads 22 --seconds 600 --split-reads < UNIT`, with the unit line
+  edited to START = BUDGET = 10.
+
 ## Open obligation
 
 After the tree DP (S ≤ 3 on rect45b, S ≤ 2 on rect46), 2 units stay open: rect46 22162 and 22172 at
