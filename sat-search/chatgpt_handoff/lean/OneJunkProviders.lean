@@ -88,7 +88,10 @@ theorem filterPlan (h : NoFourCycle G) (c : Fin n)
   | keepShared R d hb hr _ ih =>
       apply FilteredPlan.reuse
       · rcases protectedFilter G h R c d hr with he | hc
-        · exact Or.inl (he.symm ▸ hb)
+        · left
+          change base (R ∩ nbr G c)
+          rw [he]
+          exact hb
         · exact Or.inr hc
       · exact ih
   | merge A B ha hb _ ih =>
@@ -119,7 +122,7 @@ theorem edge_of_pair (a b : Fin n)
   rcases hu' with rfl | rfl <;> rcases hv' with rfl | rfl
   · exact (G.ne_of_adj huv rfl).elim
   · exact huv
-  · exact G.adj_comm.mp huv
+  · exact (G.adj_comm _ _).mp huv
   · exact (G.ne_of_adj huv rfl).elim
 
 /-- Clean raw products have every cross pair in the graph. -/
