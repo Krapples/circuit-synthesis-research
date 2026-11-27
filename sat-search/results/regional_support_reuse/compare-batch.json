@@ -1,0 +1,29 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Measure whether exact regional row-support reuse shortens captured production kernel jobs with full verdict, witness, and counter parity across builds.",
+  "jobs": [
+    {
+      "id": "regional-row-support-bitset-abba",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/experiments/native_build_compare.py",
+        "sat-search/native/build/baseline",
+        "sat-search/native",
+        "sat-search/logs/regional_row_support_comparison.jsonl"
+      ],
+      "query": {
+        "basis": "signed leaf or monotone read-once formulas",
+        "coverage": "captured queries jointly decided in archived run",
+        "decision": "retain code on measurable speedup or leave experiment recorded"
+      },
+      "workers": 1,
+      "memory_mib": 768,
+      "timeout": {
+        "initial": 90,
+        "maximum": 90
+      }
+    }
+  ]
+}

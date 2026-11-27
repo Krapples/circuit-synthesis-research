@@ -187,7 +187,6 @@ class Engine {
 
     // ---- PackedTables
     uint32_t support(const T& t) const {
-        if (!t.nonzero() || t == one_) return 0;
         uint32_t s = 0;
         for (int i = 0; i < m_; ++i)
             if (((t ^ t.shr(1u << i)) & low_[i]).nonzero()) s |= 1u << i;
@@ -402,8 +401,25 @@ class Engine {
         int size = std::popcount(primary);
         for (int p = 0; p < P_; ++p) size += avail[p];
         if (!size) return -1;
-        for (int r = 0; r < n_; ++r)
-            if (!(ob.any >> r & 1) && (support(ob.v[r]) & ~primary)) return -1;
+        // Reuse each exact row's support in both root operations. An absorbing target
+        // constrains the witness cover instead of imposing a support demand.
+        const uint64_t requested = all_rows_ & ~ob.any;
+        uint64_t exact_rows[2] = {requested, requested};  // AND, OR
+        std::array<uint32_t, R> row_support;
+        for (uint64_t rows = requested; rows; rows &= rows - 1) {
+            const int r = std::countr_zero(rows);
+            const T& target = ob.v[r];
+            if (!target.nonzero()) {
+                row_support[r] = 0;
+                exact_rows[0] &= ~(uint64_t(1) << r);
+            } else if (target == one_) {
+                row_support[r] = 0;
+                exact_rows[1] &= ~(uint64_t(1) << r);
+            } else {
+                row_support[r] = support(target);
+                if (row_support[r] & ~primary) return -1;
+            }
+        }
         if (!q_.is_signed) {  // row_filter
             const RowOrder& ro = row_order(port_mask(avail));
             bool reject = false;
@@ -455,20 +471,17 @@ class Engine {
             return -1;
         }
         for (int opi = 0; opi < 2; ++opi) {
-            const int found = port_partitions(primary, avail, opi, ob);
+            const int found = port_partitions(primary, avail, opi, ob, exact_rows[opi], row_support);
             if (found >= 0) return found;
         }
         return -1;
     }
 
     // port_partitions(...) generator fused with the consuming loop of complete(); returns a node id or -1.
-    int port_partitions(uint32_t primary, const Counts& avail, int opi, const O& ob) {
+    int port_partitions(uint32_t primary, const Counts& avail, int opi, const O& ob, uint64_t exact_rows,
+                        const std::array<uint32_t, R>& row_support) {
         const bool is_and = opi == 0;
-        const T absorbing = is_and ? T{} : one_;
         const std::vector<uint32_t> blocks = components(primary, opi);  // copy: memo may rehash in recursion
-        std::vector<std::pair<int, uint32_t>> exact;                    // (row, support(t))
-        for (int r = 0; r < n_; ++r)
-            if (!(ob.any >> r & 1) && ob.v[r] != absorbing) exact.emplace_back(r, support(ob.v[r]));
         int port_anchor = -1;
         if (blocks.empty())
             for (int p = 0; p < P_; ++p) if (avail[p]) { port_anchor = p; break; }
@@ -486,8 +499,8 @@ class Engine {
                 any_remaining |= remaining[p] != 0;
             }
             const uint32_t left_mask = port_mask(taking), right_mask = port_mask(remaining);
-            const uint32_t forbid_left = support_demands(left_mask, exact, is_and, hits_left);
-            const uint32_t forbid_right = support_demands(right_mask, exact, is_and, hits_right);
+            const uint32_t forbid_left = support_demands(left_mask, exact_rows, row_support, is_and, hits_left);
+            const uint32_t forbid_right = support_demands(right_mask, exact_rows, row_support, is_and, hits_right);
             const uint32_t force_left = forbid_right | (blocks.empty() ? 0u : blocks[0]);
             free.clear();
             uint32_t left = 0, right = 0;
@@ -538,13 +551,15 @@ class Engine {
         }
     }
 
-    uint32_t support_demands(uint32_t mask, const std::vector<std::pair<int, uint32_t>>& exact, bool is_and,
-                             std::vector<uint32_t>& hits) const {
+    uint32_t support_demands(uint32_t mask, uint64_t exact_rows, const std::array<uint32_t, R>& row_support,
+                             bool is_and, std::vector<uint32_t>& hits) const {
         uint32_t forbidden = 0;
         std::pair<uint32_t, uint32_t> first[MAX_ROWS];
         int nfirst = 0;
         hits.clear();
-        for (const auto& [row, required] : exact) {
+        for (uint64_t rows = exact_rows; rows; rows &= rows - 1) {
+            const int row = std::countr_zero(rows);
+            const uint32_t required = row_support[row];
             const uint32_t pattern = q_.pats[row] & mask;
             int f = 0;
             while (f < nfirst && first[f].first != pattern) ++f;

@@ -205,3 +205,41 @@ python experiments/native_kernel_timing.py
 python experiments/native_differential.py startup
 python experiments/native_differential.py percy logs/native_percy_replay.jsonl
 ```
+
+## Per-state row support reuse
+
+Each exact truth table contributes the same private-variable support to the initial support
+test and to the two root-operation passes. The native kernel now computes this support once.
+For AND, the demand rows exclude constant zero. For OR, they exclude constant one. Wildcard
+rows are absent from both bitsets. Traversing low bits first retains the original row order.
+This removes the two possible per-state vectors of demand rows and preserves the exact
+occurrence semantics, witness cover, partition enumeration, and work accounting.
+
+A serial comparison against `e5ea1c615d7a59c6025f541f1623470fd2e4d210` used MSVC Release
+and Python 3.15.2. The timed passes were baseline/candidate/candidate/baseline twice, in fresh
+processes. Both builds evaluated every returned witness separately with the Python checker.
+All 4,305 retained mode executions produced equal verdicts, witness trees, and full native
+counters. The signed blocks comparison excludes 24 queries with an archived timeout.
+Its retained cells include 49 SAT witnesses, with 42 for monotone blocks and 51 for phase-first.
+
+| Mode | Queries | Baseline median | Bitset median | Time reduction |
+| --- | ---: | ---: | ---: | ---: |
+| Signed blocks | 1,419 | 1.09049 s | 1.02257 s | 6.2% |
+| Monotone blocks | 1,443 | 0.06046 s | 0.05942 s | 1.7% |
+| Signed phase-first | 1,443 | 0.90045 s | 0.87994 s | 2.3% |
+
+Peak process working sets for the two builds were 33.0 to 33.4 MiB across the timed passes.
+The intermediate support-only implementation reduced signed-block time by 3.5% in a separate
+matched run. The final build also agreed with all 1,200 small independent multislice
+formula-column queries (874 feasible) and produced 12 independently evaluated
+wide-table witnesses. The wide cases exercise 6 to 8 private inputs, both bases, 16 and
+64 rows, partial row labels, and an exact nonconstant requirement at row 63. These checks are
+scoped to regional formula completion with fixed occurrences.
+
+See [matched outputs and manifests](results/regional_support_reuse) and
+[the build comparator](experiments/native_build_compare.py). Save a baseline build to
+`sat-search/native/build/baseline` before installing the candidate in `sat-search/native`.
+Run the compare and check manifests with `workflow/research.py run`. The Python reference
+at this baseline imports the locally available `anchored_region.py`, which is absent from
+Git. These runs supplied that existing module on `PYTHONPATH` (SHA-256
+`576d8db157d8b5e934bdf45ce4af225177795274f50681160406b923528dc307`).

@@ -1,0 +1,46 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check the selected row-support implementation against an independent small oracle and known wide witnesses.",
+  "jobs": [
+    {
+      "id": "regional-row-support-random",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/experiments/native_differential.py",
+        "random",
+        "1200",
+        "2"
+      ],
+      "query": {
+        "coverage": "seed 91000 and 91001 multislice formula-column oracle"
+      },
+      "workers": 2,
+      "memory_mib": 512,
+      "timeout": {
+        "initial": 90,
+        "maximum": 90
+      }
+    },
+    {
+      "id": "regional-row-support-wide",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/experiments/native_differential.py",
+        "wide"
+      ],
+      "query": {
+        "coverage": "six layouts with 6--8 variables and 16--64 rows in both bases"
+      },
+      "workers": 1,
+      "memory_mib": 256,
+      "timeout": {
+        "initial": 30,
+        "maximum": 30
+      }
+    }
+  ]
+}

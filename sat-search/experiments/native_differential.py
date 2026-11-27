@@ -8,6 +8,7 @@
                              order); witnesses are checked by regional_production_adapter.check_tree.
   random [n] [workers]       random multislice queries with an independent formula-column oracle (as
                              regional_completion_check.test_independent_multislice_oracle, different seed).
+  wide                       independent constructed witnesses at 7--8 private inputs and 16--64 rows.
   deadline                   a native call interrupted by regional_deadline.timed returns TIMEOUT, never UNSAT.
   layout <excess> <seconds> <base_mode> <native_mode> [workers] [subset] [output]
                              end-to-end free-NOT search (excess 3: solve3, else layout_projection.search_exact) on the
@@ -322,8 +323,39 @@ def deadline_check():
     print('deadline check passed', flush=True)
 
 
+def wide_check():
+    """Exercise every native table/cache shape, including exact row 63, with known SAT targets."""
+    from regional_native import completion_native
+    from regional_production_adapter import check_tree
+    from two_sharing_core import ANY
+
+    ports = (0, 1, 2, 3, 4, 5)
+    checks = 0
+    for m in (6, 7, 8):
+        one = (1 << (1 << m)) - 1
+        for signed in (False, True):
+            # F = (AND(private literals) AND (p0 OR p2 OR p4)) OR (p1 AND p3 AND p5).
+            private_row = ((1 << m) - 1) ^ ((1 << (m - 1)) if signed else 0)
+            for patterns in (tuple(range(0, 64, 4)), (*range(2, 64), 0, 1)):
+                targets = tuple(
+                    ANY if index % 5 == 0 and index < len(patterns) - 1 else
+                    one if pattern & 0b101010 == 0b101010 else
+                    1 << private_row if pattern & 0b010101 else 0
+                    for index, pattern in enumerate(patterns)
+                )
+                assert targets[-1] == 1 << private_row
+                stats = {}
+                witness = completion_native(m, ports, patterns, targets, signed, adaptive=False, native_stats=stats)
+                assert witness is not None and stats['port_allocations'] > 0
+                check_tree(witness, m, ports, patterns, targets, signed)
+                checks += 1
+    print(f'wide constructed witnesses verified: {checks}', flush=True)
+
+
 if __name__ == '__main__':
     kind = sys.argv[1]
+    if kind == 'wide':
+        wide_check(); sys.exit()
     if kind == 'deadline':
         deadline_check(); sys.exit()
     if kind == 'startup':
