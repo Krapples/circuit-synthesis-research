@@ -6704,7 +6704,8 @@ private theorem compileFalseCleanSuffix {n : ℕ} (G : SimpleGraph (Fin n)) [Dec
   rw [hb,hc,Finset.card_range] at hlen
   have hcard := Finset.card_le_card hd
   rw [Finset.card_range] at hcard
-  refine ⟨D,hD,by omega,by omega,?_,?_,hw⟩
+  have hprelen : r ≤ D.gates.length := by simpa only [hPl] using hPD.1
+  refine ⟨D,hD,by omega,hprelen,?_,?_,hw⟩
   · intro j hj
     exact (hPD.2.1 j (by omega)).trans (hPg j hj)
   · intro j hj hge ha
@@ -6740,7 +6741,8 @@ private theorem appendCleanRepairs {n : ℕ} (G : SimpleGraph (Fin n)) [Decidabl
     obtain ⟨A,hA,hBA,hAl,_,hnew⟩ := appendCleanAvailable G B hB GateOp.and
       (Or.inl rfl) hp' hq' (fun _ x hx => hc p (by simp) x (by simpa [repairProduct,GateOp.eval] using hx))
     have hnew' : WireAvailable A (repairProduct W p) := by
-      simpa [repairProduct,GateOp.eval] using hnew
+      change WireAvailable A (fun x => W x p.1 && W x p.2)
+      simpa [GateOp.eval] using hnew
     let old := fun x => f x || ps.any (fun t => repairProduct W t x)
     have hold : WireAvailable A old := wireAvailablePreserved (cleanExtensionWires hBA) hfB
     obtain ⟨E,hE,hAE,hEl,hfree,hout⟩ := appendCleanAvailable G A hA GateOp.or
@@ -6846,6 +6848,7 @@ theorem lastJunkCleanRepairDescent {n : ℕ} (G : SimpleGraph (Fin n)) [Decidabl
     · rw [hm] at he
       cases he
     · have hh := hfalse (pairInput a b)
+      change (W (pairInput a b) C.output || ps.any (fun p => repairProduct W p (pairInput a b))) = false at hh
       rw [hm,he] at hh
       cases hh
   · let D : Circuit := ⟨D₀.gates,w⟩
@@ -6870,7 +6873,8 @@ theorem lastJunkCleanRepairDescent {n : ℕ} (G : SimpleGraph (Fin n)) [Decidabl
           rcases (show z = a ∨ z = b by simpa [pairInput] using hz') with rfl | rfl
           · exact ha
           · exact hb
-        · rw [hval,Bool.or_eq_true]
+        · change circuitFun n D (pairInput a b) = true
+          rw [hval,Bool.or_eq_true]
           exact hcover a b hab
     have hmin := h.2.2 D hD hcorrect
     change C.gates.length ≤ D₀.gates.length at hmin
@@ -6924,7 +6928,8 @@ theorem lastJunkOneProductDescent {n : ℕ} (G : SimpleGraph (Fin n)) [Decidable
   · intro t ht x hx
     have he : t = (p,q) := by simpa using ht
     subst t
-    obtain ⟨hpx,hqx⟩ := Bool.and_eq_true.mp hx
+    have hpair : W x p = true ∧ W x q = true := by simpa [repairProduct] using hx
+    obtain ⟨hpx,hqx⟩ := hpair
     exact hc x hpx hqx
   · intro u v huv
     cases he : W (pairInput u v) C.output
