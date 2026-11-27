@@ -61,9 +61,9 @@ lemma foldl_getD_gate (gs : List Gate) (w : List Bool) (j : ℕ) (hj : j < gs.le
       apply List.map_congr_left
       intro i _
       by_cases hi : i < w.length
-      · rw [if_pos hi, foldl_getD_lt2 gs (stepWire w g) i (by simp [stepWire]; omega)]
+      · rw [ite_eq_left hi, foldl_getD_lt2 gs (stepWire w g) i (by simp [stepWire]; omega)]
         simp [stepWire, List.getD_eq_getElem?_getD, List.getElem?_append_left hi]
-      · rw [if_neg hi]; exact getD_ge w i (by omega)
+      · rw [ite_eq_right hi]; exact getD_ge w i (by omega)
     | succ j =>
       have hj' : j < gs.length := by simpa using hj
       have key := ih (stepWire w g) j hj'
@@ -124,10 +124,10 @@ lemma val_or {n : ℕ} {C : Circuit} {x : List Bool} (hx : x.length = n) {r : �
   constructor
   · rintro ⟨i, hi, h⟩
     by_cases hlt : i < n + r
-    · rw [if_pos hlt] at h; exact ⟨i, hi, hlt, h⟩
-    · rw [if_neg hlt] at h; cases h
+    · rw [ite_eq_left hlt] at h; exact ⟨i, hi, hlt, h⟩
+    · rw [ite_eq_right hlt] at h; cases h
   · rintro ⟨i, hi, hlt, h⟩
-    exact ⟨i, hi, by rw [if_pos hlt]; exact h⟩
+    exact ⟨i, hi, by rw [ite_eq_left hlt]; exact h⟩
 
 lemma val_and {n : ℕ} {C : Circuit} {x : List Bool} (hx : x.length = n) {r : ℕ}
     (hr : r < C.gates.length) (hop : (gateAt C r).op = GateOp.and) :
@@ -138,10 +138,10 @@ lemma val_and {n : ℕ} {C : Circuit} {x : List Bool} (hx : x.length = n) {r : �
   · intro h i hi
     have h' := h i hi
     by_cases hlt : i < n + r
-    · rw [if_pos hlt] at h'; exact ⟨hlt, h'⟩
-    · rw [if_neg hlt] at h'; cases h'
+    · rw [ite_eq_left hlt] at h'; exact ⟨hlt, h'⟩
+    · rw [ite_eq_right hlt] at h'; cases h'
   · intro h i hi
-    rw [if_pos (h i hi).1]; exact (h i hi).2
+    rw [ite_eq_left (h i hi).1]; exact (h i hi).2
 
 lemma val_prefix {n : ℕ} {C D : Circuit} {x : List Bool} (hx : x.length = n) {m : ℕ}
     (hmC : m ≤ C.gates.length) (hmD : m ≤ D.gates.length)
@@ -159,8 +159,8 @@ lemma val_prefix {n : ℕ} {C D : Circuit} {x : List Bool} (hx : x.length = n) {
       apply List.map_congr_left
       intro i _
       by_cases hi : i < n + k
-      · rw [if_pos hi, if_pos hi]; exact ih i hi (by omega)
-      · rw [if_neg hi, if_neg hi]
+      · rw [ite_eq_left hi, ite_eq_left hi]; exact ih i hi (by omega)
+      · rw [ite_eq_right hi, ite_eq_right hi]
 
 def aliasWire (w i u : ℕ) : ℕ := if u = w then i else if w < u then u - 1 else u
 
@@ -188,15 +188,15 @@ lemma bypass_val_lt {n : ℕ} {C : Circuit} {x : List Bool} (hx : x.length = n) 
     (hr : r < C.gates.length) : ∀ u, u < n + r → val (bypass n C r i) x u = val C x u := by
   apply val_prefix hx (by omega) (by rw [bypass_length]; omega)
   intro k hk
-  rw [gateAt_bypass (by omega), if_pos hk]
+  rw [gateAt_bypass (by omega), ite_eq_left hk]
 
 lemma aliasWire_self (w i : ℕ) : aliasWire w i w = i := by simp [aliasWire]
 
 lemma aliasWire_lt_self {w i u : ℕ} (hu : u < w) : aliasWire w i u = u := by
-  unfold aliasWire; rw [if_neg (by omega), if_neg (by omega)]
+  unfold aliasWire; rw [ite_eq_right (by omega), ite_eq_right (by omega)]
 
 lemma aliasWire_gt_self {w i u : ℕ} (hu : w < u) : aliasWire w i u = u - 1 := by
-  unfold aliasWire; rw [if_neg (by omega), if_pos hu]
+  unfold aliasWire; rw [ite_eq_right (by omega), ite_eq_left hu]
 
 lemma bypass_rel {R : Bool → Bool → Prop} (hrefl : ∀ b, R b b) (hmono : OpMono R)
     {n : ℕ} {C : Circuit} {x : List Bool} (hx : x.length = n)
@@ -220,30 +220,30 @@ lemma bypass_rel {R : Bool → Bool → Prop} (hrefl : ∀ b, R b b) (hmono : Op
         have hkr : ¬ k < r := by omega
         have e : n + (k + 1) - 1 = n + k := by omega
         rw [e, val_gate hx hk1, val_gate hx (by rw [bypass_length]; omega),
-          gateAt_bypass (by omega), if_neg hkr]
+          gateAt_bypass (by omega), ite_eq_right hkr]
         simp only [aliasGate, List.map_map]
         refine hmono _ (hAO _ hk1) _ _ _ ?_
         intro i' hi'
         simp only [Function.comp_apply]
         by_cases h1 : i' = n + r
         · subst h1
-          rw [aliasWire_self, if_pos (by omega)]
+          rw [aliasWire_self, ite_eq_left (by omega)]
           have hgi : (if i < n + k then val (bypass n C r i) x i else false) = val C x i := by
             rcases hi with hi | hi
-            · rw [if_pos (by omega), bypass_val_lt hx hr i hi]
-            · rw [if_neg (by omega), val_ge hx hi]
+            · rw [ite_eq_left (by omega), bypass_val_lt hx hr i hi]
+            · rw [ite_eq_right (by omega), val_ge hx hi]
           rw [hgi]
           exact hR ⟨k + 1, by omega, hk1, hi'⟩
         · by_cases h2 : i' < n + r
-          · rw [aliasWire_lt_self h2, if_pos (by omega), if_pos (by omega),
+          · rw [aliasWire_lt_self h2, ite_eq_left (by omega), ite_eq_left (by omega),
               bypass_val_lt hx hr i' h2]
             exact hrefl _
           · by_cases h3 : i' < n + (k + 1)
             · have key := ih i' h3 h1
               rw [aliasWire_gt_self (by omega)] at key
-              rw [aliasWire_gt_self (by omega), if_pos h3, if_pos (by omega)]
+              rw [aliasWire_gt_self (by omega), ite_eq_left h3, ite_eq_left (by omega)]
               exact key
-            · rw [aliasWire_gt_self (by omega), if_neg h3, if_neg (by omega)]
+            · rw [aliasWire_gt_self (by omega), ite_eq_right h3, ite_eq_right (by omega)]
               exact hrefl _
 
 lemma bypass_eval_rel {R : Bool → Bool → Prop} (hrefl : ∀ b, R b b) (hmono : OpMono R)
@@ -326,19 +326,19 @@ lemma bypass_readsBack {n : ℕ} {C : Circuit} {r i : ℕ} (hi : i < n + r)
 lemma erase_eq_bypass (n : ℕ) (C : Circuit) (r i : ℕ) (hr : r < C.gates.length) :
     PEqualNP.CircuitMoves.eraseGate n C r i = bypass n C r i := by
   unfold PEqualNP.CircuitMoves.eraseGate
-  rw [if_pos hr]
+  rw [ite_eq_left hr]
   change Circuit.mk _ (aliasWire (n + r) i C.output) = Circuit.mk _ (aliasWire (n + r) i C.output)
   congr 1
   apply List.ext_getElem
-  · simp [bypass]; omega
+  · simp; omega
   · intro k hk hk'
     have hlen : (C.gates.take r).length = r := by simp; omega
     have hklen : k < C.gates.length - 1 := by simpa [bypass] using hk'
-    simp only [bypass, List.getElem_map, List.getElem_range]
+    simp only [List.getElem_map, List.getElem_range]
     by_cases hkr : k < r
-    · rw [if_pos hkr, List.getElem_append_left (by omega), List.getElem_take,
+    · rw [ite_eq_left hkr, List.getElem_append_left (by omega), List.getElem_take,
         gateAt_eq (by omega)]
-    · rw [if_neg hkr, List.getElem_append_right (by omega), List.getElem_map,
+    · rw [ite_eq_right hkr, List.getElem_append_right (by omega), List.getElem_map,
         List.getElem_drop]
       simp only [hlen]
       have he : r + 1 + (k - r) = k + 1 := by omega
@@ -369,9 +369,9 @@ lemma wire_monotone (n : ℕ) (C : Circuit) (hM : Monotone2 C) (x y : Fin n → 
         apply opMono_imp _ (mono_ops hM k hk)
         intro i hi
         by_cases hil : i < n + k
-        · rw [if_pos hil, if_pos hil]
+        · rw [ite_eq_left hil, ite_eq_left hil]
           exact ih i hil
-        · rw [if_neg hil, if_neg hil]
+        · rw [ite_eq_right hil, ite_eq_right hil]
           exact id
 
 lemma circuit_monotone (n : ℕ) (C : Circuit) (hM : Monotone2 C) (x y : Fin n → Bool)
