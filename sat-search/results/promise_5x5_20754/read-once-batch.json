@@ -1,0 +1,16 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Independently test the read-once and once-shared reduction on the 12 active one-hot pairs of L-meta-20754.",
+  "jobs": [
+    {
+      "id": "once-shared-active-promise",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/results/promise_5x5_20754/read_once_core.py"],
+      "query": {"mask": 12815360, "scope": "active 3 by 4 promise", "coverage": "read-once and one shared read-once subformula"},
+      "inputs": ["sat-search/results/promise_5x5_20754/read_once_core.py"],
+      "cache": true,
+      "memory_mib": 512,
+      "timeout": {"initial": 20, "maximum": 40}
+    }
+  ]
+}

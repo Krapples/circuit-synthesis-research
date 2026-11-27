@@ -1,0 +1,10 @@
+{
+  "target": 3187,
+  "columns": [15, 240, 3840, 273, 546, 1092, 2184],
+  "essentiality": [[0, 0, 8], [1, 4, 8], [2, 10, 2], [3, 0, 2], [4, 1, 2], [5, 6, 7], [6, 11, 8]],
+  "read_once_target": false,
+  "ordinary_function_count": 1780,
+  "module_candidates": 8724,
+  "function_counts_by_size": {"1": 7, "2": 42, "3": 265, "4": 1074, "5": 2481, "6": 3075, "7": 1780},
+  "seconds": 0.383191
+}

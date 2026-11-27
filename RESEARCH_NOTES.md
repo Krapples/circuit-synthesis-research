@@ -6,6 +6,13 @@ The project uses exact synthesis and analytical lower bounds to study small Bool
 latest cross-family benchmark shows that frontier bounds transfer beyond graph functions, including
 to 3-uniform hypergraphs. The main open shard is L-meta-1343 at size 19.
 
+For the one-hot bipartite representation in L-meta-20754, Lean checked an
+eight-gate witness on all 25 promised pairs. The seven-gate budget is
+excluded by two synthesis encodings and an independent read-once
+enumeration. The LRAT replay depends on Lean 4.36.0's native evaluation
+axiom, so the kernel-only lower bound remains open.
+[Exact model, axiom audit, and search records](sat-search/results/promise_5x5_20754/README.md)
+
 For the cubic-graph case L-meta-5020, Lean checked that a false restriction at the
 designated two-reader input saves four gates or leaves one of two local reader
 patterns. An exclusive internal operand of the AND reader also yields a
