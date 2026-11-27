@@ -127,3 +127,7 @@ Run 46028340649 failed research compilation (bridge and audit skipped). Carrier 
 ### Second assembled CI correction
 
 Run 46029030301 failed in research compilation. The previous site-specific replay and route induction errors are gone. This patch supplies the explicit reader index to the fill hypothesis, converts the raw-wire value to the vertex input in the exclusive-provider proof, replaces the two broad endpoint searches by an explicit four-case lemma, replaces deprecated negation syntax and narrows Boolean case analysis. Local heartbeat budgets of one million for the two large sole-reader declarations address the deterministic elaborator timeouts; the kernel, theorem statements, dependency pins and axiom audit are unchanged. Unrelated tree-DP changes in merge ffdf20a are retained. Bridge and final audit remain pending.
+
+### Third assembled CI correction
+
+Run 46029757019 (job 140610297755) reported only two parser errors: declaration-scoped set_option commands were placed between documentation comments and declarations. All three new public proof declarations (site replacement, two OR readers, sole OR reader) printed exactly the permitted axioms propext, Classical.choice, Quot.sound. Move each option before its documentation comment, preserving its scope, proof body, theorem type, and dependency audit. The complete file and exact bridge have not yet passed CI; await the replacement revision before claiming verification.

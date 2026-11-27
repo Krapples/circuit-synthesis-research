@@ -5770,12 +5770,12 @@ private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
     change C.gates.length ≤ E.gates.length at hm
     omega
 
+set_option maxHeartbeats 1000000 in
 /-- The sole carrier has a uniform opposite colour. Every missing
     edge therefore belongs to the seed centre's star. If the other
     provider is protected, its residual neighbour supplies the sole
     possible universal leaf, and the nonuniversal leaves give a safe
     replacement at the carrier. -/
-set_option maxHeartbeats 1000000 in
 private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) (colour : Fin n → Bool)
@@ -5930,10 +5930,10 @@ private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
             cases hw
   · exact exclusiveProviderOneStar G C h hl hJ hi hir hal hbl hbd hA hB hdisj hcardA hs star huse cover
 
+set_option maxHeartbeats 1000000 in
 /-- All sole OR-reader configurations with the verified disjoint large
     opposite-colour supports. Choose a genuinely lost edge to orient the
     seed star, then apply the one-carrier contradiction. -/
-set_option maxHeartbeats 1000000 in
 theorem noSoleOrReaderLargeSupports {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) (colour : Fin n → Bool)
