@@ -13,6 +13,10 @@ monotone separation and a checked reverse-demand argument that reduces
 the circuit to ordinary or once-shared read-once formulas.
 [Exact model, axiom audit, and search records](sat-search/results/promise_5x5_20754/README.md)
 
+For 40 desk rect templates (rect46/rect45b, one-hot promise rows, monotone; solver verdicts only,
+no certificates), the native exact search finds 24 steps UNSAT at budget and 16 open at sizes
+10-11. [Verdicts, scope and runs](sat-search/results/templates_native/rect_2026-11-27/README.md)
+
 For the cubic-graph case L-meta-5020, Lean checked that a false restriction at the
 designated two-reader input saves four gates or leaves one of two local reader
 patterns. An exclusive internal operand of the AND reader also yields a

@@ -1,0 +1,15 @@
+{"cnf": "L-meta-20891_k8.cnf", "solver": "cadical22-native", "status": "UNSAT", "seconds": 5.962}
+{"cnf": "L-meta-20891_k8.cnf", "solver": "cadical195", "status": "UNSAT", "seconds": 6.633}
+{"cnf": "L-meta-20891_k8.cnf", "solver": "maplechrono", "status": "UNSAT", "seconds": 15.528}
+{"cnf": "L-meta-21771_k9.cnf", "solver": "cadical22-native", "status": "UNSAT", "seconds": 20.761}
+{"cnf": "L-meta-21782_k9.cnf", "solver": "cadical195", "status": "UNSAT", "seconds": 25.07}
+{"cnf": "L-meta-21771_k9.cnf", "solver": "cadical195", "status": "UNSAT", "seconds": 28.477}
+{"cnf": "L-meta-21771_k9.cnf", "solver": "maplechrono", "status": "UNSAT", "seconds": 30.799}
+{"cnf": "L-meta-21782_k9.cnf", "solver": "cadical22-native", "status": "UNSAT", "seconds": 30.749}
+{"cnf": "L-meta-21782_k9.cnf", "solver": "maplechrono", "status": "UNSAT", "seconds": 34.334}
+{"cnf": "L-meta-21319_k9.cnf", "solver": "cadical195", "status": "UNSAT", "seconds": 64.464}
+{"cnf": "L-meta-21319_k9.cnf", "solver": "maplechrono", "status": "UNSAT", "seconds": 83.603}
+{"cnf": "L-meta-21319_k9.cnf", "solver": "cadical22-native", "status": "UNSAT", "seconds": 88.755}
+{"cnf": "L-meta-21050_k9.cnf", "solver": "cadical22-native", "status": "UNSAT", "seconds": 125.968}
+{"cnf": "L-meta-21050_k9.cnf", "solver": "cadical195", "status": "UNSAT", "seconds": 130.538}
+{"cnf": "L-meta-23850_k9.cnf", "solver": "cadical22-native", "status": "UNSAT", "seconds": 131.715}
