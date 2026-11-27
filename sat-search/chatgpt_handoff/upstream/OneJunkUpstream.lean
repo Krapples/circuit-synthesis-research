@@ -783,4 +783,130 @@ theorem oneJunkAtMostOneWithAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [Decid
 
 #print axioms oneJunkAtMostOneWithAndReader
 
+
+/-- An AND reader cannot be paid for by zero or one star. If such a
+    reader survives as a candidate, both exposed stars have a private
+    noncentral edge lost under false suspension. -/
+theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r i : ℕ} (hJ : junk G C = {r})
+    (hi : i ∈ immediateJunkReaders (n := n) C r)
+    (hand : (gateAt C i).op = GateOp.and) :
+    ∃ a b : ℕ, ∃ A B : Finset (Fin n), ∃ s d u v : Fin n,
+      ∃ W : (Fin n → Bool) → ℕ → Bool,
+      (gateAt C r).inputs = [a,b] ∧ RawForm C r a A false ∧ RawForm C r b B false ∧
+      Disjoint A B ∧ 1 < A.card ∧ 1 < B.card ∧
+      s ∈ A ∧ d ∈ B ∧ u ∈ A ∧ v ∈ B ∧ u ≠ s ∧ v ≠ d ∧
+      (∀ z ∈ B, G.Adj s z) ∧ (∀ z ∈ A, G.Adj d z) ∧
+      EvalExcept n C r W ∧ (∀ x, W x (n+r) = false) ∧
+      W (pairInput u d) C.output = false ∧ W (pairInput s v) C.output = false ∧
+      (∀ p q, G.Adj p q → W (pairInput p q) C.output = true ∨
+        (pairInput p q s = true ∧ ∃ t ∈ B, pairInput p q t = true) ∨
+        (pairInput p q d = true ∧ ∃ t ∈ A, pairInput p q t = true)) := by
+  classical
+  obtain ⟨hir,him⟩ := Finset.mem_filter.mp hi
+  have hil := Finset.mem_range.mp hir
+  obtain ⟨a, b, A, B, _, hab, hA, hB, hdisj, hcardA, hcardB, _⟩ :=
+    oneJunkLargeOppositeSupports G C h hl h4 colour hcolour hJ
+  obtain ⟨W, hW, hzero⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
+  obtain ⟨EA, EB, hEA, hEB, hsmallA, hsmallB, hadjA, hadjB, hc⟩ :=
+    lostEdgesInExposedStars G C h hl h4 hJ hab hA hB hdisj hcardA hcardB
+  have classified := (hc W hW hzero).2
+  have hr := (junkMember G C hJ).1
+  have hal : a < n + C.gates.length :=
+    (h.1.2.1 r hr a (by simp [hab])).trans (Nat.add_lt_add_left hr n)
+  have hbl : b < n + C.gates.length :=
+    (h.1.2.1 r hr b (by simp [hab])).trans (Nat.add_lt_add_left hr n)
+  have oneStar {p : ℕ} (hp : p < n + C.gates.length) {S : Finset (Fin n)}
+      (hS : RawForm C r p S false) (hn : S.Nonempty) (c : Fin n)
+      (hstar : ∀ v ∈ S, G.Adj c v)
+      (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+        (pairInput u v c = true ∧ ∃ t ∈ S, pairInput u v t = true)) : False :=
+    noOneJunkOneStarWithAndReader G C h hl hJ hW hzero hil him hand hp hS hn c hstar hcover
+  by_cases hAn : EA.Nonempty
+  · obtain ⟨s, hs⟩ := hAn
+    have hAonly (t) (ht : t ∈ EA) := Finset.card_le_one.mp hsmallA t ht s hs
+    by_cases hBn : EB.Nonempty
+    · obtain ⟨d, hd⟩ := hBn
+      have hBonly (t) (ht : t ∈ EB) := Finset.card_le_one.mp hsmallB t ht d hd
+      have cover (u v) (huv : G.Adj u v) : W (pairInput u v) C.output = true ∨
+          (pairInput u v s = true ∧ ∃ t ∈ B, pairInput u v t = true) ∨
+          (pairInput u v d = true ∧ ∃ t ∈ A, pairInput u v t = true) := by
+        rcases classified u v huv with ho | ⟨c, hc, t, ht, hcx, htx⟩ | ⟨c, hc, t, ht, hcx, htx⟩
+        · exact Or.inl ho
+        · exact Or.inr (Or.inl ⟨hAonly c hc ▸ hcx, t, ht, htx⟩)
+        · exact Or.inr (Or.inr ⟨hBonly c hc ▸ hcx, t, ht, htx⟩)
+
+      have pairEq (u v p q : Fin n) (hp : pairInput u v p = true)
+          (hq : pairInput u v q = true) (hne : p ≠ q) :
+          pairInput u v = pairInput p q := by
+        have hp' : p = u ∨ p = v := by simpa [pairInput] using hp
+        have hq' : q = u ∨ q = v := by simpa [pairInput] using hq
+        rcases hp' with hp' | hp' <;> rcases hq' with hq' | hq'
+        · exact (hne (hp'.trans hq'.symm)).elim
+        · simp [hp',hq']
+        · funext w
+          simp [pairInput,hp',hq',or_comm]
+        · exact (hne (hp'.trans hq'.symm)).elim
+      have hmissingA : ∃ v ∈ B, W (pairInput s v) C.output = false ∧ v ≠ d := by
+        by_contra hn
+        apply oneStar hal hA ⟨s,hEA hs⟩ d (hadjB d hd)
+        intro u v huv
+        rcases cover u v huv with ho | ⟨hsx,z,hz,hzx⟩ | hstar
+        · exact Or.inl ho
+        · by_cases hzd : z = d
+          · exact Or.inr ⟨hzd ▸ hzx,s,hEA hs,hsx⟩
+          · left
+            rw [pairEq u v s z hsx hzx (G.ne_of_adj (hadjA s hs z hz))]
+            cases he : W (pairInput s z) C.output
+            · exact (hn ⟨z,hz,he,hzd⟩).elim
+            · rfl
+        · exact Or.inr hstar
+      have hmissingB : ∃ u ∈ A, W (pairInput u d) C.output = false ∧ u ≠ s := by
+        by_contra hn
+        apply oneStar hbl hB ⟨d,hEB hd⟩ s (hadjA s hs)
+        intro u v huv
+        rcases cover u v huv with ho | hstar | ⟨hdx,z,hz,hzx⟩
+        · exact Or.inl ho
+        · exact Or.inr hstar
+        · by_cases hzs : z = s
+          · exact Or.inr ⟨hzs ▸ hzx,d,hEB hd,hdx⟩
+          · left
+            rw [pairEq u v z d hzx hdx (G.ne_of_adj (hadjB d hd z hz).symm)]
+            cases he : W (pairInput z d) C.output
+            · exact (hn ⟨z,hz,he,hzs⟩).elim
+            · rfl
+      obtain ⟨v,hv,hvf,hvd⟩ := hmissingA
+      obtain ⟨u,hu,huf,hus⟩ := hmissingB
+      exact ⟨a,b,A,B,s,d,u,v,W,hab,hA,hB,hdisj,hcardA,hcardB,hEA hs,hEB hd,
+        hu,hv,hus,hvd,hadjA s hs,hadjB d hd,hW,hzero,huf,hvf,cover⟩
+    · exfalso
+      apply oneStar hbl hB (Finset.card_pos.mp (by omega)) s (hadjA s hs)
+      intro u v huv
+      rcases classified u v huv with ho | ⟨c, hc, t, ht, hcx, htx⟩ | ⟨c, hc, _⟩
+      · exact Or.inl ho
+      · exact Or.inr ⟨hAonly c hc ▸ hcx, t, ht, htx⟩
+      · exact (hBn ⟨c, hc⟩).elim
+  · by_cases hBn : EB.Nonempty
+    · obtain ⟨d, hd⟩ := hBn
+      have hBonly (t) (ht : t ∈ EB) := Finset.card_le_one.mp hsmallB t ht d hd
+      exfalso
+      apply oneStar hal hA (Finset.card_pos.mp (by omega)) d (hadjB d hd)
+      intro u v huv
+      rcases classified u v huv with ho | ⟨c, hc, _⟩ | ⟨c, hc, t, ht, hcx, htx⟩
+      · exact Or.inl ho
+      · exact (hAn ⟨c, hc⟩).elim
+      · exact Or.inr ⟨hBonly c hc ▸ hcx, t, ht, htx⟩
+    · exfalso
+      apply noOneJunkWithoutLostEdges G C h hl hJ hW hzero
+      intro u v huv
+      rcases classified u v huv with ho | ⟨c, hc, _⟩ | ⟨c, hc, _⟩
+      · exact ho
+      · exact (hAn ⟨c, hc⟩).elim
+      · exact (hBn ⟨c, hc⟩).elim
+
+#print axioms oneJunkAndReaderNeedsBothStars
+
 end ResearchVerification.OneJunkErase
