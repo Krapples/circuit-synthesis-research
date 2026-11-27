@@ -1,0 +1,33 @@
+{
+ "updated_at": "2026-11-27T23:18:24.765Z",
+ "gaps": [
+  {
+   "id": "L-clb-123",
+   "title": "Find a fan-in-two AND/OR/NOT circuit for cyclic count parity on 3 sites and window 2 with at most 16 AND/OR gates",
+   "statement": "let n := 3\nlet w := 1\nlet P := 2^(w+1)\nlet inv := fun (G : PEqualNP.CircuitLowerBounds.Circuit) =>\n  (G.gates.filter (fun g => @decide (g.op = PEqualNP.CircuitLowerBounds.GateOp.not) (Classical.propDecidable _))).length\nlet binary := fun (G : PEqualNP.CircuitLowerBounds.Circuit) => G.size - inv G\nlet loc := fun k : Nat => (⟨k % n, Nat.mod_lt _ (Nat.succ_pos 2)⟩ : Fin n)\nlet fits := fun (C : PEqualNP.CircuitLowerBounds.Circuit) =>\n  PEqualNP.MetaComplexity.FanInTwo C ∧ ∀ raw : Fin (n*P) → Bool,\n    let entries := List.ofFn raw\n    let pass := fun (x : Fin n → Bool) => ∀ i : Fin n,\n      let word := ∑ j : Fin (w+1), if x (loc (i.val+j.val)) then 2^j.val else 0\n      entries.getD (i.val*P+word) false = true\n    C.eval entries = (((Finset.univ : Finset (Fin n → Bool)).filter pass).card).testBit 0\n∃ C, fits C ∧ binary C ≤ 16",
+   "file": "lean/PEqualNP/Outside/L_clb_123.lean",
+   "module": "PEqualNP.Outside.L_clb_123",
+   "imports": [
+    "PEqualNP.Defs"
+   ],
+   "unlocks": "a smaller circuit here refutes the gate floor L-clb-120 at n=3, window 2",
+   "context": "A find is one explicit gate list on the 12 raw entries, checked by decide over all 2^12 tables (NOT gates free, AND/OR at most 16). L-clb-120 prices this case at 17 AND/OR gates: restrict to single entries per row to see each usable entry must be read, then count the forced binary gates. Search below that count; a hit refutes the floor of L-clb-120 at n=3, and a hand-back saying the floor stands is useful data.",
+   "dead": [],
+   "weight": 100,
+   "parallel": 1,
+   "lane": "main",
+   "depth": 0,
+   "find": true,
+   "takes_cuts": false,
+   "sketch": "A find is one explicit gate list on the 12 raw entries, checked by decide over all 2^12 tables (NOT gates free, AND/OR at most 16). L-clb-120 prices this case at 17 AND/OR gates: restrict to single entries per row to see each usable entry must be read, then count the forced binary gates. Search below that count; a hit refutes the floor of L-clb-120 at n=3, and a hand-back saying the floor stands is useful data.",
+   "pr_open": 0,
+   "pr_numbers": [],
+   "held_now": false,
+   "holders_now": 0,
+   "offerable_now": false,
+   "posted_at": "2026-11-27T20:02:57.155Z"
+  }
+ ],
+ "checked": [],
+ "withdrawn": {}
+}
