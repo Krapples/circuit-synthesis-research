@@ -46,7 +46,7 @@ inductive ProviderPlan (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
   | nil : ProviderPlan G base [] 0
   | raw {L k} (v : Fin n) :
       ProviderPlan G base L k → ProviderPlan G base ({v} :: L) k
-  | protected {L k} (R : Finset (Fin n)) (d : Fin n) :
+  | keepShared {L k} (R : Finset (Fin n)) (d : Fin n) :
       base R → R ⊆ nbr G d →
       ProviderPlan G base L k → ProviderPlan G base (R :: L) k
   | merge {L k} (A B : Finset (Fin n)) :
@@ -85,7 +85,7 @@ theorem filterPlan (h : NoFourCycle G) (c : Fin n)
             Finset.card_le_card hs
           _ = 1 := Finset.card_singleton v
       · exact ih
-  | protected R d hb hr _ ih =>
+  | keepShared R d hb hr _ ih =>
       apply FilteredPlan.reuse
       · rcases protectedFilter G h R c d hr with he | hc
         · exact Or.inl (he.symm ▸ hb)
@@ -117,10 +117,10 @@ theorem edge_of_pair (a b : Fin n)
   have hu' : u = a ∨ u = b := by simpa [pairBits] using hu
   have hv' : v = a ∨ v = b := by simpa [pairBits] using hv
   rcases hu' with rfl | rfl <;> rcases hv' with rfl | rfl
-  · exact (G.loopless _ huv).elim
+  · exact (G.ne_of_adj huv rfl).elim
   · exact huv
-  · exact G.symm huv
-  · exact (G.loopless _ huv).elim
+  · exact G.adj_comm.mp huv
+  · exact (G.ne_of_adj huv rfl).elim
 
 /-- Clean raw products have every cross pair in the graph. -/
 theorem crossAdj (A B : Finset (Fin n))
