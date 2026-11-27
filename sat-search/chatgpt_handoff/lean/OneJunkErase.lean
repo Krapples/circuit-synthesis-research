@@ -2753,6 +2753,100 @@ inductive ResidualUse {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
       (hor : (gateAt C j).op = GateOp.or) (hw : w ∈ (gateAt C j).inputs)
       (hjuse : ResidualUse G C r live (n + j)) : ResidualUse G C r live w
 
+private theorem residualUseDirty {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} {live : ℕ → Bool} {w : ℕ} (hw : ResidualUse G C r live w) :
+    ¬ CleanWire G C w := by
+  induction hw with
+  | @top j w p hj hand hc hwp hp =>
+    have hm : w ∈ (gateAt C j).inputs := by
+      rcases hwp with he | he <;> simp [he]
+    exact noCleanAndOperand G C h j w hj hm hand
+  | @throughOr j w hj hjr hor hm _ ih =>
+    exact fun hc => ih ((cleanWireGate G C j).mpr (cleanWireReader G C h hl hj hm hc).2)
+
+/-- A replay that keeps the clean gate equations and all residual OR
+    dependencies retains every input accepted by the suspended output. -/
+theorem residualOutputPreserved {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) {W Z : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (hzero : ∀ x, W x (n + r) = false)
+    (hZraw : ∀ x (v : Fin n), Z x v.val = x v)
+    (hZzero : ∀ x, Z x (n + r) = false)
+    (hZgate : ∀ x j, j < C.gates.length → j ≠ r →
+      BelowF G C j ∨ ResidualUse G C r (W (fun _ => true)) (n + j) →
+      Z x (n + j) = (gateAt C j).op.eval ((gateAt C j).inputs.map (Z x))) :
+    ∀ x, W x C.output = true → Z x C.output = true := by
+  intro x hx
+  have main : ∀ j < C.gates.length,
+      (ResidualUse G C r (W (fun _ => true)) (n + j) → Z x (n + j) = W x (n + j)) ∧
+      (BelowF G C j → W x (n + j) = true → Z x (n + j) = true) := by
+    intro j
+    induction j using Nat.strong_induction_on with
+    | _ j ih =>
+      intro hj
+      have earlier (w : ℕ) (hw : w < n + j)
+          (hwuse : ResidualUse G C r (W (fun _ => true)) w) : Z x w = W x w := by
+        by_cases hraw : w < n
+        · let v : Fin n := ⟨w, hraw⟩
+          exact (hZraw x v).trans (hW.1 x v).symm
+        · obtain ⟨i, rfl⟩ : ∃ i, w = n + i := ⟨w - n, by omega⟩
+          exact (ih i (by omega) (by omega)).1 hwuse
+      constructor
+      · intro huse
+        by_cases hjr : j = r
+        · subst j
+          exact (hZzero x).trans (hzero x).symm
+        have hd := residualUseDirty G C h hl huse
+        have hor : (gateAt C j).op = GateOp.or := by
+          rcases h.1.1 _ (gateAt_mem hj) with hand | hor
+          · exact (hjr (uniqueDirtyAnd G C hJ hj
+              (fun hc => hd ((cleanWireGate G C j).mpr hc)) hand)).elim
+          · exact hor
+        rw [hZgate x j hj hjr (Or.inr huse), hW.2 x j hj hjr]
+        congr 1
+        apply List.map_congr_left
+        intro w hw
+        exact earlier w (h.1.2.1 j hj w hw) (.throughOr hj hjr hor hw huse)
+      · intro hc hv
+        have hjr := cleanDifferent G C hJ hc
+        rcases h.1.1 _ (gateAt_mem hj) with hand | hor
+        · obtain ⟨a, b, A, B, f, g, hab, hA, hB, _⟩ := topProduct G C h hl hJ hj hand hc
+          obtain ⟨ha, hb⟩ := (evalExcept_and hW hj hjr hand hab x).mp hv
+          have atTop {w : ℕ} {S : Finset (Fin n)} {t : Bool}
+              (hS : RawForm C r w S t) (hw : W x w = true) :
+              W (fun _ => true) w = true := by
+            obtain ⟨v, hmem, _⟩ := ((hS.2 W hW x).mp hw).resolve_right (by simp [hzero x])
+            exact (hS.2 W hW _).mpr (Or.inl ⟨v, hmem, rfl⟩)
+          have hal := h.1.2.1 j hj a (by simp [hab])
+          have hbl := h.1.2.1 j hj b (by simp [hab])
+          have hza := (earlier a hal (.top hj hand hc (Or.inl hab) (atTop hB hb))).trans ha
+          have hzb := (earlier b hbl (.top hj hand hc (Or.inr hab) (atTop hA ha))).trans hb
+          rw [hZgate x j hj hjr (Or.inl hc), hand, hab]
+          simp [GateOp.eval, hza, hzb]
+        · obtain ⟨w, hm, hw⟩ := (evalExcept_or hW hj hjr hor x).mp hv
+          have hcw := cleanOrOperands G C h.1 hj hor hc hm
+          have hlt := h.1.2.1 j hj w hm
+          by_cases hraw : w < n
+          · exact (rawNotClean G C ⟨w, hraw⟩ hcw).elim
+          · obtain ⟨i, rfl⟩ : ∃ i, w = n + i := ⟨w - n, by omega⟩
+            have hwz := (ih i (by omega) (by omega)).2 hcw hw
+            rw [hZgate x j hj hjr (Or.inl hc), hor]
+            simpa [GateOp.eval, List.any_map, List.any_eq_true] using
+              (show ∃ w ∈ (gateAt C j).inputs, Z x w = true from ⟨n + i, hm, hwz⟩)
+  have hr := (junkMember G C hJ).1
+  have hlast := outputLast G C h (by omega : 0 < C.gates.length)
+  rw [hlast] at hx ⊢
+  have hclean : BelowF G C (C.gates.length - 1) := by
+    intro y hy
+    have he : C.eval (List.ofFn y) = graphFun G ∅ y := congrFun h.2.1 y
+    rw [← he]
+    change val C (List.ofFn y) C.output = true
+    rwa [hlast]
+  exact (main (C.gates.length - 1) (by omega)).2 hclean hx
+
+#print axioms residualOutputPreserved
+
 /-- Every raw contribution carried by a residual use contributes its
     whole star at some vertex to the suspended output. -/
 theorem residualUseCoversSupport {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]

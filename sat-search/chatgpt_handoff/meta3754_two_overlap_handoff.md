@@ -256,6 +256,24 @@ construction must rebuild the trimmed provider, preserve the residual
 output and the full opposite provider, and account for this OR saving
 alongside the junk and its immediate readers.
 
+One operand occurrence is enough to save the OR. For the selected gate,
+replace that operand by false and forward the other. The designated
+vertex can still reach the provider along another path. For any input
+on which the suppressed operand was already false, replay leaves every
+wire unchanged. Thus any lost target-star edge must be incident to the
+designated raw vertex or belong to the already-covered protected
+substar. The opposite provider has no OR path from the selected gate,
+since the selected gate fires on the designated singleton and the
+opposite support is disjoint. Replay must also keep the equations of
+the clean gates and the OR gates with residual uses.
+
+`residualOutputPreserved` proves that those equations suffice to retain
+every input accepted by the suspended output. In a forward induction,
+protected wires retain their values because residual uses are closed
+under OR operands. The operands of a firing clean AND each have a
+surviving opposite operand, so both are protected. True clean ORs
+retain at least one firing input.
+
 ## Verification
 
 The complete [OneJunkErase.lean](lean/OneJunkErase.lean) source passed the
@@ -374,3 +392,9 @@ were `propext`, `Classical.choice`, and `Quot.sound`. The exact source
 SHA-256 is
 `314596a1d42ecd6180c33a100b3c8818822658e81250c7e87be2d681a7f76547`.
 The log and audit are in `.research/ops/1795771698466344200-lean-check/`.
+
+The residual-output preservation proof passed the strict core check in
+72.748 seconds with 55 axiom audits and the same three allowed axioms.
+The exact source SHA-256 is
+`3eb004482286eed0fc342de30a8c266aa7cef7e64e28615b80525f9d7e702f27`.
+The log and audit are in `.research/ops/1795771969503623300-lean-check/`.

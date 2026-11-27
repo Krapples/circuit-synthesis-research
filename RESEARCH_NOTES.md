@@ -135,8 +135,10 @@ collector OR to fold. Smaller reader counts, the three-OR case, and the
 many-junk reduction remain open in Lean.
 `residualStarTrimBoundary` locates an exclusive provider OR whose
 suppressed input is the designated raw vertex or a subprovider whose
-whole star survives suspension. The remaining construction must realize
-that saving and retain the residual output and the opposite provider.
+whole star survives suspension. `residualOutputPreserved` proves that
+preserving the clean and protected gate equations retains the residual
+output's accepted inputs. The remaining construction must realize the
+one-gate saving and retain coverage by the two repaired stars.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero
