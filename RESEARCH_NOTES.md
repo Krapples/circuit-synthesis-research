@@ -118,8 +118,10 @@ of the exposing centre under triangle-freeness and the two-vertices-per-side
 condition. In the exposed singleton case, the provider containing the shared
 vertex and its adjacent centre is exclusive to the junk. Protected providers
 on the other side preserve their exposed star contributions after redirection.
-Lean checks strict deletion when that opposite provider is protected. The
-unprotected opposite provider and the disjoint-support cases remain open.
+Lean checks strict deletion when that opposite provider is protected. For
+an unprotected opposite provider it checks the candidate zero-cost OR and
+the two-gate star construction. The concrete trimmed-prefix integration and
+the disjoint-support cases remain open.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero

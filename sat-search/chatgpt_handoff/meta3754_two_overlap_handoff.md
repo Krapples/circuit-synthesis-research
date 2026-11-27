@@ -112,14 +112,22 @@ requires no replacement star.
 
 When the opposite provider is unprotected, the
 [strict trim plan](lean/OneJunkProviders.lean) must be attached to the actual
-retained wires and the cost of adding a clean star. On the opposite
-provider's ancestor cone, the first unprotected OR whose support contains
-the shared vertex supplies the strict saving. At least one of its operands
-is the shared input or a protected provider containing that input. The
-shared input is omitted and the protected provider's star is already
-covered. The trimmed OR then needs at most an alias. This argument still
-needs a checked gate-list budget. The disjoint-support and many-junk cases
-also remain open.
+retained wires. `firstUnprotectedSingletonOr` follows the active wire on
+the shared singleton input back to an unprotected OR with an active raw or
+protected operand. The shared raw input is omitted. If the operand is a
+protected provider, its star is already covered. Either way, the trimmed
+OR can reuse its other operand once the concrete trim marks this input as
+false. `compileAvailablePrefixBudget` excludes such an OR from the appended
+gate count. `noExposedSingletonWithTrimmedStar` checks the other end of the
+construction. Given a redirected circuit with at least three gates removed
+and a wire for the trimmed support that covers the missing edges, it appends
+one AND and one OR and proves that the result computes the graph edge function.
+
+The remaining integration is to compute the per-wire trimmed supports,
+prove coverage of every omitted contribution, and bind the two skipped
+prefix indices to the mixed root and the zero-cost OR. The replay must
+carry the trimmed wire's value through the suffix to the final star.
+The disjoint-support and many-junk cases also remain open.
 
 ## Verification
 
@@ -157,3 +165,8 @@ axiom audits. The exact checked source was transferred from a scratch file
 to `OneJunkErase.lean` with identical SHA-256
 `440f6e90d55daf8d05a1d5b40741124b7638223dea7c569445e5020afbce05ff`.
 The local evidence is in `.research/ops/1795766222329408600-lean-check/`.
+
+The gate-budget and star construction check took 72.730 seconds and passed
+all 43 axiom audits. The checked source SHA-256 is
+`8b9e5838674130a76b2d0b4106350a8ecc50ae97776b36057ded9bf7a58d720e`.
+The local evidence is in `.research/ops/1795766662384002400-lean-check/`.
