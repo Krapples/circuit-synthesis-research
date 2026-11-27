@@ -30,20 +30,32 @@ CONFIGS = {
 }
 
 
-def direct_sat(n, labels, budget, allow_not):
-    """Direct SAT at most budget, with an output selected from any wire."""
+def direct_sat(n, labels, budget, allow_not, mixed_cuts=(), stats=None):
+    """Direct SAT at most budget, with an output selected from any wire.
+
+    mixed_cuts (opt-in): (floor, rank, side) triples from mixed_rank_cuts.cut_floors for the COMPLETE
+    function the circuit must compute; each forces floor AND/OR gates in the output cone that read both
+    sides. stats (opt-in dict) receives the solver's accumulated statistics."""
     output, pool, clauses, ops, select = cs.build(n, budget, colex_from=budget, require_used=False)
     if not allow_not:
         clauses.extend([-lits[2]] for lits in ops.values())
     outputs = [pool.id(('output', i)) for i in range(output + 1)]
     clauses.extend(CardEnc.equals(outputs, 1, vpool=pool).clauses)
+    if mixed_cuts:
+        from mixed_rank_cuts import add_mixed_rank_cuts
+        roots = {j: outputs[j] for j in ops}
+        clauses.extend([-outputs[i]] for i in range(n))  # a mixed function is no input wire
+        add_mixed_rank_cuts(n, output, pool, ops, select, clauses, mixed_cuts, cone_root=roots)
     for row, value in sorted(labels.items()):
         vals = [pool.id(('val', row, j)) for j in range(output + 1)]
         clauses.extend([vals[i] if row >> i & 1 else -vals[i]] for i in range(n))
         clauses.extend(cs.truth_gate_clauses(row, vals, pool, ops, select))
         clauses.extend([-sel, vals[i] if value else -vals[i]] for i, sel in enumerate(outputs))
     with Solver(name='maplechrono', bootstrap_with=clauses) as s:
-        if not s.solve():
+        found = s.solve()
+        if stats is not None:
+            stats.update(s.accum_stats() or {}, variables=pool.top, clauses=len(clauses))
+        if not found:
             return None
         model = set(s.get_model())
     gates = tuple((next(i for i, lit in enumerate(types) if lit in model),

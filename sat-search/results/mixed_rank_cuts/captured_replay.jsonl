@@ -1,0 +1,41 @@
+{"mode": "cut", "target": "0116", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 842, "floor1_excluded": 449}
+{"mode": "cut", "target": "0116", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 217, "floor1_excluded": 129}
+{"mode": "cut", "target": "016a", "k": 8, "cuts": {"floor1": [[2, 3, 3], [2, 3, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": [[2, 3, 3], [2, 3, 5]]}, "models": 811, "floor1_excluded": 242, "floor2_excluded": 1}
+{"mode": "cut", "target": "016a", "k": 9, "cuts": {"floor1": [[2, 3, 3], [2, 3, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": [[2, 3, 3], [2, 3, 5]]}, "models": 497, "floor1_excluded": 306, "floor2_excluded": 27}
+{"mode": "cut", "target": "0196", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 4413, "floor1_excluded": 1161}
+{"mode": "cut", "target": "0196", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 543, "floor1_excluded": 145}
+{"mode": "cut", "target": "1668", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 2338, "floor1_excluded": 55}
+{"mode": "cut", "target": "1668", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 15474, "floor1_excluded": 5322}
+{"mode": "cut", "target": "1669", "k": 8, "cuts": {"floor1": [[1, 1, 1], [1, 1, 3], [1, 1, 5], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 2496, "floor1_excluded": 88}
+{"mode": "cut", "target": "1669", "k": 9, "cuts": {"floor1": [[1, 1, 1], [1, 1, 3], [1, 1, 5], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 14720, "floor1_excluded": 5389}
+{"mode": "cut", "target": "166b", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 6860, "floor1_excluded": 147}
+{"mode": "cut", "target": "166b", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 38351, "floor1_excluded": 9767}
+{"mode": "cut", "target": "1686", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 3083, "floor1_excluded": 1407}
+{"mode": "cut", "target": "1686", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 962, "floor1_excluded": 361}
+{"mode": "cut", "target": "1699", "k": 8, "cuts": {"floor1": [[1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 3], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 973, "floor1_excluded": 526}
+{"mode": "cut", "target": "1699", "k": 9, "cuts": {"floor1": [[1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 3], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 1252, "floor1_excluded": 694}
+{"mode": "cut", "target": "16a9", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 1, 1], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 15699, "floor1_excluded": 1163}
+{"mode": "cut", "target": "16a9", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 1, 1], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 3561, "floor1_excluded": 833}
+{"mode": "cut", "target": "6996", "k": 8, "cuts": {"floor1": [], "floor2": []}, "models": 2496}
+{"mode": "cut", "target": "6996", "k": 9, "cuts": {"floor1": [], "floor2": []}, "models": 30164}
+{"mode": "trace", "target": "0116", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 9, "floor1_excluded": 5}
+{"mode": "trace", "target": "0116", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 11, "floor1_excluded": 6}
+{"mode": "trace", "target": "016a", "k": 8, "cuts": {"floor1": [[2, 3, 3], [2, 3, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": [[2, 3, 3], [2, 3, 5]]}, "models": 13, "floor1_excluded": 2}
+{"mode": "trace", "target": "016a", "k": 9, "cuts": {"floor1": [[2, 3, 3], [2, 3, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": [[2, 3, 3], [2, 3, 5]]}, "models": 13, "floor1_excluded": 3}
+{"mode": "trace", "target": "0196", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 11, "floor1_excluded": 7}
+{"mode": "trace", "target": "0196", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 12, "floor1_excluded": 6}
+{"mode": "trace", "target": "1668", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 11, "floor1_excluded": 2}
+{"mode": "trace", "target": "1668", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 11, "floor1_excluded": 1}
+{"mode": "trace", "target": "1669", "k": 8, "cuts": {"floor1": [[1, 1, 1], [1, 1, 3], [1, 1, 5], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 9, "floor1_excluded": 6}
+{"mode": "trace", "target": "1669", "k": 9, "cuts": {"floor1": [[1, 1, 1], [1, 1, 3], [1, 1, 5], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 12, "floor1_excluded": 7}
+{"mode": "trace", "target": "166b", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 11, "floor1_excluded": 5}
+{"mode": "trace", "target": "166b", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 11, "floor1_excluded": 1}
+{"mode": "trace", "target": "1686", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 12, "floor1_excluded": 6}
+{"mode": "trace", "target": "1686", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 13, "floor1_excluded": 3}
+{"mode": "trace", "target": "1699", "k": 8, "cuts": {"floor1": [[1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 3], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 12, "floor1_excluded": 6}
+{"mode": "trace", "target": "1699", "k": 9, "cuts": {"floor1": [[1, 2, 5], [1, 2, 9], [1, 1, 1], [1, 1, 3], [1, 1, 7], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 13, "floor1_excluded": 5}
+{"mode": "trace", "target": "16a9", "k": 8, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 1, 1], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 10, "floor1_excluded": 4}
+{"mode": "trace", "target": "16a9", "k": 9, "cuts": {"floor1": [[1, 2, 3], [1, 2, 5], [1, 1, 1], [1, 1, 7], [1, 1, 9], [1, 1, 11], [1, 1, 13]], "floor2": []}, "models": 12, "floor1_excluded": 2}
+{"mode": "trace", "target": "6996", "k": 8, "cuts": {"floor1": [], "floor2": []}, "models": 9}
+{"mode": "trace", "target": "6996", "k": 9, "cuts": {"floor1": [], "floor2": []}, "models": 11}
+{"totals": {"models": 145978, "floor1_excluded": 28261, "floor2_excluded": 28}}

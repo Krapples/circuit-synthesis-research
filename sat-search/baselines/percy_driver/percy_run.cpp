@@ -47,6 +47,9 @@
 //                    bound, so only the budgets below U are run, each with the full (proof) configuration and
 //                    no witness pass. All UNSAT: U is the minimum and the external chain is reported. A SAT
 //                    budget gives a better solver witness; a timeout leaves the interval [k, U-1] open.
+//   --mixed-rank-cuts F : opt-in, complete tables only. For up to 8 input cuts (X, Q) whose anchored GF(2) mixed
+//                    rank R has floor(R) = bit_width(R + 1) - 1 >= F, at least floor(R) steps of the output cone read
+//                    both sides (scalar 2^(t+1) - 2 mixed-rank ceiling; native/src/mixed_rank.hpp)
 //   --complement-inputs auto : synthesize f with every input complemented whose x_i := 1 cofactor costs more than
 //                    its x_i := 0 cofactor (puts the stronger bound at zero); the chain is mapped back
 //   otherwise  : increasing K from --start (default 1) until SAT or --max
@@ -76,6 +79,7 @@
 #include "reified_counter.hpp"
 #include "restriction_certificate.hpp"
 #include "conditional_cost3.hpp"
+#include "mixed_rank.hpp"
 // Optional extra constraints need the SSV encoder's variable layout (svar_map, nr_svar_map, get_*_var), which Percy
 // keeps private; open it for this driver only.
 #define private public
@@ -154,12 +158,17 @@ struct Extra {
     bool restriction_conditional = false;
     std::vector<int> counter_f3;
     bool complement_inputs = false;
+    int mixed_rank_min = 0;                      // --mixed-rank-cuts F (0 = off)
+    std::vector<mixed_rank::Cut> mixed_cuts;     // selected cuts for the (complete) synthesized table
 };
 
 // Per-budget restriction counter encoding size (set by encode_counters).
 struct CounterStats { int restrictions = 0, live = 0, essential = 0, vars = 0, clauses = 0, negative_cap = 0;
                       int conditional = 0, conditional_clauses = 0; double seconds = 0; };
 static CounterStats g_counter;
+// Per-budget mixed-rank cut encoding size (set by encode_mixed_rank).
+struct MixedStats { int cuts = 0, vars = 0, clauses = 0; double seconds = 0; };
+static MixedStats g_mixed;
 // Guard literal a of the cone constraints when --restriction-cone-slice is on (else -1), and per-budget slice
 // statistics: slices run, and the phase (cone on / off) that decided each SAT or UNSAT answer.
 static int g_cone_guard = -1;
@@ -559,12 +568,91 @@ static bool encode_counters(ClauseSink& cs, ssv_encoder& enc, const spec& sp, co
     return true;
 }
 
+// Mixed-rank cuts (--mixed-rank-cuts). For each cut side X: pure[0][w] / pure[1][w] = wire w reads only X / only Q
+// inputs (inputs fixed, steps defined from every selected operand pair), reach[w] = w lies in the output cone (the
+// last step; least fixpoint over selected pairs), and a mixed step m_t -> !pure[0] & !pure[1] & reach. At least
+// floor(R) mixed steps. Several true selection variables of one step only strengthen the definitions; a circuit
+// keeps a model with one selected pair per step.
+static bool encode_mixed_rank(ClauseSink& cs, ssv_encoder& enc, const spec& sp, const std::vector<int>& start,
+                              const Extra& ex) {
+    const auto t0 = clk::now();
+    g_mixed = {};
+    const int vars0 = cs.next;
+    const size_t clauses0 = cs.clauses.size();
+    const int n = sp.get_nr_in(), k = sp.nr_steps, N = n + k;
+    const auto fresh = [&] { return pabc::Abc_Var2Lit(cs.var(), 0); };
+    const auto sel = [&](int s) { return pabc::Abc_Var2Lit(enc.get_sel_var(s), 0); };
+    std::vector<int> step_of;
+    for (int t = 0; t < k; ++t) for (int s = start[t]; s < start[t + 1]; ++s) step_of.push_back(t);
+    // Output cone: the last step is reached; reach[w] -> some selected pair of a reached step reads w.
+    std::vector<int> reach(N, -1);
+    for (int t = 0; t < k - 1; ++t) reach[n + t] = fresh();
+    std::vector<std::vector<int>> support(N);
+    for (int s = 0; s < start[k]; ++s) {
+        const int t = step_of[size_t(s)];
+        for (int pos = 0; pos < 2; ++pos) {
+            const int w = enc.svar_map[s][pos];
+            if (w < n) continue;  // inputs need no reach literal
+            const int p = fresh();
+            cs.add({p ^ 1, sel(s)});
+            if (t < k - 1) {
+                cs.add({p ^ 1, reach[n + t]});
+                cs.add({sel(s) ^ 1, reach[n + t] ^ 1, reach[w]});
+            } else {
+                cs.add({sel(s) ^ 1, reach[w]});
+            }
+            support[size_t(w)].push_back(p);
+        }
+    }
+    for (int t = 0; t < k - 1; ++t) {
+        std::vector<int> c{reach[n + t] ^ 1};
+        c.insert(c.end(), support[size_t(n + t)].begin(), support[size_t(n + t)].end());
+        cs.add(std::move(c));
+    }
+    constexpr int T = -2, F = -1;
+    for (const auto& cut : ex.mixed_cuts) {
+        if (cut.floor > k) return false;
+        std::array<std::vector<int>, 2> pure;  // [0] reads only X, [1] reads only Q
+        for (int side = 0; side < 2; ++side) {
+            auto& p = pure[side];
+            p.assign(N, F);
+            for (int i = 0; i < n; ++i) p[i] = ((cut.side >> i & 1) != 0) == (side == 0) ? T : F;
+            for (int t = 0; t < k; ++t) p[n + t] = fresh();
+            for (int s = 0; s < start[k]; ++s) {
+                const int g = p[n + step_of[size_t(s)]], a = p[enc.svar_map[s][0]], b = p[enc.svar_map[s][1]];
+                // sel & a & b -> g ; sel & !a -> !g ; sel & !b -> !g
+                std::vector<int> up{sel(s) ^ 1, g};
+                bool up_false = false;
+                for (int o : {a, b}) {
+                    if (o == F) { up_false = true; cs.add({sel(s) ^ 1, g ^ 1}); }
+                    else if (o != T) { up.push_back(o ^ 1); cs.add({sel(s) ^ 1, o, g ^ 1}); }
+                }
+                if (!up_false) cs.add(std::move(up));
+            }
+        }
+        std::vector<int> notmixed;
+        for (int t = 0; t < k; ++t) {
+            const int m = fresh();
+            cs.add({m ^ 1, pure[0][n + t] ^ 1});
+            cs.add({m ^ 1, pure[1][n + t] ^ 1});
+            if (t < k - 1) cs.add({m ^ 1, reach[n + t]});
+            notmixed.push_back(m ^ 1);
+        }
+        cs.at_most(notmixed, k - cut.floor);  // at least floor mixed steps
+        ++g_mixed.cuts;
+    }
+    g_mixed.vars = cs.next - vars0;
+    g_mixed.clauses = int(cs.clauses.size() - clauses0);
+    g_mixed.seconds = since(t0);
+    return true;
+}
+
 // Returns false if the extra constraints make budget k infeasible outright; adds clauses to the solver otherwise.
 static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, const Extra& ex,
                       const FirstLayer& layer, int& extra_clauses, std::vector<int>& layer_features,
                       std::vector<int>& typed_steps, std::vector<int>& thresholds) {
     if (!ex.noreapply_full && ex.cof.empty() && ex.pairs == synthesis::PairScope::none && !ex.first_layer_budget &&
-        ex.counters.empty())
+        ex.counters.empty() && ex.mixed_cuts.empty())
         return true;
     const int n = sp.get_nr_in(), k = sp.nr_steps;
     ClauseSink cs{solver, enc.total_nr_vars, {}};
@@ -620,6 +708,7 @@ static bool add_extra(ssv_encoder& enc, const spec& sp, solver_wrapper& solver, 
                                       ex.slack_three_policy != synthesis::SlackThreePolicy::full ? &thresholds
                                                                                                 : nullptr);
     if (!ex.counters.empty() && !encode_counters(cs, enc, sp, start, ex)) return false;
+    if (!ex.mixed_cuts.empty() && !encode_mixed_rank(cs, enc, sp, start, ex)) return false;
     solver.set_nr_vars(cs.next);
     extra_clauses = (int)cs.clauses.size();
     for (auto& cl : cs.clauses) {
@@ -1145,6 +1234,7 @@ static int run_main(int argc, char** argv) {
             if (ex.restriction_live == 0 || ex.restriction_live < -1) { fprintf(stderr, "expected --restriction-live all or N > 0\n"); return 2; }
         }
         else if (a == "--restriction-essential") ex.restriction_essential = true;
+        else if (a == "--mixed-rank-cuts") ex.mixed_rank_min = std::stoi(next());
         else if (a == "--restriction-conditional") ex.restriction_conditional = true;
         else if (a == "--upper-witness") upper_witness_spec = next();
         else if (a == "--hybrid-witness") {
@@ -1288,6 +1378,11 @@ static int run_main(int argc, char** argv) {
         fprintf(stderr, "--restriction-conditional needs --restriction-counters, 4 inputs and a complete table\n");
         return 2;
     }
+    if (ex.mixed_rank_min < 0 || (ex.mixed_rank_min && !dc_hex.empty())) {
+        // The floor needs the rank of the complete function; a partial table has no fixed completion rank.
+        fprintf(stderr, "--mixed-rank-cuts needs a positive floor and a complete table (no --dc)\n");
+        return 2;
+    }
     if (ex.restriction_counters && ex.restriction_cuts) {
         fprintf(stderr, "--restriction-counters is not combined with --restriction-cuts\n");
         return 2;
@@ -1380,6 +1475,11 @@ static int run_main(int argc, char** argv) {
                 std::swap(ex.cof[i][0], ex.cof[i][1]);
                 std::swap(ex.cof[i][2], ex.cof[i][3]);
             }
+    }
+    if (ex.mixed_rank_min) {  // after --complement-inputs: the table actually synthesized (rank is invariant anyway)
+        mixed_rank::Table f(size_t(1) << n);
+        for (int r = 0; r < (1 << n); ++r) f[size_t(r)] = kitty::get_bit(tt, r) ? 1 : 0;
+        ex.mixed_cuts = mixed_rank::select_cuts(n, f, 8, ex.mixed_rank_min);
     }
     if (ex.restriction_counters) {
         const auto rs = restriction_certificate::restrictions(unsigned(n), pack(tt, false), pack(dc, true));
@@ -1828,6 +1928,13 @@ static int run_main(int argc, char** argv) {
                        "\"counter_clauses\":%d,\"counter_seconds\":%.6f,\"counter_negative_cap\":%d,\"complement_mask\":%u",
                        g_counter.restrictions, g_counter.live, g_counter.essential, g_counter.vars, g_counter.clauses,
                        g_counter.seconds, g_counter.negative_cap, complement_mask);
+            if (ex.mixed_rank_min) {
+                printf(",\"mixed_cuts\":%d,\"mixed_vars\":%d,\"mixed_clauses\":%d,\"mixed_seconds\":%.6f,\"mixed_floors\":[",
+                       g_mixed.cuts, g_mixed.vars, g_mixed.clauses, g_mixed.seconds);
+                for (size_t c = 0; c < ex.mixed_cuts.size(); ++c)
+                    printf("%s[%d,%d,%u]", c ? "," : "", ex.mixed_cuts[c].floor, ex.mixed_cuts[c].rank, ex.mixed_cuts[c].side);
+                printf("]");
+            }
             if (ex.restriction_conditional)
                 printf(",\"counter_conditional\":%d,\"counter_conditional_clauses\":%d", g_counter.conditional,
                        g_counter.conditional_clauses);

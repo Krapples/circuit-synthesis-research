@@ -1,0 +1,52 @@
+diff --git a/sat-search/cube_search.py b/sat-search/cube_search.py
+index 558c2b6..a205b3c 100644
+--- a/sat-search/cube_search.py
++++ b/sat-search/cube_search.py
+@@ -27,6 +27,7 @@ from port_certificates import (PORT_CERTIFICATE_LEVELS, certificate_type_costs,
+                                minimal_zero_certificates)
+ from provider_certificates import required_distinctions
+ from provider_capacity import ALLOCATION_LEVELS, ordered_allocation_excess
++from mixed_rank_cuts import add_mixed_rank_cuts, select_cuts as mixed_rank_select
+ 
+ HERE = os.path.dirname(os.path.abspath(__file__))
+ STOP = os.environ.get('CUBE_SEARCH_STOP_FILE') or os.path.join(HERE, 'STOP')
+@@ -2124,6 +2125,10 @@ def run_cube(args):
+         raise ValueError('matching interface bounds require a monotone (NOT-free) search')
+     fixed = tuple(flags.get('fixgates', ()))
+     interfaces = matching_cuts(n, tuple(masks)) if flags.get('matchinginterface') else ()
++    mixed_cuts = ()
++    if flags.get('mixedrankcuts'):  # opt-in; complete function f = OR of the terms
++        truth = sum(1 << r for r in range(1 << n) if any(m & r == m for m in masks))
++        mixed_cuts = tuple(mixed_rank_select(n, truth, 8, flags['mixedrankcuts']))
+     if interfaces:
+         pinned = {0: cube, **{off: (op, left, right) for off, op, left, right in fixed}}
+         excess, side = pinned_interface_excess(n, pinned, interfaces)
+@@ -2211,6 +2216,8 @@ def run_cube(args):
+         output, pool, clauses, ops, select = build(n, G, flags.get('colex_from', 0))
+         if interfaces:
+             add_matching_interface(n, output, pool, ops, select, clauses, interfaces)
++        if mixed_cuts:  # exact size, every wire read: all gates lie in the output cone
++            add_mixed_rank_cuts(n, output, pool, ops, select, clauses, mixed_cuts)
+         if flags.get('nonot'):                  # monotone search: no NOT gates
+             clauses.extend([[-ops[j][2]] for j in ops])
+             if flags.get('typed') or flags.get('certificate_type_counts'):
+@@ -2627,6 +2634,10 @@ def main():
+     ap.add_argument('--monoports', action='store_true', help='with --portbounds, monotone circuits only: Sperner/chain ports')
+     ap.add_argument('--matchinginterface', action='store_true',
+                     help='bound pure-wire exports at independent C4-free cuts (requires --monotone)')
++    ap.add_argument('--mixedrankcuts', type=int, nargs='?', const=2, default=0, metavar='MIN_FLOOR',
++                    help='opt-in: at least floor(R) AND/OR gates read both sides of each input cut, R the '
++                         'anchored GF(2) mixed rank (scalar 2^(t+1)-2 ceiling); cuts with floor >= MIN_FLOOR '
++                         '(default 2), at most 8')
+     ap.add_argument('--orderedports', action='store_true', help='with --portbounds: ordered terminal groups')
+     ap.add_argument('--portcertrank', nargs='?', const='rank',
+                     choices=('compatibility', *PORT_CERTIFICATE_LEVELS),
+@@ -2810,7 +2821,7 @@ def main():
+                                  frontier=a.frontier, partialordered=a.partialordered, partialrepeat=a.partialrepeat,
+                                  partialmultiplicity=a.partialmultiplicity, partialempty=a.partialempty,
+                                  coupledprojections=a.coupledprojections,
+-                                 matchinginterface=a.matchinginterface,
++                                 matchinginterface=a.matchinginterface, mixedrankcuts=a.mixedrankcuts,
+                                  minimal=a.minimal, parity=a.parity, usens=a.usens,
+                                  closedcone=a.closedcone, bypass=a.bypass, outdec=a.outdec,
+                                  bottleneck=a.bottleneck, elim=a.elim, strongbounds=a.strongbounds,
