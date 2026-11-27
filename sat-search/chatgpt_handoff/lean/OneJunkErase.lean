@@ -5585,4 +5585,380 @@ theorem noTwoOrReadersBothStars {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms noOneJunkSiteReplacement
 #print axioms noTwoOrReadersBothStars
 
+
+/-- Any lost positive input activates the original junk product. -/
+private lemma lostPositiveJunk {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (x : Fin n → Bool) (hx : graphFun G ∅ x = true) (hm : W x C.output = false) :
+    val C (List.ofFn x) (n+r) = true := by
+  let V := fun (y : Fin n → Bool) w => val C (List.ofFn y) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have ho : V x C.output = true := (congrFun h.2.1 x).trans hx
+  obtain ⟨j,hj,hja,hjc,hjv⟩ := (collectorSemantics G C h hl hJ hV x).mp ho
+  obtain ⟨S,T,f,ht⟩ := orientedTop G C h hl hJ hj hja hjc
+  obtain ⟨hp,hq⟩ := (ht V hV x).mp hjv
+  rcases hp with hp | hp
+  · have hw := (collectorSemantics G C h hl hJ hW x).mpr
+      ⟨j,hj,hja,hjc,(ht W hW x).mpr ⟨Or.inl hp,hq⟩⟩
+    rw [hm] at hw
+    cases hw
+  · exact hp.2
+
+private lemma pairEqOfHits {n : ℕ} (u v p q : Fin n)
+    (hp : pairInput u v p = true) (hq : pairInput u v q = true) (hne : p ≠ q) :
+    pairInput u v = pairInput p q := by
+  have hp' : p = u ∨ p = v := by simpa [pairInput] using hp
+  have hq' : q = u ∨ q = v := by simpa [pairInput] using hq
+  rcases hp' with hp' | hp' <;> rcases hq' with hq' | hq'
+  · exact (hne (hp'.trans hq'.symm)).elim
+  · simp [hp',hq']
+  · simpa [hp',hq'] using pairInputComm u v
+  · exact (hne (hp'.trans hq'.symm)).elim
+
+/-- A pre-junk provider outside the residual-use cone can pay for
+    a one-star repair, while its disjoint other provider stays intact. -/
+private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r i a b : ℕ} (hJ : junk G C = {r})
+    (hi : i < C.gates.length) (hir : n+r ∈ (gateAt C i).inputs)
+    (hal : a < n+r) (hbl : b < n+r) (hbd : ¬ CleanWire G C b)
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (hdisj : Disjoint A B) (hcardA : 1 < A.card)
+    {s : Fin n} (hs : s ∈ A) (hstar : ∀ v ∈ B, G.Adj s v)
+    (huse : ¬ ResidualUse G C r (suspendedValue C r (fun _ => false) (fun _ => true)) a)
+    (hcover : ∀ u v, G.Adj u v →
+      suspendedValue C r (fun _ => false) (pairInput u v) C.output = true ∨
+      (pairInput u v s = true ∧ hits B (pairInput u v))) : False := by
+  classical
+  have hr := (junkMember G C hJ).1
+  have hri : r < i := Nat.lt_of_add_lt_add_left (h.1.2.1 i hi _ hir)
+  let W := suspendedValue C r (fun _ => false)
+  have hW : EvalExcept n C r W := suspendedValue_evalExcept C h.1 r _
+  have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
+  have hna : n ≤ a := by
+    by_contra! hn
+    let u : Fin n := ⟨a,hn⟩
+    obtain ⟨v,hv,w,hw,hvw⟩ := Finset.one_lt_card.mp hcardA
+    have ident (z : Fin n) (hz : z ∈ A) : u = z := by
+      have ht := (hA.2 W hW (pairInput z z)).mpr (Or.inl ⟨z,hz,by simp [pairInput]⟩)
+      simpa [pairInput] using (hW.1 (pairInput z z) u).symm.trans ht
+    exact hvw ((ident v hv).symm.trans (ident w hw))
+  obtain ⟨j,rfl⟩ : ∃ j, a = n+j := ⟨a-n,by omega⟩
+  have hjr : j < r := by omega
+  have hj := hjr.trans hr
+  have hjs : W (pairInput s s) (n+j) = true :=
+    (hA.2 W hW _).mpr (Or.inl ⟨s,hs,by simp [pairInput]⟩)
+  have hbs : W (pairInput s s) b = false := by
+    cases he : W (pairInput s s) b
+    · rfl
+    · obtain ⟨z,hz,hzx⟩ := ((hB.2 W hW _).mp he).resolve_right (by simp)
+      have heq : z = s := by simpa [pairInput] using hzx
+      exact (Finset.disjoint_left.mp hdisj hs (heq ▸ hz)).elim
+  let M : ℕ → ℕ → Bool := fun k _ => decide (k = j)
+  let Z := maskedValue C r M (fun _ => false)
+  have hZraw := maskedValue_raw C r M (fun _ : Fin n → Bool => false)
+  have hZzero := maskedValue_hole C r M (fun _ : Fin n → Bool => false)
+  have hZgate (x) (k) (hk : k < C.gates.length) (hkr : k ≠ r) :=
+    maskedValue_gate C h.1 r M (fun _ : Fin n → Bool => false) x hk hkr
+  have hZle (x) (w) (hw : w < n+C.gates.length) (ht : Z x w = true) : W x w = true :=
+    maskedValueLe C h.1 r (fun _ _ => false) M (by simp) (fun _ => false) x w hw ht
+  have hkeep : ∀ x, W x C.output = true → Z x C.output = true := by
+    apply residualOutputPreserved G C h hl hJ hW hzero hZraw hZzero
+    intro x k hk hkr hu
+    have hkj : k ≠ j := by
+      rintro rfl
+      rcases hu with hc | hu
+      · have hnot := residualUseDirty G C h hl (ResidualUse.top (G := G) (C := C))
+        -- Instead use the dirty junk operand's original support on its singleton.
+        exact (rawNotClean G C s (fun x hx => hc x
+          ((hA.2 _ (originalEvalExcept h.1 r) x).mpr (Or.inl ⟨s,hs,hx⟩)))).elim
+      · exact huse hu
+    simpa [M,hkj] using hZgate x k hk hkr
+  have hZB (x) : Z x b = W x b :=
+    extraMaskPreservesProvider G C h hl hJ hW s hjs (fun _ _ => false) M
+      (by intro k w hk; simp [M,hk]) (fun _ => false) x b hbl hbd hbs
+  have hout := outputLast G C h (by omega : 0 < C.gates.length)
+  have hob : C.output < n+C.gates.length := by omega
+  have hbb : b < n+C.gates.length := by omega
+  obtain ⟨D,hD,hlen,hwires⟩ := compileMaskedSuspension C h.1 M Z hZraw hZgate hZzero
+    {r,i,j} (by
+      intro k hk
+      rcases (show k = r ∨ k = i ∨ k = j by simpa using hk) with rfl | rfl | rfl <;>
+        exact Finset.mem_range.mpr (by assumption)) (by
+      intro k hk
+      rcases (show k = r ∨ k = i ∨ k = j by simpa using hk) with rfl | rfl | rfl
+      · exact Or.inl rfl
+      · exact Or.inr ⟨n+r,hir,Or.inr (hZzero _)⟩
+      · obtain ⟨p,q,hpq⟩ := twoOperands h.1 hj
+        exact Or.inr ⟨p,by simp [hpq],Or.inl (by simp [M])⟩)
+  have hcard : ({r,i,j} : Finset ℕ).card = 3 := by
+    have hji : j ≠ i := by omega
+    simp [hri.ne,hjr.ne.symm,hji.symm]
+  rw [hcard] at hlen
+  let star : RepairStar n := ⟨s,B⟩
+  have hprovider (x) : Z x b = star.provider x := by
+    apply Bool.eq_iff_iff.mpr
+    rw [hZB x]
+    simpa [star,RepairStar.provider] using hB.2 W hW x
+  have hp : WireAvailable D star.provider := (funext hprovider) ▸ hwires b hbb
+  obtain ⟨E,hE,hcost,houtval,_⟩ :=
+    appendRepairStar D hD (fun x => Z x C.output) (hwires C.output hob) star hp
+  have hsmall : E.gates.length < C.gates.length := by
+    cases ht : Z (fun _ => true) C.output <;> simp [ht] at hcost <;> omega
+  have hpos (u v : Fin n) (huv : G.Adj u v) :
+      (Z (pairInput u v) C.output || star.fires (pairInput u v)) = true := by
+    rcases hcover u v huv with ho | ⟨hsx,hBhit⟩
+    · simp [hkeep _ ho]
+    · have ht : star.fires (pairInput u v) = true := by
+        simpa [star,RepairStar.fires,RepairStar.provider,hits] using And.intro hsx hBhit
+      simp [ht]
+  rcases houtval with hfalse | ⟨o,_,heval⟩
+  · have hnone (u v : Fin n) (huv : G.Adj u v) : False :=
+      Bool.false_ne_true ((hfalse _).symm.trans (hpos u v huv))
+    have := emptyGraphNoGates G C h hnone
+    omega
+  · let F : Circuit := ⟨E.gates,o⟩
+    have hF : IsAO2 n F := hE
+    have hfun (x : Fin n → Bool) : circuitFun n F x = (Z x C.output || star.fires x) := heval x
+    have hcorrect : circuitFun n F = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      constructor
+      · intro hx
+        rw [hfun,Bool.or_eq_true] at hx
+        rcases hx with ho | ht
+        · exact suspendedFalseSound G C h hl hJ hW hzero x (hZle x C.output hob ho)
+        · obtain ⟨hsx,z,hz,hzx⟩ : x s = true ∧ hits B x := by
+            simpa [star,RepairStar.fires,RepairStar.provider,hits] using ht
+          exact (graph_true G x).mpr ⟨s,z,hstar z hz,hsx,hzx⟩
+      · intro hx
+        obtain ⟨u,v,huv,hu,hv⟩ := (graph_true G x).mp hx
+        apply circuit_monotone n F (ao_mono hF) (pairInput u v) x ?_ ((hfun _).trans (hpos u v huv))
+        intro z hz
+        rcases (show z = u ∨ z = v by simpa [pairInput] using hz) with rfl | rfl
+        · exact hu
+        · exact hv
+    have hm := h.2.2 F hF hcorrect
+    change C.gates.length ≤ E.gates.length at hm
+    omega
+
+/-- The sole carrier has a uniform opposite colour. Every missing
+    edge therefore belongs to the seed centre's star. If the other
+    provider is protected, its residual neighbour supplies the sole
+    possible universal leaf, and the nonuniversal leaves give a safe
+    replacement at the carrier. -/
+private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r i a b : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → n+r ∉ (gateAt C j).inputs)
+    (hi : i < C.gates.length) (hio : (gateAt C i).op = GateOp.or)
+    (hir : n+r ∈ (gateAt C i).inputs)
+    (only : ∀ k < C.gates.length, n+r ∈ (gateAt C k).inputs → k = i)
+    (hal : a < n+r) (hbl : b < n+r) (hbd : ¬ CleanWire G C b)
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (hdisj : Disjoint A B) (hcardA : 1 < A.card) (hcardB : 1 < B.card)
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n+r) = true ↔ hits A x ∧ hits B x)
+    {s : Fin n} (hs : s ∈ A)
+    (hcolA : ∀ z ∈ A, colour z = colour s) (hcolB : ∀ z ∈ B, colour z ≠ colour s)
+    {j p q : ℕ} (hj : j < C.gates.length) (hja : (gateAt C j).op = GateOp.and)
+    (hjc : BelowF G C j) {S T : Finset (Fin n)}
+    (hpq : (gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p])
+    (hS : RawForm C r p S true) (hT : RawForm C r q T false)
+    (path : OrCarrierRoute n C r i p) (hsT : s ∈ T) : False := by
+  classical
+  let W := suspendedValue C r (fun _ => false)
+  have hW : EvalExcept n C r W := suspendedValue_evalExcept C h.1 r _
+  have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
+  have ht := routedTopSemantics hj (cleanDifferent G C hJ hjc) hja hpq hS hT
+  have star (z : Fin n) (hz : z ∈ B) : G.Adj s z :=
+    (carrierCross G h.1 hprod hjc ht hs hz hsT (Or.inr rfl) (Or.inl rfl)).symm
+  have sameColour (u v w : Fin n) (hu : colour u ≠ colour w)
+      (hv : colour v ≠ colour w) : colour u = colour v := by
+    generalize colour u = cu at hu ⊢
+    generalize colour v = cv at hv ⊢
+    generalize colour w = cw at hu hv
+    cases cu <;> cases cv <;> cases cw <;> simp_all
+  have rawCross {k : ℕ} {P Q : Finset (Fin n)} (hc : BelowF G C k)
+      (ht : OrientedTop C r k P Q true) {u v : Fin n} (hu : u ∈ P) (hv : v ∈ Q) :
+      G.Adj u v := adjOfPair G (hc _ ((ht _ (originalEvalExcept h.1 r) (pairInput u v)).mpr
+        ⟨Or.inl ⟨u,hu,by simp [pairInput]⟩,⟨v,hv,by simp [pairInput]⟩⟩))
+  have colTop {k u w t : ℕ} (hk : k < C.gates.length) (hka : (gateAt C k).op = GateOp.and)
+      (hkc : BelowF G C k) {P Q : Finset (Fin n)}
+      (huw : (gateAt C k).inputs = [u,w] ∨ (gateAt C k).inputs = [w,u])
+      (hP : RawForm C r u P true) (hQ : RawForm C r w Q false)
+      (route : OrCarrierRoute n C r t u) : ∀ c ∈ Q, colour c = colour s := by
+    obtain ⟨htl,_,htm⟩ := routeReadSite route
+    have he := only t htl htm
+    obtain ⟨e,heS,heP⟩ := carrierRoutesShareRawLeaf G C h hl hJ hi hio hir path (he ▸ route) hS hP
+    have htop := routedTopSemantics hk (cleanDifferent G C hJ hkc) hka huw hP hQ
+    intro c hc
+    exact sameColour c s e (hcolour c e (rawCross hkc htop heP hc).symm)
+      (hcolour s e (rawCross hjc ht heS hsT).symm)
+  have cover (u v : Fin n) (huv : G.Adj u v) : W (pairInput u v) C.output = true ∨
+      (pairInput u v s = true ∧ hits B (pairInput u v)) := by
+    let x := pairInput u v
+    by_cases ho : W x C.output = true
+    · exact Or.inl ho
+    have hf : W x C.output = false := by cases he : W x C.output <;> simp_all
+    obtain ⟨t,k,u',w,P,Q,_,_,_,hk,hka,hkc,huw,hP,hQ,route,hQx⟩ :=
+      lostRoutedTop G C h hl hJ hno hW x (pair_true G u v huv) hf
+    obtain ⟨⟨a',ha',hax⟩,⟨b',hb',hbx⟩⟩ :=
+      (hprod x).mp (lostPositiveJunk G C h hl hJ hW x (pair_true G u v huv) hf)
+    obtain ⟨c,hc,hcx⟩ := hQx
+    have hne : a' ≠ b' := fun he => Finset.disjoint_left.mp hdisj ha' (he.symm ▸ hb')
+    have h1 : a' = u ∨ a' = v := by simpa [x,pairInput] using hax
+    have h2 : b' = u ∨ b' = v := by simpa [x,pairInput] using hbx
+    have h3 : c = u ∨ c = v := by simpa [x,pairInput] using hcx
+    have hc' : c = a' ∨ c = b' := by aesop
+    have hcA : c ∈ A := by
+      rcases hc' with he | he
+      · exact he.symm ▸ ha'
+      · exact (hcolB b' hb' (he ▸ colTop hk hka hkc huw hP hQ route c hc)).elim
+    have hkTop := routedTopSemantics hk (cleanDifferent G C hJ hkc) hka huw hP hQ
+    have starC (z : Fin n) (hz : z ∈ B) : G.Adj c z :=
+      (carrierCross G h.1 hprod hkc hkTop hcA hz hc (Or.inr rfl) (Or.inl rfl)).symm
+    obtain ⟨e,he,f,hf',hef⟩ := Finset.one_lt_card.mp hcardB
+    have hcs := commonNeighborUnique G h4 hef (star e he).symm (star f hf').symm
+      (starC e he).symm (starC f hf').symm
+    exact Or.inr ⟨hcs ▸ hcx,b',hb',hbx⟩
+  by_cases huse : ResidualUse G C r (W (fun _ => true)) a
+  · obtain ⟨d,hd⟩ := residualUseCoversSupport G C h hl hJ hW hzero huse
+      (fun x hx => (hA.2 W hW x).mpr (Or.inl hx))
+    have universal (z : Fin n) (hz : ∀ y ∈ A, G.Adj y z) : z = d := by
+      obtain ⟨e,he,f,hf,hef⟩ := Finset.one_lt_card.mp hcardA
+      exact commonNeighborUnique G h4 hef (hd e he).1 (hd f hf).1 (hz e he) (hz f hf)
+    have existsBad : ∃ z ∈ B, ¬ ∀ y ∈ A, G.Adj y z := by
+      by_contra! hall
+      obtain ⟨e,he,f,hf,hef⟩ := Finset.one_lt_card.mp hcardB
+      exact hef ((universal e (hall e he)).trans (universal f (hall f hf)).symm)
+    obtain ⟨t,htB,htbad⟩ := existsBad
+    have forced {k u w i' : ℕ} (hk : k < C.gates.length) (hka : (gateAt C k).op = GateOp.and)
+        (hkc : BelowF G C k) {P Q : Finset (Fin n)}
+        (huw : (gateAt C k).inputs = [u,w] ∨ (gateAt C k).inputs = [w,u])
+        (hP : RawForm C r u P true) (hQ : RawForm C r w Q false)
+        (route : OrCarrierRoute n C r i' u) {z : Fin n} (hzB : z ∈ B)
+        (hbad : ¬ ∀ y ∈ A, G.Adj y z) : ∀ c ∈ Q, G.Adj c z := by
+      push_neg at hbad
+      obtain ⟨y,hy,hyn⟩ := hbad
+      intro c hc
+      have hyc : colour y = colour c := (hcolA y hy).trans (colTop hk hka hkc huw hP hQ route c hc).symm
+      let x : Fin n → Bool := fun w => decide (w = y ∨ w = z ∨ w = c)
+      have htop := routedTopSemantics hk (cleanDifferent G C hJ hkc) hka huw hP hQ
+      have hpos : graphFun G ∅ x = true := hkc x ((htop _ (originalEvalExcept h.1 r) x).mpr
+        ⟨Or.inr ⟨rfl,(hprod x).mpr ⟨⟨y,hy,by simp [x]⟩,⟨z,hzB,by simp [x]⟩⟩⟩,
+          ⟨c,hc,by simp [x]⟩⟩)
+      obtain ⟨l,m,hlm,hlx,hmx⟩ := (graph_true G x).mp hpos
+      have hl' : l = y ∨ l = z ∨ l = c := by simpa [x] using hlx
+      have hm' : m = y ∨ m = z ∨ m = c := by simpa [x] using hmx
+      rcases hl' with hl' | hl' | hl' <;> rcases hm' with hm' | hm' | hm' <;> rw [hl',hm'] at hlm
+      · exact (G.ne_of_adj hlm rfl).elim
+      · exact (hyn hlm).elim
+      · exact (hcolour y c hlm hyc).elim
+      · exact (hyn hlm.symm).elim
+      · exact (G.ne_of_adj hlm rfl).elim
+      · exact hlm.symm
+      · exact (hcolour c y hlm hyc.symm).elim
+      · exact hlm
+      · exact (G.ne_of_adj hlm rfl).elim
+    by_cases hsecond : ∃ z ∈ B, z ≠ t ∧ ¬ ∀ y ∈ A, G.Adj y z
+    · obtain ⟨z,hz,hzt,hbad⟩ := hsecond
+      apply noOneJunkSiteReplacement G C h hl hJ hno (fun _ => b) (fun _ => hbl) hW hzero
+      · intro k hk hka hkc u w P Q huw hP hQ i' route x hf hQx
+        obtain ⟨c,hc,hcx⟩ := hQx
+        have hcs := commonNeighborUnique G h4 hzt (star z hz).symm (star t htB).symm
+          (forced hk hka hkc huw hP hQ route hz hbad c hc).symm
+          (forced hk hka hkc huw hP hQ route htB htbad c hc).symm
+        obtain ⟨v,hv,hvx⟩ := ((hB.2 _ (originalEvalExcept h.1 r) x).mp hf).resolve_right (by simp)
+        exact (graph_true G x).mpr ⟨s,v,star v hv,hcs ▸ hcx,hvx⟩
+      · intro u v huv hf i' _
+        rcases cover u v huv with ho | ⟨_,hBhit⟩
+        · rw [hf] at ho
+          cases ho
+        · exact (hB.2 _ (originalEvalExcept h.1 r) _).mpr (Or.inl hBhit)
+    · have other (z : Fin n) (hz : z ∈ B) (hne : z ≠ t) : z = d :=
+        universal z (by by_contra hn; exact hsecond ⟨z,hz,hne,hn⟩)
+      apply noOneJunkSiteReplacement G C h hl hJ hno (fun _ => t.val)
+        (fun _ => by have := t.isLt; omega) hW hzero
+      · intro k hk hka hkc u w P Q huw hP hQ i' route x hf hQx
+        obtain ⟨c,hc,hcx⟩ := hQx
+        exact (graph_true G x).mpr ⟨c,t,forced hk hka hkc huw hP hQ route htB htbad c hc,hcx,
+          ((originalEvalExcept h.1 r).1 x t).symm.trans hf⟩
+      · intro u v huv hf i' _
+        rcases cover u v huv with ho | ⟨hsx,z,hz,hzx⟩
+        · rw [hf] at ho
+          cases ho
+        · by_cases he : z = t
+          · exact ((originalEvalExcept h.1 r).1 _ t).trans (he ▸ hzx)
+          · have heq := other z hz he
+            have hp := pairEqOfHits u v s z hsx hzx (G.ne_of_adj (star z hz))
+            have hw := (hd s hs).2
+            rw [← heq,← hp,hf] at hw
+            cases hw
+  · exact exclusiveProviderOneStar G C h hl hJ hi hir hal hbl hbd hA hB hdisj hcardA hs star huse cover
+
+/-- All sole OR-reader configurations with the verified disjoint large
+    opposite-colour supports. Choose a genuinely lost edge to orient the
+    seed star, then apply the one-carrier contradiction. -/
+theorem noSoleOrReaderLargeSupports {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r i a b : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → n+r ∉ (gateAt C j).inputs)
+    (hi : i < C.gates.length) (hio : (gateAt C i).op = GateOp.or)
+    (hir : n+r ∈ (gateAt C i).inputs)
+    (only : ∀ k < C.gates.length, n+r ∈ (gateAt C k).inputs → k = i)
+    (hab : (gateAt C r).inputs = [a,b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (hdisj : Disjoint A B) (hcardA : 1 < A.card) (hcardB : 1 < B.card)
+    (col : Bool) (hcolA : ∀ z ∈ A, colour z = col) (hcolB : ∀ z ∈ B, colour z ≠ col) : False := by
+  classical
+  obtain ⟨hr,hand,_⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  let W := suspendedValue C r (fun _ => false)
+  have hW : EvalExcept n C r W := suspendedValue_evalExcept C h.1 r _
+  have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
+  by_cases hall : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true
+  · exact noOneJunkWithoutLostEdges G C h hl hJ hW hzero hall
+  push_neg at hall
+  obtain ⟨u,v,huv,hmiss⟩ := hall
+  have hf : W (pairInput u v) C.output = false := by
+    cases he : W (pairInput u v) C.output <;> simp_all
+  obtain ⟨t,j,p,q,S,T,htl,_,htm,hj,hja,hjc,hpq,hS,hT,route,hTx⟩ :=
+    lostRoutedTop G C h hl hJ hno hW (pairInput u v) (pair_true G u v huv) hf
+  have hroute : OrCarrierRoute n C r i p := only t htl htm ▸ route
+  obtain ⟨s,hsT,hsx⟩ := hTx
+  obtain ⟨⟨y,hy,hyx⟩,⟨z,hz,hzx⟩⟩ := (hprod _).mp
+    (lostPositiveJunk G C h hl hJ hW _ (pair_true G u v huv) hf)
+  have hyz : y ≠ z := fun he => Finset.disjoint_left.mp hdisj hy (he.symm ▸ hz)
+  have h1 : y = u ∨ y = v := by simpa [pairInput] using hyx
+  have h2 : z = u ∨ z = v := by simpa [pairInput] using hzx
+  have h3 : s = u ∨ s = v := by simpa [pairInput] using hsx
+  have hs' : s = y ∨ s = z := by aesop
+  have hal := h.1.2.1 r hr a (by simp [hab])
+  have hbl := h.1.2.1 r hr b (by simp [hab])
+  have had := noCleanAndOperand G C h r a hr (by simp [hab]) hand
+  have hbd := noCleanAndOperand G C h r b hr (by simp [hab]) hand
+  rcases hs' with he | he
+  · have hsA : s ∈ A := he.symm ▸ hy
+    exact noSoleOrReaderOfSeed G C h hl h4 colour hcolour hJ hno hi hio hir only hal hbl hbd
+      hA hB hdisj hcardA hcardB hprod hsA (fun w hw => (hcolA w hw).trans (hcolA s hsA).symm)
+      (fun w hw hn => hcolB w hw (hn.trans (hcolA s hsA))) hj hja hjc hpq hS hT hroute hsT
+  · have hsB : s ∈ B := he.symm ▸ hz
+    have hBsame (w) (hw : w ∈ B) : colour w = colour s := by
+      have h1 := hcolB w hw
+      have h2 := hcolB s hsB
+      generalize colour w = cw at h1 ⊢
+      generalize colour s = cs at h2 ⊢
+      cases cw <;> cases cs <;> cases col <;> simp_all
+    exact noSoleOrReaderOfSeed G C h hl h4 colour hcolour hJ hno hi hio hir only hbl hal had
+      hB hA hdisj.symm hcardB hcardA (fun x => (hprod x).trans and_comm) hsB hBsame
+      (fun w hw hn => hcolB s hsB (hn.symm.trans (hcolA w hw))) hj hja hjc hpq hS hT hroute hsT
+
+#print axioms noSoleOrReaderLargeSupports
+
 end ResearchVerification.OneJunkErase
