@@ -191,12 +191,13 @@ vertex of its opposite support, and C4-freeness bounds each support to
 one such endpoint. The soundness result `suspendedFalseSound` holds on
 every input and requires neither support-size nor colour hypotheses.
 
-`foldSuspendedFalse` uses the pinned upstream `FoldProg.build` to
-compile this valuation back into the exact constant-free model. It
+`compileFalseSuspension` compiles this valuation back into the exact
+constant-free model by inductively appending AND and OR gates. It
 certifies each original wire as identically false or represents its
-value by an available wire in the compiled gate list. The gate bound
-charges the junk and each immediate reader once. A reader AND becomes
-false and a reader OR forwards its other operand, so each saves a gate.
+value by an available wire in the compiled gate list. It charges the
+junk and every gate with an operand false on the all-true suspended
+input. An immediate reader AND becomes false and a reader OR forwards
+its other operand, so each saves a gate.
 
 `noOneJunkWithoutLostEdges` closes the case where all edge inputs survive.
 `noOneJunkOneStarWithTwoReaders` closes the case where one star covers
@@ -218,15 +219,26 @@ Four readers give at least five charges against a maximum repair cost of
 four. `oneJunkReaderBudget` rules out three readers when the suspended
 output is false, since the two-star repair then costs at most three.
 
-`foldFalseOperandBudget` also charges gates with any operand false on
-the all-true input of the suspended circuit. When an immediate AND
-reader becomes false and the suspended output survives, that AND is
-clean and has a downstream clean OR reader. The OR cannot directly
+The false-operand accounting can also charge downstream gates. When
+an immediate AND reader becomes false and the suspended output survives,
+that AND is clean and has a downstream clean OR reader. The OR cannot directly
 read the dirty junk because its operands are clean. It supplies a
 distinct extra charge. `oneJunkAtMostTwoWithAndReader` therefore rules
 out three readers including an AND. The remaining three-reader shape
 has three OR readers, a nonzero suspended output, and requires both
 stars. The lower-reader branches and many-junk reduction remain open.
+
+The suspended compiler and the underlying strict zero-, one-, and
+two-star repair proofs are in the core file, which imports Mathlib and
+`PEqualNP.Defs`. The local adapter applies them to the reader cases and
+still imports five accepted upstream lemmas for the one-junk support
+geometry.
+
+For the three-OR branch, the remaining step is to save an exclusive OR
+from one provider while preserving the other star and the surviving clean
+products. Protection must follow uses in the suspended circuit. A path in
+the original circuit can avoid the junk itself and still pass through an
+AND whose other operand becomes false under suspension.
 
 ## Verification
 
@@ -328,3 +340,14 @@ check in 39.879 seconds. All 15 audited declarations use only
 `0f44bc7548a624fd049b5dc44073c70015007f892a53e1ec1bf8209c4a7c025d`.
 The earlier checked core source is the dependency for this run.
 The log and audit are in `.research/ops/1795769890789684500-lean-check/`.
+
+The independent repair compiler passed the strict core check in 70.251
+seconds with 50 axiom audits. The dependent bridge passed in 38.992
+seconds with 10 audits after rebuilding the local core module. Both
+audits report only `propext`, `Classical.choice`, and `Quot.sound`.
+The checked core SHA-256 is
+`7b5e13a019736c89804f2e0e69c9e20af09b3901448e2e2173cb8febd4c3924b`.
+The checked bridge SHA-256 is
+`e9f57d7555b1612dab3e9969aa88d848be66e62345c2ab03d271fd49745aceeb`.
+The evidence is in `.research/ops/1795771140241605200-lean-check/`
+and `.research/ops/1795771365907966600-lean-check/`, respectively.

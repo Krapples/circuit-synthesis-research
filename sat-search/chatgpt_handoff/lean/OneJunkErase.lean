@@ -2073,7 +2073,8 @@ theorem noExposedTwoOverlap {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.
 #print axioms noTwoOverlapWithEarlierFilter
 #print axioms noExposedTwoOverlap
 
-private def WireAvailable {n : ℕ} (D : Circuit) (f : (Fin n → Bool) → Bool) : Prop :=
+/-- A value is identically false or is represented by an existing wire. -/
+def WireAvailable {n : ℕ} (D : Circuit) (f : (Fin n → Bool) → Bool) : Prop :=
   (∀ x, f x = false) ∨ ∃ w < n + D.gates.length, ∀ x, val D (List.ofFn x) w = f x
 
 private def PreservesWires (n : ℕ) (D E : Circuit) : Prop :=
@@ -2085,6 +2086,15 @@ private lemma wireAvailablePreserved {n : ℕ} {D E : Circuit} (h : PreservesWir
   rcases hf with hz | ⟨w, hw, he⟩
   · exact Or.inl hz
   · exact Or.inr ⟨w, by have := h.1; omega, fun x => (h.2 x w hw).trans (he x)⟩
+
+private lemma wireAvailableFalseOfTop {n : ℕ} {D : Circuit} (hD : IsAO2 n D)
+    {f : (Fin n → Bool) → Bool} (hf : WireAvailable D f) (hzero : f (fun _ => true) = false) :
+    ∀ x, f x = false := by
+  rcases hf with hfalse | ⟨w, hw, he⟩
+  · exact hfalse
+  · have ht := (he _).symm.trans (allTrueWires hD w hw)
+    rw [hzero] at ht
+    cases ht
 
 private lemma appendAvailableOr {n : ℕ} (D : Circuit) (hD : IsAO2 n D)
     {f g : (Fin n → Bool) → Bool} (hf : WireAvailable D f) (hg : WireAvailable D g) :
@@ -3165,5 +3175,344 @@ theorem noExposedSingletonWithTrimmedStar {n : ℕ} (G : SimpleGraph (Fin n)) [D
 
 #print axioms noExposedSingletonWithTrimmedStar
 
+/-- An AND with a false operand is represented by false without adding a gate. -/
+private lemma appendAvailableAnd {n : ℕ} (D : Circuit) (hD : IsAO2 n D)
+    {f g : (Fin n → Bool) → Bool} (hf : WireAvailable D f) (hg : WireAvailable D g) :
+    ∃ E, IsAO2 n E ∧ PreservesWires n D E ∧ E.gates.length ≤ D.gates.length + 1 ∧
+      ((∀ x, f x = false) ∨ (∀ x, g x = false) → E.gates.length ≤ D.gates.length) ∧
+      WireAvailable E (fun x => f x && g x) := by
+  have hself : PreservesWires n D D := ⟨le_rfl, fun _ _ _ => rfl⟩
+  rcases hf with hf | ⟨a, ha, hfa⟩
+  · exact ⟨D, hD, hself, by omega, fun _ => le_rfl, Or.inl (fun x => by simp [hf x])⟩
+  · rcases hg with hg | ⟨b, hb, hgb⟩
+    · exact ⟨D, hD, hself, by omega, fun _ => le_rfl, Or.inl (fun x => by simp [hg x])⟩
+    · obtain ⟨hlen, hE, hkeep, hval⟩ := appendBinary_spec hD (Or.inl rfl) ha hb
+      refine ⟨appendBinary D GateOp.and a b, hE, ⟨by omega, hkeep⟩, by omega, ?_, Or.inr ?_⟩
+      · rintro (hf | hg)
+        · have ht : f (fun _ => true) = true := (hfa _).symm.trans (allTrueWires hD a ha)
+          cases (hf _).symm.trans ht
+        · have ht : g (fun _ => true) = true := (hgb _).symm.trans (allTrueWires hD b hb)
+          cases (hg _).symm.trans ht
+      · refine ⟨n + D.gates.length, by omega, fun x => ?_⟩
+        rw [hval x, hfa x, hgb x]
+        simp [GateOp.eval]
+
+/-- Compile the suspension without adding constants. Every charged index is
+    the suspended gate or has a false operand at the all-true input. -/
+theorem compileFalseSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨
+      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false) :
+    ∃ D : Circuit, IsAO2 n D ∧ D.gates.length + dropped.card ≤ C.gates.length ∧
+      ∀ w < n + C.gates.length, WireAvailable D (fun x => W x w) := by
+  classical
+  let budget := fun k => ((Finset.range k).filter fun j => j ∉ dropped).card
+  have main : ∀ k ≤ C.gates.length, ∃ D : Circuit, IsAO2 n D ∧
+      D.gates.length ≤ budget k ∧ ∀ w < n + k, WireAvailable D (fun x => W x w) := by
+    intro k
+    induction k with
+    | zero =>
+      intro _
+      let D : Circuit := ⟨[], 0⟩
+      have hD : IsAO2 n D := by
+        refine ⟨fun g hg => ?_, fun j hj => ?_, fun g hg => ?_⟩ <;> simp [D] at *
+      refine ⟨D, hD, by simp [D], fun w hw => Or.inr ⟨w, by simpa [D] using hw, ?_⟩⟩
+      intro x
+      let v : Fin n := ⟨w, by omega⟩
+      exact ((originalEvalExcept hD r).1 x v).trans (hW.1 x v).symm
+    | succ k ih =>
+      intro hk
+      obtain ⟨D, hD, hsize, havail⟩ := ih (by omega)
+      have hj : k < C.gates.length := by omega
+      have hcount : budget (k + 1) = budget k + if k ∈ dropped then 0 else 1 := by
+        by_cases hm : k ∈ dropped
+        · simp [budget, Finset.range_add_one, Finset.filter_insert, hm]
+        · simp [budget, Finset.range_add_one, Finset.filter_insert, hm]
+      have finish (E : Circuit) (hE : IsAO2 n E) (hkeep : PreservesWires n D E)
+          (hbound : E.gates.length ≤ D.gates.length + 1)
+          (hfree : k ∈ dropped → E.gates.length ≤ D.gates.length)
+          (hw : WireAvailable E (fun x => W x (n + k))) :
+          ∃ F : Circuit, IsAO2 n F ∧ F.gates.length ≤ budget (k + 1) ∧
+            ∀ w < n + (k + 1), WireAvailable F (fun x => W x w) := by
+        refine ⟨E, hE, ?_, fun w hwlt => ?_⟩
+        · by_cases hm : k ∈ dropped
+          · have := hfree hm
+            simp only [hm, ite_true, Nat.add_zero] at hcount
+            omega
+          · simp only [hm, ite_false] at hcount
+            omega
+        · by_cases he : w = n + k
+          · simpa [he] using hw
+          · exact wireAvailablePreserved hkeep (havail w (by omega))
+      by_cases he : k = r
+      · exact finish D hD ⟨le_rfl, fun _ _ _ => rfl⟩ (by omega) (fun _ => le_rfl)
+          (Or.inl (by simpa [he] using hzero))
+      obtain ⟨p, q, hpq⟩ := twoOperands h hj
+      have hp : p ∈ (gateAt C k).inputs := by simp [hpq]
+      have hq : q ∈ (gateAt C k).inputs := by simp [hpq]
+      have hP := havail p (h.2.1 k hj p hp)
+      have hQ := havail q (h.2.1 k hj q hq)
+      have uncharged (hm : k ∈ dropped) :
+          (∀ x, W x p = false) ∨ (∀ x, W x q = false) := by
+        rcases (hdrop k hm).resolve_left he with ⟨w, hw, hz⟩
+        have heq : w = p ∨ w = q := by simpa [hpq] using hw
+        rcases heq with rfl | rfl
+        · exact Or.inl (wireAvailableFalseOfTop hD hP hz)
+        · exact Or.inr (wireAvailableFalseOfTop hD hQ hz)
+      rcases h.1 _ (gateAt_mem hj) with hand | hor
+      · obtain ⟨E, hE, hkeep, hbound, hfree, hw⟩ := appendAvailableAnd D hD hP hQ
+        have hv : (fun x => W x p && W x q) = fun x => W x (n + k) := by
+          funext x
+          simpa [hand, hpq, GateOp.eval] using (hW.2 x k hj he).symm
+        exact finish E hE hkeep hbound (fun hm => hfree (uncharged hm)) (hv ▸ hw)
+      · obtain ⟨E, hE, hkeep, hbound, hfree, hw⟩ := appendAvailableOr D hD hP hQ
+        have hv : (fun x => W x p || W x q) = fun x => W x (n + k) := by
+          funext x
+          simpa [hor, hpq, GateOp.eval] using (hW.2 x k hj he).symm
+        exact finish E hE hkeep hbound (fun hm => hfree (uncharged hm)) (hv ▸ hw)
+  obtain ⟨D, hD, hsize, hw⟩ := main C.gates.length le_rfl
+  have hcard := Finset.card_sdiff_of_subset hd
+  have he : budget C.gates.length = (Finset.range C.gates.length \ dropped).card := by
+    unfold budget
+    rw [Finset.sdiff_eq_filter]
+  rw [he, hcard, Finset.card_range] at hsize
+  have hdcard := Finset.card_le_card hd
+  rw [Finset.card_range] at hdcard
+  exact ⟨D, hD, by omega, hw⟩
+
+#print axioms compileFalseSuspension
+
+/-- Erasing the junk and folding its readers strictly reduces the gate count
+    when every edge survives the suspension. -/
+theorem noOneJunkWithoutLostEdges {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true) : False := by
+  classical
+  have hr := (junkMember G C hJ).1
+  have hout := outputLast G C h (Nat.zero_lt_of_lt hr)
+  have houtBound : C.output < n + C.gates.length := by omega
+  obtain ⟨D₀, hao, hlen, hwires⟩ := compileFalseSuspension C h.1 hW hzero {r}
+    (by simpa using hr) (by intro j hj; exact Or.inl (Finset.mem_singleton.mp hj))
+  have hlen' : D₀.gates.length + 1 ≤ C.gates.length := by simpa using hlen
+  rcases hwires C.output houtBound with hfalse | ⟨w, _, hwire⟩
+  · have hnone (u v : Fin n) (huv : G.Adj u v) : False :=
+      Bool.false_ne_true ((hfalse _).symm.trans (hcover u v huv))
+    have := emptyGraphNoGates G C h hnone
+    omega
+  · let D : Circuit := ⟨D₀.gates, w⟩
+    have hD : IsAO2 n D := hao
+    have hval (x : Fin n → Bool) : circuitFun n D x = W x C.output := hwire x
+    have hcorrect : circuitFun n D = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      refine ⟨fun hx => suspendedFalseSound G C h hl hJ hW hzero x ((hval x).symm.trans hx), ?_⟩
+      intro hx
+      obtain ⟨u, v, hadj, hu, hv⟩ := (graph_true G x).mp hx
+      apply circuit_monotone n D (ao_mono hD) (pairInput u v) x ?_ ((hval _).trans (hcover u v hadj))
+      intro t ht
+      have he : t = u ∨ t = v := by simpa [pairInput] using ht
+      rcases he with rfl | rfl
+      · exact hu
+      · exact hv
+    have hmin := h.2.2 D hD hcorrect
+    change C.gates.length ≤ D₀.gates.length at hmin
+    omega
+
+abbrev RepairStar (n : ℕ) := Fin n × Finset (Fin n)
+
+abbrev RepairStar.centre {n : ℕ} (s : RepairStar n) : Fin n := s.1
+
+abbrev RepairStar.support {n : ℕ} (s : RepairStar n) : Finset (Fin n) := s.2
+
+def RepairStar.provider {n : ℕ} (s : RepairStar n) (x : Fin n → Bool) : Bool :=
+  decide (∃ v ∈ s.support, x v = true)
+
+def RepairStar.fires {n : ℕ} (s : RepairStar n) (x : Fin n → Bool) : Bool :=
+  x s.centre && s.provider x
+
+private theorem appendRepairStar {n : ℕ} (D : Circuit) (hD : IsAO2 n D)
+    (f : (Fin n → Bool) → Bool) (hf : WireAvailable D f) (s : RepairStar n)
+    (hprovider : WireAvailable D s.provider) :
+    ∃ E : Circuit, IsAO2 n E ∧
+      E.gates.length ≤ D.gates.length + 1 + (f (fun _ => true)).toNat ∧
+      WireAvailable E (fun x => f x || s.fires x) ∧ PreservesWires n D E := by
+  have hraw : WireAvailable D (fun x => x s.centre) :=
+    Or.inr ⟨s.centre.val, by have := s.centre.isLt; omega, fun x =>
+      (originalEvalExcept hD 0).1 x s.centre⟩
+  obtain ⟨F, hF, hDF, hFlen, _, hstar⟩ := appendAvailableAnd D hD hraw hprovider
+  change WireAvailable F s.fires at hstar
+  obtain ⟨E, hE, hFE, hElen, hfree, hval⟩ :=
+    appendAvailableOr F hF (wireAvailablePreserved hDF hf) hstar
+  have hDE : PreservesWires n D E := ⟨hDF.1.trans hFE.1, fun x w hw =>
+    (hFE.2 x w (by have := hDF.1; omega)).trans (hDF.2 x w hw)⟩
+  refine ⟨E, hE, ?_, hval, hDE⟩
+  cases htop : f (fun _ => true)
+  · have := hfree (Or.inl (wireAvailableFalseOfTop hD hf htop))
+    simp only [Bool.toNat_false, Nat.add_zero]
+    omega
+  · simp only [Bool.toNat_true]
+    omega
+
+/-- Compile a nonempty list of stars with at most two gates per star, saving
+    one collector gate when the suspended output is identically false. -/
+private theorem compileRepairStars {n : ℕ} (D : Circuit) (hD : IsAO2 n D)
+    (f : (Fin n → Bool) → Bool) (hf : WireAvailable D f) (stars : List (RepairStar n))
+    (hproviders : ∀ s ∈ stars, s.support.Nonempty ∧ WireAvailable D s.provider) :
+    ∃ E : Circuit, IsAO2 n E ∧
+      E.gates.length ≤ D.gates.length + 2 * stars.length ∧
+      (stars ≠ [] → f (fun _ => true) = false → E.gates.length + 1 ≤ D.gates.length + 2 * stars.length) ∧
+      WireAvailable E (fun x => f x || stars.any (fun s => s.fires x)) ∧
+      (∀ g : (Fin n → Bool) → Bool, WireAvailable D g → WireAvailable E g) := by
+  induction stars with
+  | nil =>
+    refine ⟨D, hD, by simp, by simp, ?_, fun _ hg => hg⟩
+    simpa using hf
+  | cons s ss ih =>
+    obtain ⟨ds, hds, hlen, hbonus, hres, hpersist⟩ :=
+      ih fun t ht => hproviders t (List.mem_cons_of_mem _ ht)
+    obtain ⟨_, hp⟩ := hproviders s (by simp)
+    let old := fun x => f x || ss.any (fun t => t.fires x)
+    obtain ⟨fs, hfs, hcost, hval, hkeep⟩ :=
+      appendRepairStar ds hds old hres s (hpersist s.provider hp)
+    have hbit : (old (fun _ => true)).toNat ≤ 1 := by
+      cases old (fun _ => true) <;> decide
+    refine ⟨fs, hfs, by simp only [List.length_cons]; omega, ?_, ?_,
+      fun g hg => wireAvailablePreserved hkeep (hpersist g hg)⟩
+    · intro _ hf0
+      simp only [List.length_cons]
+      by_cases hempty : ss = []
+      · have hb0 : (old (fun _ => true)).toNat = 0 := by simp [old, hempty, hf0]
+        omega
+      · have hprev := hbonus hempty hf0
+        omega
+    · simpa [old, Bool.or_left_comm, Bool.or_comm, Bool.or_assoc] using hval
+
+/-- Realize a cover of the lost edge inputs by stars with available providers.
+    The number of charged gates must exceed the cost of the repair. -/
+theorem noOneJunkWithStarBudget {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨
+      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false)
+    (stars : List (RepairStar n)) (hne : stars ≠ [])
+    (hproviders : ∀ s ∈ stars, s.support.Nonempty ∧
+      ∃ p < n + C.gates.length, RawForm C r p s.support false)
+    (hstarEdges : ∀ s ∈ stars, ∀ v ∈ s.support, G.Adj s.centre v)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      stars.any (fun s => s.fires (pairInput u v)) = true)
+    (hbudget : 2 * stars.length < dropped.card ∨
+      (W (fun _ => true) C.output = false ∧ 2 * stars.length ≤ dropped.card)) : False := by
+  have hr := (junkMember G C hJ).1
+  have hout := outputLast G C h (Nat.zero_lt_of_lt hr)
+  have houtBound : C.output < n + C.gates.length := by omega
+  obtain ⟨D, hD, hlen, hwires⟩ := compileFalseSuspension C h.1 hW hzero dropped hd hdrop
+  have hprov (s : RepairStar n) (hs : s ∈ stars) : s.support.Nonempty ∧ WireAvailable D s.provider := by
+    obtain ⟨hn, p, hp, hP⟩ := hproviders s hs
+    have he (x) : W x p = s.provider x := by
+      apply Bool.eq_iff_iff.mpr
+      simpa [RepairStar.provider] using hP.2 W hW x
+    have hfun : (fun x => W x p) = s.provider := funext he
+    exact ⟨hn, hfun ▸ hwires p hp⟩
+  let f := fun x => W x C.output
+  obtain ⟨fs, hfs, hcost, hbonus, hres, _⟩ :=
+    compileRepairStars D hD f (hwires C.output houtBound) stars hprov
+  have hsmall : fs.gates.length < C.gates.length := by
+    rcases hbudget with hstrict | ⟨hfalse, hweak⟩
+    · omega
+    · have := hbonus hne hfalse
+      omega
+  rcases hres with hfalse | ⟨o, _, heval⟩
+  · obtain ⟨s, hs⟩ := List.exists_mem_of_ne_nil stars hne
+    obtain ⟨z, hz⟩ := (hproviders s hs).1
+    have ht : s.fires (fun _ => true) = true := by
+      simp only [RepairStar.fires, RepairStar.provider, Bool.true_and, decide_eq_true_eq]
+      exact ⟨z, hz, trivial⟩
+    have hsome : stars.any (fun s => s.fires (fun _ => true)) = true :=
+      List.any_eq_true.mpr ⟨s, hs, ht⟩
+    have ht' : (f (fun _ => true) || stars.any (fun s => s.fires (fun _ => true))) = false := hfalse _
+    simp [hsome] at ht'
+  · let E : Circuit := ⟨fs.gates, o⟩
+    have hE : IsAO2 n E := hfs
+    have hval (x) : circuitFun n E x = (f x || stars.any (fun s => s.fires x)) := heval x
+    have hcorrect : circuitFun n E = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      constructor
+      · intro hx
+        rw [hval, Bool.or_eq_true] at hx
+        rcases hx with hy | hstars
+        · exact suspendedFalseSound G C h hl hJ hW hzero x hy
+        · obtain ⟨s, hs, hfire⟩ := List.any_eq_true.mp hstars
+          obtain ⟨hc, v, hv, hvx⟩ : x s.centre = true ∧ ∃ v ∈ s.support, x v = true := by
+            simpa [RepairStar.fires, RepairStar.provider] using hfire
+          exact (graph_true G x).mpr ⟨s.centre, v, hstarEdges s hs v hv, hc, hvx⟩
+      · intro hx
+        obtain ⟨u, v, huv, hu, hv⟩ := (graph_true G x).mp hx
+        apply circuit_monotone n E (ao_mono hE) (pairInput u v) x ?_ ?_
+        · intro t ht
+          have he : t = u ∨ t = v := by simpa [pairInput] using ht
+          rcases he with rfl | rfl
+          · exact hu
+          · exact hv
+        · change circuitFun n E (pairInput u v) = true
+          rw [hval, Bool.or_eq_true]
+          exact hcover u v huv
+    have hmin := h.2.2 E hE hcorrect
+    change C.gates.length ≤ fs.gates.length at hmin
+    exact (Nat.not_lt_of_ge hmin) hsmall
+
+/-- Two immediate readers pay for a strict one-star repair. The provider is
+    preserved by the fold, so the repair uses at most one AND and one OR. -/
+theorem noOneJunkOneStarWithTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    {j k : ℕ} (hj : j < C.gates.length) (hk : k < C.gates.length) (hjk : j ≠ k)
+    (hjr : n + r ∈ (gateAt C j).inputs) (hkr : n + r ∈ (gateAt C k).inputs)
+    {p : ℕ} (hp : p < n + C.gates.length) {S : Finset (Fin n)} (hS : RawForm C r p S false)
+    (hne : S.Nonempty) (c : Fin n) (hadj : ∀ v ∈ S, G.Adj c v)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      (pairInput u v c = true ∧ ∃ w ∈ S, pairInput u v w = true)) : False := by
+  classical
+  have hr := (junkMember G C hJ).1
+  have hjr' : r ≠ j := by have := h.1.2.1 j hj _ hjr; omega
+  have hkr' : r ≠ k := by have := h.1.2.1 k hk _ hkr; omega
+  let star : RepairStar n := ⟨c, S⟩
+  refine noOneJunkWithStarBudget G C h hl hJ hW hzero {r, j, k} ?_ ?_ [star]
+    (by simp) ?_ ?_ ?_ ?_
+  · intro t ht
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+    rcases ht with rfl | rfl | rfl <;> exact Finset.mem_range.mpr (by assumption)
+  · intro t ht
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+    rcases ht with rfl | rfl | rfl
+    · exact Or.inl rfl
+    · exact Or.inr ⟨n + r, hjr, hzero _⟩
+    · exact Or.inr ⟨n + r, hkr, hzero _⟩
+  · intro s hs
+    have he : s = star := by simpa using hs
+    subst s
+    exact ⟨hne, p, hp, hS⟩
+  · intro s hs
+    have he : s = star := by simpa using hs
+    subst s
+    exact hadj
+  · intro u v huv
+    simpa [star, RepairStar.fires, RepairStar.provider] using hcover u v huv
+  · left
+    simp [hjr', hkr', hjk]
+
+#print axioms noOneJunkWithoutLostEdges
+#print axioms noOneJunkWithStarBudget
+#print axioms noOneJunkOneStarWithTwoReaders
 
 end ResearchVerification.OneJunkErase

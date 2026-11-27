@@ -122,11 +122,12 @@ in opposite colour classes. A gate reader exposes a vertex adjacent to
 every vertex in the other support. The strict circuit replacement for this
 remaining one-junk shape starts from `lostEdgesInExposedStars`: setting the
 junk to false loses edge inputs only in at most two clean stars.
-`foldSuspendedFalse` compiles the suspended circuit without constants,
-preserves the wire values, and saves one gate per eliminated junk or
-immediate reader. Lean checks strict replacement when no edges are lost
-or one star suffices with two immediate readers. The same repair compiler
-adds at most four gates for two stars, or three with a false suspended
+`compileFalseSuspension` compiles the suspended circuit without constants,
+preserves wire values, and charges the suspended junk and every gate
+with a false operand on the all-true input. The compiler and star repair
+proofs use only Mathlib and `PEqualNP.Defs`. Lean checks strict replacement
+when no edges are lost or one star suffices with two immediate readers.
+The same repair compiler adds at most four gates for two stars, or three with a false suspended
 output. `oneJunkAtMostThreeReaders` rules out four or more immediate
 readers. If there are three, the suspended output survives and every
 immediate reader is an OR. An immediate AND would force an additional
