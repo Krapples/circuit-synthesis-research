@@ -549,4 +549,96 @@ theorem oneJunkAtMostTwoWithAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [Decid
 #print axioms oneJunkAtMostThreeReaders
 #print axioms oneJunkAtMostTwoWithAndReader
 
+/-- The extra exclusive OR saving rules out three immediate readers
+    in the remaining disjoint-support case. -/
+theorem oneJunkAtMostTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r}) : (immediateJunkReaders (n := n) C r).card ≤ 2 := by
+  classical
+  by_contra! hcount
+  let readers := immediateJunkReaders (n := n) C r
+  change 2 < readers.card at hcount
+  have hread (j) (hj : j ∈ readers) : j < C.gates.length ∧ n + r ∈ (gateAt C j).inputs := by
+    obtain ⟨hj, hm⟩ := Finset.mem_filter.mp hj
+    exact ⟨Finset.mem_range.mp hj, hm⟩
+  obtain ⟨j, hj, k, hk, hjk⟩ := Finset.one_lt_card.mp (show 1 < readers.card by omega)
+  obtain ⟨a, b, A, B, _, hab, hA, hB, hdisj, hcardA, hcardB, _⟩ :=
+    oneJunkLargeOppositeSupports G C h hl h4 colour hcolour hJ
+  obtain ⟨W, hW, hzero⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
+  obtain ⟨EA, EB, hEA, hEB, hsmallA, hsmallB, hadjA, hadjB, hc⟩ :=
+    lostEdgesInExposedStars G C h hl h4 hJ hab hA hB hdisj hcardA hcardB
+  have classified := (hc W hW hzero).2
+  have hr := (junkMember G C hJ).1
+  have hal : a < n + C.gates.length :=
+    (h.1.2.1 r hr a (by simp [hab])).trans (Nat.add_lt_add_left hr n)
+  have hbl : b < n + C.gates.length :=
+    (h.1.2.1 r hr b (by simp [hab])).trans (Nat.add_lt_add_left hr n)
+  have oneStar {p : ℕ} (hp : p < n + C.gates.length) {S : Finset (Fin n)}
+      (hS : RawForm C r p S false) (hn : S.Nonempty) (c : Fin n)
+      (hstar : ∀ v ∈ S, G.Adj c v)
+      (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+        (pairInput u v c = true ∧ ∃ t ∈ S, pairInput u v t = true)) : False :=
+    noOneJunkOneStarWithTwoReaders G C h hl hJ hW hzero (hread j hj).1 (hread k hk).1
+      hjk (hread j hj).2 (hread k hk).2 hp hS hn c hstar hcover
+  by_cases hAn : EA.Nonempty
+  · obtain ⟨s, hs⟩ := hAn
+    have hAonly (t) (ht : t ∈ EA) := Finset.card_le_one.mp hsmallA t ht s hs
+    by_cases hBn : EB.Nonempty
+    · obtain ⟨d, hd⟩ := hBn
+      have hBonly (t) (ht : t ∈ EB) := Finset.card_le_one.mp hsmallB t ht d hd
+      have cover (u v) (huv : G.Adj u v) : W (pairInput u v) C.output = true ∨
+          (pairInput u v s = true ∧ ∃ t ∈ B, pairInput u v t = true) ∨
+          (pairInput u v d = true ∧ ∃ t ∈ A, pairInput u v t = true) := by
+        rcases classified u v huv with ho | ⟨c, hc, t, ht, hcx, htx⟩ | ⟨c, hc, t, ht, hcx, htx⟩
+        · exact Or.inl ho
+        · exact Or.inr (Or.inl ⟨hAonly c hc ▸ hcx, t, ht, htx⟩)
+        · exact Or.inr (Or.inr ⟨hBonly c hc ▸ hcx, t, ht, htx⟩)
+      by_cases hall : ∀ t ∈ A, W (pairInput t d) C.output = true
+      · apply oneStar hbl hB ⟨d, hEB hd⟩ s (hadjA s hs)
+        intro u v huv
+        rcases cover u v huv with ho | hstar | ⟨hdx, t, ht, htx⟩
+        · exact Or.inl ho
+        · exact Or.inr hstar
+        have hne := G.ne_of_adj (hadjB d hd t ht).symm
+        have htuv : t = u ∨ t = v := by simpa [pairInput] using htx
+        have hduv : d = u ∨ d = v := by simpa [pairInput] using hdx
+        rcases htuv with htu | htv <;> rcases hduv with hdu | hdv
+        · exact (hne (htu.trans hdu.symm)).elim
+        · exact Or.inl (by simpa [htu, hdv] using hall t ht)
+        · have he : pairInput v u = pairInput u v := by
+            funext w
+            simp [pairInput, or_comm]
+          exact Or.inl (by simpa [htv, hdu, he] using hall t ht)
+        · exact (hne (htv.trans hdv.symm)).elim
+      · push Not at hall
+        obtain ⟨t, ht, hfalse⟩ := hall
+        exact noOneJunkWithTrimmedTwoStars G C h hl h4 hJ hab hA hB hdisj hcardA
+          (hEA hs) (hEB hd) (hadjA s hs) (fun u hu => (hadjB d hd u hu).symm) hW hzero
+          ⟨t, ht, by cases hv : W (pairInput t d) C.output <;> simp_all⟩ cover
+          readers (by omega) hread
+    · apply oneStar hbl hB (Finset.card_pos.mp (by omega)) s (hadjA s hs)
+      intro u v huv
+      rcases classified u v huv with ho | ⟨c, hc, t, ht, hcx, htx⟩ | ⟨c, hc, _⟩
+      · exact Or.inl ho
+      · exact Or.inr ⟨hAonly c hc ▸ hcx, t, ht, htx⟩
+      · exact (hBn ⟨c, hc⟩).elim
+  · by_cases hBn : EB.Nonempty
+    · obtain ⟨d, hd⟩ := hBn
+      have hBonly (t) (ht : t ∈ EB) := Finset.card_le_one.mp hsmallB t ht d hd
+      apply oneStar hal hA (Finset.card_pos.mp (by omega)) d (hadjB d hd)
+      intro u v huv
+      rcases classified u v huv with ho | ⟨c, hc, _⟩ | ⟨c, hc, t, ht, hcx, htx⟩
+      · exact Or.inl ho
+      · exact (hAn ⟨c, hc⟩).elim
+      · exact Or.inr ⟨hBonly c hc ▸ hcx, t, ht, htx⟩
+    · apply noOneJunkWithoutLostEdges G C h hl hJ hW hzero
+      intro u v huv
+      rcases classified u v huv with ho | ⟨c, hc, _⟩ | ⟨c, hc, _⟩
+      · exact ho
+      · exact (hAn ⟨c, hc⟩).elim
+      · exact (hBn ⟨c, hc⟩).elim
+
+#print axioms oneJunkAtMostTwoReaders
+
 end ResearchVerification.OneJunkErase

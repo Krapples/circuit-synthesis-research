@@ -2504,34 +2504,55 @@ private theorem replaySuffix {n : ℕ} (C : Circuit) (hC : IsAO2 n C)
       have ht := hσ w prev
       exact ⟨by omega, fun x => (hold x _ ht.1).trans (ht.2 x)⟩
 
-private def suspendedValue {n : ℕ} (C : Circuit) (r : ℕ)
-    (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) (w : ℕ) : Bool :=
+private def maskedValue {n : ℕ} (C : Circuit) (r : ℕ)
+    (mask : ℕ → ℕ → Bool) (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) (w : ℕ) : Bool :=
   if hw : w < n then x ⟨w, hw⟩
   else if w = n + r then fill x
   else (gateAt C (w - n)).op.eval ((gateAt C (w - n)).inputs.attach.map fun v =>
-    if _hv : v.val < w then suspendedValue C r fill x v.val else false)
+    if mask (w - n) v.val then false
+    else if _hv : v.val < w then maskedValue C r mask fill x v.val else false)
 termination_by w
+
+private abbrev suspendedValue {n : ℕ} (C : Circuit) (r : ℕ)
+    (fill : (Fin n → Bool) → Bool) := maskedValue C r (fun _ _ => false) fill
+
+private lemma maskedValue_raw {n : ℕ} (C : Circuit) (r : ℕ) (mask : ℕ → ℕ → Bool)
+    (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) (v : Fin n) :
+    maskedValue C r mask fill x v.val = x v := by
+  rw [maskedValue, dite_eq_left v.isLt]
+
+private lemma maskedValue_hole {n : ℕ} (C : Circuit) (r : ℕ) (mask : ℕ → ℕ → Bool)
+    (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) :
+    maskedValue C r mask fill x (n + r) = fill x := by
+  rw [maskedValue, dite_eq_right (by omega), ite_eq_left rfl]
+
+private lemma maskedValue_gate {n : ℕ} (C : Circuit) (h : IsAO2 n C) (r : ℕ)
+    (mask : ℕ → ℕ → Bool) (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool)
+    {j : ℕ} (hj : j < C.gates.length) (hne : j ≠ r) :
+    maskedValue C r mask fill x (n + j) = (gateAt C j).op.eval
+      ((gateAt C j).inputs.map fun v => if mask j v then false else maskedValue C r mask fill x v) := by
+  rw [maskedValue, dite_eq_right (by omega), ite_eq_right (by omega), Nat.add_sub_cancel_left]
+  congr 1
+  conv => rhs; rw [← List.attach_map_val]
+  apply List.map_congr_left
+  intro v _
+  rw [dite_eq_left (h.2.1 j hj v.val v.property)]
 
 private lemma suspendedValue_raw {n : ℕ} (C : Circuit) (r : ℕ)
     (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) (v : Fin n) :
     suspendedValue C r fill x v.val = x v := by
-  rw [suspendedValue, dite_eq_left v.isLt]
+  exact maskedValue_raw C r _ fill x v
 
 private lemma suspendedValue_hole {n : ℕ} (C : Circuit) (r : ℕ)
     (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) :
     suspendedValue C r fill x (n + r) = fill x := by
-  rw [suspendedValue, dite_eq_right (by omega), ite_eq_left rfl]
+  exact maskedValue_hole C r _ fill x
 
 private lemma suspendedValue_evalExcept {n : ℕ} (C : Circuit) (h : IsAO2 n C) (r : ℕ)
     (fill : (Fin n → Bool) → Bool) : EvalExcept n C r (suspendedValue C r fill) := by
   refine ⟨suspendedValue_raw C r fill, ?_⟩
   intro x j hj hne
-  rw [suspendedValue, dite_eq_right (by omega), ite_eq_right (by omega), Nat.add_sub_cancel_left]
-  congr 1
-  conv => rhs; rw [← List.attach_map_val]
-  apply List.map_congr_left
-  intro v _
-  exact dite_eq_left (h.2.1 j hj v.val v.property)
+  simpa using maskedValue_gate C h r (fun _ _ => false) fill x hj hne
 
 /-- The suspended gate can be assigned any Boolean function while retaining
     all other gate equations. -/
@@ -2912,6 +2933,7 @@ theorem firstUnprotectedResidualOr {n : ℕ} (G : SimpleGraph (Fin n)) [Decidabl
       W (pairInput s s) (n + j) = true →
       ∃ k ≤ j, (k = j ∨ InCone n C k j) ∧
         ¬ ResidualUse G C r (W (fun _ => true)) (n + k) ∧
+        ¬ CleanWire G C (n + k) ∧
         (gateAt C k).op = GateOp.or ∧ ∃ w ∈ (gateAt C k).inputs,
           ¬ CleanWire G C w ∧ W (pairInput s s) w = true ∧
           (w = s.val ∨ ResidualUse G C r (W (fun _ => true)) w) ∧
@@ -2937,21 +2959,21 @@ theorem firstUnprotectedResidualOr {n : ℕ} (G : SimpleGraph (Fin n)) [Decidabl
     · let v : Fin n := ⟨w, hwraw⟩
       have hv : pairInput s s v = true := (hW.1 (pairInput s s) v).symm.trans hwv
       have he : v = s := by simpa [pairInput] using hv
-      exact ⟨j, le_rfl, Or.inl rfl, hjuse, hor, w, hw, hwd, hwv,
+      exact ⟨j, le_rfl, Or.inl rfl, hjuse, hd, hor, w, hw, hwd, hwv,
         Or.inl (congrArg Fin.val he), hprop⟩
     by_cases hwuse : ResidualUse G C r (W (fun _ => true)) w
-    · exact ⟨j, le_rfl, Or.inl rfl, hjuse, hor, w, hw, hwd, hwv, Or.inr hwuse, hprop⟩
+    · exact ⟨j, le_rfl, Or.inl rfl, hjuse, hd, hor, w, hw, hwd, hwv, Or.inr hwuse, hprop⟩
     obtain ⟨i, rfl⟩ : ∃ i, w = n + i := ⟨w - n, by omega⟩
     have hij : i < j := by omega
     have hcone : InCone n C i j := (coneRec hjlen i).mpr
       ⟨n + i, hw, by omega, hwlt, Or.inl (by omega)⟩
-    obtain ⟨k, hk, hc, hkp, hko, v, hv, hvd, hvv, hpu, hreach⟩ :=
+    obtain ⟨k, hk, hc, hkp, hkd, hko, v, hv, hvd, hvv, hpu, hreach⟩ :=
       ih i hij (hij.trans hj) hwd hwuse hwv
     have hkj : InCone n C k j := by
       rcases hc with rfl | hki
       · exact hcone
       · exact coneTrans _ hjlen _ _ hki hcone
-    exact ⟨k, hk.trans hij.le, Or.inr hkj, hkp, hko, v, hv, hvd, hvv, hpu,
+    exact ⟨k, hk.trans hij.le, Or.inr hkj, hkp, hkd, hko, v, hv, hvd, hvv, hpu,
       fun x hx => hprop x (hreach x hx)⟩
 
 #print axioms firstUnprotectedResidualOr
@@ -2993,10 +3015,12 @@ theorem residualStarTrimBoundary {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableR
     (hzero : ∀ x, W x (n + r) = false) (hlost : W (pairInput z d) C.output = false) :
     ∃ k ≤ j, (k = j ∨ InCone n C k j) ∧
       ¬ ResidualUse G C r (W (fun _ => true)) (n + k) ∧
+      ¬ CleanWire G C (n + k) ∧
       (gateAt C k).op = GateOp.or ∧ ∃ w ∈ (gateAt C k).inputs,
-        w = s.val ∨ ∃ Q : Finset (Fin n), RawForm C r w Q false ∧ s ∈ Q ∧ Q ⊆ R ∧
+        W (pairInput s s) w = true ∧
+        (w = s.val ∨ ∃ Q : Finset (Fin n), RawForm C r w Q false ∧ s ∈ Q ∧ Q ⊆ R ∧
           ResidualUse G C r (W (fun _ => true)) w ∧
-          ∀ u ∈ Q, W (pairInput u d) C.output = true := by
+          ∀ u ∈ Q, W (pairInput u d) C.output = true) := by
   have hr := (junkMember G C hJ).1
   have hjlen := hj.trans hr
   have hjuse : ¬ ResidualUse G C r (W (fun _ => true)) (n + j) := by
@@ -3005,9 +3029,9 @@ theorem residualStarTrimBoundary {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableR
       hW hzero hR (pureGateSupportCard G C h hjlen hR) hstar hp z hz))
   have hjs : W (pairInput s s) (n + j) = true :=
     (hR.2 W hW _).mpr (Or.inl ⟨s, hs, by simp [pairInput]⟩)
-  obtain ⟨k, hk, hc, hkp, hko, w, hw, hwd, hwv, hboundary, hreach⟩ :=
+  obtain ⟨k, hk, hc, hkp, hkd, hko, w, hw, hwd, hwv, hboundary, hreach⟩ :=
     firstUnprotectedResidualOr G C h hl hJ hW s j hj hdirty hjuse hjs
-  refine ⟨k, hk, hc, hkp, hko, w, hw, ?_⟩
+  refine ⟨k, hk, hc, hkp, hkd, hko, w, hw, hwv, ?_⟩
   by_cases hraw : w < n
   · let v : Fin n := ⟨w, hraw⟩
     have hv : pairInput s s v = true := (hW.1 (pairInput s s) v).symm.trans hwv
@@ -3489,14 +3513,15 @@ private lemma appendAvailableAnd {n : ℕ} (D : Circuit) (hD : IsAO2 n D)
         rw [hval x, hfa x, hgb x]
         simp [GateOp.eval]
 
-/-- Compile the suspension without adding constants. Every charged index is
-    the suspended gate or has a false operand at the all-true input. -/
-theorem compileFalseSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
-    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+private theorem compileMaskedSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+    (mask : ℕ → ℕ → Bool) (W : (Fin n → Bool) → ℕ → Bool)
+    (hraw : ∀ x (v : Fin n), W x v.val = x v)
+    (hgate : ∀ x j, j < C.gates.length → j ≠ r → W x (n + j) =
+      (gateAt C j).op.eval ((gateAt C j).inputs.map fun v => if mask j v then false else W x v))
     (hzero : ∀ x, W x (n + r) = false)
     (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
     (hdrop : ∀ j ∈ dropped, j = r ∨
-      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false) :
+      ∃ w ∈ (gateAt C j).inputs, mask j w = true ∨ W (fun _ => true) w = false) :
     ∃ D : Circuit, IsAO2 n D ∧ D.gates.length + dropped.card ≤ C.gates.length ∧
       ∀ w < n + C.gates.length, WireAvailable D (fun x => W x w) := by
   classical
@@ -3513,7 +3538,7 @@ theorem compileFalseSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
       refine ⟨D, hD, by simp [D], fun w hw => Or.inr ⟨w, by simpa [D] using hw, ?_⟩⟩
       intro x
       let v : Fin n := ⟨w, by omega⟩
-      exact ((originalEvalExcept hD r).1 x v).trans (hW.1 x v).symm
+      exact ((originalEvalExcept hD r).1 x v).trans (hraw x v).symm
     | succ k ih =>
       intro hk
       obtain ⟨D, hD, hsize, havail⟩ := ih (by omega)
@@ -3544,25 +3569,32 @@ theorem compileFalseSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
       obtain ⟨p, q, hpq⟩ := twoOperands h hj
       have hp : p ∈ (gateAt C k).inputs := by simp [hpq]
       have hq : q ∈ (gateAt C k).inputs := by simp [hpq]
-      have hP := havail p (h.2.1 k hj p hp)
-      have hQ := havail q (h.2.1 k hj q hq)
+      let operand := fun w x => if mask k w then false else W x w
+      have available (w) (hm : w ∈ (gateAt C k).inputs) : WireAvailable D (operand w) := by
+        cases he : mask k w
+        · simpa [operand, he] using havail w (h.2.1 k hj w hm)
+        · exact Or.inl (by simp [operand, he])
+      have hP := available p hp
+      have hQ := available q hq
       have uncharged (hm : k ∈ dropped) :
-          (∀ x, W x p = false) ∨ (∀ x, W x q = false) := by
+          (∀ x, operand p x = false) ∨ (∀ x, operand q x = false) := by
         rcases (hdrop k hm).resolve_left he with ⟨w, hw, hz⟩
+        have hz' : operand w (fun _ => true) = false := by
+          rcases hz with hm | hv <;> simp [operand, *]
         have heq : w = p ∨ w = q := by simpa [hpq] using hw
         rcases heq with rfl | rfl
-        · exact Or.inl (wireAvailableFalseOfTop hD hP hz)
-        · exact Or.inr (wireAvailableFalseOfTop hD hQ hz)
+        · exact Or.inl (wireAvailableFalseOfTop hD hP hz')
+        · exact Or.inr (wireAvailableFalseOfTop hD hQ hz')
       rcases h.1 _ (gateAt_mem hj) with hand | hor
       · obtain ⟨E, hE, hkeep, hbound, hfree, hw⟩ := appendAvailableAnd D hD hP hQ
-        have hv : (fun x => W x p && W x q) = fun x => W x (n + k) := by
+        have hv : (fun x => operand p x && operand q x) = fun x => W x (n + k) := by
           funext x
-          simpa [hand, hpq, GateOp.eval] using (hW.2 x k hj he).symm
+          simpa [operand, hand, hpq, GateOp.eval] using (hgate x k hj he).symm
         exact finish E hE hkeep hbound (fun hm => hfree (uncharged hm)) (hv ▸ hw)
       · obtain ⟨E, hE, hkeep, hbound, hfree, hw⟩ := appendAvailableOr D hD hP hQ
-        have hv : (fun x => W x p || W x q) = fun x => W x (n + k) := by
+        have hv : (fun x => operand p x || operand q x) = fun x => W x (n + k) := by
           funext x
-          simpa [hor, hpq, GateOp.eval] using (hW.2 x k hj he).symm
+          simpa [operand, hor, hpq, GateOp.eval] using (hgate x k hj he).symm
         exact finish E hE hkeep hbound (fun hm => hfree (uncharged hm)) (hv ▸ hw)
   obtain ⟨D, hD, hsize, hw⟩ := main C.gates.length le_rfl
   have hcard := Finset.card_sdiff_of_subset hd
@@ -3574,7 +3606,303 @@ theorem compileFalseSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
   rw [Finset.card_range] at hdcard
   exact ⟨D, hD, by omega, hw⟩
 
+/-- Compile the suspension without adding constants. Every charged index is
+    the suspended gate or has a false operand at the all-true input. -/
+theorem compileFalseSuspension {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨
+      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false) :
+    ∃ D : Circuit, IsAO2 n D ∧ D.gates.length + dropped.card ≤ C.gates.length ∧
+      ∀ w < n + C.gates.length, WireAvailable D (fun x => W x w) := by
+  refine compileMaskedSuspension C h (fun _ _ => false) W hW.1 ?_ hzero dropped hd ?_
+  · simpa using hW.2
+  · simpa using hdrop
+
 #print axioms compileFalseSuspension
+
+private def trimOperand (k p : ℕ) : ℕ → ℕ → Bool :=
+  fun j w => decide (j = k ∧ w = p)
+
+private abbrev trimValue {n : ℕ} (C : Circuit) (r k p : ℕ) :=
+  maskedValue (n := n) C r (trimOperand k p) (fun _ => false)
+
+private theorem trimValueCompare {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false) (k p : ℕ) (x : Fin n → Bool) :
+    ∀ w < n + C.gates.length,
+      (trimValue C r k p x w = true → W x w = true) ∧
+      (W x p = false → trimValue C r k p x w = W x w) := by
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw
+    by_cases hraw : w < n
+    · let v : Fin n := ⟨w, hraw⟩
+      have he : trimValue C r k p x w = W x w :=
+        (maskedValue_raw C r _ _ x v).trans (hW.1 x v).symm
+      exact ⟨fun ht => he ▸ ht, fun _ => he⟩
+    obtain ⟨j, rfl⟩ : ∃ j, w = n + j := ⟨w - n, by omega⟩
+    by_cases he : j = r
+    · subst j
+      have heq : trimValue C r k p x (n + r) = W x (n + r) :=
+        (maskedValue_hole C r _ _ x).trans (hzero x).symm
+      exact ⟨fun ht => heq ▸ ht, fun _ => heq⟩
+    have hj : j < C.gates.length := by omega
+    let input := fun v => if trimOperand k p j v then false else trimValue C r k p x v
+    have hval : trimValue C r k p x (n + j) =
+        (gateAt C j).op.eval ((gateAt C j).inputs.map input) :=
+      maskedValue_gate C h r _ _ x hj he
+    have hprev (v) (hv : v ∈ (gateAt C j).inputs) :=
+      ih v (h.2.1 j hj v hv) (by have := h.2.1 j hj v hv; omega)
+    have hle (v) (hv : v ∈ (gateAt C j).inputs) : input v = true → W x v = true := by
+      cases hm : trimOperand k p j v
+      · exact fun ht => (hprev v hv).1 (by simpa [input, hm] using ht)
+      · simp [input, hm]
+    constructor
+    · rw [hval, hW.2 x j hj he]
+      rcases h.1 _ (gateAt_mem hj) with hand | hor
+      · simp only [hand, GateOp.eval, List.all_map, List.all_eq_true, Function.comp_apply]
+        exact fun ht v hv => hle v hv (ht v hv)
+      · simp only [hor, GateOp.eval, List.any_map, List.any_eq_true, Function.comp_apply]
+        rintro ⟨v, hv, ht⟩
+        exact ⟨v, hv, hle v hv ht⟩
+    · intro hp
+      rw [hval, hW.2 x j hj he]
+      congr 1
+      apply List.map_congr_left
+      intro v hv
+      by_cases hm : j = k ∧ v = p
+      · have heq : trimOperand k p j v = true := decide_eq_true hm
+        change (if trimOperand k p j v then false else trimValue C r k p x v) = W x v
+        rw [ite_eq_left heq, hm.2, hp]
+      · have heq : trimOperand k p j v ≠ true :=
+          fun htrue => hm (of_decide_eq_true htrue)
+        change (if trimOperand k p j v then false else trimValue C r k p x v) = W x v
+        rw [ite_eq_right heq, (hprev v hv).2 hp]
+
+private theorem trimValuePreservesOtherProvider {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) {k p : ℕ} (s : Fin n)
+    (hk : W (pairInput s s) (n + k) = true) (x : Fin n → Bool) :
+    ∀ w < n + r, ¬ CleanWire G C w → W (pairInput s s) w = false →
+      trimValue C r k p x w = W x w := by
+  have hr := (junkMember G C hJ).1
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw hd hfalse
+    by_cases hraw : w < n
+    · let v : Fin n := ⟨w, hraw⟩
+      exact (maskedValue_raw C r _ _ x v).trans (hW.1 x v).symm
+    obtain ⟨j, rfl⟩ : ∃ j, w = n + j := ⟨w - n, by omega⟩
+    have hj : j < C.gates.length := by omega
+    have hjr : j ≠ r := by omega
+    have hjk : j ≠ k := by
+      rintro rfl
+      exact Bool.noConfusion (hfalse.symm.trans hk)
+    have hor : (gateAt C j).op = GateOp.or := by
+      rcases h.1.1 _ (gateAt_mem hj) with hand | ho
+      · exact (hjr (uniqueDirtyAnd G C hJ hj hd hand)).elim
+      · exact ho
+    change maskedValue C r (trimOperand k p) (fun _ => false) x (n + j) = W x (n + j)
+    rw [maskedValue_gate C h.1 r _ _ x hj hjr, hW.2 x j hj hjr]
+    congr 1
+    apply List.map_congr_left
+    intro v hv
+    have hlt := h.1.2.1 j hj v hv
+    have hvd : ¬ CleanWire G C v := fun hc =>
+      hd (cleanWireReader G C h hl hj hv hc).2
+    have hvfalse : W (pairInput s s) v = false := by
+      cases he : W (pairInput s s) v
+      · rfl
+      · exact (Bool.noConfusion (hfalse.symm.trans
+          ((evalExcept_or hW hj hjr hor (pairInput s s)).mpr ⟨v, hv, he⟩)))
+    simpa [trimOperand, hjk] using ih v hlt (hlt.trans hw) hvd hvfalse
+
+private theorem pairInputComm {n : ℕ} (u v : Fin n) : pairInput u v = pairInput v u := by
+  funext z
+  simp [pairInput, or_comm]
+
+/-- With three direct junk readers, one exclusive provider OR pays for
+    the second star even when the suspended output survives. -/
+theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) {r a b : ℕ} (hJ : junk G C = {r})
+    (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false)
+    (hB : RawForm C r b B false) (hdisj : Disjoint A B) (hcardA : 1 < A.card)
+    {s d : Fin n} (hs : s ∈ A) (hd : d ∈ B)
+    (hstarA : ∀ v ∈ B, G.Adj s v) (hstarB : ∀ u ∈ A, G.Adj u d)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (hlost : ∃ z ∈ A, W (pairInput z d) C.output = false)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      (pairInput u v s = true ∧ hits B (pairInput u v)) ∨
+      (pairInput u v d = true ∧ hits A (pairInput u v)))
+    (readers : Finset ℕ) (hcount : 3 ≤ readers.card)
+    (hread : ∀ j ∈ readers, j < C.gates.length ∧ n + r ∈ (gateAt C j).inputs) : False := by
+  classical
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have ham : a ∈ (gateAt C r).inputs := by simp [hab]
+  have hbm : b ∈ (gateAt C r).inputs := by simp [hab]
+  have hal := h.1.2.1 r hr a ham
+  have hbl := h.1.2.1 r hr b hbm
+  have had := noCleanAndOperand G C h r a hr ham hand
+  have hbd := noCleanAndOperand G C h r b hr hbm hand
+  have hsemA (x) : W x a = true ↔ hits A x := by simpa [hits] using hA.2 W hW x
+  have hsemB (x) : W x b = true ↔ hits B x := by simpa [hits] using hB.2 W hW x
+  have hna : n ≤ a := by
+    by_contra! hraw
+    let u : Fin n := ⟨a, hraw⟩
+    obtain ⟨v, hv, w, hw, hne⟩ := Finset.one_lt_card.mp hcardA
+    have ident (z) (hz : z ∈ A) : u = z := by
+      have ht := (hsemA (pairInput z z)).mpr ⟨z, hz, by simp [pairInput]⟩
+      simpa [pairInput] using (hW.1 (pairInput z z) u).symm.trans ht
+    exact hne ((ident v hv).symm.trans (ident w hw))
+  obtain ⟨j, rfl⟩ : ∃ j, a = n + j := ⟨a - n, by omega⟩
+  obtain ⟨z, hz, hmissing⟩ := hlost
+  obtain ⟨k, hk, _, hku, hkd, hko, p, hp, hpactive, hpform⟩ :=
+    residualStarTrimBoundary G C h hl h4 hJ (by omega) had hA hstarB hs hz hW hzero hmissing
+  have hkr : k < r := by omega
+  have hkl := hkr.trans hr
+  have hks := (evalExcept_or hW hkl hkr.ne hko (pairInput s s)).mpr ⟨p, hp, hpactive⟩
+  let Z := trimValue (n := n) C r k p
+  have hZraw := maskedValue_raw C r (trimOperand k p) (fun _ : Fin n → Bool => false)
+  have hZzero := maskedValue_hole C r (trimOperand k p) (fun _ : Fin n → Bool => false)
+  have hZgate (x) (i) (hi : i < C.gates.length) (hir : i ≠ r) :=
+    maskedValue_gate C h.1 r (trimOperand k p) (fun _ : Fin n → Bool => false) x hi hir
+  have hkeep : ∀ x, W x C.output = true → Z x C.output = true := by
+    apply residualOutputPreserved G C h hl hJ hW hzero hZraw hZzero
+    intro x i hi hir hu
+    have hik : i ≠ k := by
+      rintro rfl
+      exact hu.elim hkd hku
+    simpa [trimOperand, hik] using hZgate x i hi hir
+  have hbs : W (pairInput s s) b = false := by
+    cases he : W (pairInput s s) b
+    · rfl
+    · obtain ⟨v, hv, hvx⟩ := (hsemB _).mp he
+      have heq : v = s := by simpa [pairInput] using hvx
+      exact (Finset.disjoint_left.mp hdisj hs (heq ▸ hv)).elim
+  have hZB (x) : Z x b = W x b :=
+    trimValuePreservesOtherProvider G C h hl hJ hW s hks x b hbl hbd hbs
+  have outBound : C.output < n + C.gates.length := by
+    have := outputLast G C h (by omega : 0 < C.gates.length)
+    omega
+  have habound : n + j < n + C.gates.length := by omega
+  have hbbound : b < n + C.gates.length := by omega
+  let f (x : Fin n → Bool) := (Z x C.output || (x s && Z x b)) || (x d && Z x (n + j))
+  have hpositive (u v : Fin n) (huv : G.Adj u v) : f (pairInput u v) = true := by
+    let x := pairInput u v
+    have leftStar (hc : x s = true) (hb : hits B x) : f x = true := by
+      simp [f, hc, hZB x, (hsemB x).mpr hb]
+    have base (ho : W x C.output = true) : f x = true := by
+      simp [f, hkeep x ho]
+    rcases hcover u v huv with ho | ⟨hcs, hb⟩ | ⟨hcd, ha⟩
+    · exact base ho
+    · exact leftStar hcs hb
+    obtain ⟨t, ht, htx⟩ := ha
+    have htd := G.ne_of_adj (hstarB t ht)
+    have hpair : x = pairInput t d := by
+      have htuv : t = u ∨ t = v := by simpa [x, pairInput] using htx
+      have hduv : d = u ∨ d = v := by simpa [x, pairInput] using hcd
+      rcases htuv with ht' | ht' <;> rcases hduv with hd' | hd'
+      · exact (htd (ht'.trans hd'.symm)).elim
+      · simp [x, ht', hd']
+      · simpa [x, ht', hd'] using pairInputComm u v
+      · exact (htd (ht'.trans hd'.symm)).elim
+    cases hpv : W x p
+    · have he := (trimValueCompare C h.1 hW hzero k p x (n + j) habound).2 hpv
+      have haz : Z x (n + j) = true := he.trans ((hsemA x).mpr ⟨t, ht, htx⟩)
+      change ((Z x C.output || (x s && Z x b)) || (x d && Z x (n + j))) = true
+      have hxd : x d = true := hcd
+      rw [hxd, haz]
+      simp
+    · rcases hpform with rfl | ⟨Q, hQ, _, hQA, _, hQcover⟩
+      · have hsx : x s = true := (hW.1 x s).symm.trans hpv
+        exact leftStar hsx ⟨d, hd, hcd⟩
+      · obtain ⟨q, hq, hqx⟩ := ((hQ.2 W hW x).mp hpv).resolve_right (by simp)
+        have hqtd : q = t ∨ q = d := by simpa [hpair, pairInput] using hqx
+        have hqd : q ≠ d := G.ne_of_adj (hstarB q (hQA hq))
+        have hqt := hqtd.resolve_right hqd
+        exact base (by rw [hpair, ← hqt]; exact hQcover q hq)
+  have hsound (x) (hx : f x = true) : graphFun G ∅ x = true := by
+    simp only [f, Bool.or_eq_true, Bool.and_eq_true] at hx
+    rcases hx with (ho | ⟨hx, hb⟩) | ⟨hx, ha⟩
+    · exact suspendedFalseSound G C h hl hJ hW hzero x
+        ((trimValueCompare C h.1 hW hzero k p x C.output outBound).1 ho)
+    · obtain ⟨v, hv, hvx⟩ := (hsemB x).mp ((hZB x).symm.trans hb)
+      exact (graph_true G x).mpr ⟨s, v, hstarA v hv, hx, hvx⟩
+    · obtain ⟨u, hu, hux⟩ := (hsemA x).mp
+        ((trimValueCompare C h.1 hW hzero k p x (n + j) habound).1 ha)
+      exact (graph_true G x).mpr ⟨u, d, hstarB u hu, hux, hx⟩
+  have readerAfter (i) (hi : i ∈ readers) : r < i :=
+    Nat.lt_of_add_lt_add_left (h.1.2.1 i (hread i hi).1 _ (hread i hi).2)
+  have hrnot : r ∉ readers := fun hm => (Nat.lt_irrefl r) (readerAfter r hm)
+  have hknot : k ∉ insert r readers := by
+    intro hm
+    rcases Finset.mem_insert.mp hm with he | hm
+    · omega
+    · have := readerAfter k hm
+      omega
+  let dropped := insert k (insert r readers)
+  have hsize : 5 ≤ dropped.card := by
+    rw [show dropped = insert k (insert r readers) from rfl,
+      Finset.card_insert_of_notMem hknot, Finset.card_insert_of_notMem hrnot]
+    omega
+  obtain ⟨D, hD, hlen, hwires⟩ := compileMaskedSuspension C h.1 (trimOperand k p)
+    Z hZraw hZgate hZzero dropped (by
+      intro i hi
+      rcases Finset.mem_insert.mp hi with rfl | hi
+      · exact Finset.mem_range.mpr hkl
+      · rcases Finset.mem_insert.mp hi with rfl | hi
+        · exact Finset.mem_range.mpr hr
+        · exact Finset.mem_range.mpr (hread i hi).1) (by
+      intro i hi
+      rcases Finset.mem_insert.mp hi with rfl | hi
+      · exact Or.inr ⟨p, hp, Or.inl (by simp [trimOperand])⟩
+      · rcases Finset.mem_insert.mp hi with rfl | hi
+        · exact Or.inl rfl
+        · exact Or.inr ⟨n + r, (hread i hi).2, Or.inr (hZzero _)⟩)
+  have rawAvailable (F : Circuit) (hF : IsAO2 n F) (v : Fin n) :
+      WireAvailable F (fun x => x v) :=
+    Or.inr ⟨v, by have := v.isLt; omega, fun x => (originalEvalExcept hF r).1 x v⟩
+  obtain ⟨D₁, hD₁, h₁, hlen₁, _, hs₁⟩ :=
+    appendAvailableAnd D hD (rawAvailable D hD s) (hwires b hbbound)
+  obtain ⟨D₂, hD₂, h₂, hlen₂, _, hs₂⟩ :=
+    appendAvailableOr D₁ hD₁ (wireAvailablePreserved h₁ (hwires C.output outBound)) hs₁
+  obtain ⟨D₃, hD₃, h₃, hlen₃, _, hs₃⟩ := appendAvailableAnd D₂ hD₂ (rawAvailable D₂ hD₂ d)
+    (wireAvailablePreserved h₂ (wireAvailablePreserved h₁ (hwires (n + j) habound)))
+  obtain ⟨D₄, hD₄, _, hlen₄, _, hf⟩ :=
+    appendAvailableOr D₃ hD₃ (wireAvailablePreserved h₃ hs₂) hs₃
+  change WireAvailable D₄ f at hf
+  rcases hf with hf | ⟨o, _, hfo⟩
+  · exact Bool.noConfusion ((hf _).symm.trans (hpositive s d (hstarA d hd)))
+  · let E : Circuit := ⟨D₄.gates, o⟩
+    have hE : IsAO2 n E := hD₄
+    have hfun (x) : circuitFun n E x = f x := hfo x
+    have hcorrect : circuitFun n E = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      constructor
+      · intro hx
+        exact hsound x ((hfun x).symm.trans hx)
+      · intro hx
+        obtain ⟨u, v, huv, hu, hv⟩ := (graph_true G x).mp hx
+        refine circuit_monotone n E (ao_mono hE) (pairInput u v) x ?_ ?_
+        · intro t ht
+          rcases (show t = u ∨ t = v by simpa [pairInput] using ht) with rfl | rfl
+          · exact hu
+          · exact hv
+        · exact (hfun _).trans (hpositive u v huv)
+    have hmin := h.2.2 E hE hcorrect
+    change C.gates.length ≤ D₄.gates.length at hmin
+    omega
+
+#print axioms noOneJunkWithTrimmedTwoStars
 
 /-- Erasing the junk and folding its readers strictly reduces the gate count
     when every edge survives the suspension. -/

@@ -127,18 +127,13 @@ preserves wire values, and charges the suspended junk and every gate
 with a false operand on the all-true input. The compiler and star repair
 proofs use only Mathlib and `PEqualNP.Defs`. Lean checks strict replacement
 when no edges are lost or one star suffices with two immediate readers.
-The same repair compiler adds at most four gates for two stars, or three with a false suspended
-output. `oneJunkAtMostThreeReaders` rules out four or more immediate
-readers. If there are three, the suspended output survives and every
-immediate reader is an OR. An immediate AND would force an additional
-collector OR to fold. Smaller reader counts, the three-OR case, and the
-many-junk reduction remain open in Lean.
-`residualStarTrimBoundary` locates an exclusive provider OR whose
-suppressed input is the designated raw vertex or a subprovider whose
-whole star survives suspension. `residualOutputPreserved` proves that
-preserving the clean and protected gate equations retains the residual
-output's accepted inputs. The remaining construction must realize the
-one-gate saving and retain coverage by the two repaired stars.
+`oneJunkAtMostTwoReaders` rules out three or more immediate readers.
+When both repair stars are needed, the replay trims one operand of an
+exclusive provider OR, preserves the opposite provider and the
+suspended output, and covers all missing edges with at most four new
+gates. Three readers, the suspended junk, and the trimmed OR pay for at
+least five deletions. The remaining lower-reader cases and the
+many-junk reduction are open in Lean.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero

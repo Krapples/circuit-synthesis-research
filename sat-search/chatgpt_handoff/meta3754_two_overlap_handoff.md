@@ -224,9 +224,8 @@ an immediate AND reader becomes false and the suspended output survives,
 that AND is clean and has a downstream clean OR reader. The OR cannot directly
 read the dirty junk because its operands are clean. It supplies a
 distinct extra charge. `oneJunkAtMostTwoWithAndReader` therefore rules
-out three readers including an AND. The remaining three-reader shape
-has three OR readers, a nonzero suspended output, and requires both
-stars. The lower-reader branches and many-junk reduction remain open.
+out three readers including an AND. The trim argument below closes
+the three-OR case, including when both repair stars are needed.
 
 The suspended compiler and the underlying strict zero-, one-, and
 two-star repair proofs are in the core file, which imports Mathlib and
@@ -234,9 +233,9 @@ two-star repair proofs are in the core file, which imports Mathlib and
 still imports five accepted upstream lemmas for the one-junk support
 geometry.
 
-For the three-OR branch, the remaining step is to save an exclusive OR
-from one provider while preserving the other star and the surviving clean
-products. Protection must follow uses in the suspended circuit. A path in
+The three-OR proof saves an exclusive OR from one provider while
+preserving the other star and the surviving clean products.
+Protection follows uses in the suspended circuit. A path in
 the original circuit can avoid the junk itself and still pass through an
 AND whose other operand becomes false under suspension.
 
@@ -251,10 +250,7 @@ missing star edge and traces the distinguished vertex through
 unprotected OR gates. It locates an exclusive OR fed either by the
 distinguished raw input or by a protected pure subprovider whose entire
 substar already survives. In the two-star repair the full opposite star
-covers the distinguished raw input's central edge. The remaining
-construction must rebuild the trimmed provider, preserve the residual
-output and the full opposite provider, and account for this OR saving
-alongside the junk and its immediate readers.
+covers the distinguished raw input's central edge.
 
 One operand occurrence is enough to save the OR. For the selected gate,
 replace that operand by false and forward the other. The designated
@@ -273,6 +269,29 @@ protected wires retain their values because residual uses are closed
 under OR operands. The operands of a firing clean AND each have a
 surviving opposite operand, so both are protected. True clean ORs
 retain at least one firing input.
+
+The replay suppresses one operand occurrence and the junk output in a
+single forward pass. If the selected operand was false on an input,
+the replay agrees with the original suspension on that input. The
+opposite provider also agrees on every input, since it is a pre-junk
+pure OR provider whose support omits the selected singleton. The
+replay can only decrease any wire value, so appended stars accept
+only graph edges. The repair handles a lost edge of the trimmed star
+by checking the suppressed operand. If it was false, the edge still
+fires in the trimmed provider. If it was true, the edge belongs to
+the full opposite star or to a protected substar that survives.
+`noOneJunkWithTrimmedTwoStars` realizes this replay in the exact AO2
+model and saves at least five gates before adding at most four for
+the two stars. The adapter's `oneJunkAtMostTwoReaders` combines this
+with the zero- and one-star repairs. Remaining branches include two
+readers needing both stars, one reader, and the unrestricted many-junk
+case.
+
+For two readers including an AND, the next budget comparison uses the
+same trim. If the residual output is false, the first attached star
+needs no collector OR. If it is nonzero, the vanished clean AND
+provides a distinct downstream OR charge. Two direct OR readers
+requiring both stars still need a separate argument.
 
 ## Verification
 
@@ -398,3 +417,15 @@ The residual-output preservation proof passed the strict core check in
 The exact source SHA-256 is
 `3eb004482286eed0fc342de30a8c266aa7cef7e64e28615b80525f9d7e702f27`.
 The log and audit are in `.research/ops/1795771969503623300-lean-check/`.
+
+The exact two-star trim passed the strict core check in 85.668 seconds
+with 56 axiom audits. The only reported axioms were `propext`,
+`Classical.choice`, and `Quot.sound`. The checked core SHA-256 is
+`83ae08093f92a55c0a186e6cb2567e8bc1be19fa07a51bc04392d569708f5c2c`.
+The log and audit are in `.research/ops/1795772666721017600-lean-check/`.
+
+The bridge check against the rebuilt core module took 44.717 seconds.
+All 11 axiom audits passed, including `oneJunkAtMostTwoReaders`, with
+the same allowed axioms. The checked bridge SHA-256 is
+`96a346bb1796f5be4d0f4bc19ffa93fd0b7b8b303330ed4d34adb8de2314f723`.
+The log and audit are in `.research/ops/1795772815606878200-lean-check/`.
