@@ -159,10 +159,29 @@ identifies a case to analyze in the disjoint-support replacement. It does
 not assert that the edge would be lost on deleting the junk, since the
 same reader or another reader may cover it.
 
+`oneJunkLargeOppositeSupports` uses that witness to narrow the two raw
+supports further. If the exposing vertex `z` belongs to one support,
+pairing it with any vertex of the other support makes the junk and the
+clean reader true. The clean reader forces adjacency to `z`, so all
+vertices of the opposite support have the same colour.
+[L-meta-4743](https://github.com/open-goat/pequalnp-proofs/blob/3db0136bf094e975baaf20214b01e4b4579059f2/lean/PEqualNP/Outside/L_meta_4743.lean)
+excludes a mixed-colour support paired with a monochromatic one. The edge
+witness puts the two monochromatic supports in opposite classes.
+[L-meta-4712](https://github.com/open-goat/pequalnp-proofs/blob/3db0136bf094e975baaf20214b01e4b4579059f2/lean/PEqualNP/Outside/L_meta_4712.lean)
+then excludes a singleton on either side. The theorem keeps the exposing
+vertex and its reader as witnesses for the next circuit-replacement proof.
+
 The bridge is a local research dependency on accepted upstream modules.
 Check the desk's permitted imports for the exact submission before using
-this dependency there. The disjoint case with an edge-reader witness and
-the many-junk reduction remain open in Lean.
+this dependency there. The remaining one-junk case has two large disjoint
+supports in opposite colour classes, with at least one exposed centre.
+The strict replacement must account for shared OR providers and the
+gate budget. The many-junk reduction also remains open in Lean.
+For the next proof, set the junk value to false and classify the edge
+inputs lost by that suspension. The
+[paper argument](meta3754_one_junk_complete_handoff.md#5-disjoint-large-supports-exposed-stars-and-deletion-budget)
+uses at most two stars, one centred in each support. That classification
+gives a common correctness condition for the later gate-budget cases.
 
 ## Verification
 
@@ -209,7 +228,7 @@ The local evidence is in `.research/ops/1795766662384002400-lean-check/`.
 To replay the upstream bridge, use the same pinned Lake project at
 `3db0136bf094e975baaf20214b01e4b4579059f2`. A sparse checkout needs the
 `PEqualNP/MetaComplexity/Helpers` directory, `PEqualNP/MetaComplexity/L2604.lean`
-and the three imported `PEqualNP/Outside` files in addition to the
+and the five imported `PEqualNP/Outside` files in addition to the
 definitions. From the research repository root, run these commands with
 the pinned dependencies available.
 
@@ -218,7 +237,7 @@ $workspace = (Resolve-Path '.research/one-junk-upstream/lean').Path
 $src = (Resolve-Path 'sat-search/chatgpt_handoff/lean/OneJunkErase.lean').Path
 $srcRoot = Split-Path -Parent $src
 $lake = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.elan/bin/lake.exe'
-foreach ($step in '4745', '4746', '4747') {
+foreach ($step in '4712', '4743', '4745', '4746', '4747') {
   python -B sat-search/workflow/research.py lean $workspace --module "PEqualNP.Outside.L_meta_$step" --timeout 240
   if ($LASTEXITCODE -ne 0) { throw "Upstream L-meta-$step build failed" }
 }
@@ -241,3 +260,9 @@ Both audits report only `propext`, `Classical.choice`, and `Quot.sound`.
 The logs and machine-readable audit records are under
 `.research/ops/1795768110084459100-lean-check/` and
 `.research/ops/1795768275005188200-lean-check/`, respectively.
+
+The follow-up with the two colour and size reductions took 39.447 seconds
+and passed all six bridge audits, including the exposing-reader witness
+in `oneJunkLargeOppositeSupports`. The checked bridge SHA-256 is
+`a688d17f9dc266905a7619bc249e5a4227d53c182527e38ecfee461ebbd95c77`.
+The evidence is in `.research/ops/1795768613970960300-lean-check/`.

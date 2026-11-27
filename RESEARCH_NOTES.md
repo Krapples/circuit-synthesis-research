@@ -115,11 +115,12 @@ the raw operand supports of the unique dirty AND in a least lift-fixed
 exact fan-in-two AND/OR circuit on a bipartite C4-free graph. Lean checks
 the singleton case using the merged L-meta-4745 and L-meta-4746 reductions
 plus a local bypass. The independent gate-list rebuild `noTwoOverlap`
-handles larger intersections and preserves shared providers. The L-meta-4747
-bridge narrows the remaining disjoint-support case to circuits with a
-clean AND that reads the junk through ORs and has a unit-active opposite
-operand on an edge where the junk is true. The one-junk contradiction
-under that condition and the many-junk reduction remain open in Lean.
+handles larger intersections and preserves shared providers.
+`oneJunkLargeOppositeSupports` uses L-meta-4747, L-meta-4743, and L-meta-4712
+to force both supports to have at least two vertices and to lie entirely
+in opposite colour classes. A gate reader exposes a vertex adjacent to
+every vertex in the other support. The strict circuit replacement for this
+remaining one-junk shape and the many-junk reduction remain open in Lean.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero

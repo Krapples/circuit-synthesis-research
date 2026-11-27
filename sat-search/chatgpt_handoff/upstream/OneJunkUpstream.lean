@@ -1,4 +1,6 @@
 import OneJunkErase
+import PEqualNP.Outside.L_meta_4712
+import PEqualNP.Outside.L_meta_4743
 import PEqualNP.Outside.L_meta_4745
 import PEqualNP.Outside.L_meta_4746
 import PEqualNP.Outside.L_meta_4747
@@ -216,10 +218,157 @@ theorem oneJunkHasEdgeReader {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G
     (oneJunkFalseOnUnit G C h hl h4 colour hcolour hJ) noEdge
   exact (Nat.not_lt_of_ge (h.2.2 D hD hfun)) hsmaller
 
+private theorem junkAtPair {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r a b : ℕ} (hr : r < C.gates.length) (hand : (gateAt C r).op = GateOp.and)
+    (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (u z : Fin n) : gateVal n C r (pairInput u z) = true ↔
+      (u ∈ A ∨ z ∈ A) ∧ (u ∈ B ∨ z ∈ B) := by
+  have pair_support (S : Finset (Fin n)) :
+      (∃ v ∈ S, pairInput u z v = true) ↔ u ∈ S ∨ z ∈ S := by
+    constructor
+    · rintro ⟨v, hv, hpair⟩
+      have eq : v = u ∨ v = z := by simpa [pairInput] using hpair
+      rcases eq with rfl | rfl
+      · exact Or.inl hv
+      · exact Or.inr hv
+    · rintro (hu | hz)
+      · exact ⟨u, hu, by simp [pairInput]⟩
+      · exact ⟨z, hz, by simp [pairInput]⟩
+  have hV := originalEvalExcept h C.gates.length
+  change val C (List.ofFn (pairInput u z)) (n + r) = true ↔ _
+  rw [evalExcept_and hV hr (Nat.ne_of_lt hr) hand hab]
+  rw [(hA.2 _ (originalEvalExcept h r) _), (hB.2 _ (originalEvalExcept h r) _)]
+  simp only [Bool.false_eq_true, false_and, or_false, pair_support]
+
+/-- The remaining one-junk case has two disjoint supports of size at least two,
+    in opposite colour classes, and a reader exposing a vertex adjacent to all
+    vertices of the opposite support. -/
+theorem oneJunkLargeOppositeSupports {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r}) :
+    ∃ a b : ℕ, ∃ A B : Finset (Fin n), ∃ c : Bool,
+      (gateAt C r).inputs = [a, b] ∧ RawForm C r a A false ∧ RawForm C r b B false ∧
+      Disjoint A B ∧ 1 < A.card ∧ 1 < B.card ∧
+      (∀ v ∈ A, colour v = c) ∧ (∀ v ∈ B, colour v ≠ c) ∧
+      ∃ z, ((z ∈ A ∧ ∀ v ∈ B, G.Adj v z) ∨ (z ∈ B ∧ ∀ v ∈ A, G.Adj v z)) ∧
+        ∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧ PZ C r j z := by
+  classical
+  have H := fromLeastOneJunk G C h hl hJ
+  have hunit := oneJunkFalseOnUnit G C h hl h4 colour hcolour hJ
+  obtain ⟨a, b, A, B, _, _, hab, _, _, hA, hB, hAn, hBn, _⟩ := junkProduct G C h hl hJ
+  have hd := oneJunkSupportsDisjoint G C h hl h4 colour hcolour hJ hab hA hB
+  have hpair := junkAtPair H.ao H.hg H.gand hab hA hB
+  have unitA (v : Fin n) : wireVal n C (opnd C r 0) (unitInput v) = true ↔ v ∈ A := by
+    simpa [opnd, hab] using rawFalseAtUnit H.ao hA v
+  have unitB (v : Fin n) : wireVal n C (opnd C r 1) (unitInput v) = true ↔ v ∈ B := by
+    simpa [opnd, hab] using rawFalseAtUnit H.ao hB v
+  obtain ⟨j, hj, _, hjand, hjclean, u, z, huz, hex, hujunk⟩ :=
+    oneJunkHasEdgeReader G C h hl h4 colour hcolour hJ
+  obtain ⟨side, hreach, hopp⟩ := (PEqualNP.Outside.L_meta_4745.pz_iff C r j z).mp hex
+  have hadj (v : Fin n) (hv : gateVal n C r (pairInput v z) = true) : G.Adj v z := by
+    have hb := (opnd_lt C H.ao j hj side).trans (Nat.add_lt_add_left hj n)
+    have hcarry := (reach_le C H.ao r _ hb hreach).2 _ hv
+    have hother : wireVal n C (opnd C j (1 - side)) (pairInput v z) = true :=
+      wire_monotone n C (ao_mono H.ao) _ _
+        (fun t ht => by
+          have eq : t = z := by simpa [unitInput] using ht
+          simp [eq, pairInput]) _ hopp
+    exact PEqualNP.Outside.L_meta_4745.pair_adj G v z
+      (hjclean _ ((PEqualNP.Outside.L_meta_4745.val_and' C H.ao j hj hjand _ side).mpr
+        ⟨hcarry, hother⟩))
+  let Mono := fun S : Finset (Fin n) => ∀ v ∈ S, ∀ w ∈ S, colour v = colour w
+  have oriented : (u ∈ A ∧ z ∈ B) ∨ (z ∈ A ∧ u ∈ B) := by
+    rcases (hpair u z).mp hujunk with ⟨huA | hzA, huB | hzB⟩
+    · exact (Finset.disjoint_left.mp hd huA huB).elim
+    · exact Or.inl ⟨huA, hzB⟩
+    · exact Or.inr ⟨hzA, huB⟩
+    · exact (Finset.disjoint_left.mp hd hzA hzB).elim
+  have centre : (z ∈ A ∧ ∀ v ∈ B, G.Adj v z) ∨ (z ∈ B ∧ ∀ v ∈ A, G.Adj v z) := by
+    rcases oriented with ⟨_, hzB⟩ | ⟨hzA, _⟩
+    · exact Or.inr ⟨hzB, fun v hv => hadj v ((hpair v z).mpr ⟨Or.inl hv, Or.inr hzB⟩)⟩
+    · exact Or.inl ⟨hzA, fun v hv => hadj v ((hpair v z).mpr ⟨Or.inr hzA, Or.inl hv⟩)⟩
+  have someMono : Mono A ∨ Mono B := by
+    have sameOtherColour {x y c : Bool} (hx : x ≠ c) (hy : y ≠ c) : x = y := by
+      cases x <;> cases y <;> cases c <;> simp_all
+    rcases centre with ⟨_, hz⟩ | ⟨_, hz⟩
+    · exact Or.inr (fun v hv w hw => sameOtherColour (hcolour v z (hz v hv)) (hcolour w z (hz w hw)))
+    · exact Or.inl (fun v hv w hw => sameOtherColour (hcolour v z (hz v hv)) (hcolour w z (hz w hw)))
+  have mixed {S : Finset (Fin n)} (hm : ¬ Mono S) :
+      ∃ v ∈ S, ∃ w ∈ S, colour v ≠ colour w := by
+    by_contra absent
+    apply hm
+    intro v hv w hw
+    by_contra hne
+    exact absent ⟨v, hv, w, hw, hne⟩
+  have noMixed
+      (hm : ((∃ v ∈ A, ∃ w ∈ A, colour v ≠ colour w) ∧ Mono B) ∨
+        ((∃ v ∈ B, ∃ w ∈ B, colour v ≠ colour w) ∧ Mono A)) : False := by
+    have hshape : ((∃ v w, wireVal n C (opnd C r 0) (unitInput v) = true ∧
+        wireVal n C (opnd C r 0) (unitInput w) = true ∧ colour v ≠ colour w) ∧
+        (∀ v w, wireVal n C (opnd C r 1) (unitInput v) = true →
+          wireVal n C (opnd C r 1) (unitInput w) = true → colour v = colour w)) ∨
+      ((∃ v w, wireVal n C (opnd C r 1) (unitInput v) = true ∧
+        wireVal n C (opnd C r 1) (unitInput w) = true ∧ colour v ≠ colour w) ∧
+        (∀ v w, wireVal n C (opnd C r 0) (unitInput v) = true →
+          wireVal n C (opnd C r 0) (unitInput w) = true → colour v = colour w)) := by
+      simp only [unitA, unitB]
+      rcases hm with ⟨⟨v, hv, w, hw, hne⟩, hmono⟩ | ⟨⟨v, hv, w, hw, hne⟩, hmono⟩
+      · exact Or.inl ⟨⟨v, w, hv, hw, hne⟩, fun x y hx hy => hmono x hx y hy⟩
+      · exact Or.inr ⟨⟨v, w, hv, hw, hne⟩, fun x y hx hy => hmono x hx y hy⟩
+    obtain ⟨D, hD, hsmaller, hfun⟩ := PEqualNP.Outside.L_meta_4743 n G C colour r hcolour h4
+      H.ao H.comp H.lift H.andLow H.cone H.hg H.gand H.dirty H.others hunit hshape
+    exact (Nat.not_lt_of_ge (h.2.2 D hD hfun)) hsmaller
+  have bothMono : Mono A ∧ Mono B := by
+    rcases someMono with hmono | hmono
+    · refine ⟨hmono, ?_⟩
+      by_contra hm
+      exact noMixed (Or.inr ⟨mixed hm, hmono⟩)
+    · refine ⟨?_, hmono⟩
+      by_contra hm
+      exact noMixed (Or.inl ⟨mixed hm, hmono⟩)
+  obtain ⟨v, w, hv, hw, hvw⟩ : ∃ v w, v ∈ A ∧ w ∈ B ∧ G.Adj v w := by
+    rcases oriented with ⟨huA, hzB⟩ | ⟨hzA, huB⟩
+    · exact ⟨u, z, huA, hzB, huz⟩
+    · exact ⟨z, u, hzA, huB, huz.symm⟩
+  have colourA (t : Fin n) (ht : t ∈ A) : colour t = colour v := bothMono.1 t ht v hv
+  have colourB (t : Fin n) (ht : t ∈ B) : colour t ≠ colour v := by
+    rw [bothMono.2 t ht w hw]
+    exact (hcolour v w hvw).symm
+  have noSingleton (hs : (∃ t, A = {t}) ∨ (∃ t, B = {t})) : False := by
+    have hshape :
+        (∃ t, (∀ y, wireVal n C (opnd C r 1) (unitInput y) = true ↔ y = t) ∧
+          ∀ y, wireVal n C (opnd C r 0) (unitInput y) = true → colour y ≠ colour t) ∨
+        (∃ t, (∀ y, wireVal n C (opnd C r 0) (unitInput y) = true ↔ y = t) ∧
+          ∀ y, wireVal n C (opnd C r 1) (unitInput y) = true → colour y ≠ colour t) := by
+      simp only [unitA, unitB]
+      rcases hs with ⟨t, ht⟩ | ⟨t, ht⟩
+      · have hv' : v = t := by simpa [ht] using hv
+        exact Or.inr ⟨t, fun y => by simp [ht], fun y hy => hv' ▸ colourB y hy⟩
+      · have hw' : w = t := by simpa [ht] using hw
+        refine Or.inl ⟨t, fun y => by simp [ht], fun y hy => ?_⟩
+        rw [colourA y hy, ← hw']
+        exact hcolour v w hvw
+    obtain ⟨D, hD, hsmaller, hfun⟩ := PEqualNP.Outside.L_meta_4712 n G C colour r hcolour h4
+      H.ao H.comp H.lift H.andLow H.cone H.hg H.gand H.dirty H.others hunit hshape
+    exact (Nat.not_lt_of_ge (h.2.2 D hD hfun)) hsmaller
+  have ha : 1 < A.card := by
+    by_contra hsmall
+    have hpos := Finset.card_pos.mpr hAn
+    exact noSingleton (Or.inl (Finset.card_eq_one.mp (by omega)))
+  have hb : 1 < B.card := by
+    by_contra hsmall
+    have hpos := Finset.card_pos.mpr hBn
+    exact noSingleton (Or.inr (Finset.card_eq_one.mp (by omega)))
+  exact ⟨a, b, A, B, colour v, hab, hA, hB, hd, ha, hb, colourA, colourB,
+    z, centre, j, hj, hjand, hex⟩
+
 #print axioms rawFormJunkReaches
 #print axioms noSingletonOverlapWithUpstream
 #print axioms oneJunkSupportsDisjoint
 #print axioms oneJunkFalseOnUnit
 #print axioms oneJunkHasEdgeReader
+#print axioms oneJunkLargeOppositeSupports
 
 end ResearchVerification.OneJunkErase
