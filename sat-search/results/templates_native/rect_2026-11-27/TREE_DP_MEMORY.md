@@ -146,6 +146,40 @@ Overall saving about 2-3x, and disk removes the hard ceiling at the cost of time
   could rule out the heavy p = 2, e = 1 shapes for a given mask without any DP. It is worth asking
   the theory side whether a mask-rank bound excludes f = (2,2) sharing at S = 3. Untested.
 
+## Quick measurements (2026-11-27)
+
+`tree_dp.cpp` now has an opt-in dump: set `TREE_DP_DUMP=<file>` and it writes the table count of every
+stored key after each DP. Without the variable its behaviour is unchanged.
+
+Run: L-meta-21279 (4x5), `--smax 2`, 23 s. Analysis with `tree_dp_checks/orbit_weight.py DUMP 4`:
+- Group the keys into orbits under Stab(M) ⊂ S4 x S5.
+- Check that every key in an orbit has the same count.
+- Sum the counts over orbit representatives only.
+
+**Method 1 (input symmetry), measured.**
+- **All keys in each orbit have identical table counts.** 0 of about 2,900 orbits differ, which
+  confirms the symmetry claim on real data.
+- Shapes where every input appears once save 15-37x. For example, the heaviest S = 2 shape
+  (`p2 M111111111 r2=12`) goes from 56.0M to 2.14M tables, a 26x saving.
+- Shapes with one repeated input save 5.3-5.6x (25.8M to 4.6M).
+- Over all S ≤ 2 shapes together: 3.78 GB of tables becomes 0.50 GB, a 7.6x saving.
+- The heaviest S = 3 shapes in the rect45b log have one repeated input (`p2 M211111111 ...`), so
+  about 5-6x is the relevant figure there.
+- For 4x6 the stabilizers are larger (S6 instead of S5 on the right), so the factor should be at
+  least as large. Applied to the estimated 4G tables, that is about 0.7G tables, roughly 11 GB at
+  16 B per table. This fits in 64 GB.
+- The shape-orbit companion runs only 2 of the 9 one-repeat S = 2 shapes (one left repeat, one
+  right repeat). Their counts are identical to each other in the dump.
+
+**Method 3 (row subsets), measured negative.**
+- Random subsets of the 20 cared rows:
+  - 7 of 8 subsets with 10-16 rows make some input inessential, so the DP skips them.
+  - The one valid 16-row subset dropped the minimum from > 10 to exactly 10.
+- So the relaxation loses the lower bound before it saves much memory (3.78 GB down to 1.20 GB at 16
+  rows).
+- Row subsets chosen by refinement (CEGAR) might do better, but this is weak evidence against
+  method 3 as a main route.
+
 ## Suggested order
 
 1. Method 1, plus the shape-orbit time saving, plus method 5's sorted arrays. All are exact and

@@ -32,6 +32,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -44,6 +45,10 @@
 
 typedef uint32_t V;
 static bool g_verbose = false, g_prune = false;
+// TREE_DP_DUMP=<file>: write per-key table counts after each DP (measurement only)
+static FILE* g_dump = nullptr;
+static std::mutex g_dump_mu;
+static std::atomic<int> g_dump_id{0};
 static int g_rows = 0;
 
 template <int NE> struct TabT { V e[NE]; };
@@ -316,6 +321,15 @@ template <int NE> struct DPT {
         return false;
       });
       R[K] = set.list();
+    }
+    if (g_dump) {
+      std::lock_guard<std::mutex> lk(g_dump_mu);
+      int id = g_dump_id++;
+      std::fprintf(g_dump, "S %d %d %d NE %d cap", id, u.n, nc, NE);
+      for (int c = 0; c < nc; ++c) std::fprintf(g_dump, " %d", cap[c]);
+      std::fputc('\n', g_dump);
+      for (int k = 0; k < nkeys; ++k) if (done[k]) std::fprintf(g_dump, "K %d %d %zu%c", id, k, R[k].size(), '\n');
+      std::fflush(g_dump);
     }
   }
   int key(const std::vector<int>& in, const int* ph) const {
@@ -597,6 +611,7 @@ static bool verify(const Unit& u, const Witness& w, int k) {
 struct Task { int group, s, shape; };
 
 int main(int argc, char** argv) {
+  if (const char* dp = std::getenv("TREE_DP_DUMP")) g_dump = std::fopen(dp, "w");
   int smax = 2, threads = 11, heavy = 4;
   bool to_budget = false;
   for (int i = 1; i < argc; ++i) {
