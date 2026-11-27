@@ -7,10 +7,10 @@ latest cross-family benchmark shows that frontier bounds transfer beyond graph f
 to 3-uniform hypergraphs. The main open shard is L-meta-1343 at size 19.
 
 For the one-hot bipartite representation in L-meta-20754, Lean checked an
-eight-gate witness on all 25 promised pairs. The seven-gate budget is
-excluded by two synthesis encodings and an independent read-once
-enumeration. The LRAT replay depends on Lean 4.36.0's native evaluation
-axiom, so the kernel-only lower bound remains open.
+eight-gate witness on all 25 promised pairs and proved that seven gates
+are impossible in the exact repository model. The lower bound uses
+monotone separation and a checked reverse-demand argument that reduces
+the circuit to ordinary or once-shared read-once formulas.
 [Exact model, axiom audit, and search records](sat-search/results/promise_5x5_20754/README.md)
 
 For the cubic-graph case L-meta-5020, Lean checked that a false restriction at the

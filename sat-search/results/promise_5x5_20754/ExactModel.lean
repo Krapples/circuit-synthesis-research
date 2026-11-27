@@ -1,5 +1,5 @@
 import PEqualNP.Defs.Represents
-import ActiveBudget
+import PackedModel
 
 namespace ActiveBudget20754
 
@@ -11,7 +11,7 @@ private theorem appendLookup {α : Type} (xs ys : List α) (d : α) (i : ℕ) :
   simp only [List.getD_eq_getElem?_getD, List.getElem?_append]
   split <;> rfl
 
-private theorem read_eq (w : List Table) (i : Wire) :
+theorem read_eq (w : List Table) (i : Wire) :
     read w i = w.getD i.toNat 0 := by
   induction w generalizing i with
   | nil => rfl
@@ -35,7 +35,7 @@ private theorem read_eq (w : List Table) (i : Wire) :
 
 private def row (k : Fin 12) : Fin 5 := ⟨2 + k.val / 4, by omega⟩
 private def col (k : Fin 12) : Fin 5 := ⟨k.val % 4, by omega⟩
-private def target (u v : Fin 5) : Bool := (12815360 : ℕ).testBit (5 * u.val + v.val)
+def target (u v : Fin 5) : Bool := (12815360 : ℕ).testBit (5 * u.val + v.val)
 private def originalInputs : List Table := [0, 0, 15, 240, 3840, 273, 546, 1092, 2184, 0]
 
 private theorem initial_bits (k : Fin 12) :
@@ -89,7 +89,7 @@ private theorem wire_map (ts : List Table) (i : ℕ) (hn : ts.length ≤ 7) :
       have hoob : ts[i - 10]? = none := List.getElem?_eq_none (by omega)
       simp [packedIndex, hinactive, hgate, hi, List.getD_eq_getElem?_getD, hoob, inputs]
 
-private structure Recipe where
+structure Recipe where
   isOr : Bool
   a : Wire
   b : Wire
@@ -114,10 +114,10 @@ private def convertList (n : ℕ) : List Gate → List Recipe
   | nil => rfl
   | cons g gs ih => simp [convertList, ih]
 
-private def value (ts : List Table) (r : Recipe) : Table :=
+def value (ts : List Table) (r : Recipe) : Table :=
   gate (inputs ++ ts) r.isOr r.a r.b
 
-private def run (ts : List Table) (rs : List Recipe) : List Table :=
+def run (ts : List Table) (rs : List Recipe) : List Table :=
   rs.foldl (fun w r => w ++ [value w r]) ts
 
 private def boolStep (w : List Bool) (g : Gate) : List Bool :=
@@ -180,9 +180,6 @@ private theorem simulate (gs : List Gate) (ts : List Table)
     rw [show t.getLsbD k.val = _ from hcorrect]
     rw [List.map_append]
 
-private theorem run_append (ts : List Table) (rs ss : List Recipe) :
-    run ts (rs ++ ss) = run (run ts rs) ss := List.foldl_append
-
 private theorem run_length (ts : List Table) (rs : List Recipe) :
     (run ts rs).length = ts.length + rs.length := by
   induction rs generalizing ts with
@@ -193,36 +190,7 @@ private theorem run_length (ts : List Table) (rs : List Recipe) :
     simp
     omega
 
-private theorem run_extends (ts : List Table) (rs : List Recipe) :
-    ∃ us, run ts rs = ts ++ us := by
-  induction rs generalizing ts with
-  | nil => exact ⟨[], by simp [run]⟩
-  | cons r rs ih =>
-    obtain ⟨us, hu⟩ := ih (ts ++ [value ts r])
-    refine ⟨value ts r :: us, ?_⟩
-    change run (ts ++ [value ts r]) rs = _
-    simpa [List.append_assoc] using hu
-
-private theorem run7 (rs : List Recipe) (h : rs.length = 7) (o : Wire) :
-    read (inputs ++ run [] rs) o ≠ 3187 := by
-  rcases rs with _ | ⟨r₀, _ | ⟨r₁, _ | ⟨r₂, _ | ⟨r₃, _ | ⟨r₄, _ | ⟨r₅, _ |
-    ⟨r₆, _ | ⟨r₇, rest⟩⟩⟩⟩⟩⟩⟩⟩
-  all_goals simp only [List.length_nil, List.length_cons] at h
-  all_goals try omega
-  exact no_packed_witness r₀.a r₀.b r₁.a r₁.b r₂.a r₂.b r₃.a r₃.b r₄.a r₄.b
-    r₅.a r₅.b r₆.a r₆.b o r₀.isOr r₁.isOr r₂.isOr r₃.isOr r₄.isOr r₅.isOr r₆.isOr
-    _ _ _ _ _ _ _ rfl rfl rfl rfl rfl rfl rfl
-
-private theorem packed_at_most (rs : List Recipe) (h : rs.length ≤ 7)
-    (o : Wire) (ho : o.toNat < (inputs ++ run [] rs).length) :
-    read (inputs ++ run [] rs) o ≠ 3187 := by
-  let pad := List.replicate (7 - rs.length) (⟨false, 0, 0⟩ : Recipe)
-  have hlen : (rs ++ pad).length = 7 := by simp [pad]; omega
-  obtain ⟨us, hu⟩ := run_extends (run [] rs) pad
-  have hp := run7 (rs ++ pad) hlen o
-  rwa [run_append, hu, ← List.append_assoc, read_eq, appendLookup, ite_eq_left ho, ← read_eq] at hp
-
-private theorem project_to_packed (h : RepSizeAtMost target 7) :
+theorem project_to_packed (h : RepSizeAtMost target 7) :
     ∃ rs : List Recipe, rs.length ≤ 7 ∧ ∃ o : Wire,
       o.toNat < (inputs ++ run [] rs).length ∧ read (inputs ++ run [] rs) o = 3187 := by
   obtain ⟨C, hmono, hsize, hrep⟩ := h
@@ -256,11 +224,6 @@ private theorem project_to_packed (h : RepSizeAtMost target 7) :
     (3187 : Table).getLsbD k.val
   rw [hsim, target_bits]
   exact hrep (row k) (col k)
-
-theorem not_rep_size_at_most_seven : ¬ RepSizeAtMost target 7 := by
-  intro h
-  obtain ⟨rs, hlen, o, ho, hvalue⟩ := project_to_packed h
-  exact packed_at_most rs hlen o ho hvalue
 
 theorem rep_size_at_most_eight : RepSizeAtMost target 8 := by
   refine ⟨⟨[⟨.or, [2, 3]⟩, ⟨.or, [5, 6]⟩, ⟨.and, [10, 11]⟩, ⟨.and, [3, 7]⟩,

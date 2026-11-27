@@ -24,13 +24,60 @@ their chosen output unchanged. The same file gives the explicit eight-gate
 circuit on all 25 promised assignments. The axiom audit of the projection
 reported only standard Lean axioms, and the upper bound used only `propext`.
 
+## Kernel proof
+
+[ReadOnce.lean](ReadOnce.lean) proves the two terminal exclusions. In a
+candidate OR split, both children are false on every negative row. If
+some positive row projects below a negative row on each child's inputs,
+both children are false there too. The dual obstruction applies to an
+AND split. These two tests eliminate all root partitions of the
+ordinary read-once case.
+
+For the shared case, consider any positive and negative pair whose
+outside inputs are ordered. The shared subformula must be true on the
+positive and false on the negative, or the outside formula would be
+monotone on that ordered pair. If an ordered pair of these forced
+labels is also comparable on the inside, the whole module support is
+excluded. This leaves fourteen proper supports, with one candidate
+value each. The full-support case reduces to idempotence of AND and OR.
+For the remaining formulas, Lean splits the output rows that either
+child may witness, assigns the others to both children, and prunes
+inconsistent assignments by monotonicity. The completeness theorem
+for this search uses the formula's actual values as witnesses. The
+[independent cofactor probe](cofactor_probe.py) confirms the fourteen
+candidates and checks them against 429 surviving requirements.
+
+[TraceDemand.lean](TraceDemand.lean) walks backwards through the
+gate outputs. A demand is a multiset of truth tables, and duplicate
+outputs that were previously available can be discarded. Replacing all
+`k ≥ 1` demands for a gate's result by one demand for each operand
+increases the multiset size by `2 - k`. Charge `k - 1` for this
+transition and one for an unused gate. Including the charge, each
+gate increases the size by one. Monotone separation forces all seven
+active inputs into the final demand, so a program with at most seven
+gates can pay at most one charge. One repeated internal demand yields
+the paired formula. With no repeated internal demand, the output is
+one formula with at most eight leaves. The possible extra leaf is
+either a second occurrence of one active input or a constant, which
+can be simplified away.
+
+[KernelExact.lean](KernelExact.lean) connects the packed evaluation to
+the distinct-result rule trace and gives the exact negation of the
+posted seven-gate statement. The eight-gate circuit in
+[ExactModel.lean](ExactModel.lean) gives the matching upper bound.
+
 Run `python -B sat-search/results/promise_5x5_20754/replay.py` from the
 research checkout with the proofs checkout at `pequalnp-proofs/` and its
 pinned Lake and Mathlib environment available. The runner keeps the Lean
-output and axiom report under `.research/ops`. The combined replay took
-45.42 seconds. Its lower bound depends on the tactic's generated axiom
-and the standard Lean axioms `propext`, `Classical.choice`, and `Quot.sound`.
-The prove lease offered no refute twin.
+output and axiom report under `.research/ops` and fails the kernel run
+if an audited theorem uses a generated axiom. The complete kernel replay
+took 28.43 seconds. The lower bound uses only `propext`,
+`Classical.choice`, and `Quot.sound`. Use `--mode diagnostic` to replay
+the earlier LRAT comparison.
+
+The desk offered a positive prove lease and listed no refute twin. After
+the kernel audit passed, the desk acknowledged the official
+`statement_seems_false` release on November 26, 2026 (Mountain time).
 
 ## Independent mathematical reduction
 
