@@ -11,7 +11,7 @@ from threading import Event
 
 from common import ROOT, process_alive, read_json, run_logged
 from graph import canonical_graph
-from ops import beat, heartbeat, normalize
+from ops import beat, command_failure, heartbeat, normalize
 from runs import build_jobs, run_batch
 
 
@@ -106,6 +106,19 @@ class RunTests(unittest.TestCase):
             self.assertFalse(result["timeout"])
             self.assertFalse(process_alive(read_json(Path(folder) / "process.json")["pid"]))
             self.assertTrue(process_alive(os.getpid()))
+
+    def test_timeout_keeps_cleanup_messages_out_of_command_output(self):
+        def stop_with_message(process, cleanup_log):
+            cleanup_log.write_text("cleanup utility failed\n", encoding="utf-8")
+            process.kill()
+
+        with TemporaryDirectory() as folder, patch("common.kill_tree", side_effect=stop_with_message):
+            result = run_logged([sys.executable, "-c",
+                                 "import sys, time; print('command diagnostic', file=sys.stderr, flush=True); time.sleep(10)"],
+                                ROOT, Path(folder), 0.8)
+            self.assertTrue(result["timeout"])
+            self.assertEqual(command_failure(result), "time limit reached\ncommand diagnostic")
+            self.assertEqual(Path(result["cleanup"]).read_text().strip(), "cleanup utility failed")
 
 
 class AdminTests(unittest.TestCase):

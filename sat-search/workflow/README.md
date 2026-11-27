@@ -84,6 +84,8 @@ asks the cube process to stop, and uses a bounded process-tree shutdown when nec
 an abrupt runner exit, `recover <attempt> --reason '…'` can retire a reservation on its original
 host after recorded processes exit. Confirm the old worker tree is gone first. The command
 preserves raw output and records an interrupted attempt.
+Windows process-cleanup diagnostics go to `cleanup.log` beside the job's unchanged command
+streams. A Lean timeout summary identifies the time limit and includes any available tool output.
 
 ## Keep administration separate
 

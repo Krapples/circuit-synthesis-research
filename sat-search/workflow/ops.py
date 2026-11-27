@@ -46,7 +46,12 @@ def command_ok(result):
 
 
 def command_failure(result):
-    return excerpt(result["stderr"]) or excerpt(result["stdout"]) or result["error"] or "command did not finish successfully"
+    detail = excerpt(result["stderr"]) or excerpt(result["stdout"]) or result["error"]
+    if result["timeout"]:
+        return f"time limit reached\n{detail}" if detail else "time limit reached"
+    if result["interrupted"]:
+        return f"interrupted\n{detail}" if detail else "interrupted"
+    return detail or "command did not finish successfully"
 
 
 def selected_paths(names):
@@ -229,4 +234,5 @@ def lean_command(state, workspace, module, source, timeout, lake=None):
     result = command(state, "lean-build" if module else "lean-check", argv, workspace, timeout)
     return {"status": "ok" if command_ok(result) else "open" if result["timeout"] else "error",
             "cached_environment": str(profile_path), "log": result["stdout"], "stderr": result["stderr"],
+            "cleanup": result["cleanup"],
             "seconds": result["seconds"], "excerpt": None if command_ok(result) else command_failure(result)}

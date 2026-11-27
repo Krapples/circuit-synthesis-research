@@ -83,11 +83,12 @@ def process_alive(pid):
         api.CloseHandle(handle)
 
 
-def kill_tree(process, stderr):
+def kill_tree(process, cleanup_log):
     if os.name == "nt":
         try:
-            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                           stdout=stderr, stderr=stderr, timeout=8, check=False)
+            with cleanup_log.open("ab") as log:
+                subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                               stdout=log, stderr=log, timeout=8, check=False)
         except (OSError, subprocess.TimeoutExpired):
             pass
         if process.poll() is None:
@@ -104,6 +105,7 @@ def run_logged(argv, cwd, folder, timeout, *, env=None, stop=None, grace=7, canc
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     stdout, stderr = folder / "stdout.log", folder / "stderr.log"
+    cleanup_log = folder / "cleanup.log"
     started = time.monotonic()
     timeout_hit = False
     interrupted = False
@@ -140,13 +142,14 @@ def run_logged(argv, cwd, folder, timeout, *, env=None, stop=None, grace=7, canc
                     except (subprocess.TimeoutExpired, KeyboardInterrupt):
                         pass
                 if process.poll() is None:
-                    kill_tree(process, err)
+                    kill_tree(process, cleanup_log)
                 process.wait()
             except OSError:
-                kill_tree(process, err)
+                kill_tree(process, cleanup_log)
                 process.wait()
                 raise
             returncode = process.returncode
     return {"seconds": round(time.monotonic() - started, 6), "returncode": returncode,
             "timeout": timeout_hit, "interrupted": interrupted, "error": error,
-            "stdout": str(stdout), "stderr": str(stderr)}
+            "stdout": str(stdout), "stderr": str(stderr),
+            "cleanup": str(cleanup_log) if cleanup_log.exists() else None}
