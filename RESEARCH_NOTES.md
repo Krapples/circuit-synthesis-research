@@ -15,7 +15,10 @@ the circuit to ordinary or once-shared read-once formulas.
 
 For 40 desk rect templates (rect46/rect45b, one-hot promise rows, monotone; solver verdicts only,
 no certificates), the native exact search finds 24 steps UNSAT at budget and 16 open at sizes
-10-11. [Verdicts, scope and runs](sat-search/results/templates_native/rect_2026-11-27/README.md)
+10-11. An exact tree-decomposition DP for at most n+1 gates (all inputs essential; program verdict,
+146/146 agreement with SAT minima) closes 11 more. Five stay open: three at size 11 and two at size 12.
+[Verdicts, scope and runs](sat-search/results/templates_native/rect_2026-11-27/README.md),
+[DP proof](sat-search/results/templates_native/rect_2026-11-27/TREE_DP.md)
 
 For the cubic-graph case L-meta-5020, Lean checked that a false restriction at the
 designated two-reader input saves four gates or leaves one of two local reader

@@ -12,10 +12,13 @@ checked proofs.
 
 ## Verdicts (`verdicts.jsonl`)
 
-| template | UNSAT at budget | open |
-| --- | --- | --- |
-| rect45b | 13 | 7 |
-| rect46 | 11 | 9 |
+| template | UNSAT at budget (SAT) | + closed by tree DP | open |
+| --- | --- | --- | --- |
+| rect45b | 13 | 4 | 3 (21279, 21288, 21319: min ≥ 11, budget 11) |
+| rect46 | 11 | 7 | 2 (22162, 22172: min ≥ 12, budget 12) |
+
+The tree-DP column is a separate exact method with its own grade (section "Tree DP"). `verdicts.jsonl`
+holds only the SAT verdicts.
 
 `unsat_at_budget` means every exact size 1..budget is UNSAT. That rules out a circuit of at most
 `budget` gates: a minimum circuit has every non-output gate read and no gate repeating an earlier
@@ -52,12 +55,48 @@ Input line format: `ID N GENERAL START BUDGET hexrow:target,...`.
 - L-meta-20891 independently agrees with the Python verdict in `../../templates/verdicts.jsonl`
   (UNSAT, 106 s).
 - `solver_cmp.jsonl` / `solver_cmp.py` time the same whole-size CNFs, single-threaded with a
-  300 s cap, on three solvers: native CaDiCaL 2.2, pysat cadical195 and maplechrono. CaDiCaL won
-  on every finished CNF. The run was stopped early once the outcome was clear.
+  300 s cap, on three solvers: native CaDiCaL 2.2, pysat cadical195 and maplechrono.
+  - The fastest solver was always one of the two CaDiCaL builds: native 2.2 on 20891, 21771 and
+    21050, and cadical195 on 21782 (25.1 s vs 30.7 s) and 21319 (64.5 s vs 88.8 s).
+  - Maplechrono was never fastest, but it beat native 2.2 once (21319: 83.6 s).
+  - The two CaDiCaL builds are within about 1.4x of each other. Native 2.2 is kept because it runs
+    in-process with the cube splitting.
+  - The run was stopped early once the outcome was clear.
+
+## Tree DP (2026-11-27)
+
+`sat-search/native/tools/tree_dp.cpp` is an exact enumeration of every circuit with at most n-1+S gates,
+S ≤ 2, for units whose n inputs are all essential. The proof and scope are in [TREE_DP.md](TREE_DP.md).
+It is a program verdict, not a checked proof, and it is independent of the SAT encoding.
+
+- Results: `tree_dp_rect45b.jsonl` (`--smax 2`) and `tree_dp_rect46.jsonl` (`--smax 2 --to-budget`).
+  `min_k` means a circuit of that size exists (no witness is printed). `gt: g` means no circuit with at
+  most g gates exists. L-meta-20888, 20892 and 23850 have an inessential input and are skipped; all three
+  are already UNSAT by SAT.
+- Newly closed at budget:
+  - rect45b, budget 10: 21127, 21140, 21143, 21160.
+  - rect46, budget 10: 23530, 23570, 23680, 23832.
+  - rect46, budget 11: 23606, 23625, 23659.
+- Raised floors on still-open units: 21279, 21288 and 21319 have min ≥ 11 (SAT had ≥ 10). 22162 and
+  22172 have min ≥ 12 (SAT had ≥ 10 and ≥ 11). Their budgets need S = 3, which is not implemented.
+- Consistency: wherever both methods decided a size, they agree. For example, 21050 and 21051 have DP
+  min 10 above their SAT-UNSAT budget, and 22172 is SAT-UNSAT at 10 and DP min > 11.
+- Differential checks (`tree_dp_checks/`): on 146 random all-essential 4x5 units with the same rows, the
+  DP minimum equals the native `template_synth` SAT minimum: 80 in `rand80` and 66 harder units in
+  `hard45_sel`, including 6 with min n+1. The s ≤ 1 levels also agree with the Python reference
+  `tree_dp.py` on `rand80`.
+- Cost: the tables depend only on the wires, not on the target, so units with the same rows share one
+  DP per structure. Each S = 2, p = 2 case is its own DP, which caps memory at about 20 GB for 4x6.
+  The 20 rect46 units take 15 min on 22 threads (`--heavy 4`), and the 26-unit 4x5 batch takes 1 min.
+
+Reproduce from `sat-search/native` (built with `build_tree_dp.bat`):
+`tree_dp.exe --smax 2 --to-budget --threads 22 --heavy 4 < UNITS`, where UNITS is the rect46 lines of
+`units.txt`.
 
 ## Open obligation
 
-Sizes 10 and 11 on the 16 open units take more than 500 s per size. This needs pruning for
+After the tree DP, 5 units stay open: 21279, 21288, 21319 at size 11, and 22162, 22172 at sizes 12. SAT
+sizes 10 and 11 take more than 500 s per size. This needs pruning for
 partial labels that is shown to be sound, such as row/column permutations that preserve the mask
 or partial-label reader bounds (`cube_search.py --partial*`, monotone only). It also needs
 certificates (LRAT) before any of these verdicts are used as proofs.
