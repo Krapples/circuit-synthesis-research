@@ -68,3 +68,23 @@ Next after active CI finishes: formalize the exact one-hole criterion, use check
 ## Repair-extension CI correction
 
 Run 46044043859 (job 140658716234) completed unsuccessfully with six diagnostics arising from five locations: the implicit prefix-length lower bound, partially applied repairProduct simplification, an unapplied-lambda rewrite, the circuitFun/eval conversion, and an invalid Boolean lemma projection (plus its dependent rcases failure). The patch exposes the prefix length from the clean-extension invariant, makes the function eta expansion explicit, changes the two replay goals to their actual forms, and decomposes the Boolean conjunction with simp. No new mathematical assumptions or verifier changes. The hazard-set argument above remains paper-only; the next run is intentionally confined to repairing the multi-edge candidate. Previously checked singleton descent is unchanged.
+
+## Stronger nonleast controls: all local liveness and pivotal tests can hold
+
+During active verification run 46044654103 at dc4cb54 (checked in progress), no Lean source or workflow was changed. This follow-up is outside the workflow path filters.
+
+A matching on k disjoint edges has a monotone CNF for its edge function: conjoin all 2^k clauses that choose one endpoint from every edge. Build the clauses with shared OR prefixes and combine them by a left-deep binary AND chain. The last dirty AND conjoins all but the last clause; the final AND is clean. On an independent set that picks one endpoint per edge, precisely the complementary clause is false. Consequently each proper prefix of the clause conjunction is dirty. Every clause is essential. The final AND has the last dirty AND as its immediate operand, so false suspension makes the entire output false; all k edges are pivotal. The only charged indices at or after the hole are the last two ANDs.
+
+For k=2,3,4, the new executable [matching control](meta3754_matching_descent_control.js) exhaustively evaluates all assignments, all single-gate false suspensions, all binary AND/OR replacements at the last dirty AND using earlier wires (including repeated operands), and all pairs of residual wires for one clean product. Results:
+
+| matching edges | original gates | dirty ANDs | minimum pivotal edges per gate | lost edges at last junk | safe earlier wires | exact OR replacements | clean AND replacements | clean residual one-product covers | clean comparator gates |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 7 | 2 | 2 | 2 | 0 | 0 | 0 | 0 | 3 |
+| 3 | 19 | 6 | 2 | 3 | 0 | 0 | 0 | 0 | 5 |
+| 4 | 43 | 14 | 2 | 4 | 0 | 0 | 0 | 0 | 7 |
+
+All gates live, every raw/gate wire function distinct, no lift sites, exactness confirmed. For each circuit exactly one unordered AND replacement is exact (the original operand pair). Residual output is false; with two charges the repair budget permits only one product, and there is none. The checker additionally constructs the strictly smaller edge-DNF comparator and confirms its exactness on the whole cube. All assertions passed in the JS execution runtime. Reproduction: node sat-search/chatgpt_handoff/meta3754_matching_descent_control.js .
+
+The family gives a rigorous **obstruction to deriving the local cover conditions solely from exactness, C4-freeness, lift-fixedness, liveness, distinct wire functions, and individual pivotal-edge existence**. It is NOT an obstruction under full leastness. No theorem about minimum circuits is falsified.
+
+Next substantive target: charge the exclusive upstream cone, not only false-valued suffix gates. A paper formulation: for a cut of dirty gates, suspend those gates simultaneously, identify the live residual output and repair-provider cones, and retain only their ancestor-closed selections after constant/alias simplification. A list of clean residual products covering all lost edges can be appended for at most 2p gates (2p-1 when output is identically false). If the total deleted count exceeds that cost, exactness plus monotonicity of the replay gives a strict contradiction to leastness. Unlike the prefix-preserving descent, this strict budget may remove several earlier dirty gates or unused true-valued OR providers. In the matching controls the entire original cone is disposable, and the DNF comparator is a strict saving. A general bound connecting exclusive-cone charges to a repair cover in least C4-free circuits remains open; do not equate removal of all junk at equal cost with proof every least circuit is clean. First finish active repair CI, then formalize hazard-set descent and investigate multi-hole/exclusive-cone charges. No new Lean claims or upstream submission.
