@@ -205,8 +205,28 @@ The compiler keeps a wire for the opposite support. The repair adds an
 AND and, when the suspended output is nonzero, an OR. At least three
 original gates are charged and at most two are added. The edge-input
 coverage test and monotonicity establish equality on the whole input cube.
-The remaining one-junk cases require a smaller budget or simultaneous
-coverage by two stars. The many-junk reduction remains open.
+The repair compiler now accepts a list of stars. Each star reuses
+its provider wire and costs one AND with at most one OR. The first
+star needs no collector OR when the suspended output is false. The
+compiler preserves previously available providers across appends.
+`noOneJunkWithStarBudget` checks function equality and strictness for
+these budgets. The existing one-star theorem uses the same proof.
+
+`oneJunkAtMostThreeReaders` applies the compiler to the at-most-two-star
+classification and charges the junk and all of its immediate readers.
+Four readers give at least five charges against a maximum repair cost of
+four. `oneJunkReaderBudget` rules out three readers when the suspended
+output is false, since the two-star repair then costs at most three.
+
+`foldFalseOperandBudget` also charges gates with any operand false on
+the all-true input of the suspended circuit. When an immediate AND
+reader becomes false and the suspended output survives, that AND is
+clean and has a downstream clean OR reader. The OR cannot directly
+read the dirty junk because its operands are clean. It supplies a
+distinct extra charge. `oneJunkAtMostTwoWithAndReader` therefore rules
+out three readers including an AND. The remaining three-reader shape
+has three OR readers, a nonzero suspended output, and requires both
+stars. The lower-reader branches and many-junk reduction remain open.
 
 ## Verification
 
@@ -301,3 +321,10 @@ and the bridge SHA-256 is
 `9ae5e8ac206e6f49cbd9f80c5b9233853061e7269399a325e71902efb058f9d0`.
 The logs and audits are in `.research/ops/1795768918355008700-lean-check/`
 and `.research/ops/1795769255343341300-lean-check/`.
+
+The shared repair compiler and reader bounds passed the strict bridge
+check in 39.879 seconds. All 15 audited declarations use only
+`propext`, `Classical.choice`, and `Quot.sound`. The checked SHA-256 is
+`0f44bc7548a624fd049b5dc44073c70015007f892a53e1ec1bf8209c4a7c025d`.
+The earlier checked core source is the dependency for this run.
+The log and audit are in `.research/ops/1795769890789684500-lean-check/`.

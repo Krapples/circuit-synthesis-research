@@ -14,7 +14,7 @@ open PEqualNP.EdgeOwnership (gateVal pairInput)
 open PEqualNP.SplitCount (unitInput)
 open PEqualNP.MetaComplexity.LowerPart (opnd_lt reach_gate reach_le OneDirty)
 open PEqualNP.MetaComplexity.FoldProg
-  (Closed Sol Res srcAt opv kept wireVal_input isAO2_snoc wireVal_new wireVal_old
+  (Closed Sol Res srcAt opv kept wireVal_input isAO2_snoc wireVal_new wireVal_old res_mono
     srcOf srcOf_inr progOf isA)
 open PEqualNP.Outside.L_meta_4745 (PZ)
 
@@ -367,14 +367,13 @@ theorem oneJunkLargeOppositeSupports {n : ℕ} (G : SimpleGraph (Fin n)) [Decida
   exact ⟨a, b, A, B, colour v, hab, hA, hB, hd, ha, hb, colourA, colourB,
     z, centre, j, hj, hjand, hex⟩
 
-/-- Fold the false junk value out of the exact AND/OR circuit. The junk and
-    every immediate reader can be charged against the size, and each original
-    wire is either identically false or represented by a wire of the result. -/
-theorem foldSuspendedFalse {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+/-- A gate folds whenever an operand is false at the all-true input. -/
+theorem foldFalseOperandBudget {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
     {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
     (hzero : ∀ x, W x (n + r) = false)
     (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
-    (hdrop : ∀ j ∈ dropped, j = r ∨ n + r ∈ (gateAt C j).inputs) :
+    (hdrop : ∀ j ∈ dropped, j = r ∨
+      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false) :
     ∃ gs : List Gate, IsAO2 n ⟨gs, 0⟩ ∧ gs.length + dropped.card ≤ C.gates.length ∧
       ∀ w < n + C.gates.length, Res gs (fun x => W x w) := by
   classical
@@ -419,12 +418,12 @@ theorem foldSuspendedFalse {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
     refine Finset.disjoint_left.mpr ?_
     intro j hj hjd
     obtain ⟨hjK, hleft, hright⟩ := Finset.mem_filter.mp hj
-    rcases hdrop j hjd with rfl | hread
+    rcases hdrop j hjd with rfl | ⟨u, hread, hzeroU⟩
     · exact (Finset.mem_erase.mp hjK).1 rfl
     · have hjlen := Finset.mem_range.mp (Finset.mem_erase.mp hjK).2
       obtain ⟨d, hd⟩ := PEqualNP.MetaComplexity.LowerPart.mem_opnd C h j hjlen _ hread
       have hz : srcAt (fun _ => true) (fun k => value k fun _ => true) (ρ j d) = false := by
-        simp [ρ, hd, srcAt]
+        rw [source, hd, hzeroU]
       fin_cases d
       · exact Bool.false_ne_true (hz.symm.trans hleft)
       · exact Bool.false_ne_true (hz.symm.trans hright)
@@ -440,6 +439,21 @@ theorem foldSuspendedFalse {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
     · subst j
       exact Or.inl hzero
     · exact hres j (Finset.mem_erase.mpr ⟨he, Finset.mem_range.mpr (by omega)⟩)
+
+/-- Deleting the junk also removes every immediate reader from the gate
+    count. Each original wire is either false or represented by a folded wire. -/
+theorem foldSuspendedFalse {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨ n + r ∈ (gateAt C j).inputs) :
+    ∃ gs : List Gate, IsAO2 n ⟨gs, 0⟩ ∧ gs.length + dropped.card ≤ C.gates.length ∧
+      ∀ w < n + C.gates.length, Res gs (fun x => W x w) := by
+  apply foldFalseOperandBudget C h hW hzero dropped hd
+  intro j hj
+  rcases hdrop j hj with he | hread
+  · exact Or.inl he
+  · exact Or.inr ⟨n + r, hread, hzero _⟩
 
 /-- Erasing the junk and folding its readers strictly reduces the gate count
     when every edge survives the suspension. -/
@@ -480,6 +494,167 @@ theorem noOneJunkWithoutLostEdges {n : ℕ} (G : SimpleGraph (Fin n)) [Decidable
     change C.gates.length ≤ gs.length at hmin
     omega
 
+structure RepairStar (n : ℕ) where
+  centre : Fin n
+  support : Finset (Fin n)
+
+def RepairStar.provider {n : ℕ} (s : RepairStar n) (x : Fin n → Bool) : Bool :=
+  decide (∃ v ∈ s.support, x v = true)
+
+def RepairStar.fires {n : ℕ} (s : RepairStar n) (x : Fin n → Bool) : Bool :=
+  x s.centre && s.provider x
+
+private theorem appendRepairStar {n : ℕ} (gs : List Gate) (hgs : IsAO2 n ⟨gs, 0⟩)
+    (f : (Fin n → Bool) → Bool) (hf : Res gs f) (s : RepairStar n)
+    (hs : s.support.Nonempty) (hprovider : Res gs s.provider) :
+    ∃ fs : List Gate, IsAO2 n ⟨fs, 0⟩ ∧
+      fs.length ≤ gs.length + 1 + (f (fun _ => true)).toNat ∧
+      Res fs (fun x => f x || s.fires x) ∧
+      (∀ g : (Fin n → Bool) → Bool, Res gs g → Res fs g) := by
+  obtain ⟨z, hz⟩ := hs
+  have hproviderTrue : s.provider (fun _ => true) = true := by
+    simp only [RepairStar.provider, decide_eq_true_eq]
+    exact ⟨z, hz, trivial⟩
+  have hstarTrue : s.fires (fun _ => true) = true := by
+    simp [RepairStar.fires, hproviderTrue]
+  rcases hprovider with hfalse | ⟨_, w, hw, hwire⟩
+  · exact (Bool.false_ne_true ((hfalse _).symm.trans hproviderTrue)).elim
+  let gate : Gate := ⟨.and, [s.centre.val, w]⟩
+  let base := gs ++ [gate]
+  let b := n + gs.length
+  have hbase : IsAO2 n ⟨base, 0⟩ := isAO2_snoc gs .and (Or.inl rfl) _ _
+    (by have := s.centre.isLt; omega) hw hgs
+  have hlen : base.length = gs.length + 1 := by simp [base]
+  have hb : b < n + base.length := by dsimp [b]; omega
+  have hval (x : Fin n → Bool) : wireVal n ⟨base, 0⟩ b x = s.fires x := by
+    change wireVal n ⟨gs ++ [gate], 0⟩ (n + gs.length) x = _
+    rw [wireVal_new]
+    simp [gate, GateOp.eval, wireVal_input gs s.centre x, hwire x, RepairStar.fires]
+  have htrue : (fun x => f x || s.fires x) (fun _ => true) = true := by simp [hstarTrue]
+  rcases hf with hfalse | ⟨htrueOld, o, ho, hold⟩
+  · refine ⟨base, hbase, by omega, Or.inr ⟨htrue, b, hb, fun x => ?_⟩,
+      fun g hg => res_mono gs gate g hg⟩
+    simp [hval, hfalse]
+  · let join : Gate := ⟨.or, [o, b]⟩
+    have ho' : o < n + base.length := by omega
+    have hao := isAO2_snoc base .or (Or.inr rfl) o b ho' hb hbase
+    refine ⟨base ++ [join], hao, by simp [hlen, htrueOld], Or.inr ⟨htrue, n + base.length,
+      by simp, fun x => ?_⟩, fun g hg => res_mono base join g (res_mono gs gate g hg)⟩
+    rw [wireVal_new]
+    have hold' : wireVal n ⟨base, 0⟩ o x = f x :=
+      (wireVal_old gs gate o ho x).trans (hold x)
+    simp [join, GateOp.eval, hold', hval]
+
+/-- Compile a nonempty list of stars with at most two gates per star, saving
+    one collector gate when the suspended output is identically false. -/
+private theorem compileRepairStars {n : ℕ} (gs : List Gate) (hgs : IsAO2 n ⟨gs, 0⟩)
+    (f : (Fin n → Bool) → Bool) (hf : Res gs f) (stars : List (RepairStar n))
+    (hproviders : ∀ s ∈ stars, s.support.Nonempty ∧ Res gs s.provider) :
+    ∃ fs : List Gate, IsAO2 n ⟨fs, 0⟩ ∧
+      fs.length ≤ gs.length + 2 * stars.length ∧
+      (stars ≠ [] → f (fun _ => true) = false → fs.length + 1 ≤ gs.length + 2 * stars.length) ∧
+      Res fs (fun x => f x || stars.any (fun s => s.fires x)) ∧
+      (∀ g : (Fin n → Bool) → Bool, Res gs g → Res fs g) := by
+  induction stars with
+  | nil =>
+    refine ⟨gs, hgs, by simp, by simp, ?_, fun _ hg => hg⟩
+    simpa using hf
+  | cons s ss ih =>
+    obtain ⟨ds, hds, hlen, hbonus, hres, hpersist⟩ :=
+      ih fun t ht => hproviders t (List.mem_cons_of_mem _ ht)
+    obtain ⟨hs, hp⟩ := hproviders s (by simp)
+    let old := fun x => f x || ss.any (fun t => t.fires x)
+    obtain ⟨fs, hfs, hcost, hval, hkeep⟩ :=
+      appendRepairStar ds hds old hres s hs (hpersist s.provider hp)
+    have hbit : (old (fun _ => true)).toNat ≤ 1 := by
+      cases old (fun _ => true) <;> decide
+    refine ⟨fs, hfs, by simp only [List.length_cons]; omega, ?_, ?_,
+      fun g hg => hkeep g (hpersist g hg)⟩
+    · intro _ hf0
+      simp only [List.length_cons]
+      by_cases hempty : ss = []
+      · have hb0 : (old (fun _ => true)).toNat = 0 := by simp [old, hempty, hf0]
+        omega
+      · have hprev := hbonus hempty hf0
+        omega
+    · simpa [old, Bool.or_left_comm, Bool.or_comm, Bool.or_assoc] using hval
+
+/-- Realize a cover of the lost edge inputs by stars with available providers.
+    The number of charged gates must exceed the cost of the repair. -/
+theorem noOneJunkWithStarBudget {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨
+      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false)
+    (stars : List (RepairStar n)) (hne : stars ≠ [])
+    (hproviders : ∀ s ∈ stars, s.support.Nonempty ∧
+      ∃ p < n + C.gates.length, RawForm C r p s.support false)
+    (hstarEdges : ∀ s ∈ stars, ∀ v ∈ s.support, G.Adj s.centre v)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      stars.any (fun s => s.fires (pairInput u v)) = true)
+    (hbudget : 2 * stars.length < dropped.card ∨
+      (W (fun _ => true) C.output = false ∧ 2 * stars.length ≤ dropped.card)) : False := by
+  have hr := (junkMember G C hJ).1
+  have hout := outputLast G C h (Nat.zero_lt_of_lt hr)
+  have houtBound : C.output < n + C.gates.length := by omega
+  obtain ⟨gs, hgs, hlen, hwires⟩ := foldFalseOperandBudget C h.1 hW hzero dropped hd hdrop
+  have hprov (s : RepairStar n) (hs : s ∈ stars) : s.support.Nonempty ∧ Res gs s.provider := by
+    obtain ⟨hn, p, hp, hP⟩ := hproviders s hs
+    have he (x) : W x p = s.provider x := by
+      apply Bool.eq_iff_iff.mpr
+      simpa [RepairStar.provider] using hP.2 W hW x
+    have hfun : (fun x => W x p) = s.provider := funext he
+    exact ⟨hn, hfun ▸ hwires p hp⟩
+  let f := fun x => W x C.output
+  obtain ⟨fs, hfs, hcost, hbonus, hres, _⟩ :=
+    compileRepairStars gs hgs f (hwires C.output houtBound) stars hprov
+  have hsmall : fs.length < C.gates.length := by
+    rcases hbudget with hstrict | ⟨hfalse, hweak⟩
+    · omega
+    · have := hbonus hne hfalse
+      omega
+  rcases hres with hfalse | ⟨_, o, _, heval⟩
+  · obtain ⟨s, hs⟩ := List.exists_mem_of_ne_nil stars hne
+    obtain ⟨z, hz⟩ := (hproviders s hs).1
+    have ht : s.fires (fun _ => true) = true := by
+      simp only [RepairStar.fires, RepairStar.provider, Bool.true_and, decide_eq_true_eq]
+      exact ⟨z, hz, trivial⟩
+    have hsome : stars.any (fun s => s.fires (fun _ => true)) = true :=
+      List.any_eq_true.mpr ⟨s, hs, ht⟩
+    have ht' : (f (fun _ => true) || stars.any (fun s => s.fires (fun _ => true))) = false := hfalse _
+    simp [hsome] at ht'
+  · let E : Circuit := ⟨fs, o⟩
+    have hE : IsAO2 n E := hfs
+    have hval (x) : circuitFun n E x = (f x || stars.any (fun s => s.fires x)) := heval x
+    have hcorrect : circuitFun n E = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      constructor
+      · intro hx
+        rw [hval, Bool.or_eq_true] at hx
+        rcases hx with hy | hstars
+        · exact suspendedFalseSound G C h hl hJ hW hzero x hy
+        · obtain ⟨s, hs, hfire⟩ := List.any_eq_true.mp hstars
+          obtain ⟨hc, v, hv, hvx⟩ : x s.centre = true ∧ ∃ v ∈ s.support, x v = true := by
+            simpa [RepairStar.fires, RepairStar.provider] using hfire
+          exact (graph_true G x).mpr ⟨s.centre, v, hstarEdges s hs v hv, hc, hvx⟩
+      · intro hx
+        obtain ⟨u, v, huv, hu, hv⟩ := (graph_true G x).mp hx
+        apply circuit_monotone n E (ao_mono hE) (pairInput u v) x ?_ ?_
+        · intro t ht
+          have he : t = u ∨ t = v := by simpa [pairInput] using ht
+          rcases he with rfl | rfl
+          · exact hu
+          · exact hv
+        · change circuitFun n E (pairInput u v) = true
+          rw [hval, Bool.or_eq_true]
+          exact hcover u v huv
+    have hmin := h.2.2 E hE hcorrect
+    exact (Nat.not_lt_of_ge hmin) hsmall
+
 /-- Two immediate readers pay for a strict one-star repair. The provider is
     preserved by the fold, so the repair uses at most one AND and one OR. -/
 theorem noOneJunkOneStarWithTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
@@ -497,73 +672,203 @@ theorem noOneJunkOneStarWithTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [Deci
   have hr := (junkMember G C hJ).1
   have hjr' : r ≠ j := by have := h.1.2.1 j hj _ hjr; omega
   have hkr' : r ≠ k := by have := h.1.2.1 k hk _ hkr; omega
-  have hout := outputLast G C h (Nat.zero_lt_of_lt hr)
-  have houtBound : C.output < n + C.gates.length := by omega
-  obtain ⟨gs, hgs, hlen, hwires⟩ := foldSuspendedFalse C h.1 hW hzero {r, j, k}
-    (by intro t ht; simp only [Finset.mem_insert, Finset.mem_singleton] at ht
-        rcases ht with rfl | rfl | rfl <;> exact Finset.mem_range.mpr (by assumption))
-    (by intro t ht; simp only [Finset.mem_insert, Finset.mem_singleton] at ht
-        rcases ht with rfl | rfl | rfl
+  let star : RepairStar n := ⟨c, S⟩
+  refine noOneJunkWithStarBudget G C h hl hJ hW hzero {r, j, k} ?_ ?_ [star]
+    (by simp) ?_ ?_ ?_ ?_
+  · intro t ht
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+    rcases ht with rfl | rfl | rfl <;> exact Finset.mem_range.mpr (by assumption)
+  · intro t ht
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+    rcases ht with rfl | rfl | rfl
+    · exact Or.inl rfl
+    · exact Or.inr ⟨n + r, hjr, hzero _⟩
+    · exact Or.inr ⟨n + r, hkr, hzero _⟩
+  · intro s hs
+    have he : s = star := by simpa using hs
+    subst s
+    exact ⟨hne, p, hp, hS⟩
+  · intro s hs
+    have he : s = star := by simpa using hs
+    subst s
+    exact hadj
+  · intro u v huv
+    simpa [star, RepairStar.fires, RepairStar.provider] using hcover u v huv
+  · left
+    simp [hjr', hkr', hjk]
+
+/-- The gates that read the junk wire in an operand position. -/
+def immediateJunkReaders {n : ℕ} (C : Circuit) (r : ℕ) : Finset ℕ :=
+  (Finset.range C.gates.length).filter fun j => n + r ∈ (gateAt C j).inputs
+
+/-- Two stars cover the losses, so a minimum circuit cannot yield any
+    chargeable set larger than the cost of the two-star repair. -/
+theorem oneJunkDroppedBudget {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨
+      ∃ w ∈ (gateAt C j).inputs, W (fun _ => true) w = false) :
+    dropped.card ≤ 3 + (W (fun _ => true) C.output).toNat := by
+  classical
+  by_contra! hmany
+  obtain ⟨a, b, A, B, _, hab, hA, hB, hdisj, hcardA, hcardB, _⟩ :=
+    oneJunkLargeOppositeSupports G C h hl h4 colour hcolour hJ
+  obtain ⟨EA, EB, _, _, hEA, hEB, hadjA, hadjB, hclassification⟩ :=
+    lostEdgesInExposedStars G C h hl h4 hJ hab hA hB hdisj hcardA hcardB
+  let stars := EA.toList.map (fun c => (⟨c, B⟩ : RepairStar n)) ++
+    EB.toList.map (fun c => (⟨c, A⟩ : RepairStar n))
+  have hlength : stars.length ≤ 2 := by
+    have he : stars.length = EA.card + EB.card := by simp [stars]
+    omega
+  have hkind (s : RepairStar n) (hs : s ∈ stars) :
+      (s.centre ∈ EA ∧ s.support = B) ∨ (s.centre ∈ EB ∧ s.support = A) := by
+    simp only [stars, List.mem_append, List.mem_map, Finset.mem_toList] at hs
+    rcases hs with ⟨c, hc, rfl⟩ | ⟨c, hc, rfl⟩
+    · exact Or.inl ⟨hc, rfl⟩
+    · exact Or.inr ⟨hc, rfl⟩
+  have hcover (u v : Fin n) (huv : G.Adj u v) :
+      W (pairInput u v) C.output = true ∨ stars.any (fun s => s.fires (pairInput u v)) = true := by
+    let x := pairInput u v
+    rcases (hclassification W hW hzero).2 u v huv with hv | ⟨c, hc, w, hw, hcx, hwx⟩ |
+        ⟨c, hc, w, hw, hcx, hwx⟩
+    · exact Or.inl hv
+    · refine Or.inr (List.any_eq_true.mpr ⟨⟨c, B⟩, by simp [stars, hc], ?_⟩)
+      change (x c && decide (∃ v ∈ B, x v = true)) = true
+      have hhit : ∃ v ∈ B, x v = true := ⟨w, hw, hwx⟩
+      simp [show x c = true from hcx, hhit]
+    · refine Or.inr (List.any_eq_true.mpr ⟨⟨c, A⟩, by simp [stars, hc], ?_⟩)
+      change (x c && decide (∃ v ∈ A, x v = true)) = true
+      have hhit : ∃ v ∈ A, x v = true := ⟨w, hw, hwx⟩
+      simp [show x c = true from hcx, hhit]
+  by_cases hne : stars = []
+  · apply noOneJunkWithoutLostEdges G C h hl hJ hW hzero
+    intro u v huv
+    simpa [hne] using hcover u v huv
+  have hr := (junkMember G C hJ).1
+  have ha : a < n + C.gates.length :=
+    (h.1.2.1 r hr a (by simp [hab])).trans (Nat.add_lt_add_left hr n)
+  have hb : b < n + C.gates.length :=
+    (h.1.2.1 r hr b (by simp [hab])).trans (Nat.add_lt_add_left hr n)
+  have hAn : A.Nonempty := Finset.card_pos.mp (by omega)
+  have hBn : B.Nonempty := Finset.card_pos.mp (by omega)
+  refine noOneJunkWithStarBudget G C h hl hJ hW hzero dropped hd hdrop stars hne ?_ ?_ hcover ?_
+  · intro s hs
+    rcases hkind s hs with ⟨_, he⟩ | ⟨_, he⟩
+    · rw [he]
+      exact ⟨hBn, b, hb, hB⟩
+    · rw [he]
+      exact ⟨hAn, a, ha, hA⟩
+  · intro s hs v hv
+    rcases hkind s hs with ⟨hm, he⟩ | ⟨hm, he⟩
+    · exact hadjA _ hm v (he ▸ hv)
+    · exact hadjB _ hm v (he ▸ hv)
+  · cases htop : W (fun _ => true) C.output
+    · right
+      refine ⟨rfl, ?_⟩
+      simp only [htop, Bool.toNat_false, Nat.add_zero] at hmany
+      omega
+    · left
+      simp only [htop, Bool.toNat_true] at hmany
+      omega
+
+private theorem junkNotImmediateReader {n : ℕ} (C : Circuit) (h : IsAO2 n C) (r : ℕ) :
+    r ∉ immediateJunkReaders (n := n) C r := by
+  intro hm
+  obtain ⟨hr, hread⟩ := Finset.mem_filter.mp hm
+  exact (Nat.lt_irrefl _) (h.2.1 r (Finset.mem_range.mp hr) _ hread)
+
+/-- Four immediate readers cannot occur, and three require a nonzero
+    suspended output. -/
+theorem oneJunkReaderBudget {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (hzero : ∀ x, W x (n + r) = false) :
+    (immediateJunkReaders (n := n) C r).card ≤ 2 + (W (fun _ => true) C.output).toNat := by
+  let R := immediateJunkReaders (n := n) C r
+  have hr := (junkMember G C hJ).1
+  have hsize := Finset.card_insert_of_notMem (junkNotImmediateReader C h.1 r)
+  have hcount := oneJunkDroppedBudget G C h hl h4 colour hcolour hJ hW hzero (insert r R)
+    (by intro j hj; rcases Finset.mem_insert.mp hj with rfl | hm
+        · exact Finset.mem_range.mpr hr
+        · exact (Finset.mem_filter.mp hm).1)
+    (by intro j hj; rcases Finset.mem_insert.mp hj with rfl | hm
         · exact Or.inl rfl
-        · exact Or.inr hjr
-        · exact Or.inr hkr)
-  have hlen' : gs.length + 3 ≤ C.gates.length := by
-    simpa [hjr', hkr', hjk] using hlen
-  have hsupport (x : Fin n → Bool) : W x p = true ↔ ∃ v ∈ S, x v = true := by
-    simpa using hS.2 W hW x
-  obtain ⟨v, hv⟩ := hne
-  have htop : W (fun _ => true) p = true := (hsupport _).mpr ⟨v, hv, rfl⟩
-  rcases hwires p hp with hfalse | ⟨_, w, hw, hwire⟩
-  · exact Bool.false_ne_true ((hfalse _).symm.trans htop)
-  let star : Gate := ⟨GateOp.and, [c.val, w]⟩
-  let base := gs ++ [star]
-  let b := n + gs.length
-  have hbase : IsAO2 n ⟨base, 0⟩ := isAO2_snoc gs GateOp.and (Or.inl rfl) _ _
-    (by have := c.isLt; omega) hw hgs
-  have hblen : base.length = gs.length + 1 := by simp [base]
-  have hstar (x : Fin n → Bool) : wireVal n ⟨base, 0⟩ b x = true ↔
-      x c = true ∧ ∃ v ∈ S, x v = true := by
-    change wireVal n ⟨gs ++ [star], 0⟩ (n + gs.length) x = true ↔ _
-    rw [wireVal_new]
-    simp [star, GateOp.eval, wireVal_input gs c x, hwire x, hsupport x]
-  have rebuilt : ∃ E : Circuit, IsAO2 n E ∧ E.gates.length ≤ gs.length + 2 ∧
-      ∀ x, circuitFun n E x = true ↔
-        W x C.output = true ∨ (x c = true ∧ ∃ v ∈ S, x v = true) := by
-    rcases hwires C.output houtBound with hfalse | ⟨_, o, ho, hold⟩
-    · refine ⟨⟨base, b⟩, hbase, by change base.length ≤ gs.length + 2; omega, fun x => ?_⟩
-      change wireVal n ⟨base, 0⟩ b x = true ↔ _
-      have hzeroOutput : W x C.output = false := hfalse x
-      simp [hstar, hzeroOutput]
-    · let join : Gate := ⟨GateOp.or, [o, b]⟩
-      have ho' : o < n + base.length := by omega
-      have hb' : b < n + base.length := by dsimp [b]; omega
-      have hao := isAO2_snoc base GateOp.or (Or.inr rfl) o b ho' hb' hbase
-      refine ⟨⟨base ++ [join], n + base.length⟩, hao, by simp [hblen], fun x => ?_⟩
-      change wireVal n ⟨base ++ [join], 0⟩ (n + base.length) x = true ↔ _
-      rw [wireVal_new]
-      simp [join, GateOp.eval, wireVal_old gs star o ho x, base, hold x,
-        show wireVal n ⟨gs ++ [star], 0⟩ b x = true ↔ _ from hstar x]
-  obtain ⟨E, hE, hEsize, heval⟩ := rebuilt
-  have hcorrect : circuitFun n E = graphFun G ∅ := by
-    funext x
-    apply Bool.eq_iff_iff.mpr
-    constructor
-    · intro hx
-      rcases (heval x).mp hx with hy | ⟨hc, z, hz, hzx⟩
-      · exact suspendedFalseSound G C h hl hJ hW hzero x hy
-      · exact (graph_true G x).mpr ⟨c, z, hadj z hz, hc, hzx⟩
-    · intro hx
-      obtain ⟨u, z, huz, hu, hz⟩ := (graph_true G x).mp hx
-      apply circuit_monotone n E (ao_mono hE) (pairInput u z) x ?_
-        ((heval _).mpr (hcover u z huz))
-      intro t ht
-      have eq : t = u ∨ t = z := by simpa [pairInput] using ht
-      rcases eq with rfl | rfl
-      · exact hu
-      · exact hz
-  have hmin := h.2.2 E hE hcorrect
-  change C.gates.length ≤ E.gates.length at hmin
+        · exact Or.inr ⟨n + r, (Finset.mem_filter.mp hm).2, hzero _⟩)
+  change (insert r (immediateJunkReaders (n := n) C r)).card ≤ _ at hcount
+  rw [hsize] at hcount
   omega
+
+theorem oneJunkAtMostThreeReaders {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r}) : (immediateJunkReaders (n := n) C r).card ≤ 3 := by
+  obtain ⟨W, hW, hzero⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
+  have hbound := oneJunkReaderBudget G C h hl h4 colour hcolour hJ hW hzero
+  cases htop : W (fun _ => true) C.output <;> simp [htop] at hbound <;> omega
+
+/-- A direct AND reader is forced to false by the suspension. When the
+    suspended output survives, one of that reader's clean collector ORs
+    also folds. This extra charge rules out three readers including an AND. -/
+theorem oneJunkAtMostTwoWithAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r j : ℕ} (hJ : junk G C = {r}) (hj : j ∈ immediateJunkReaders (n := n) C r)
+    (hand : (gateAt C j).op = GateOp.and) : (immediateJunkReaders (n := n) C r).card ≤ 2 := by
+  obtain ⟨W, hW, hzero⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
+  cases htop : W (fun _ => true) C.output
+  · have hbound := oneJunkReaderBudget G C h hl h4 colour hcolour hJ hW hzero
+    simpa [htop] using hbound
+  · have H := fromLeastOneJunk G C h hl hJ
+    obtain ⟨hjr, hread⟩ := Finset.mem_filter.mp hj
+    have hjlen := Finset.mem_range.mp hjr
+    have hrj : r < j := by have := h.1.2.1 j hjlen _ hread; omega
+    have hclean := H.others j hjlen hand hrj.ne.symm
+    obtain ⟨p, q, hpq⟩ := twoOperands h.1 hjlen
+    let x : Fin n → Bool := fun _ => true
+    have hjzero : W x (n + j) = false := by
+      cases hv : W x (n + j)
+      · rfl
+      · obtain ⟨hp, hq⟩ := (evalExcept_and hW hjlen hrj.ne.symm hand hpq x).mp hv
+        have he : n + r = p ∨ n + r = q := by simpa [hpq] using hread
+        rcases he with he | he
+        · rw [← he, hzero] at hp
+          cases hp
+        · rw [← he, hzero] at hq
+          cases hq
+    have hout : C.output ≠ n + j := by
+      intro he
+      have hv : W x C.output = true := htop
+      rw [he, hjzero] at hv
+      cases hv
+    obtain ⟨k, hjk, hk, hkread⟩ := noUnreadGate G C h j (n + r) hjlen
+      (h.1.2.1 j hjlen _ hread) hout
+    obtain ⟨hkor, hkclean⟩ := cleanReader G C h hl hjlen hclean (allLive G C h k hk) hkread
+    let R := immediateJunkReaders (n := n) C r
+    have hknew : k ∉ insert r R := by
+      intro hm
+      rcases Finset.mem_insert.mp hm with he | hm
+      · omega
+      · exact H.dirty (cleanOrOperands G C h.1 hk hkor hkclean (Finset.mem_filter.mp hm).2)
+    have hcount := oneJunkDroppedBudget G C h hl h4 colour hcolour hJ hW hzero (insert k (insert r R))
+      (by intro i hi; rcases Finset.mem_insert.mp hi with rfl | hi
+          · exact Finset.mem_range.mpr hk
+          · rcases Finset.mem_insert.mp hi with rfl | hi
+            · exact Finset.mem_range.mpr H.hg
+            · exact (Finset.mem_filter.mp hi).1)
+      (by intro i hi; rcases Finset.mem_insert.mp hi with rfl | hi
+          · exact Or.inr ⟨n + j, hkread, hjzero⟩
+          · rcases Finset.mem_insert.mp hi with rfl | hi
+            · exact Or.inl rfl
+            · exact Or.inr ⟨n + r, (Finset.mem_filter.mp hi).2, hzero _⟩)
+    rw [Finset.card_insert_of_notMem hknew, Finset.card_insert_of_notMem
+      (show r ∉ R from junkNotImmediateReader C h.1 r)] at hcount
+    simp only [htop, Bool.toNat_true] at hcount
+    change R.card ≤ 2
+    omega
 
 #print axioms rawFormJunkReaches
 #print axioms noSingletonOverlapWithUpstream
@@ -571,8 +876,14 @@ theorem noOneJunkOneStarWithTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [Deci
 #print axioms oneJunkFalseOnUnit
 #print axioms oneJunkHasEdgeReader
 #print axioms oneJunkLargeOppositeSupports
+#print axioms foldFalseOperandBudget
 #print axioms foldSuspendedFalse
 #print axioms noOneJunkWithoutLostEdges
+#print axioms noOneJunkWithStarBudget
 #print axioms noOneJunkOneStarWithTwoReaders
+#print axioms oneJunkDroppedBudget
+#print axioms oneJunkReaderBudget
+#print axioms oneJunkAtMostThreeReaders
+#print axioms oneJunkAtMostTwoWithAndReader
 
 end ResearchVerification.OneJunkErase

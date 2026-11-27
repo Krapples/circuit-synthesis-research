@@ -125,9 +125,13 @@ junk to false loses edge inputs only in at most two clean stars.
 `foldSuspendedFalse` compiles the suspended circuit without constants,
 preserves the wire values, and saves one gate per eliminated junk or
 immediate reader. Lean checks strict replacement when no edges are lost
-and when one star covers every lost edge and the junk has two immediate
-readers. Other reader and star budgets and the many-junk reduction
-remain open in Lean.
+or one star suffices with two immediate readers. The same repair compiler
+adds at most four gates for two stars, or three with a false suspended
+output. `oneJunkAtMostThreeReaders` rules out four or more immediate
+readers. If there are three, the suspended output survives and every
+immediate reader is an OR. An immediate AND would force an additional
+collector OR to fold. Smaller reader counts, the three-OR case, and the
+many-junk reduction remain open in Lean.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero
