@@ -5485,14 +5485,17 @@ theorem noOneJunkSiteReplacement {n : ℕ} (G : SimpleGraph (Fin n))
         (topEq x j hj ha hc (Or.inl hpq)).mpr
           ⟨(wireEq x j hj ha (p := p) (by simp [hpq])).mpr (Or.inl hp),
            (wireEq x j hj ha (p := q) (by simp [hpq])).mpr (Or.inl hq)⟩⟩
-    · have hf : W x C.output = false := by cases he : W x C.output <;> simp_all
+    · have hf : W x C.output = false := by
+        cases he : W x C.output
+        · rfl
+        · exact (hw he).elim
       obtain ⟨i,j,p,q,S,T,hi,hio,hir,hj,hja,hjc,hpq,hS,hT,path,hTx⟩ :=
         lostRoutedTop G C h hl hJ hno hW x (pair_true G u v huv) hf
       have hp : p ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
       have hq : q ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
       exact (siteCollector G C h hl hJ ρ hρ x).mpr ⟨j,hj,hja,hjc,
         (topEq x j hj hja hjc hpq).mpr
-          ⟨(wireEq x j hj hja hp).mpr (Or.inr ⟨i,path,hfill u v huv hf (.direct hi hio hir)⟩),
+          ⟨(wireEq x j hj hja hp).mpr (Or.inr ⟨i,path,hfill u v huv hf i (.direct hi hio hir)⟩),
             (pure x j hj hja hq hT).mpr hTx⟩⟩
   have hcorrect : circuitFun n D = graphFun G ∅ := by
     funext x
@@ -5633,6 +5636,15 @@ private lemma pairEqOfHits {n : ℕ} (u v p q : Fin n)
   · simpa [hp',hq'] using pairInputComm u v
   · exact (hne (hp'.trans hq'.symm)).elim
 
+private lemma memberOfPair {n : ℕ} {u v a b c : Fin n}
+    (ha : a = u ∨ a = v) (hb : b = u ∨ b = v) (hc : c = u ∨ c = v)
+    (hne : a ≠ b) : c = a ∨ c = b := by
+  rcases ha with ha | ha <;> rcases hb with hb | hb
+  · exact (hne (ha.trans hb.symm)).elim
+  · exact hc.imp (fun h => h.trans ha.symm) (fun h => h.trans hb.symm)
+  · exact hc.symm.imp (fun h => h.trans ha.symm) (fun h => h.trans hb.symm)
+  · exact (hne (ha.trans hb.symm)).elim
+
 /-- A pre-junk provider outside the residual-use cone can pay for
     a one-star repair, while its disjoint other provider stays intact. -/
 private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
@@ -5687,7 +5699,7 @@ private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
       rintro rfl
       rcases hu with hc | hu
       · exact (rawNotClean G C s (fun x hx => hc x
-          ((hA.2 _ (originalEvalExcept h.1 r) x).mpr (Or.inl ⟨s,hs,hx⟩)))).elim
+          ((hA.2 _ (originalEvalExcept h.1 r) x).mpr (Or.inl ⟨s,hs,((originalEvalExcept h.1 r).1 x s).symm.trans hx⟩)))).elim
       · exact huse hu
     simpa [M,hkj] using hZgate x k hk hkr
   have hZB (x) : Z x b = W x b :=
@@ -5763,6 +5775,7 @@ private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
     provider is protected, its residual neighbour supplies the sole
     possible universal leaf, and the nonuniversal leaves give a safe
     replacement at the carrier. -/
+set_option maxHeartbeats 1000000 in
 private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) (colour : Fin n → Bool)
@@ -5817,7 +5830,10 @@ private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
     let x := pairInput u v
     by_cases ho : W x C.output = true
     · exact Or.inl ho
-    have hf : W x C.output = false := by cases he : W x C.output <;> simp_all
+    have hf : W x C.output = false := by
+      cases he : W x C.output
+      · rfl
+      · exact (ho he).elim
     obtain ⟨t,k,u',w,P,Q,_,_,_,hk,hka,hkc,huw,hP,hQ,route,hQx⟩ :=
       lostRoutedTop G C h hl hJ hno hW x (pair_true G u v huv) hf
     obtain ⟨⟨a',ha',hax⟩,⟨b',hb',hbx⟩⟩ :=
@@ -5827,7 +5843,7 @@ private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
     have h1 : a' = u ∨ a' = v := by simpa [x,pairInput] using hax
     have h2 : b' = u ∨ b' = v := by simpa [x,pairInput] using hbx
     have h3 : c = u ∨ c = v := by simpa [x,pairInput] using hcx
-    have hc' : c = a' ∨ c = b' := by aesop
+    have hc' : c = a' ∨ c = b' := memberOfPair h1 h2 h3 hne
     have hcA : c ∈ A := by
       rcases hc' with he | he
       · exact he.symm ▸ ha'
@@ -5856,7 +5872,7 @@ private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
         (hP : RawForm C r u P true) (hQ : RawForm C r w Q false)
         (route : OrCarrierRoute n C r i' u) {z : Fin n} (hzB : z ∈ B)
         (hbad : ¬ ∀ y ∈ A, G.Adj y z) : ∀ c ∈ Q, G.Adj c z := by
-      push_neg at hbad
+      push Not at hbad
       obtain ⟨y,hy,hyn⟩ := hbad
       intro c hc
       have hyc : colour y = colour c := (hcolA y hy).trans (colTop hk hka hkc huw hP hQ route c hc).symm
@@ -5917,6 +5933,7 @@ private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
 /-- All sole OR-reader configurations with the verified disjoint large
     opposite-colour supports. Choose a genuinely lost edge to orient the
     seed star, then apply the one-carrier contradiction. -/
+set_option maxHeartbeats 1000000 in
 theorem noSoleOrReaderLargeSupports {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) (colour : Fin n → Bool)
@@ -5938,10 +5955,14 @@ theorem noSoleOrReaderLargeSupports {n : ℕ} (G : SimpleGraph (Fin n))
   have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
   by_cases hall : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true
   · exact noOneJunkWithoutLostEdges G C h hl hJ hW hzero hall
-  push_neg at hall
-  obtain ⟨u,v,huv,hmiss⟩ := hall
-  have hf : W (pairInput u v) C.output = false := by
-    cases he : W (pairInput u v) C.output <;> simp_all
+  have hmissing : ∃ u v, G.Adj u v ∧ W (pairInput u v) C.output = false := by
+    by_contra hnone
+    apply hall
+    intro u v huv
+    cases he : W (pairInput u v) C.output
+    · exact (hnone ⟨u,v,huv,he⟩).elim
+    · rfl
+  obtain ⟨u,v,huv,hf⟩ := hmissing
   obtain ⟨t,j,p,q,S,T,htl,_,htm,hj,hja,hjc,hpq,hS,hT,route,hTx⟩ :=
     lostRoutedTop G C h hl hJ hno hW (pairInput u v) (pair_true G u v huv) hf
   have hroute : OrCarrierRoute n C r i p := only t htl htm ▸ route
@@ -5952,7 +5973,7 @@ theorem noSoleOrReaderLargeSupports {n : ℕ} (G : SimpleGraph (Fin n))
   have h1 : y = u ∨ y = v := by simpa [pairInput] using hyx
   have h2 : z = u ∨ z = v := by simpa [pairInput] using hzx
   have h3 : s = u ∨ s = v := by simpa [pairInput] using hsx
-  have hs' : s = y ∨ s = z := by aesop
+  have hs' : s = y ∨ s = z := memberOfPair h1 h2 h3 hyz
   have hal := h.1.2.1 r hr a (by simp [hab])
   have hbl := h.1.2.1 r hr b (by simp [hab])
   have had := noCleanAndOperand G C h r a hr (by simp [hab]) hand

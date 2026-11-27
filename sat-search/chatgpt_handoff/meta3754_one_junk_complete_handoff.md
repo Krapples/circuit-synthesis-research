@@ -123,3 +123,7 @@ Inspected the actual upstream reduction at 167004490776da6ee62464efd592ae667f3fc
 ### First assembled CI correction
 
 Run 46028340649 failed research compilation (bridge and audit skipped). Carrier classification elaborated; site bypass and sole-reader branches exposed syntax, implicit-dimension, arithmetic and dependent-route-elimination errors. This correction uses forward induction on routes to avoid the indexed-constructor elimination, explicit dimensions for constant suspensions, current ite lemmas, explicit read bounds, and removes an accidental unused partial proof expression. Master merge 330efb9 preserved unrelated tree-DP memory notes. The exact theorem remains pending verification; no statement or verification policy weakened.
+
+### Second assembled CI correction
+
+Run 46029030301 failed in research compilation. The previous site-specific replay and route induction errors are gone. This patch supplies the explicit reader index to the fill hypothesis, converts the raw-wire value to the vertex input in the exclusive-provider proof, replaces the two broad endpoint searches by an explicit four-case lemma, replaces deprecated negation syntax and narrows Boolean case analysis. Local heartbeat budgets of one million for the two large sole-reader declarations address the deterministic elaborator timeouts; the kernel, theorem statements, dependency pins and axiom audit are unchanged. Unrelated tree-DP changes in merge ffdf20a are retained. Bridge and final audit remain pending.
