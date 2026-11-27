@@ -59,6 +59,8 @@ those conditions, and document proofs, counterexamples, and open questions for t
 - Use the Lean project's locked incremental Lake environment. Keep project checker, axiom,
   permitted-dependency, lease and exact-commit submission requirements in force. Normalize
   selected source files before staging and checkpoint focused changes after applicable checks.
+  Audit the final theorem's transitive axioms. For promised circuits, start from the
+  [exact evaluator and support checks](sat-search/workflow/README.md#proof-checks-for-promised-circuits).
 
 ## Reports and commits
 

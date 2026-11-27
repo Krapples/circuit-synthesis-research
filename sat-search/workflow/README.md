@@ -111,6 +111,28 @@ python -B sat-search/workflow/research.py checkpoint path/to/selected-source.lea
   staged diff and its whitespace check. Review the diff before using `--message` to create a
   focused local commit. The project submission and push workflow remains explicit.
 
+## Proof checks for promised circuits
+
+- Check the exact evaluator at its boundary. Account for nullary and unary gates,
+  repeated or missing operands, and outputs that name inputs. Compare the definitions
+  in the pinned checker against the local checkout whenever a bridge depends on them.
+- State the reduction from the original circuit model independently of its finite exclusions.
+  On a monotone promise, project required positive and negative rows onto candidate supports.
+  Ordered pairs certify that a support is essential or that a proposed decomposition is
+  impossible. Use explicit witnesses or a small kernel-computed finite check for these facts.
+  The [L-meta-20754 proof packet](../results/promise_5x5_20754/README.md) extends this method
+  to a reverse gate trace and records the exact scope of the finite checks.
+- Audit the submitted theorem's transitive axioms in a separate local replay.
+  In Lean 4.36.0, a successful `bv_decide` incorporates compiled certificate evaluation
+  through a generated axiom. Its LRAT trace remains computational evidence. The
+  kernel replay should report only permitted axioms. Keep the local `#print axioms`
+  commands outside any submitted file.
+- An accepted one-hot example first establishes the evaluator and deletion properties,
+  then uses the instance's small combinatorial checks and a shared-gate charge.
+  An accepted reduction splits out whether the original output is an input wire.
+  [Strict-AND proof](https://github.com/open-goat/pequalnp-proofs/pull/37899)
+  [Output-wire reduction](https://github.com/open-goat/pequalnp-proofs/pull/37153)
+
 Run the workflow regressions with `python -B -m unittest discover -s sat-search/workflow -p 'test_*.py' -v`.
 
 The initial Windows validation used the existing 22-worker backend and Lean 4.36.0. The smoke
