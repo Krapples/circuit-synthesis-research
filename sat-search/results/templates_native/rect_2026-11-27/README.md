@@ -61,3 +61,13 @@ Sizes 10 and 11 on the 16 open units take more than 500 s per size. This needs p
 partial labels that is shown to be sound, such as row/column permutations that preserve the mask
 or partial-label reader bounds (`cube_search.py --partial*`, monotone only). It also needs
 certificates (LRAT) before any of these verdicts are used as proofs.
+
+## Closed direction: mask-automorphism symmetry breaking (2026-11-27)
+
+Left-row × right-column permutations that preserve the mask are sound symmetries for partial labels.
+Brute-force group sizes over all 40 units: the 16 open units have |Aut| = 1 (5 units), 2 (5), 4 (4),
+12 (1) and 16 (1). The large groups (8-48) all belong to units that are already UNSAT. A symmetry
+reduction saves at most a factor |Aut| (typically 1-4), but sizes 10-11 cost 5-10x per extra gate, so
+it was not implemented. `cube_search.py --minimal` (no duplicate gates, no absorption or idempotence)
+is implied by this encoding's semantic distinct-gate normal form and adds nothing.
+Reopen if a family with large mask groups remains open.
