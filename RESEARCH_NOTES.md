@@ -38,8 +38,9 @@ normalization preserves the number of OR gates and exposes the exact
 monotone boundary. The 105 positive rows pair with 25,237 maximal
 negative rows in 10 projective-symmetry orbits. Lean checked a uniform
 40 lower bound for the straight-line AND/OR and common vertex-cover union
-models, the surrogate leaf projection, and 104 union instructions for
-independent operand centers.
+models, the surrogate leaf projection, and 104 union instructions when the
+marked operand centers induce a forest. Any shorter program would give a
+relative OR saving on a cyclic subgraph supported entirely on marked centers.
 The unrestricted bound of 104 remains open.
 [Reduction audit, geometry, proof, and diagnostics](sat-search/results/pg4_or_4653/README.md)
 

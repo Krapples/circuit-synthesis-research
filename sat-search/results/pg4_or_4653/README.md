@@ -107,13 +107,13 @@ would turn its projected program into a monotone circuit using at most one OR pe
 For a nontrivial forest, delete a leaf while some edge remains. Along a path from that leaf input
 to the output, the first OR can be removed under the zero restriction, since the preceding ANDs
 hold the operand at false. Such a path must contain an OR, or the restricted function would be
-identically false. Induction on edges gives at least `|E|−1` ORs for the forest. This proves on
-paper that a sub-104 program must have a cycle of marked centers. Each leaf deletion that
-leaves an edge saves one OR, including in graphs with a cyclic core. Thus any saving over
-`|E|−1` must survive leaf deletion all the way to the remaining core. `LeafOrElimination.lean`
-checks the elimination and the induction for any finite certificate of leaf deletions.
-Applying the induction to every acyclic surrogate still requires a graph theorem producing
-the leaf certificate and the corresponding split-incidence edge presentation.
+identically false. Induction on edges gives at least `|E|−1` ORs for the forest.
+`ForestCase.PG4.acyclic_centers_lower_bound` proves in Lean that acyclic marked centers force
+at least 104 instructions. `ForestCase.PG4.short_program_has_core` shows that any shorter program
+would give an AND/OR circuit for a cyclic subgraph whose edges are supported entirely on marked
+centers. If that subgraph has `m` edges, the circuit uses at most `m−2` ORs. The proof preserves
+the shortfall by charging one OR per deleted leaf edge. `ForestCase.lean` passed its local Lean
+check in 30.790 s using the compiled dependencies below. The general cyclic case remains open.
 
 **Uniform bound of 40 in the straight-line circuit model.** The same elimination applies to
 any vertex incident to an edge if deletion leaves some edge. An edge using the vertex
@@ -214,7 +214,7 @@ $lake = Join-Path $env:USERPROFILE '.elan/toolchains/leanprover--lean4---v4.36.0
 New-Item -ItemType Directory -Force $cache | Out-Null
 Push-Location sat-search/lean
 try {
-  foreach ($module in 'ConjunctionCompiler', 'LeafOrElimination') {
+  foreach ($module in 'ConjunctionCompiler', 'LeafOrElimination', 'CoverUnion4653') {
     & $lake env lean "--root=$proofs" -o (Join-Path $cache "$module.olean") (Join-Path $proofs "$module.lean")
     if ($LASTEXITCODE -ne 0) { throw "Lean module build failed for $module" }
   }
@@ -222,6 +222,11 @@ try {
 $priorLeanPath = $env:LEAN_PATH
 try {
   $env:LEAN_PATH = $cache
-  python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/CompilerBridge.lean --lake $lake --timeout 90
+  Push-Location sat-search/lean
+  try {
+    & $lake env lean "--root=$proofs" -o (Join-Path $cache 'CompilerBridge.olean') (Join-Path $proofs 'CompilerBridge.lean')
+    if ($LASTEXITCODE -ne 0) { throw 'Lean compiler bridge build failed' }
+  } finally { Pop-Location }
+  python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/results/pg4_or_4653/ForestCase.lean --lake $lake --timeout 90
 } finally { $env:LEAN_PATH = $priorLeanPath }
 ```
