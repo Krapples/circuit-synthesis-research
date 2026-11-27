@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/lean-verification.yml'
       - 'sat-search/chatgpt_handoff/lean/**'
+      - 'sat-search/chatgpt_handoff/upstream/**'
   workflow_dispatch:
 
 permissions:
@@ -81,12 +82,13 @@ jobs:
           root="$GITHUB_WORKSPACE/sat-search/chatgpt_handoff/lean"
           test -f "$root/ProofSmoke.lean"
           cd "$UPSTREAM_DIR/lean"
+          mkdir -p "$RUNNER_TEMP/lean-audits"
           count=0
           failures=0
           while IFS= read -r -d '' proof; do
             count=$((count + 1))
             echo "::group::Checking ${proof##*/}"
-            if lake env lean -DwarningAsError=true "$proof"; then
+            if lake env lean -DwarningAsError=true "$proof" 2>&1 | tee "$RUNNER_TEMP/lean-audits/${proof##*/}.log"; then
               echo "CHECKED: ${proof##*/}"
             else
               echo "::error::Lean rejected ${proof##*/}"
@@ -97,3 +99,59 @@ jobs:
           test "$count" -gt 0
           echo "Checked $count files; $failures failed."
           test "$failures" -eq 0
+
+      - name: Build pinned upstream lemmas and check one-junk bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/sat-search/chatgpt_handoff/lean"
+          bridge="$GITHUB_WORKSPACE/sat-search/chatgpt_handoff/upstream/OneJunkUpstream.lean"
+          cd "$UPSTREAM_DIR/lean"
+          # Restore only the five explicit outside modules. Their dependencies
+          # live in the pinned definition/helper directories.
+          mkdir -p PEqualNP/Outside
+          for id in 4712 4743 4745 4746 4747; do
+            cp "$RUNNER_TEMP/pequalnp-outside/L_meta_${id}.lean" PEqualNP/Outside/
+            lake build "+PEqualNP.Outside.L_meta_${id}"
+          done
+          lake env lean --root="$root" -DwarningAsError=true -o .lake/build/lib/lean/OneJunkErase.olean "$root/OneJunkErase.lean"
+          echo "::group::Checking OneJunkUpstream.lean"
+          lake env lean -DwarningAsError=true "$bridge" 2>&1 | tee "$RUNNER_TEMP/lean-audits/OneJunkUpstream.lean.log"
+          echo "CHECKED: OneJunkUpstream.lean"
+          echo "::endgroup::"
+
+      - name: Enforce reported axiom allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os, pathlib, re
+          root = pathlib.Path(os.environ["GITHUB_WORKSPACE"]) / "sat-search/chatgpt_handoff"
+          logs = pathlib.Path(os.environ["RUNNER_TEMP"]) / "lean-audits"
+          allowed = {"propext", "Classical.choice", "Quot.sound"}
+          sources = sorted((root / "lean").rglob("*.lean")) + [root / "upstream/OneJunkUpstream.lean"]
+          results = []
+          for source in sources:
+              source_bytes = source.read_bytes()
+              requested = re.findall(r"(?m)^\s*#print axioms\s+(\S+)\s*$", source_bytes.decode("utf-8"))
+              log = (logs / (source.name + ".log")).read_text()
+              reports = [(name, [a.strip() for a in axioms.split(",") if a.strip()])
+                         for name, axioms in re.findall(r"'([^']+)' depends on axioms:\s*\[([^\]]*)\]", log)]
+              reports += [(name, []) for name in re.findall(r"'([^']+)' does not depend on any axioms", log)]
+              if not requested or len(reports) != len(requested):
+                  raise SystemExit(f"{source.name}: expected {len(requested)} reports, received {len(reports)}")
+              unmatched = list(reports)
+              for decl in requested:
+                  matches = [item for item in unmatched if item[0] == decl or item[0].endswith("." + decl)]
+                  if len(matches) != 1:
+                      raise SystemExit(f"{source.name}: missing or ambiguous axiom report for {decl}")
+                  unmatched.remove(matches[0])
+              for name, axioms in reports:
+                  bad = set(axioms) - allowed
+                  if bad:
+                      raise SystemExit(f"{source.name}: {name} uses forbidden axioms {sorted(bad)}")
+              results.append({"file": str(source.relative_to(root)), "sha256": hashlib.sha256(source_bytes).hexdigest(),
+                              "reports": [{"name": n, "axioms": a} for n, a in reports]})
+          (logs / "axioms.json").write_text(json.dumps(results, indent=2) + "\n")
+          print(f"Audited {sum(len(r['reports']) for r in results)} declarations across {len(results)} files.")
+          PY
