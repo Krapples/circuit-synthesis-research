@@ -2741,6 +2741,204 @@ theorem suspendedFalseSound {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.
   have hraw : hits S x := by simpa [hzero x] using hs
   exact hc x ((htop _ (originalEvalExcept h.1 r) x).mpr ⟨Or.inl hraw, ht⟩)
 
+/-- A path through OR gates to a clean AND whose other operand survives
+    suspension on the all-true input. -/
+inductive ResidualUse {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (r : ℕ) (live : ℕ → Bool) : ℕ → Prop where
+  | top {j w p : ℕ} (hj : j < C.gates.length) (hand : (gateAt C j).op = GateOp.and)
+      (hc : BelowF G C j)
+      (hwp : (gateAt C j).inputs = [w, p] ∨ (gateAt C j).inputs = [p, w])
+      (hp : live p = true) : ResidualUse G C r live w
+  | throughOr {j w : ℕ} (hj : j < C.gates.length) (hjr : j ≠ r)
+      (hor : (gateAt C j).op = GateOp.or) (hw : w ∈ (gateAt C j).inputs)
+      (hjuse : ResidualUse G C r live (n + j)) : ResidualUse G C r live w
+
+/-- Every raw contribution carried by a residual use contributes its
+    whole star at some vertex to the suspended output. -/
+theorem residualUseCoversSupport {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (hzero : ∀ x, W x (n + r) = false)
+    {w : ℕ} (hw : ResidualUse G C r (W (fun _ => true)) w)
+    {R : Finset (Fin n)} (hforce : ∀ x, (∃ z ∈ R, x z = true) → W x w = true) :
+    ∃ d : Fin n, ∀ z ∈ R, G.Adj z d ∧ W (pairInput z d) C.output = true := by
+  induction hw with
+  | @top j w p hj hand hc hwp hp =>
+    have hm : p ∈ (gateAt C j).inputs := by
+      rcases hwp with he | he <;> simp [he]
+    have hlt := h.1.2.1 j hj p hm
+    obtain ⟨P, b, hP⟩ := dirtyRawForm G C h hl hJ p (by omega)
+      (noCleanAndOperand G C h j p hj hm hand)
+    have hraw (x) : W x p = true ↔ ∃ d ∈ P, x d = true := by
+      simpa [hzero x] using hP.2 W hW x
+    obtain ⟨d, hd, _⟩ := (hraw _).mp hp
+    refine ⟨d, fun z hz => ?_⟩
+    let x := pairInput z d
+    have hwx : W x w = true := hforce x ⟨z, hz, by simp [x, pairInput]⟩
+    have hpx : W x p = true := (hraw x).mpr ⟨d, hd, by simp [x, pairInput]⟩
+    have hnr := cleanDifferent G C hJ hc
+    have hv : W x (n + j) = true := by
+      rcases hwp with he | he
+      · exact (evalExcept_and hW hj hnr hand he x).mpr ⟨hwx, hpx⟩
+      · exact (evalExcept_and hW hj hnr hand he x).mpr ⟨hpx, hwx⟩
+    have hout := (collectorSemantics G C h hl hJ hW x).mpr ⟨j, hj, hand, hc, hv⟩
+    exact ⟨adjOfPair G (suspendedFalseSound G C h hl hJ hW hzero x hout), hout⟩
+  | @throughOr j w hj hjr hor hm _ ih =>
+    exact ih (fun x hx => (evalExcept_or hW hj hjr hor x).mpr ⟨w, hm, hforce x hx⟩)
+
+/-- A protected pure provider with at least two vertices can only serve
+    the unique common neighbour of those vertices. -/
+theorem residualUseCoversPureStar {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (hzero : ∀ x, W x (n + r) = false)
+    {w : ℕ} {R : Finset (Fin n)} (hR : RawForm C r w R false)
+    (hcard : 1 < R.card) {d : Fin n} (hstar : ∀ z ∈ R, G.Adj z d)
+    (hw : ResidualUse G C r (W (fun _ => true)) w) :
+    ∀ z ∈ R, W (pairInput z d) C.output = true := by
+  obtain ⟨e, he⟩ := residualUseCoversSupport G C h hl hJ hW hzero hw
+    (fun x hx => (hR.2 W hW x).mpr (Or.inl hx))
+  obtain ⟨p, hp, q, hq, hpq⟩ := Finset.one_lt_card.mp hcard
+  have hed := commonNeighborUnique G h4 hpq (hstar p hp) (hstar q hq)
+    (he p hp).1 (he q hq).1
+  subst e
+  exact fun z hz => (he z hz).2
+
+#print axioms residualUseCoversSupport
+#print axioms residualUseCoversPureStar
+
+/-- Trace a distinguished input through an exclusive provider to the
+    first OR where it arrives from a raw input or a protected wire. -/
+theorem firstUnprotectedResidualOr {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (s : Fin n) :
+    ∀ j < r, ¬ CleanWire G C (n + j) →
+      ¬ ResidualUse G C r (W (fun _ => true)) (n + j) →
+      W (pairInput s s) (n + j) = true →
+      ∃ k ≤ j, (k = j ∨ InCone n C k j) ∧
+        ¬ ResidualUse G C r (W (fun _ => true)) (n + k) ∧
+        (gateAt C k).op = GateOp.or ∧ ∃ w ∈ (gateAt C k).inputs,
+          ¬ CleanWire G C w ∧ W (pairInput s s) w = true ∧
+          (w = s.val ∨ ResidualUse G C r (W (fun _ => true)) w) ∧
+          ∀ x, W x w = true → W x (n + j) = true := by
+  have hr := (junkMember G C hJ).1
+  intro j
+  induction j using Nat.strong_induction_on with
+  | _ j ih =>
+    intro hj hd hjuse hjv
+    have hjlen := hj.trans hr
+    have hor : (gateAt C j).op = GateOp.or := by
+      rcases h.1.1 _ (gateAt_mem hjlen) with hand | hor
+      · exact (hj.ne (uniqueDirtyAnd G C hJ hjlen
+          (fun hc => hd ((cleanWireGate G C j).mpr hc)) hand)).elim
+      · exact hor
+    obtain ⟨w, hw, hwv⟩ := (evalExcept_or hW hjlen hj.ne hor (pairInput s s)).mp hjv
+    have hwlt := h.1.2.1 j hjlen w hw
+    have hwd : ¬ CleanWire G C w := fun hc =>
+      hd ((cleanWireGate G C j).mpr (cleanWireReader G C h hl hjlen hw hc).2)
+    have hprop (x) (hx : W x w = true) : W x (n + j) = true :=
+      (evalExcept_or hW hjlen hj.ne hor x).mpr ⟨w, hw, hx⟩
+    by_cases hwraw : w < n
+    · let v : Fin n := ⟨w, hwraw⟩
+      have hv : pairInput s s v = true := (hW.1 (pairInput s s) v).symm.trans hwv
+      have he : v = s := by simpa [pairInput] using hv
+      exact ⟨j, le_rfl, Or.inl rfl, hjuse, hor, w, hw, hwd, hwv,
+        Or.inl (congrArg Fin.val he), hprop⟩
+    by_cases hwuse : ResidualUse G C r (W (fun _ => true)) w
+    · exact ⟨j, le_rfl, Or.inl rfl, hjuse, hor, w, hw, hwd, hwv, Or.inr hwuse, hprop⟩
+    obtain ⟨i, rfl⟩ : ∃ i, w = n + i := ⟨w - n, by omega⟩
+    have hij : i < j := by omega
+    have hcone : InCone n C i j := (coneRec hjlen i).mpr
+      ⟨n + i, hw, by omega, hwlt, Or.inl (by omega)⟩
+    obtain ⟨k, hk, hc, hkp, hko, v, hv, hvd, hvv, hpu, hreach⟩ :=
+      ih i hij (hij.trans hj) hwd hwuse hwv
+    have hkj : InCone n C k j := by
+      rcases hc with rfl | hki
+      · exact hcone
+      · exact coneTrans _ hjlen _ _ hki hcone
+    exact ⟨k, hk.trans hij.le, Or.inr hkj, hkp, hko, v, hv, hvd, hvv, hpu,
+      fun x hx => hprop x (hreach x hx)⟩
+
+#print axioms firstUnprotectedResidualOr
+
+/-- A counted gate realizing a pure disjunction needs at least two
+    vertices in its support, by nonzero evaluation and minimality. -/
+private theorem pureGateSupportCard {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) {r j : ℕ} (hj : j < C.gates.length)
+    {R : Finset (Fin n)} (hR : RawForm C r (n + j) R false) : 1 < R.card := by
+  let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have hraw (x) : V x (n + j) = true ↔ ∃ z ∈ R, x z = true := by
+    simpa using hR.2 V hV x
+  obtain ⟨s, hs, _⟩ := (hraw _).mp (allTrueWires h.1 (n + j) (by omega))
+  by_contra! hcard
+  apply noEqualEarlier G C h j s.val hj (by have := s.isLt; omega)
+  intro x
+  change V x (n + j) = V x s.val
+  rw [hV.1 x s]
+  apply Bool.eq_iff_iff.mpr
+  rw [hraw x]
+  constructor
+  · rintro ⟨z, hz, hzx⟩
+    exact (Finset.card_le_one.mp hcard z hz s hs) ▸ hzx
+  · exact fun hx => ⟨s, hs, hx⟩
+
+/-- If some edge of a provider's star is missing after suspension,
+    tracing the distinguished vertex yields an exclusive OR. Its
+    incoming edge can be suppressed in a trimmed copy: the source is
+    the distinguished input itself or a protected substar already
+    covered by the residual output. -/
+theorem residualStarTrimBoundary {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r j : ℕ} (hJ : junk G C = {r}) (hj : j < r)
+    (hdirty : ¬ CleanWire G C (n + j))
+    {R : Finset (Fin n)} (hR : RawForm C r (n + j) R false)
+    {d s z : Fin n} (hstar : ∀ u ∈ R, G.Adj u d) (hs : s ∈ R) (hz : z ∈ R)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false) (hlost : W (pairInput z d) C.output = false) :
+    ∃ k ≤ j, (k = j ∨ InCone n C k j) ∧
+      ¬ ResidualUse G C r (W (fun _ => true)) (n + k) ∧
+      (gateAt C k).op = GateOp.or ∧ ∃ w ∈ (gateAt C k).inputs,
+        w = s.val ∨ ∃ Q : Finset (Fin n), RawForm C r w Q false ∧ s ∈ Q ∧ Q ⊆ R ∧
+          ResidualUse G C r (W (fun _ => true)) w ∧
+          ∀ u ∈ Q, W (pairInput u d) C.output = true := by
+  have hr := (junkMember G C hJ).1
+  have hjlen := hj.trans hr
+  have hjuse : ¬ ResidualUse G C r (W (fun _ => true)) (n + j) := by
+    intro hp
+    exact Bool.noConfusion (hlost.symm.trans (residualUseCoversPureStar G C h hl h4 hJ
+      hW hzero hR (pureGateSupportCard G C h hjlen hR) hstar hp z hz))
+  have hjs : W (pairInput s s) (n + j) = true :=
+    (hR.2 W hW _).mpr (Or.inl ⟨s, hs, by simp [pairInput]⟩)
+  obtain ⟨k, hk, hc, hkp, hko, w, hw, hwd, hwv, hboundary, hreach⟩ :=
+    firstUnprotectedResidualOr G C h hl hJ hW s j hj hdirty hjuse hjs
+  refine ⟨k, hk, hc, hkp, hko, w, hw, ?_⟩
+  by_cases hraw : w < n
+  · let v : Fin n := ⟨w, hraw⟩
+    have hv : pairInput s s v = true := (hW.1 (pairInput s s) v).symm.trans hwv
+    have he : v = s := by simpa [pairInput] using hv
+    exact Or.inl (congrArg Fin.val he)
+  have hwp := hboundary.resolve_left (by have := s.isLt; omega)
+  have hwlt := h.1.2.1 k (hk.trans_lt hjlen) w hw
+  obtain ⟨Q, hQ⟩ := preJunkDirtyRaw G C h hl hJ (by omega : w < n + r) hwd
+  have hqs : s ∈ Q := by
+    obtain ⟨v, hv, hs⟩ := ((hQ.2 W hW _).mp hwv).resolve_right (by simp)
+    have he : v = s := by simpa [pairInput] using hs
+    exact he ▸ hv
+  have hsub : Q ⊆ R := by
+    intro u hu
+    have ht := hreach (pairInput u u) ((hQ.2 W hW _).mpr
+      (Or.inl ⟨u, hu, by simp [pairInput]⟩))
+    obtain ⟨v, hv, hu⟩ := ((hR.2 W hW _).mp ht).resolve_right (by simp)
+    have he : v = u := by simpa [pairInput] using hu
+    exact he ▸ hv
+  obtain ⟨i, rfl⟩ : ∃ i, w = n + i := ⟨w - n, by omega⟩
+  exact Or.inr ⟨Q, hQ, hqs, hsub, hwp, residualUseCoversPureStar G C h hl h4 hJ hW hzero
+    hQ (pureGateSupportCard G C h (by omega) hQ) (fun u hu => hstar u (hsub hu)) hwp⟩
+
+#print axioms residualStarTrimBoundary
+
 /-- Suspending the junk at false is sound. Every lost edge belongs to one
     of the stars at the exposed centres, at most one for each support. -/
 theorem lostEdgesInExposedStars {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]

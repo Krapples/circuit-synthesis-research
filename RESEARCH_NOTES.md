@@ -133,6 +133,10 @@ readers. If there are three, the suspended output survives and every
 immediate reader is an OR. An immediate AND would force an additional
 collector OR to fold. Smaller reader counts, the three-OR case, and the
 many-junk reduction remain open in Lean.
+`residualStarTrimBoundary` locates an exclusive provider OR whose
+suppressed input is the designated raw vertex or a subprovider whose
+whole star survives suspension. The remaining construction must realize
+that saving and retain the residual output and the opposite provider.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero

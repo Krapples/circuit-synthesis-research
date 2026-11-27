@@ -240,6 +240,22 @@ products. Protection must follow uses in the suspended circuit. A path in
 the original circuit can avoid the junk itself and still pass through an
 AND whose other operand becomes false under suspension.
 
+`ResidualUse` follows OR paths back from a clean AND whose opposite
+operand survives on the all-true suspended input. A pure provider with
+at least two support vertices and such a use contributes its whole
+star to the suspended output. The graph's C4-freeness makes the centre
+of that star unique.
+
+`residualStarTrimBoundary` starts from a pre-junk provider with a
+missing star edge and traces the distinguished vertex through
+unprotected OR gates. It locates an exclusive OR fed either by the
+distinguished raw input or by a protected pure subprovider whose entire
+substar already survives. In the two-star repair the full opposite star
+covers the distinguished raw input's central edge. The remaining
+construction must rebuild the trimmed provider, preserve the residual
+output and the full opposite provider, and account for this OR saving
+alongside the junk and its immediate readers.
+
 ## Verification
 
 The complete [OneJunkErase.lean](lean/OneJunkErase.lean) source passed the
@@ -351,3 +367,10 @@ The checked bridge SHA-256 is
 `e9f57d7555b1612dab3e9969aa88d848be66e62345c2ab03d271fd49745aceeb`.
 The evidence is in `.research/ops/1795771140241605200-lean-check/`
 and `.research/ops/1795771365907966600-lean-check/`, respectively.
+
+The residual-provider and trim-boundary proofs passed the strict core
+check in 72.161 seconds with 54 axiom audits. The only reported axioms
+were `propext`, `Classical.choice`, and `Quot.sound`. The exact source
+SHA-256 is
+`314596a1d42ecd6180c33a100b3c8818822658e81250c7e87be2d681a7f76547`.
+The log and audit are in `.research/ops/1795771698466344200-lean-check/`.
