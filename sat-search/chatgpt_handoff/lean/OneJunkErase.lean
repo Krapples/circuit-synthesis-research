@@ -3852,7 +3852,6 @@ theorem noOneJunkWithTrimmedTwoStarsBudget {n : ℕ} (G : SimpleGraph (Fin n))
   have hsize : dropped.card = charges.card + 2 := by
     rw [show dropped = insert k (insert r charges) from rfl,
       Finset.card_insert_of_notMem hknot, Finset.card_insert_of_notMem hrnot]
-    omega
   obtain ⟨D, hD, hlen, hwires⟩ := compileMaskedSuspension C h.1 (trimOperand k p)
     Z hZraw hZgate hZzero dropped (by
       intro i hi
