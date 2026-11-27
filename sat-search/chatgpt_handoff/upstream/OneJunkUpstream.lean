@@ -1136,7 +1136,9 @@ theorem noLeastOneJunk {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     have hf : C.eval (List.ofFn x) = graphFun G ∅ x := congrFun h.2.1 x
     rw [← hf]
     change val C (List.ofFn x) C.output = true
-    simpa [he] using hx
+    rw [he]
+    change val C (List.ofFn x) (n+r) = true at hx
+    exact hx
   obtain ⟨p,q,hpq⟩ := twoOperands h.1 hr
   have hp := h.1.2.1 r hr p (by simp [hpq])
   obtain ⟨i,hri,hi,hir⟩ := noUnreadGate G C h r p hr hp hout

@@ -131,3 +131,7 @@ Run 46029030301 failed in research compilation. The previous site-specific repla
 ### Third assembled CI correction
 
 Run 46029757019 (job 140610297755) reported only two parser errors: declaration-scoped set_option commands were placed between documentation comments and declarations. All three new public proof declarations (site replacement, two OR readers, sole OR reader) printed exactly the permitted axioms propext, Classical.choice, Quot.sound. Move each option before its documentation comment, preserving its scope, proof body, theorem type, and dependency audit. The complete file and exact bridge have not yet passed CI; await the replacement revision before claiming verification.
+
+### Bridge-only correction
+
+Run 46030474888 passed every independent research proof. The bridge checked noOneJunkTwoReaders with permitted axioms; its sole error was the gateVal/val conversion in noLeastOneJunk's output-not-junk argument. Rewrite the output wire equality explicitly and expose the definitional gate value at the hypothesis. No mathematical proof obligations remain identified; exact bridge and final audit still pending. No upstream submission.
