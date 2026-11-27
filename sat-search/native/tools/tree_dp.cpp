@@ -45,11 +45,20 @@
 
 typedef uint32_t V;
 static bool g_verbose = false, g_prune = false;
+// --sym: store R only for one key per orbit of the twin-input group (see TREE_DP_MEMORY.md, method 1)
+static bool g_sym = false;
+static bool g_fold = false;  // --fold: fold placeholder values into the output-tree tables per depth (exact; opt-in)
+static bool g_foldcheck = false;  // TREE_DP_FOLDCHECK: cross-check the window filter against the direct fold filter
 // TREE_DP_DUMP=<file>: write per-key table counts after each DP (measurement only)
 static FILE* g_dump = nullptr;
 static std::mutex g_dump_mu;
 static std::atomic<int> g_dump_id{0};
 static int g_rows = 0;
+// opt-in check-phase profile (TREE_DP_PROF=1): per-thread counters, printed per shape with --verbose
+static bool g_prof = false;
+struct Prof { double tF = 0, tG = 0, tM = 0, tMid = 0, tFold = 0; uint64_t folds = 0, foldemp = 0, lastc = 0, Fscan = 0, Ds = 0, Gev = 0, vs = 0, mscan = 0, mbit = 0, midc = 0, midev = 0, mids = 0, splits = 0; };
+static thread_local Prof g_pf;
+static inline double pnow() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
 template <int NE> struct TabT { V e[NE]; };
 template <int NE> static inline bool tab_eq(const TabT<NE>& a, const TabT<NE>& b) {
@@ -220,6 +229,14 @@ template <int NE> struct DPT {
   std::vector<int> maxin;  // by placeholder counts (base 5): max input leaves of a needed key, -1 = none
   std::vector<std::vector<Tab>> R;
   std::vector<char> done;
+  // --sym. Inputs i, j are twins when swapping them maps the cared-row set onto itself; twins with equal
+  // multiplicity in M form a class, and the classes generate a group G that fixes M and the wires. A tree with
+  // leaf multiset K relabelled by g in G has leaf multiset gK and the row-permuted table, so R(gK) = g R(K).
+  // Only the representative of each key orbit (class counts in descending order) stores R; every other key
+  // reads its representative through a row-permutation lookup table.
+  using Lut = std::array<std::array<V, 256>, 4>;
+  std::vector<int> repk, lutk;  // per key: representative key, index into luts (-1 = identity)
+  std::vector<Lut> luts;
 
   DPT(const Unit& un, const Shape& sh) : u(un), nc(un.n + NP), maxin(125, -1) {
     cap = sh.M;
@@ -241,7 +258,92 @@ template <int NE> struct DPT {
         if (dom) maxin[a] = std::max(maxin[a], tot - (summin - sh.min_inputs(t)));
       }
     }
+    repk.resize(nkeys);
+    lutk.assign(nkeys, -1);
+    for (int k = 0; k < nkeys; ++k) repk[k] = k;
+    if (g_sym) init_sym(sh);
   }
+  void init_sym(const Shape& sh) {
+    const int n = u.n;
+    std::map<unsigned long long, int> rowidx;
+    for (int r = 0; r < u.rows; ++r) rowidx[u.row[r]] = r;
+    auto swapped = [&](unsigned long long m, int i, int j) {
+      unsigned long long bi = m >> i & 1, bj = m >> j & 1;
+      m &= ~((1ULL << i) | (1ULL << j));
+      return m | (bi << j) | (bj << i);
+    };
+    auto twins = [&](int i, int j) {
+      for (int r = 0; r < u.rows; ++r) if (!rowidx.count(swapped(u.row[r], i, j))) return false;
+      return true;
+    };
+    // classes: twin and same multiplicity (twin-ness is an equivalence: (ik) = (ij)(jk)(ij))
+    std::vector<int> cl(n, -1);
+    std::vector<std::vector<int>> cls;
+    for (int i = 0; i < n; ++i) {
+      if (cl[i] >= 0) continue;
+      cl[i] = (int)cls.size();
+      cls.push_back({i});
+      for (int j = i + 1; j < n; ++j)
+        if (cl[j] < 0 && sh.M[j] == sh.M[i] && twins(i, j)) { cl[j] = cl[i]; cls.back().push_back(j); }
+    }
+    std::map<std::vector<int>, int> lutid;
+    std::vector<int> d, rd(nc), pi(n);
+    for (int k = 0; k < nkeys; ++k) {
+      digits(k, d);
+      rd = d;
+      for (int i = 0; i < n; ++i) pi[i] = i;
+      for (auto& c : cls) {
+        if (c.size() < 2) continue;
+        // members of K by count descending (stable); the representative puts those counts on c in index order
+        std::vector<int> byc(c);
+        std::stable_sort(byc.begin(), byc.end(), [&](int a, int b) { return d[a] > d[b]; });
+        for (size_t q = 0; q < c.size(); ++q) { rd[c[q]] = d[byc[q]]; pi[c[q]] = byc[q]; }
+      }
+      int rk = 0;
+      for (int c = 0; c < nc; ++c) rk += rd[c] * stride[c];
+      repk[k] = rk;
+      bool id = true;
+      for (int i = 0; i < n; ++i) id &= pi[i] == i;
+      if (id) continue;
+      auto it = lutid.find(pi);
+      if (it == lutid.end()) {
+        // row r of the representative goes to the row with the relabelled input set
+        std::vector<int> sigma(u.rows);
+        for (int r = 0; r < u.rows; ++r) {
+          unsigned long long m = 0;
+          for (int i = 0; i < n; ++i) if (u.row[r] >> i & 1) m |= 1ULL << pi[i];
+          sigma[r] = rowidx.at(m);
+        }
+        Lut L{};
+        for (int b = 0; b < 4; ++b)
+          for (int x = 0; x < 256; ++x) {
+            V o = 0;
+            for (int t = 0; t < 8; ++t) if ((x >> t & 1) && 8 * b + t < u.rows) o |= V(1) << sigma[8 * b + t];
+            L[b][x] = o;
+          }
+        it = lutid.emplace(pi, (int)luts.size()).first;
+        luts.push_back(L);
+      }
+      lutk[k] = it->second;
+    }
+  }
+  static V pv(V v, const Lut& L) { return L[0][v & 255] | L[1][v >> 8 & 255] | L[2][v >> 16 & 255] | L[3][v >> 24]; }
+  Tab pt(const Tab& t, int K) const {
+    if (lutk[K] < 0) return t;
+    const Lut& L = luts[lutk[K]];
+    Tab o;
+    for (int i = 0; i < NE; ++i) o.e[i] = pv(t.e[i], L);
+    return o;
+  }
+  // the tables of key K: R[K] itself, or its representative's tables permuted into buf
+  const std::vector<Tab>& view(int K, std::vector<Tab>& buf) const {
+    if (repk[K] == K) return R[K];
+    const std::vector<Tab>& src = R[repk[K]];
+    buf.resize(src.size());
+    for (size_t i = 0; i < src.size(); ++i) buf[i] = pt(src[i], K);
+    return buf;
+  }
+  size_t count(int K) const { return R[repk[K]].size(); }
   void digits(int k, std::vector<int>& d) const {
     d.resize(nc);
     for (int c = 0; c < nc; ++c) d[c] = k / stride[c] % (cap[c] + 1);
@@ -309,10 +411,14 @@ template <int NE> struct DPT {
       digits(K, d);
       if (!needed(d)) continue;
       done[K] = 1;
+      if (repk[K] != K) continue;  // --sym: read through the representative (built in this size band)
       if (tot[K] == 1) { int c = 0; while (d[c] == 0) ++c; R[K].push_back(leaf(c)); continue; }
       TabSetT<NE> set(1024);
+      std::vector<Tab> bufB, bufC;
       splits(d, K, [&](int B, int C) {
-        for (const Tab& a : R[B]) for (const Tab& b : R[C]) {
+        const std::vector<Tab>& RB = view(B, bufB);
+        const std::vector<Tab>& RC = view(C, bufC);
+        for (const Tab& a : RB) for (const Tab& b : RC) {
           Tab x, y;
           for (int i = 0; i < NE; ++i) { x.e[i] = a.e[i] & b.e[i]; y.e[i] = a.e[i] | b.e[i]; }
           if (!constant(x) && !(g_prune && redundant(x, a, b, d))) set.insert(x);
@@ -347,8 +453,11 @@ template <int NE> struct DPT {
     for (int x : d) s += x;
     if (s == 1) { int c = 0; while (d[c] == 0) ++c; return c < u.n ? c : -1 - (c - u.n); }
     int out = -1000000000;
+    std::vector<Tab> bufB, bufC;
     splits(d, K, [&](int B, int C) {
-      for (const Tab& a : R[B]) for (const Tab& b : R[C]) {
+      const std::vector<Tab>& RB = view(B, bufB);
+      const std::vector<Tab>& RC = view(C, bufC);
+      for (const Tab& a : RB) for (const Tab& b : RC) {
         bool isand = true, isor = true;
         for (int i = 0; i < NE; ++i) { isand &= (a.e[i] & b.e[i]) == t.e[i]; isor &= (a.e[i] | b.e[i]) == t.e[i]; }
         if (!isand && !isor) continue;
@@ -379,12 +488,14 @@ static bool meet(const std::vector<V>& vs, const std::vector<V>& Ds, V T, int* v
   if (vs.empty() || Ds.empty()) return false;
   double scan = (double)vs.size() * Ds.size(), build = (double)(1u << g_rows) * g_rows;
   if (scan <= 4 * build) {
+    if (g_prof) g_pf.mscan += (uint64_t)scan;
     for (size_t a = 0; a < vs.size(); ++a) {
       V x = vs[a] ^ T;
       for (size_t b = 0; b < Ds.size(); ++b) if ((x & Ds[b]) == 0) { *vi = (int)a; *di = (int)b; return true; }
     }
     return false;
   }
+  if (g_prof) ++g_pf.mbit;
   const V FULL = g_rows == 32 ? ~V(0) : (V(1) << g_rows) - 1;
   std::vector<uint32_t> Y((size_t)1 << g_rows, 0);
   for (size_t a = 0; a < vs.size(); ++a) { V y = (vs[a] ^ T) & FULL; if (!Y[y]) Y[y] = (uint32_t)a + 1; }
@@ -409,7 +520,8 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
   const int p = sh.p, n = u.n;
   if (p == 0) {
     int K = dp.key(sh.M, nullptr);
-    for (auto& t : dp.R[K]) if (t.e[0] == u.T) {
+    std::vector<Tab> buf;
+    for (auto& t : dp.view(K, buf)) if (t.e[0] == u.T) {
       if (w) {
         int root = dp.build(K, t, w->gates);
         for (auto& g : w->gates)
@@ -426,7 +538,10 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
   auto filtered = [&](int K) -> const std::vector<Tab>& {
     if (!Fdone[K]) {
       Fdone[K] = 1;
-      for (auto& t : dp.R[K]) if ((t.e[0] & ~u.T) == 0 && (u.T & ~t.e[NE - 1]) == 0) Fc[K].push_back(t);
+      for (auto& t0 : dp.R[dp.repk[K]]) {
+        Tab t = dp.pt(t0, K);
+        if ((t.e[0] & ~u.T) == 0 && (u.T & ~t.e[NE - 1]) == 0) Fc[K].push_back(t);
+      }
     }
     return Fc[K];
   };
@@ -457,7 +572,10 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
 
   std::function<bool(int)> values = [&](int j) -> bool {
     if (j == last) {
+      double pt0 = g_prof ? pnow() : 0;
+      if (g_prof) ++g_pf.lastc;
       const std::vector<Tab>& F = filtered(keys[p]);
+      if (g_prof) g_pf.Fscan += F.size();
       std::vector<V> Ds;
       std::vector<std::array<int, 4>> src;
       for (size_t fi = 0; fi < F.size(); ++fi) {
@@ -474,6 +592,7 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
           if (w) src.push_back({(int)fi, pick[0], pick[1], pick[2]});
         }
       }
+      if (g_prof) { double t = pnow(); g_pf.tF += t - pt0; pt0 = t; g_pf.Ds += Ds.size(); }
       if (Ds.empty()) return false;
       if (indep_last) {
         Dacc.insert(Dacc.end(), Ds.begin(), Ds.end());
@@ -481,31 +600,164 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
         return Dacc.size() > LIM && flush();
       }
       if (!w) { std::sort(Ds.begin(), Ds.end()); Ds.erase(std::unique(Ds.begin(), Ds.end()), Ds.end()); }
-      const std::vector<Tab>& G = dp.R[keys[last]];
+      const std::vector<Tab>& G = dp.R[dp.repk[keys[last]]];
       std::vector<V> vs;
       std::vector<int> gi;
       for (size_t a = 0; a < G.size(); ++a) {
-        V v = dp.eval(G[a], vals);
+        V v = dp.eval(dp.pt(G[a], keys[last]), vals);
         if (v != 0 && v != u.FULL) { vs.push_back(v); gi.push_back((int)a); }
       }
+      if (g_prof) { double t = pnow(); g_pf.tG += t - pt0; pt0 = t; g_pf.Gev += G.size(); g_pf.vs += vs.size(); }
       int vi, di;
-      if (!meet(vs, Ds, u.T, &vi, &di)) return false;
+      bool mok = meet(vs, Ds, u.T, &vi, &di);
+      if (g_prof) g_pf.tM += pnow() - pt0;
+      if (!mok) return false;
       if (w) { pick[last] = gi[vi]; pick[p] = src[di][0]; }
       return true;
     }
-    const std::vector<Tab>& G = dp.R[keys[j]];
+    double pm0 = g_prof ? pnow() : 0;
+    const std::vector<Tab>& G = dp.R[dp.repk[keys[j]]];
     std::vector<std::pair<V, int>> vs;
     for (size_t a = 0; a < G.size(); ++a) {
-      V v = dp.eval(G[a], vals);
+      V v = dp.eval(dp.pt(G[a], keys[j]), vals);
       if (v != 0 && v != u.FULL) vs.push_back({v, (int)a});
     }
     std::sort(vs.begin(), vs.end(), [](const std::pair<V, int>& x, const std::pair<V, int>& y) { return x.first < y.first; });
     vs.erase(std::unique(vs.begin(), vs.end(),
                          [](const std::pair<V, int>& x, const std::pair<V, int>& y) { return x.first == y.first; }),
              vs.end());
+    if (g_prof) { g_pf.tMid += pnow() - pm0; ++g_pf.midc; g_pf.midev += G.size(); g_pf.mids += vs.size(); }
     for (auto& pr : vs) {
       vals[j] = pr.first; pick[j] = pr.second;
       if (values(j + 1)) return true;
+    }
+    vals[j] = 0;
+    return false;
+  };
+
+  // --fold (exact, opt-in): FL[j] holds the output-tree tables with v_0..v_{j-1} folded into the entries
+  // without those placeholder bits, kept only if t(rest = 0) inside T inside t(rest = all ones) (monotone, so
+  // necessary for every later choice of values). GL[j] does the same for h_last's tables
+  // (no filter). Folding preserves eval at any later values, so each v_last check sees the same lo/hi/D as
+  // values(); the inner loops scan the short folded lists instead of every table.
+  struct FT { Tab t; int i; };
+  std::vector<std::vector<FT>> FL(p + 1), GL(p + 1);
+  auto fold = [&](const std::vector<FT>& in, int j, V v, bool filt, std::vector<FT>& out) {
+    out.clear();
+    for (const FT& f : in) {
+      FT g = f;
+      for (int i = 0; i < NE; ++i)
+        if (i >> j & 1) { g.t.e[i ^ (1 << j)] |= g.t.e[i] & v; g.t.e[i] = 0; }
+      if (filt) {
+        V hi = 0;
+        for (int i = 0; i < NE; ++i) hi |= g.t.e[i];
+        if ((g.t.e[0] & ~u.T) != 0 || (u.T & ~hi) != 0) continue;
+      }
+      out.push_back(g);
+    }
+  };
+  // the filter after folding v into placeholder j, as a window on v: with A (B) the OR of the entries without
+  // (with) bit j, fold(t)[0] = e[0] | (e[1<<j] & v) must lie inside T and T inside A | (B & v), i.e.
+  // need = T & ~A inside v (and inside B) and forbid = e[1<<j] & ~T disjoint from v. v is never 0, so
+  // forbid = all ones rejects the table for every v.
+  struct Win { V need, forbid; };
+  std::vector<std::vector<Win>> WL(p + 1);
+  auto windows = [&](const std::vector<FT>& in, int j, std::vector<Win>& out) {
+    out.resize(in.size());
+    for (size_t a = 0; a < in.size(); ++a) {
+      const Tab& t = in[a].t;
+      V A = 0, B = 0;
+      for (int i = 0; i < NE; ++i) { if (i >> j & 1) B |= t.e[i]; else A |= t.e[i]; }
+      V need = u.T & ~A, forbid = t.e[1 << j] & ~u.T;
+      if ((need & ~B) != 0 || (t.e[0] & ~u.T) != 0) forbid = ~V(0);
+      out[a] = {need, forbid};
+    }
+  };
+  auto fold_win = [&](const std::vector<FT>& in, const std::vector<Win>& wn, int j, V v, std::vector<FT>& out) {
+    out.clear();
+    for (size_t a = 0; a < in.size(); ++a) {
+      if ((wn[a].need & ~v) != 0 || (wn[a].forbid & v) != 0) continue;
+      FT g = in[a];
+      for (int i = 0; i < NE; ++i)
+        if (i >> j & 1) { g.t.e[i ^ (1 << j)] |= g.t.e[i] & v; g.t.e[i] = 0; }
+      out.push_back(g);
+    }
+  };
+  // buffers reused across calls (the last level is a leaf, and each middle depth owns its own list)
+  std::vector<V> fDs, fvs;
+  std::vector<std::array<int, 4>> fsrc;
+  std::vector<int> fgi;
+  std::vector<std::vector<std::pair<V, int>>> fmid(p + 1);
+  std::function<bool(int)> values_fold = [&](int j) -> bool {
+    if (j == last) {
+      double pt0 = g_prof ? pnow() : 0;
+      const std::vector<FT>& F = FL[j];
+      if (g_prof) { ++g_pf.lastc; g_pf.Fscan += F.size(); }
+      std::vector<V>& Ds = fDs;
+      std::vector<std::array<int, 4>>& src = fsrc;
+      Ds.clear(); src.clear();
+      for (const FT& f : F) {
+        V lo = 0, hi = 0;
+        for (int i = 0; i < NE; ++i) { hi |= f.t.e[i]; if (!(i >> last & 1)) lo |= f.t.e[i]; }
+        if ((lo & ~u.T) == 0 && (u.T & ~hi) == 0) {
+          Ds.push_back(hi & ~lo);
+          if (w) src.push_back({f.i, pick[0], pick[1], pick[2]});
+        }
+      }
+      if (g_prof) { double t = pnow(); g_pf.tF += t - pt0; pt0 = t; g_pf.Ds += Ds.size(); }
+      if (Ds.empty()) return false;
+      if (indep_last) {
+        Dacc.insert(Dacc.end(), Ds.begin(), Ds.end());
+        if (w) Dsrc.insert(Dsrc.end(), src.begin(), src.end());
+        return Dacc.size() > LIM && flush();
+      }
+      if (!w) { std::sort(Ds.begin(), Ds.end()); Ds.erase(std::unique(Ds.begin(), Ds.end()), Ds.end()); }
+      std::vector<V>& vs = fvs;
+      std::vector<int>& gi = fgi;
+      vs.clear(); gi.clear();
+      for (const FT& g : GL[j]) {  // every placeholder h_last reads is folded: its value is entry 0
+        V v = g.t.e[0];
+        if (v != 0 && v != u.FULL) { vs.push_back(v); gi.push_back(g.i); }
+      }
+      if (g_prof) { double t = pnow(); g_pf.tG += t - pt0; pt0 = t; g_pf.Gev += GL[j].size(); g_pf.vs += vs.size(); }
+      int vi, di;
+      bool mok = meet(vs, Ds, u.T, &vi, &di);
+      if (g_prof) g_pf.tM += pnow() - pt0;
+      if (!mok) return false;
+      if (w) { pick[last] = gi[vi]; pick[p] = src[di][0]; }
+      return true;
+    }
+    double pm0 = g_prof ? pnow() : 0;
+    const std::vector<Tab>& G = dp.R[dp.repk[keys[j]]];
+    std::vector<std::pair<V, int>>& vs = fmid[j];
+    vs.clear();
+    for (size_t a = 0; a < G.size(); ++a) {
+      V v = dp.eval(dp.pt(G[a], keys[j]), vals);
+      if (v != 0 && v != u.FULL) vs.push_back({v, (int)a});
+    }
+    std::sort(vs.begin(), vs.end(), [](const std::pair<V, int>& x, const std::pair<V, int>& y) { return x.first < y.first; });
+    vs.erase(std::unique(vs.begin(), vs.end(),
+                         [](const std::pair<V, int>& x, const std::pair<V, int>& y) { return x.first == y.first; }),
+             vs.end());
+    if (g_prof) { g_pf.tMid += pnow() - pm0; ++g_pf.midc; g_pf.midev += G.size(); g_pf.mids += vs.size(); }
+    if (!vs.empty()) windows(FL[j], j, WL[j]);
+    for (auto& pr : vs) {
+      vals[j] = pr.first; pick[j] = pr.second;
+      double pf0 = g_prof ? pnow() : 0;
+      if (g_foldcheck) {  // debug: the window filter must keep exactly the tables the direct filter keeps
+        std::vector<FT> ref;
+        fold(FL[j], j, pr.first, true, ref);
+        fold_win(FL[j], WL[j], j, pr.first, FL[j + 1]);
+        bool same = ref.size() == FL[j + 1].size();
+        for (size_t a = 0; same && a < ref.size(); ++a) same = ref[a].i == FL[j + 1][a].i && tab_eq(ref[a].t, FL[j + 1][a].t);
+        if (!same) { std::fprintf(stderr, "FOLD WINDOW MISMATCH %s\n", sh.str().c_str()); std::abort(); }
+      } else
+        fold_win(FL[j], WL[j], j, pr.first, FL[j + 1]);
+      bool emp = FL[j + 1].empty();
+      if (!emp && !indep_last) fold(GL[j], j, pr.first, false, GL[j + 1]);
+      if (g_prof) { g_pf.tFold += pnow() - pf0; ++g_pf.folds; g_pf.foldemp += emp; }
+      if (emp) continue;
+      if (values_fold(j + 1)) return true;
     }
     vals[j] = 0;
     return false;
@@ -521,14 +773,27 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
       if (total(left) < mins[p]) return false;
       keys[p] = dp.key(S[p], sh.r[p]);
       if (!dp.done[keys[p]] || filtered(keys[p]).empty()) return false;
+      if (g_prof) ++g_pf.splits;
       Dacc.clear(); Dsrc.clear();
       if (indep_last) {
         vsL.clear(); giL.clear();
-        const std::vector<Tab>& G = dp.R[keys[last]];
+        const std::vector<Tab>& G = dp.R[dp.repk[keys[last]]];
         for (size_t a = 0; a < G.size(); ++a) {
-          V v = G[a].e[0];
+          V v = dp.pt(G[a], keys[last]).e[0];
           if (v != 0 && v != u.FULL) { vsL.push_back(v); giL.push_back((int)a); }
         }
+      }
+      if (g_fold) {
+        const std::vector<Tab>& F0 = filtered(keys[p]);
+        FL[0].clear();
+        for (size_t fi = 0; fi < F0.size(); ++fi) FL[0].push_back({F0[fi], (int)fi});
+        if (!indep_last) {
+          GL[0].clear();
+          const std::vector<Tab>& G = dp.R[dp.repk[keys[last]]];
+          for (size_t a = 0; a < G.size(); ++a) GL[0].push_back({dp.pt(G[a], keys[last]), (int)a});
+        }
+        if (values_fold(0)) return true;
+        return indep_last && flush();
       }
       if (values(0)) return true;
       return indep_last && flush();
@@ -541,7 +806,7 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
       int st = total(St);
       if (st < mins[t] || lt - st < restmin[t + 1]) continue;
       keys[t] = dp.key(St, sh.r[t]);
-      if (!dp.done[keys[t]] || dp.R[keys[t]].empty()) continue;
+      if (!dp.done[keys[t]] || dp.count(keys[t]) == 0) continue;
       for (int c = 0; c < n; ++c) nl[c] = left[c] - St[c];
       if (assign(t + 1, nl)) return true;
     } while (next_sub(St, left));
@@ -552,7 +817,7 @@ template <int NE> static bool check_one(const Unit& u, const DPT<NE>& dp, const 
     // trees h_0..h_{p-1} in order, then the output tree; placeholder j -> root wire of h_j
     std::vector<int> rootw(p, -1);
     for (int t = 0; t <= p; ++t) {
-      const Tab& tab = t < p ? dp.R[keys[t]][pick[t]] : filtered(keys[p])[pick[p]];
+      const Tab tab = t < p ? dp.pt(dp.R[dp.repk[keys[t]]][pick[t]], keys[t]) : filtered(keys[p])[pick[p]];
       std::vector<std::array<int, 3>> lg;
       int root = dp.build(keys[t], tab, lg);
       int base = n + (int)w->gates.size();
@@ -573,6 +838,7 @@ template <int NE> static std::vector<char> check_shape(const std::vector<const U
   double tdp = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
   std::vector<char> ok(us.size(), 0);
   wit.assign(us.size(), {});
+  g_pf = Prof();
   for (size_t j = 0; j < us.size(); ++j)
     if (check_one<NE>(*us[j], dp, sh, nullptr)) { ok[j] = 1; check_one<NE>(*us[j], dp, sh, &wit[j]); }
   if (g_verbose && (sh.p >= 1 || tdp > 5)) {
@@ -583,6 +849,15 @@ template <int NE> static std::vector<char> check_shape(const std::vector<const U
     std::fprintf(stderr, "shape %s dp %.2fs total %.2fs tables %zu max %zu sat %d/%zu\n", sh.str().c_str(), tdp,
                  std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(), tot, mx, nok,
                  us.size());
+    if (g_prof && sh.p >= 1)
+      std::fprintf(stderr,
+                   "  prof %s: splits %llu | mid calls %llu evals %llu distinct %llu %.2fs | last calls %llu Fscan %llu "
+                   "Ds %llu %.2fs | Gevals %llu vs %llu %.2fs | meet %.2fs scanops %llu bitmaps %llu | folds %llu empty %llu %.2fs%c",
+                   sh.str().c_str(), (unsigned long long)g_pf.splits, (unsigned long long)g_pf.midc,
+                   (unsigned long long)g_pf.midev, (unsigned long long)g_pf.mids, g_pf.tMid,
+                   (unsigned long long)g_pf.lastc, (unsigned long long)g_pf.Fscan, (unsigned long long)g_pf.Ds, g_pf.tF,
+                   (unsigned long long)g_pf.Gev, (unsigned long long)g_pf.vs, g_pf.tG, g_pf.tM,
+                   (unsigned long long)g_pf.mscan, (unsigned long long)g_pf.mbit, (unsigned long long)g_pf.folds, (unsigned long long)g_pf.foldemp, g_pf.tFold, '\n');
   }
   return ok;
 }
@@ -612,6 +887,9 @@ struct Task { int group, s, shape; };
 
 int main(int argc, char** argv) {
   if (const char* dp = std::getenv("TREE_DP_DUMP")) g_dump = std::fopen(dp, "w");
+  g_prof = std::getenv("TREE_DP_PROF") != nullptr;
+  g_foldcheck = std::getenv("TREE_DP_FOLDCHECK") != nullptr;
+  const char* only_shape = std::getenv("TREE_DP_SHAPE");  // profiling: run only the shape with this str()
   int smax = 2, threads = 11, heavy = 4;
   bool to_budget = false;
   for (int i = 1; i < argc; ++i) {
@@ -622,6 +900,8 @@ int main(int argc, char** argv) {
     else if (a == "--to-budget") to_budget = true;  // per unit, stop at s = BUDGET - (n-1)
     else if (a == "--verbose") g_verbose = true;
     else if (a == "--prune") g_prune = true;  // drop redundant gates (sound for minimum circuits; opt-in)
+    else if (a == "--sym") g_sym = true;  // store one key per twin-input orbit (memory; opt-in)
+    else if (a == "--fold") g_fold = true;  // fold and filter output tables per placeholder value (time; opt-in)
   }
   if (smax < 0 || smax > 3 || heavy < 1) { std::fprintf(stderr, "--smax must be 0..3, --heavy >= 1\n"); return 2; }
   std::vector<Unit> units;
@@ -665,7 +945,8 @@ int main(int argc, char** argv) {
       for (int i : groups[gi]) if (found[i] < 0 && s <= ucap[i]) any = true;
       if (!any) continue;
       gshapes[gi] = shapes_for(units[groups[gi][0]].n, s);
-      for (int k = 0; k < (int)gshapes[gi].size(); ++k) tasks.push_back({gi, s, k});
+      for (int k = 0; k < (int)gshapes[gi].size(); ++k)
+        if (!only_shape || gshapes[gi][k].str() == only_shape) tasks.push_back({gi, s, k});
     }
     // heavy shapes first (largest p, then fewest extra inputs = most shared reads)
     std::stable_sort(tasks.begin(), tasks.end(), [&](const Task& a, const Task& b) {

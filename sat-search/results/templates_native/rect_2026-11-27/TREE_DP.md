@@ -86,3 +86,26 @@ prints a witness circuit, which the tool checks by simulation on the cared rows.
 
 See `README.md` (section "Tree DP") for the differential checks against native SAT minima and the
 results on the open units.
+
+## Options (opt-in, exact)
+
+- **`--sym`.**
+  - Inputs i and j are twins if swapping them maps the cared-row set to itself. Twins with equal
+    multiplicity in the shape's M form classes, and the symmetric group of each class acts on keys.
+  - Since R(K) does not depend on T, R(gK) = g·R(K), where g permutes the 32-bit row vectors.
+    Constant and redundant tables are mapped to constant and redundant tables.
+  - So only the key whose class counts are in descending order is built. Every other key reads it
+    through a row-permutation lookup table.
+  - The set of tables seen by every split and check is unchanged.
+- **`--fold`.**
+  - In the step-5 check, once v_j is chosen it is folded into the output tree's tables:
+    e[i without j] |= e[i] & v_j, and then e[i] = 0 for every i that contains j.
+  - This preserves the table's value at every later choice of values.
+  - A folded table is kept only if t(rest = 0) ⊆ T ⊆ t(rest = all ones). The tree is monotone in
+    each placeholder, so this is necessary for every later choice.
+  - This test is evaluated before folding as a window on v_j. Let A (B) be the OR of the entries
+    without (with) bit j. Then need = T & ~A must be inside v_j and inside B, and
+    forbid = e[1<<j] & ~T must be disjoint from v_j.
+  - h_{p-1}'s tables are folded the same way, without a filter.
+  - The lo, hi and D sets at the last step are therefore the ones the unfolded check computes. Only
+    tables that cannot meet any completion are skipped.

@@ -38,3 +38,29 @@ The generic version (`--smax 3`, witness output) reproduces every s ≤ 2 verdic
 - Not checked: the s = 3 lower-bound direction. No 3x3 or 3x4 target needs s = 3. On the 39 `t44b` units
   with DP > 10, `template_synth` at exactly k = 10 (`t44b_gt10_k10.txt`) timed out after 120 s on all 39,
   so SAT cannot confirm them.
+
+## `--sym` and `--fold` (opt-in, 2026-11-27)
+
+Both options are exact. Their soundness arguments are in `../TREE_DP.md`, section "Options".
+The baseline for `--sym` is the default binary; the baseline for `--fold` is `--sym` alone.
+
+| set | units | `--sym` vs default | `--sym --fold` vs `--sym` |
+| --- | --- | --- | --- |
+| `a33` (s ≤ 3) | 156 | 0 verdicts differ | 0 differ |
+| `a34` (s ≤ 3) | 1500 | 0 differ | 0 differ |
+| `rand80` (s ≤ 2) | 80 | 0 differ | 0 differ |
+| `hard45_sel` (s ≤ 2) | 66 | 0 differ | 0 differ |
+| rect45b open units (s ≤ 3) | 3 | gt 11 reproduced | gt 11 reproduced |
+
+- Every witness passed the tool's own simulation in every run (0 `WITNESS CHECK FAILED`).
+- `TREE_DP_FOLDCHECK=1` recomputed the direct fold filter beside the window filter on every fold of
+  the differential runs and found 0 mismatches.
+- rect45b s = 3 on 22 threads with `--heavy 4`:
+  - `--sym`: 639 s, peak 1.95 GB.
+  - `--sym --fold`: 491 s, peak 1.99 GB.
+  - Before both options (11 threads, `--heavy 3`): 1950 s.
+- Slowest shape alone, one thread (`TREE_DP_SHAPE='p3 M111111111 r0=000 r1=100 r2=010 r3=112'`,
+  `TREE_DP_PROF=1`): 213 s with `--sym`, 76 s with `--fold`.
+  - Without `--fold`, 172 s of the 213 s was the output-tree scan: 14.9 billion table scans over
+    58M (v0, v1) pairs.
+  - The matching step took 2 s and never used the bitmap.
