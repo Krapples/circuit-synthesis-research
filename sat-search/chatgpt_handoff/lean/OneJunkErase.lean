@@ -4276,7 +4276,10 @@ theorem mixedProviderNoResidualUse {n : ℕ} (G : SimpleGraph (Fin n))
     (fun x hx => (hS.2 W hW x).mpr (Or.inl hx))
   have h1 := hcolour u d (hd u hu).1
   have h2 := hcolour v d (hd v hv).1
-  cases colour u <;> cases colour v <;> cases colour d <;> simp_all
+  generalize colour u = cu at h1 hmix
+  generalize colour v = cv at h2 hmix
+  generalize colour d = cd at h1 h2
+  cases cu <;> cases cv <;> cases cd <;> simp_all
 
 #print axioms noOneJunkOneStarWithAndReader
 #print axioms mixedProviderNoResidualUse
@@ -4323,7 +4326,6 @@ theorem dirtyRawFormNoOrReader {n : ℕ} (G : SimpleGraph (Fin n))
       have hAs : V x a = true ↔ hits A x := by simpa [hits] using hA.2 V hV x
       have hBs : V x b = true ↔ hits B x := by simpa [hits] using hB.2 V hV x
       rw [evalExcept_or hV hj hjr hor x, hab]
-      simp only [List.mem_cons,List.mem_singleton]
       constructor
       · rintro ⟨v,hv,ht⟩
         have he : v = a ∨ v = b := by simpa using hv
@@ -4334,8 +4336,8 @@ theorem dirtyRawFormNoOrReader {n : ℕ} (G : SimpleGraph (Fin n))
           exact Or.inl ⟨z,Finset.mem_union.mpr (Or.inr hz),hzx⟩
       · rintro (⟨z,hz,hzx⟩ | ⟨hf,_⟩)
         · rcases Finset.mem_union.mp hz with hz | hz
-          · exact ⟨a,Or.inl rfl,hAs.mpr ⟨z,hz,hzx⟩⟩
-          · exact ⟨b,Or.inr rfl,hBs.mpr ⟨z,hz,hzx⟩⟩
+          · exact ⟨a,by simp,hAs.mpr ⟨z,hz,hzx⟩⟩
+          · exact ⟨b,by simp,hBs.mpr ⟨z,hz,hzx⟩⟩
         · cases hf
 
 /-- Without an immediate OR reader, all clean AND gates that do not
@@ -4359,7 +4361,9 @@ theorem cleanTopUnaffectedNoOrReader {n : ℕ} (G : SimpleGraph (Fin n))
   obtain ⟨S,hS⟩ := dirtyRawFormNoOrReader G C h hl hJ hno p (by omega)
     (fun he => hnread (he ▸ hp)) (noCleanAndOperand G C h j p hj hp hand)
   apply Bool.eq_iff_iff.mpr
-  exact (hS.2 V hV x).trans (hS.2 W hW x).symm
+  have hVraw : V x p = true ↔ hits S x := by simpa [hits] using hS.2 V hV x
+  have hWraw : W x p = true ↔ hits S x := by simpa [hits] using hS.2 W hW x
+  exact hVraw.trans hWraw.symm
 
 #print axioms dirtyRawFormNoOrReader
 #print axioms cleanTopUnaffectedNoOrReader
@@ -4402,10 +4406,9 @@ private theorem maskedValueLe {n : ℕ} (C : Circuit) (h : IsAO2 n C)
         · have hz := hm j v hh
           rw [hn] at hz
           contradiction
-      rw [hn, if_false] at he
-      rw [hm', if_false]
+      have he' : maskedValue C r N fill x v = true := by simpa [hn] using he
       have hlt := h.2.1 j hj v hv
-      exact ih v hlt (by omega) he
+      simpa [hm'] using ih v hlt (by omega) he'
     rcases h.1 _ (gateAt_mem hj) with hand | hor
     · simp only [hand,GateOp.eval,List.all_map,List.all_eq_true,Function.comp_apply] at ht ⊢
       exact fun v hv => hi v hv (ht v hv)
