@@ -1701,4 +1701,349 @@ theorem noSingleOverlapNoExposure {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms collectorSemantics
 #print axioms noSingleOverlapNoExposure
 
+private def hits {n : ℕ} (S : Finset (Fin n)) (x : Fin n → Bool) : Prop :=
+  ∃ v ∈ S, x v = true
+
+private lemma adjOfPair {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    {a b : Fin n} (h : graphFun G ∅ (pairInput a b) = true) : G.Adj a b := by
+  obtain ⟨u, v, huv, hu, hv⟩ := (graph_true G _).mp h
+  have hu' : u = a ∨ u = b := by simpa [pairInput] using hu
+  have hv' : v = a ∨ v = b := by simpa [pairInput] using hv
+  rcases hu' with rfl | rfl <;> rcases hv' with rfl | rfl
+  · exact (G.ne_of_adj huv rfl).elim
+  · exact huv
+  · exact (G.adj_comm _ _).mp huv
+  · exact (G.ne_of_adj huv rfl).elim
+
+private lemma originalJunkProduct {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r a b : ℕ} (hr : r < C.gates.length) (hand : (gateAt C r).op = GateOp.and)
+    (hab : (gateAt C r).inputs = [a, b]) {A B : Finset (Fin n)}
+    (hA : RawForm C r a A false) (hB : RawForm C r b B false) (x : Fin n → Bool) :
+    val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x := by
+  let V := fun (y : Fin n → Bool) w => val C (List.ofFn y) w
+  have hV : EvalExcept n C r V := originalEvalExcept h r
+  have he := evalExcept_and (originalEvalExcept h C.gates.length) hr (Nat.ne_of_lt hr) hand hab x
+  have ha : V x a = true ↔ hits A x := by simpa [hits] using hA.2 V hV x
+  have hb : V x b = true ↔ hits B x := by simpa [hits] using hB.2 V hV x
+  change V x (n + r) = true ↔ _
+  change V x (n + r) = true ↔ V x a = true ∧ V x b = true at he
+  rw [he, ha, hb]
+
+/-- A clean top has an oriented form, with the optional junk carried
+    exclusively on the first side. -/
+private def OrientedTop {n : ℕ} (C : Circuit) (r j : ℕ)
+    (S T : Finset (Fin n)) (f : Bool) : Prop :=
+  ∀ V, EvalExcept n C r V → ∀ x,
+    V x (n + j) = true ↔ (hits S x ∨ (f = true ∧ V x (n + r) = true)) ∧ hits T x
+
+private lemma orientedTop {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r j : ℕ} (hJ : junk G C = {r}) (hj : j < C.gates.length)
+    (hand : (gateAt C j).op = GateOp.and) (hc : BelowF G C j) :
+    ∃ (S T : Finset (Fin n)) (f : Bool), OrientedTop C r j S T f := by
+  obtain ⟨a, b, A, B, f, g, hab, hA, hB, he⟩ := topProduct G C h hl hJ hj hand hc
+  have hne := cleanDifferent G C hJ hc
+  rcases he with hf | hg
+  · refine ⟨B, A, g, fun V hV x => ?_⟩
+    rw [evalExcept_and hV hj hne hand hab x, hA.2 V hV x, hB.2 V hV x]
+    simp [hf, hits, and_comm]
+  · refine ⟨A, B, f, fun V hV x => ?_⟩
+    rw [evalExcept_and hV hj hne hand hab x, hA.2 V hV x, hB.2 V hV x]
+    simp [hg, hits]
+
+private lemma carrierCross {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    {C : Circuit} (h : IsAO2 n C) {r j : ℕ} {A B S T : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)
+    (hc : BelowF G C j) (ht : OrientedTop C r j S T true)
+    {a b u v : Fin n} (ha : a ∈ A) (hb : b ∈ B) (hv : v ∈ T)
+    (ha' : a = u ∨ a = v) (hb' : b = u ∨ b = v) : G.Adj u v := by
+  let x := pairInput u v
+  have ha'' : x a = true := by simpa [x, pairInput] using ha'
+  have hb'' : x b = true := by simpa [x, pairInput] using hb'
+  have hv' : x v = true := by simp [x, pairInput]
+  have hj := (hprod x).mpr ⟨⟨a, ha, ha''⟩, ⟨b, hb, hb''⟩⟩
+  exact adjOfPair G (hc x ((ht _ (originalEvalExcept h r) x).mpr
+    ⟨Or.inr ⟨rfl, hj⟩, ⟨v, hv, hv'⟩⟩))
+
+private lemma commonNeighborUnique {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (h4 : NoFourCycle G) {u v c d : Fin n} (hne : u ≠ v)
+    (huc : G.Adj u c) (hvc : G.Adj v c) (hud : G.Adj u d) (hvd : G.Adj v d) : d = c := by
+  let N := Finset.univ.filter fun w => G.Adj u w ∧ G.Adj v w
+  have hN : N.card ≤ 1 := h4 u v hne
+  have hc : c ∈ N := by simp [N, huc, hvc]
+  have hd : d ∈ N := by simp [N, hud, hvd]
+  exact Finset.card_le_one.mp hN d hd c hc
+
+private lemma overlapCarrierCentre {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    {C : Circuit} (h : IsAO2 n C) (h4 : NoFourCycle G) {r j : ℕ}
+    {A B S T : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)
+    (hc : BelowF G C j) (ht : OrientedTop C r j S T true)
+    {u v c : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) (huc : G.Adj u c) (hvc : G.Adj v c) :
+    ∀ x : Fin n → Bool, hits T x → x c = true := by
+  rintro x ⟨d, hd, hx⟩
+  have hud := carrierCross G h hprod hc ht huA huB hd (Or.inl rfl) (Or.inl rfl)
+  have hvd := carrierCross G h hprod hc ht hvA hvB hd (Or.inl rfl) (Or.inl rfl)
+  exact commonNeighborUnique G h4 hne huc hvc hud hvd ▸ hx
+
+/-- The opposite operand of a junk-carrying top is the raw centre wire
+    itself. A gate computing that singleton would be redundant. -/
+theorem twoOverlapOppositeRaw {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (h4 : NoFourCycle G)
+    {r a b j p q : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B S T : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (hj : j < C.gates.length) (hand : (gateAt C j).op = GateOp.and) (hc : BelowF G C j)
+    (hpq : (gateAt C j).inputs = [p, q] ∨ (gateAt C j).inputs = [q, p])
+    (hP : RawForm C r p S true) (hQ : RawForm C r q T false)
+    {u v c : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) (huc : G.Adj u c) (hvc : G.Adj v c) : q = c.val := by
+  obtain ⟨hr, hrand, _⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hrand hab hA hB
+  have ht : OrientedTop C r j S T true := by
+    intro V hV x
+    have hd := cleanDifferent G C hJ hc
+    rcases hpq with he | he
+    · rw [evalExcept_and hV hj hd hand he x, hP.2 V hV x, hQ.2 V hV x]
+      simp [hits]
+    · rw [evalExcept_and hV hj hd hand he x, hP.2 V hV x, hQ.2 V hV x]
+      simp [hits, and_comm]
+  have hm : q ∈ (gateAt C j).inputs := by rcases hpq with he | he <;> simp [he]
+  have hbnd := h.1.2.1 j hj q hm
+  let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have hsem (x : Fin n → Bool) : V x q = true ↔ hits T x := by simpa [hits] using hQ.2 V hV x
+  have hcentre (x : Fin n → Bool) (hx : hits T x) : x c = true :=
+    overlapCarrierCentre G h.1 h4 hprod hc ht huA huB hvA hvB hne huc hvc x hx
+  have hcT : c ∈ T := by
+    obtain ⟨d, hd, _⟩ := (hsem (fun _ => true)).mp (allTrueWires h.1 q (by omega))
+    have hcd : c = d := by simpa using hcentre (fun w => decide (w = d)) ⟨d, hd, by simp⟩
+    exact hcd.symm ▸ hd
+  have heq (x : Fin n → Bool) : V x q = x c := by
+    apply Bool.eq_iff_iff.mpr
+    exact (hsem x).trans ⟨hcentre x, fun hx => ⟨c, hcT, hx⟩⟩
+  by_cases hq : q < n
+  · let z : Fin n := ⟨q, hq⟩
+    have he := (hV.1 (fun w => decide (w = c)) z).symm.trans (heq (fun w => decide (w = c)))
+    have hzc : z = c := by simpa using he
+    exact congrArg Fin.val hzc
+  · obtain ⟨k, rfl⟩ : ∃ k, q = n + k := ⟨q - n, by omega⟩
+    have hcn := c.isLt
+    apply False.elim
+    apply noEqualEarlier G C h k c.val (by omega) (by omega)
+    intro x
+    exact (heq x).trans (hV.1 x c).symm
+
+private lemma noBypassPreserving {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) {r i : ℕ} (hr : r < C.gates.length) (hi : i < n + r)
+    (he : ∀ x : Fin n → Bool, (bypass n C r i).eval (List.ofFn x) = true ↔
+      graphFun G ∅ x = true) : False := by
+  have hao : IsAO2 n (bypass n C r i) := by
+    rw [← erase_eq_bypass n C r i hr]
+    exact erase_exactAO h.1 hr hi
+  have hf : circuitFun n (bypass n C r i) = graphFun G ∅ := by
+    funext x
+    exact Bool.eq_iff_iff.mpr (he x)
+  have hm := h.2.2 _ hao hf
+  have hs : (bypass n C r i).size = C.gates.length - 1 := bypass_length n C r i
+  change C.gates.length ≤ (bypass n C r i).size at hm
+  omega
+
+/-- At least one clean top can carry the unique junk in its oriented form.
+    Otherwise redirecting the junk to any earlier raw input changes no top. -/
+private lemma someCarrier {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) (u : Fin n) :
+    ∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧
+      ∃ S T : Finset (Fin n), OrientedTop C r j S T true := by
+  by_contra hn
+  have hr := (junkMember G C hJ).1
+  have hi : u.val < n + r := by have := u.isLt; omega
+  let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+  let W := fun (x : Fin n → Bool) w =>
+    val (bypass n C r u.val) (List.ofFn x) (aliasWire (n + r) u.val w)
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have hW : EvalExcept n C r W := bypassEvalExcept h.1 hr hi
+  have htop (x : Fin n → Bool) (j : ℕ) (hj : j < C.gates.length)
+      (ho : (gateAt C j).op = GateOp.and) (hc : BelowF G C j) :
+      W x (n + j) = true ↔ V x (n + j) = true := by
+    obtain ⟨S, T, f, ht⟩ := orientedTop G C h hl hJ hj ho hc
+    cases f with
+    | false => rw [ht W hW x, ht V hV x]; simp
+    | true => exact (hn ⟨j, hj, ho, hc, S, T, ht⟩).elim
+  apply noBypassPreserving G C h hr hi
+  intro x
+  change W x C.output = true ↔ _
+  have hv : V x C.output = graphFun G ∅ x := congrFun h.2.1 x
+  rw [← hv, collectorSemantics G C h hl hJ hW x, collectorSemantics G C h hl hJ hV x]
+  exact exists_congr (fun j => and_congr_right (fun hj => and_congr_right (fun ho =>
+    and_congr_right (fun hc => htop x j hj ho hc))))
+
+private lemma overlapCentreExists {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r : ℕ} (hJ : junk G C = {r}) {A B : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)
+    {u v : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B) (hne : u ≠ v) :
+    ∃! c : Fin n, G.Adj u c ∧ G.Adj v c := by
+  obtain ⟨j, hj, _, hc, S, T, ht⟩ := someCarrier G C h hl hJ u
+  let x : Fin n → Bool := fun _ => true
+  have hv : val C (List.ofFn x) (n + j) = true := allTrueWires h.1 _ (by omega)
+  obtain ⟨c, hcT, _⟩ := ((ht _ (originalEvalExcept h.1 r) x).mp hv).2
+  have huc := carrierCross G h.1 hprod hc ht huA huB hcT (Or.inl rfl) (Or.inl rfl)
+  have hvc := carrierCross G h.1 hprod hc ht hvA hvB hcT (Or.inl rfl) (Or.inl rfl)
+  exact ⟨c, ⟨huc, hvc⟩, fun d hd => commonNeighborUnique G h4 hne huc hvc hd.1 hd.2⟩
+
+/-- Two distinct shared raw vertices force a unique common centre. -/
+theorem twoOverlapCommonCentre {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {u v : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) : ∃! c : Fin n, G.Adj u c ∧ G.Adj v c := by
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  exact overlapCentreExists G C h hl h4 hJ (originalJunkProduct h.1 hr hand hab hA hB)
+    huA huB hvA hvB hne
+
+private lemma exposureCleansProvider {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r : ℕ} (hJ : junk G C = {r}) {A B : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)
+    {u v c : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) (huc : G.Adj u c) (hvc : G.Adj v c) (hcA : c ∈ A) :
+    ∀ b ∈ B, G.Adj c b := by
+  obtain ⟨j, hj, _, hc, S, T, ht⟩ := someCarrier G C h hl hJ u
+  let x : Fin n → Bool := fun _ => true
+  have hw : val C (List.ofFn x) (n + j) = true := allTrueWires h.1 _ (by omega)
+  obtain ⟨d, hd, _⟩ := ((ht _ (originalEvalExcept h.1 r) x).mp hw).2
+  have hud := carrierCross G h.1 hprod hc ht huA huB hd (Or.inl rfl) (Or.inl rfl)
+  have hvd := carrierCross G h.1 hprod hc ht hvA hvB hd (Or.inl rfl) (Or.inl rfl)
+  have he := commonNeighborUnique G h4 hne huc hvc hud hvd
+  subst d
+  intro b hb
+  exact (G.adj_comm b c).mp (carrierCross G h.1 hprod hc ht hcA hb hd (Or.inr rfl) (Or.inl rfl))
+
+/-- A filtered replacement at the junk wire accepts no false input and
+    preserves every edge input. The two conclusions are sufficient for any
+    concrete monotone circuit that implements this redirected valuation. -/
+private theorem overlapRedirect {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r : ℕ} (hJ : junk G C = {r}) {A B : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)
+    {u v c : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) (huc : G.Adj u c) (hvc : G.Adj v c)
+    {R : Finset (Fin n)} (hR : R = A ∨ R = B) (hcR : c ∉ R)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hfill : ∀ x : Fin n → Bool, W x (n + r) = true ↔ hits (R.filter (G.Adj c)) x) :
+    (∀ x : Fin n → Bool, W x C.output = true → graphFun G ∅ x = true) ∧
+      ∀ a b : Fin n, G.Adj a b → W (pairInput a b) C.output = true := by
+  let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have hcentre (j : ℕ) (hc : BelowF G C j) (S T : Finset (Fin n))
+      (ht : OrientedTop C r j S T true) (x : Fin n → Bool) (hx : hits T x) : x c = true :=
+    overlapCarrierCentre G h.1 h4 hprod hc ht huA huB hvA hvB hne huc hvc x hx
+  constructor
+  · intro x hx
+    obtain ⟨j, hj, ho, hc, hjx⟩ := (collectorSemantics G C h hl hJ hW x).mp hx
+    obtain ⟨S, T, f, ht⟩ := orientedTop G C h hl hJ hj ho hc
+    obtain ⟨hs, htx⟩ := (ht W hW x).mp hjx
+    rcases hs with hs | ⟨hf, hw⟩
+    · exact hc x ((ht V hV x).mpr ⟨Or.inl hs, htx⟩)
+    · subst f
+      obtain ⟨b, hb, hbx⟩ := (hfill x).mp hw
+      exact (graph_true G x).mpr ⟨c, b, (Finset.mem_filter.mp hb).2,
+        hcentre j hc S T ht x htx, hbx⟩
+  · intro a b hab
+    let x := pairInput a b
+    have hx : V x C.output = true := (congrFun h.2.1 x).trans (pair_true G a b hab)
+    obtain ⟨j, hj, ho, hc, hjx⟩ := (collectorSemantics G C h hl hJ hV x).mp hx
+    obtain ⟨S, T, f, ht⟩ := orientedTop G C h hl hJ hj ho hc
+    obtain ⟨hs, htx⟩ := (ht V hV x).mp hjx
+    apply (collectorSemantics G C h hl hJ hW x).mpr
+    refine ⟨j, hj, ho, hc, (ht W hW x).mpr ⟨?_, htx⟩⟩
+    rcases hs with hs | ⟨hf, hv⟩
+    · exact Or.inl hs
+    · subst f
+      have hcx : x c = true := hcentre j hc S T ht x htx
+      have hcab : c = a ∨ c = b := by simpa [x, pairInput] using hcx
+      have hv' : hits A x ∧ hits B x := (hprod x).mp hv
+      have hrx : hits R x := by rcases hR with rfl | rfl; exacts [hv'.1, hv'.2]
+      obtain ⟨d, hd, hdx⟩ := hrx
+      have hdab : d = a ∨ d = b := by simpa [x, pairInput] using hdx
+      have hdc : d ≠ c := fun he => hcR (he ▸ hd)
+      have hcd : G.Adj c d := by
+        rcases hcab with rfl | rfl <;> rcases hdab with rfl | rfl
+        · exact (hdc rfl).elim
+        · exact hab
+        · exact (G.adj_comm _ _).mp hab
+        · exact (hdc rfl).elim
+      exact Or.inr ⟨rfl, (hfill x).mpr ⟨d, Finset.mem_filter.mpr ⟨hd, hcd⟩, hdx⟩⟩
+
+/-- An earlier wire realizing the chosen filtered provider suffices to
+    strictly delete the unique junk in the multiple-overlap case. -/
+theorem noTwoOverlapWithEarlierFilter {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {u v c : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) (huc : G.Adj u c) (hvc : G.Adj v c)
+    {i : ℕ} {R : Finset (Fin n)} (hi : i < n + r) (hR : R = A ∨ R = B)
+    (hcR : c ∉ R) (hraw : RawForm C r i (R.filter (G.Adj c)) false) : False := by
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  let D := bypass n C r i
+  let W := fun (x : Fin n → Bool) w => val D (List.ofFn x) (aliasWire (n + r) i w)
+  have hW : EvalExcept n C r W := bypassEvalExcept h.1 hr hi
+  have hfill (x : Fin n → Bool) : W x (n + r) = true ↔ hits (R.filter (G.Adj c)) x := by
+    have hw : W x (n + r) = W x i := by simp [W, aliasWire, Nat.ne_of_lt hi, Nat.not_lt_of_ge hi.le]
+    rw [hw]
+    simpa [hits] using hraw.2 W hW x
+  obtain ⟨hneg, hedge⟩ := overlapRedirect G C h hl h4 hJ hprod huA huB hvA hvB hne huc hvc
+    hR hcR hW hfill
+  have hD : IsAO2 n D := by
+    change IsAO2 n (bypass n C r i)
+    rw [← erase_eq_bypass n C r i hr]
+    exact erase_exactAO h.1 hr hi
+  apply noBypassPreserving G C h hr hi
+  intro x
+  constructor
+  · exact hneg x
+  · intro hx
+    obtain ⟨d, e, hde, hd, he⟩ := (graph_true G x).mp hx
+    apply circuit_monotone n D (ao_mono hD) (pairInput d e) x ?_ (hedge d e hde)
+    intro w hw
+    have hw' : w = d ∨ w = e := by simpa [pairInput] using hw
+    rcases hw' with rfl | rfl
+    · exact hd
+    · exact he
+
+/-- When the common centre is exposed, the opposite operand already
+    realizes the filtered provider. -/
+theorem noExposedTwoOverlap {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {u v c : Fin n} (huA : u ∈ A) (huB : u ∈ B) (hvA : v ∈ A) (hvB : v ∈ B)
+    (hne : u ≠ v) (huc : G.Adj u c) (hvc : G.Adj v c) (hc : c ∈ A ∨ c ∈ B) : False := by
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  have trim (i : ℕ) (R : Finset (Fin n)) (hi : i < n + r)
+      (hR : R = A ∨ R = B) (hraw : RawForm C r i R false) (hclean : ∀ d ∈ R, G.Adj c d) : False := by
+    have hcR : c ∉ R := fun hm => G.ne_of_adj (hclean c hm) rfl
+    have hf : R.filter (G.Adj c) = R := Finset.filter_true_of_mem hclean
+    exact noTwoOverlapWithEarlierFilter G C h hl h4 hJ hab hA hB huA huB hvA hvB hne huc hvc
+      hi hR hcR (hf.symm ▸ hraw)
+  rcases hc with hcA | hcB
+  · exact trim b B (h.1.2.1 r hr b (by rw [hab]; simp)) (Or.inr rfl) hB
+      (exposureCleansProvider G C h hl h4 hJ hprod huA huB hvA hvB hne huc hvc hcA)
+  · have hswap (x : Fin n → Bool) : val C (List.ofFn x) (n + r) = true ↔ hits B x ∧ hits A x := by
+      rw [hprod x, and_comm]
+    exact trim a A (h.1.2.1 r hr a (by rw [hab]; simp)) (Or.inl rfl) hA
+      (exposureCleansProvider G C h hl h4 hJ hswap huB huA hvB hvA hne huc hvc hcB)
+
+#print axioms twoOverlapCommonCentre
+#print axioms twoOverlapOppositeRaw
+#print axioms overlapRedirect
+#print axioms noTwoOverlapWithEarlierFilter
+#print axioms noExposedTwoOverlap
+
 end ResearchVerification.OneJunkErase
