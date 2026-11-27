@@ -180,4 +180,174 @@ theorem twoOverlapCleaner (h4 : NoFourCycle G) (A B C : Finset (Fin n))
 #print axioms exposedCentre
 #print axioms twoOverlapCleaner
 
+
+-- Strict shared-provider trimming. Drop contains precisely vertices
+-- whose star edges can safely be covered elsewhere (or a superset of
+-- them justified by the caller). No assumption of tree unfolding.
+
+/-- The replacement support retains every vertex not authorized to
+    be lost, has no new vertices, and omits the distinguished centre. -/
+def TrimRel (a : Fin n) (Drop R T : Finset (Fin n)) : Prop :=
+  T ⊆ R ∧ a ∉ T ∧ ∀ v ∈ R, v ∉ Drop → v ∈ T
+
+lemma trimKeep (a : Fin n) (Drop R : Finset (Fin n)) (ha : a ∉ R) :
+    TrimRel a Drop R R := ⟨fun _ h => h, ha, fun _ h _ => h⟩
+
+lemma trimDrop (a : Fin n) (Drop R : Finset (Fin n)) (hR : R ⊆ Drop) :
+    TrimRel a Drop R ∅ := by
+  refine ⟨Finset.empty_subset _, by simp, ?_⟩
+  intro v hv hn
+  exact (hn (hR hv)).elim
+
+lemma trimUnion (a : Fin n) (Drop A B X Y : Finset (Fin n))
+    (hx : TrimRel a Drop A X) (hy : TrimRel a Drop B Y) :
+    TrimRel a Drop (A ∪ B) (X ∪ Y) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro v hv
+    rcases Finset.mem_union.mp hv with h | h
+    · exact Finset.mem_union.mpr (Or.inl (hx.1 h))
+    · exact Finset.mem_union.mpr (Or.inr (hy.1 h))
+  · intro hv
+    rcases Finset.mem_union.mp hv with h | h
+    · exact hx.2.1 h
+    · exact hy.2.1 h
+  · intro v hv hn
+    rcases Finset.mem_union.mp hv with h | h
+    · exact Finset.mem_union.mpr (Or.inl (hx.2.2 v h hn))
+    · exact Finset.mem_union.mpr (Or.inr (hy.2.2 v h hn))
+
+/-- All original support nodes have a suitable replacement. If no
+    exclusive OR has yet been saved, every old support containing a
+    has an available zero replacement and lies in Drop. -/
+def TrimState (a : Fin n) (Drop : Finset (Fin n))
+    (base : Finset (Fin n) → Prop) (L : List (Finset (Fin n))) (k : ℕ) : Prop :=
+  ∃ M l, FilteredPlan (fun R => base R ∨ R.card ≤ 1) M l ∧ l ≤ k ∧
+    (∀ R ∈ L, ∃ T ∈ M, TrimRel a Drop R T) ∧
+    (l = k → ∀ R ∈ L, a ∈ R → R ⊆ Drop ∧ (∅ : Finset (Fin n)) ∈ M)
+
+lemma trimStateReuse (a : Fin n) (Drop : Finset (Fin n))
+    (base : Finset (Fin n) → Prop) {L : List (Finset (Fin n))} {k : ℕ}
+    (st : TrimState a Drop base L k) (R T : Finset (Fin n))
+    (hfree : base T ∨ T.card ≤ 1) (htrim : TrimRel a Drop R T)
+    (hzero : a ∈ R → R ⊆ Drop ∧ T = ∅) :
+    TrimState a Drop base (R :: L) k := by
+  obtain ⟨M,l,hM,hl,hrel,hz⟩ := st
+  refine ⟨T :: M,l,FilteredPlan.reuse T hfree hM,hl,?_,?_⟩
+  · intro S hS
+    rcases List.mem_cons.mp hS with rfl | hS
+    · exact ⟨T,List.mem_cons_self, htrim⟩
+    · obtain ⟨U,hU,htr⟩ := hrel S hS
+      exact ⟨U,List.mem_cons_of_mem _ hU,htr⟩
+  · intro he S hS ha
+    rcases List.mem_cons.mp hS with rfl | hS
+    · obtain ⟨hd,heT⟩ := hzero ha
+      exact ⟨hd,by rw [heT]; exact List.mem_cons_self⟩
+    · obtain ⟨hd,hm⟩ := hz he S hS ha
+      exact ⟨hd,List.mem_cons_of_mem _ hm⟩
+
+lemma trimStateMerge (a : Fin n) (Drop : Finset (Fin n))
+    (base : Finset (Fin n) → Prop) {L : List (Finset (Fin n))} {k : ℕ}
+    (st : TrimState a Drop base L k) (A B : Finset (Fin n))
+    (ha : A ∈ L) (hb : B ∈ L) :
+    TrimState a Drop base ((A ∪ B) :: L) (k+1) := by
+  obtain ⟨M,l,hM,hl,hrel,hz⟩ := st
+  obtain ⟨X,hX,htX⟩ := hrel A ha
+  obtain ⟨Y,hY,htY⟩ := hrel B hb
+  by_cases hsave : l = k ∧ a ∈ A ∪ B
+  · obtain ⟨he,hm⟩ := hsave
+    have hnew : ∃ T ∈ M, TrimRel a Drop (A ∪ B) T := by
+      rcases Finset.mem_union.mp hm with ha' | hb'
+      · obtain ⟨hAd,_⟩ := hz he A ha ha'
+        refine ⟨Y,hY,?_⟩
+        simpa only [Finset.empty_union] using
+          trimUnion a Drop A B ∅ Y (trimDrop a Drop A hAd) htY
+      · obtain ⟨hBd,_⟩ := hz he B hb hb'
+        refine ⟨X,hX,?_⟩
+        simpa only [Finset.union_empty] using
+          trimUnion a Drop A B X ∅ htX (trimDrop a Drop B hBd)
+    refine ⟨M,l,hM,by omega,?_,?_⟩
+    · intro R hR
+      rcases List.mem_cons.mp hR with rfl | hR
+      · exact hnew
+      · exact hrel R hR
+    · intro he'
+      omega
+  · refine ⟨(X ∪ Y) :: M,l+1,FilteredPlan.merge X Y hX hY hM,by omega,?_,?_⟩
+    · intro R hR
+      rcases List.mem_cons.mp hR with rfl | hR
+      · exact ⟨X ∪ Y,List.mem_cons_self,trimUnion a Drop A B X Y htX htY⟩
+      · obtain ⟨T,hT,ht⟩ := hrel R hR
+        exact ⟨T,List.mem_cons_of_mem _ hT,ht⟩
+    · intro he R hR hRa
+      have he' : l = k := by omega
+      rcases List.mem_cons.mp hR with rfl | hR
+      · exact (hsave ⟨he',hRa⟩).elim
+      · obtain ⟨hd,hm⟩ := hz he' R hR hRa
+        exact ⟨hd,List.mem_cons_of_mem _ hm⟩
+
+/-- Trim a shared plan without increasing its exclusive OR count.
+    Every shared node containing a may be discarded from the new
+    provider only when all its vertices lie in the authorized Drop set. -/
+theorem trimPlan (a : Fin n) (Drop : Finset (Fin n)) (haD : a ∈ Drop)
+    (base : Finset (Fin n) → Prop)
+    (hdrop : ∀ R, base R → a ∈ R → R ⊆ Drop)
+    {L : List (Finset (Fin n))} {k : ℕ} (p : ProviderPlan G base L k) :
+    TrimState a Drop base L k := by
+  induction p with
+  | nil =>
+    refine ⟨[],0,FilteredPlan.nil,le_rfl,?_,?_⟩
+    · intro R hR
+      simp at hR
+    · intro _ R hR
+      simp at hR
+  | raw v _ ih =>
+    by_cases he : v = a
+    · subst v
+      have hsub : ({a} : Finset (Fin n)) ⊆ Drop := by simpa using haD
+      exact trimStateReuse a Drop base ih {a} ∅ (Or.inr (by simp))
+        (trimDrop a Drop {a} hsub) (fun _ => ⟨hsub,rfl⟩)
+    · have hn : a ∉ ({v} : Finset (Fin n)) := by
+        simpa using Ne.symm he
+      exact trimStateReuse a Drop base ih {v} {v} (Or.inr (by simp))
+        (trimKeep a Drop {v} hn) (fun h => (hn h).elim)
+  | keepShared R d hbase _ _ ih =>
+    by_cases ha : a ∈ R
+    · have hd := hdrop R hbase ha
+      exact trimStateReuse a Drop base ih R ∅ (Or.inr (by simp))
+        (trimDrop a Drop R hd) (fun _ => ⟨hd,rfl⟩)
+    · exact trimStateReuse a Drop base ih R R (Or.inl hbase)
+        (trimKeep a Drop R ha) (fun h => (ha h).elim)
+  | merge A B ha hb _ ih =>
+    exact trimStateMerge a Drop base ih A B ha hb
+
+/-- The strict second filter at an exclusive OR root. The original
+    plan including this root costs k+1, but the rebuilt support needs
+    at most k exclusive merges. This is not merely a nonincrease. -/
+theorem trimExclusiveRoot (a : Fin n) (Drop : Finset (Fin n)) (haD : a ∈ Drop)
+    (base : Finset (Fin n) → Prop)
+    (hdrop : ∀ R, base R → a ∈ R → R ⊆ Drop)
+    {L : List (Finset (Fin n))} {k : ℕ} (p : ProviderPlan G base L k)
+    (A B : Finset (Fin n)) (ha : A ∈ L) (hb : B ∈ L) (hroot : a ∈ A ∪ B) :
+    ∃ M l T, FilteredPlan (fun R => base R ∨ R.card ≤ 1) M l ∧ l ≤ k ∧
+      T ∈ M ∧ TrimRel a Drop (A ∪ B) T := by
+  obtain ⟨M,l,hM,hl,hrel,hz⟩ := trimPlan G a Drop haD base hdrop p
+  obtain ⟨X,hX,htX⟩ := hrel A ha
+  obtain ⟨Y,hY,htY⟩ := hrel B hb
+  by_cases he : l = k
+  · rcases Finset.mem_union.mp hroot with ha' | hb'
+    · obtain ⟨hAd,_⟩ := hz he A ha ha'
+      refine ⟨M,l,Y,hM,hl,hY,?_⟩
+      simpa only [Finset.empty_union] using
+        trimUnion a Drop A B ∅ Y (trimDrop a Drop A hAd) htY
+    · obtain ⟨hBd,_⟩ := hz he B hb hb'
+      refine ⟨M,l,X,hM,hl,hX,?_⟩
+      simpa only [Finset.union_empty] using
+        trimUnion a Drop A B X ∅ htX (trimDrop a Drop B hBd)
+  · refine ⟨(X ∪ Y)::M,l+1,X ∪ Y,FilteredPlan.merge X Y hX hY hM,
+      by omega,List.mem_cons_self,?_⟩
+    exact trimUnion a Drop A B X Y htX htY
+
+#print axioms trimPlan
+#print axioms trimExclusiveRoot
+
 end ResearchVerification.OneJunk
