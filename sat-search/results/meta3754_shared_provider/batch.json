@@ -1,0 +1,27 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Validate protected-provider sharing, gate charges, and failure modes on a six-input one-junk circuit before connecting provider rebuilding to the strict-deletion proof.",
+  "jobs": [
+    {
+      "id": "meta3754-shared-provider-audit",
+      "kind": "command",
+      "argv": [
+        "python",
+        "-B",
+        "sat-search/results/meta3754_shared_provider/replay.py"
+      ],
+      "query": {
+        "task": "L-meta-3754",
+        "basis": "exact AO2",
+        "scope": "One six-input C4-free bipartite path graph, unique dirty AND, five circuit variants, exhaustive 64 assignments each",
+        "budget": "Compare original 10-gate circuit with 7-gate protected rebuild; finite proof control"
+      },
+      "timeout": {
+        "initial": 10,
+        "maximum": 10
+      },
+      "workers": 1,
+      "memory_mib": 128
+    }
+  ]
+}

@@ -110,12 +110,12 @@ and a concrete strict deletion for singleton overlap without exposed
 centres are also Lean-checked. The remaining one-junk replacements are open.
 [Collector proof and verification scope](sat-search/chatgpt_handoff/meta3754_collector_accounting.md)
 
-For multiple-vertex overlap in L-meta-3754, Lean identifies the unique
-common centre and proves that every clean AND carrying the junk reads that
-centre as a raw input. It checks strict deletion when the centre occurs in
-either operand support or an earlier wire already realizes the required
-filtered OR. The remaining overlap case needs a concrete provider rebuild.
-[Overlap proof and remaining construction](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
+For L-meta-3754, `noTwoOverlap` rules out two or more shared raw vertices
+in the operands of the unique dirty AND in a least lift-fixed circuit on a
+C4-free graph. The checked gate-list rebuild preserves shared providers,
+replays the suffix and reduces the circuit size. Singleton overlap with an
+exposed centre and the disjoint-support cases remain open in Lean.
+[Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero
 fallbacks with a stable unit ledger. The fixed-metadata hard incidence core on

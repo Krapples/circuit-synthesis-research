@@ -37,7 +37,32 @@ bipartition.
   `b ∈ B` proves `B ⊆ N(c)`, so the existing `B` operand already is the
   required filtered wire. The other orientation is symmetric.
 
-## Remaining construction
+## Protected provider reconstruction
+
+- `AvoidJunk` describes a path from a wire to the output avoiding the junk
+  after the starting wire. The proof retains all protected pre-junk gates
+  with their original values. They form an ancestor-closed prefix selection.
+- `protectedPureSupportNeighbour` proves that a protected dirty OR's raw
+  support is contained in a single neighbourhood. A path avoiding the junk
+  reaches a first clean top. If this path ran through the opposite operand
+  of a junk-carrying top, that operand would be the raw centre wire, which
+  cannot have a gate ancestor. In the other cases a clean raw product
+  supplies the required neighbourhood.
+- The compiler computes the masked value of each needed wire separately
+  from its original value. A protected OR supported in `N(c)` can reuse its
+  original wire. For a different neighbourhood centre, C4-freeness bounds
+  its intersection with `N(c)` by one vertex, so the compiler uses a raw
+  alias or represents false without a gate. Each unprotected prefix OR
+  costs at most one replacement gate. The two selected index sets partition
+  the prefix, so the rebuilt prefix costs at most the original prefix length.
+- `replayJunkSuffix` redirects the removed junk to the filtered wire and
+  replays the suffix one gate per original gate. Its shadow valuation gives
+  the interface required by `overlapRedirect`, which preserves the edge
+  function on every assignment. `noTwoOverlap` concludes by leastness, since
+  the rebuilt gate list has at least one fewer gate. It covers the branch
+  with no earlier filtered wire as well as the two special cases above.
+
+## Independent circuit controls
 
 When `c` is outside both supports, the original raw provider need not already
 equal its filter. For example, take five distinct vertices `c,u,v,a,b` and the
@@ -48,19 +73,39 @@ C4-free bipartite graph with edges `c-u`, `c-v`, and `a-b`. Set
 This is a local semantic control, with no claim that the displayed circuit
 is least or computes the entire edge function.
 
-The uncovered branch is the unexposed centre with no earlier wire for either
-filter. The next proof needs to identify protected original OR gates from
-paths avoiding the junk, account for the exclusive provider gates available
-for rebuilding, and connect that gate-list construction to `overlapRedirect`.
-The [checked support compiler](lean/OneJunkProviders.lean) provides the
-filtering cost once those conditions are supplied. The remaining one-junk
-branches and the full L-meta-3754 theorem are open.
+The shared-provider replay checks a six-vertex path graph with exactly one
+dirty AND. It checks all 64 inputs. The protected rebuild uses seven gates
+in place of ten and preserves the function. Overwriting the shared provider
+loses three positive inputs. Reusing the unfiltered operand creates one false
+positive. Retaining all providers and appending the filter gives a ten-gate
+equivalent circuit. [Manifest](../results/meta3754_shared_provider/batch.json)
+and [recorded outcomes](../results/meta3754_shared_provider/replay.json).
+
+The next one-junk branch is singleton overlap with an exposed centre. The
+geometry can start at `carrierCross`. The singleton overlap makes every
+opposite support a subset of its neighbourhood. A centre exposed in one
+operand is adjacent to all of the other operand. C4-freeness gives uniqueness
+within each type once containment is excluded. Triangle-freeness rules out
+both types occurring, since they and the overlap vertex would form a triangle.
+The gate-list proof still needs a second filter that omits the overlap vertex
+and a budget for adding a clean star. The disjoint-support branches and the
+many-junk case remain open.
 
 ## Verification
 
 The complete [OneJunkErase.lean](lean/OneJunkErase.lean) source passed the
-pinned Lean `v4.36.0` environment documented in the collector handoff, in
-52.826 seconds with warnings treated as errors. All 27 printed declarations,
-including the five new audits, used only `propext`, `Classical.choice`, and
-`Quot.sound`. The checked source SHA-256 is
-`433ba60bc40627003cc22333e3cfcf88412a0a0cabb354f0178a80434a653e57`.
+pinned Lean `v4.36.0` environment documented in the collector handoff,
+using the strict research runner from the repository root.
+
+```powershell
+python -B sat-search/workflow/research.py lean .research/one-junk-upstream/lean --source sat-search/chatgpt_handoff/lean/OneJunkErase.lean --strict --timeout 240
+python -B sat-search/results/meta3754_shared_provider/replay.py
+```
+
+Lean ran for 66.507 seconds with warnings treated as errors. All 34 printed
+declarations, including `noTwoOverlap`, used only `propext`,
+`Classical.choice`, and `Quot.sound`. The checked source SHA-256 is
+`68588953fad1132afc95e7440c16f2c66b12c3e6a2a3d187f74ba41785b5cf78`.
+The local strict-run evidence is in
+`.research/ops/1795765643102984300-lean-check/`. The earlier 52.826-second
+check covered a smaller source and is a separate verification record.
