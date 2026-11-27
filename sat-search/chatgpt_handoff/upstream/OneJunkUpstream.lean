@@ -787,13 +787,17 @@ theorem oneJunkAtMostOneWithAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [Decid
 /-- An AND reader cannot be paid for by zero or one star. If such a
     reader survives as a candidate, both exposed stars have a private
     noncentral edge lost under false suspension. -/
-theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
+private theorem oneJunkNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) (colour : Fin n → Bool)
     (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
-    {r i : ℕ} (hJ : junk G C = {r})
-    (hi : i ∈ immediateJunkReaders (n := n) C r)
-    (hand : (gateAt C i).op = GateOp.and) :
+    {r : ℕ} (hJ : junk G C = {r})
+    (hpay : ∀ {W : (Fin n → Bool) → ℕ → Bool}, EvalExcept n C r W →
+      (∀ x, W x (n+r) = false) →
+      ∀ {p : ℕ}, p < n+C.gates.length → ∀ {S : Finset (Fin n)}, RawForm C r p S false →
+      S.Nonempty → ∀ c : Fin n, (∀ v ∈ S, G.Adj c v) →
+      (∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+        (pairInput u v c = true ∧ ∃ t ∈ S, pairInput u v t = true)) → False) :
     ∃ a b : ℕ, ∃ A B : Finset (Fin n), ∃ s d u v : Fin n,
       ∃ W : (Fin n → Bool) → ℕ → Bool,
       (gateAt C r).inputs = [a,b] ∧ RawForm C r a A false ∧ RawForm C r b B false ∧
@@ -806,8 +810,6 @@ theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
         (pairInput p q s = true ∧ ∃ t ∈ B, pairInput p q t = true) ∨
         (pairInput p q d = true ∧ ∃ t ∈ A, pairInput p q t = true)) := by
   classical
-  obtain ⟨hir,him⟩ := Finset.mem_filter.mp hi
-  have hil := Finset.mem_range.mp hir
   obtain ⟨a, b, A, B, _, hab, hA, hB, hdisj, hcardA, hcardB, _⟩ :=
     oneJunkLargeOppositeSupports G C h hl h4 colour hcolour hJ
   obtain ⟨W, hW, hzero⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
@@ -824,7 +826,7 @@ theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
       (hstar : ∀ v ∈ S, G.Adj c v)
       (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
         (pairInput u v c = true ∧ ∃ t ∈ S, pairInput u v t = true)) : False :=
-    noOneJunkOneStarWithAndReader G C h hl hJ hW hzero hil him hand hp hS hn c hstar hcover
+    hpay hW hzero hp hS hn c hstar hcover
   by_cases hAn : EA.Nonempty
   · obtain ⟨s, hs⟩ := hAn
     have hAonly (t) (ht : t ∈ EA) := Finset.card_le_one.mp hsmallA t ht s hs
@@ -906,6 +908,31 @@ theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
       · exact ho
       · exact (hAn ⟨c, hc⟩).elim
       · exact (hBn ⟨c, hc⟩).elim
+
+
+theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r i : ℕ} (hJ : junk G C = {r})
+    (hi : i ∈ immediateJunkReaders (n := n) C r)
+    (hand : (gateAt C i).op = GateOp.and) :
+    ∃ a b : ℕ, ∃ A B : Finset (Fin n), ∃ s d u v : Fin n,
+      ∃ W : (Fin n → Bool) → ℕ → Bool,
+      (gateAt C r).inputs = [a,b] ∧ RawForm C r a A false ∧ RawForm C r b B false ∧
+      Disjoint A B ∧ 1 < A.card ∧ 1 < B.card ∧
+      s ∈ A ∧ d ∈ B ∧ u ∈ A ∧ v ∈ B ∧ u ≠ s ∧ v ≠ d ∧
+      (∀ z ∈ B, G.Adj s z) ∧ (∀ z ∈ A, G.Adj d z) ∧
+      EvalExcept n C r W ∧ (∀ x, W x (n+r) = false) ∧
+      W (pairInput u d) C.output = false ∧ W (pairInput s v) C.output = false ∧
+      (∀ p q, G.Adj p q → W (pairInput p q) C.output = true ∨
+        (pairInput p q s = true ∧ ∃ t ∈ B, pairInput p q t = true) ∨
+        (pairInput p q d = true ∧ ∃ t ∈ A, pairInput p q t = true)) := by
+  obtain ⟨hir,him⟩ := Finset.mem_filter.mp hi
+  have hil := Finset.mem_range.mp hir
+  apply oneJunkNeedsBothStars G C h hl h4 colour hcolour hJ
+  intro W hW hzero p hp S hS hn c hstar hcover
+  exact noOneJunkOneStarWithAndReader G C h hl hJ hW hzero hil him hand hp hS hn c hstar hcover
 
 #print axioms oneJunkAndReaderNeedsBothStars
 
@@ -1064,5 +1091,91 @@ theorem noOneJunkAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.A
     hj hjr hwd hju hjs hjd charges hjn hcc hbudget hch
 
 #print axioms noOneJunkAndReader
+
+
+/-- Two distinct immediate readers pay for any single-star repair.
+    Hence both stars must have indispensable noncentral edges. The
+    site-specific bypass then excludes the remaining two-OR case. -/
+theorem noOneJunkTwoReaders {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r i k : ℕ} (hJ : junk G C = {r})
+    (hi : i ∈ immediateJunkReaders (n := n) C r)
+    (hk : k ∈ immediateJunkReaders (n := n) C r) (hik : i ≠ k) : False := by
+  obtain ⟨hil,him⟩ := Finset.mem_filter.mp hi
+  obtain ⟨hkl,hkm⟩ := Finset.mem_filter.mp hk
+  have hno (j) (hj : j < C.gates.length) (hja : (gateAt C j).op = GateOp.and) :
+      n+r ∉ (gateAt C j).inputs := by
+    intro hm
+    exact noOneJunkAndReader G C h hl h4 colour hcolour hJ
+      (Finset.mem_filter.mpr ⟨Finset.mem_range.mpr hj,hm⟩) hja
+  have hcount := oneJunkAtMostTwoReaders G C h hl h4 colour hcolour hJ
+  obtain ⟨a,b,A,B,s,d,u,v,W,hab,hA,hB,_,hcardA,hcardB,hs,hd,hu,hv,hus,hvd,
+    hstarA,hstarB,hW,hzero,hmissB,hmissA,_⟩ :=
+    oneJunkNeedsBothStars G C h hl h4 colour hcolour hJ (by
+      intro W hW hzero p hp S hS hn c hstar hcover
+      exact noOneJunkOneStarWithTwoReaders G C h hl hJ hW hzero
+        (Finset.mem_range.mp hil) (Finset.mem_range.mp hkl) hik him hkm hp hS hn c hstar hcover)
+  exact noTwoOrReadersBothStars G C h hl h4 colour hcolour hJ hab hno hcount
+    hA hB hcardA hcardB hs hd hu hv hus hvd hstarA hstarB hW hzero hmissA hmissB
+
+/-- No minimum exact binary AO edge circuit at a lift fixed point
+    has a singleton dirty-AND set. This uses the same pinned upstream
+    definitions as the reduction R_meta_3754_1. -/
+theorem noLeastOneJunk {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r}) : False := by
+  obtain ⟨hr,hand,hdirty⟩ := junkMember G C hJ
+  have hout : C.output ≠ n+r := by
+    intro he
+    apply hdirty
+    intro x hx
+    have hf : C.eval (List.ofFn x) = graphFun G ∅ x := congrFun h.2.1 x
+    rw [← hf]
+    change val C (List.ofFn x) C.output = true
+    simpa [he] using hx
+  obtain ⟨p,q,hpq⟩ := twoOperands h.1 hr
+  have hp := h.1.2.1 r hr p (by simp [hpq])
+  obtain ⟨i,hri,hi,hir⟩ := noUnreadGate G C h r p hr hp hout
+  have hiR : i ∈ immediateJunkReaders (n := n) C r :=
+    Finset.mem_filter.mpr ⟨Finset.mem_range.mpr hi,hir⟩
+  have hno (j) (hj : j < C.gates.length) (hja : (gateAt C j).op = GateOp.and) :
+      n+r ∉ (gateAt C j).inputs := by
+    intro hm
+    exact noOneJunkAndReader G C h hl h4 colour hcolour hJ
+      (Finset.mem_filter.mpr ⟨Finset.mem_range.mpr hj,hm⟩) hja
+  have hio : (gateAt C i).op = GateOp.or := by
+    rcases h.1.1 _ (gateAt_mem hi) with ha | ho
+    · exact (hno i hi ha hir).elim
+    · exact ho
+  by_cases hex : ∃ k ∈ immediateJunkReaders (n := n) C r, k ≠ i
+  · obtain ⟨k,hk,hki⟩ := hex
+    exact noOneJunkTwoReaders G C h hl h4 colour hcolour hJ hiR hk hki.symm
+  · have only (j) (hj : j < C.gates.length) (hm : n+r ∈ (gateAt C j).inputs) : j = i := by
+      by_contra hn
+      exact hex ⟨j,Finset.mem_filter.mpr ⟨Finset.mem_range.mpr hj,hm⟩,hn⟩
+    obtain ⟨a,b,A,B,c,hab,hA,hB,hdisj,hcardA,hcardB,hcolA,hcolB,_⟩ :=
+      oneJunkLargeOppositeSupports G C h hl h4 colour hcolour hJ
+    exact noSoleOrReaderLargeSupports G C h hl h4 colour hcolour hJ hno hi hio hir only
+      hab hA hB hdisj hcardA hcardB c hcolA hcolB
+
+/-- Exact hone hypothesis of upstream reduction R_meta_3754_1.
+    In fact its cardinality-one premise is contradictory. -/
+theorem oneJunkExact (n : ℕ) (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (s : Fin n → Bool) :
+    (∀ u v : Fin n, G.Adj u v → s u ≠ s v) →
+    NoFourCycle G → IsLeastAO G C → IsLiftFixedPoint G C →
+    (junk G C).card = 1 →
+    ∀ k < C.gates.length, (gateAt C k).op = GateOp.and → BelowF G C k := by
+  intro hbi hC4 hleast hlift hcard k hk hand
+  obtain ⟨r,hr⟩ := Finset.card_eq_one.mp hcard
+  exact (noLeastOneJunk G C hleast hlift hC4 s hbi hr).elim
+
+#print axioms noOneJunkTwoReaders
+#print axioms noLeastOneJunk
+#print axioms oneJunkExact
 
 end ResearchVerification.OneJunkErase
