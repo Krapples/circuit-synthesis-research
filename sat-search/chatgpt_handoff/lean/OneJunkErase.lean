@@ -4281,4 +4281,87 @@ theorem mixedProviderNoResidualUse {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms noOneJunkOneStarWithAndReader
 #print axioms mixedProviderNoResidualUse
 
+
+/-- If the junk has no direct OR reader, every other dirty wire
+    has a raw-only representation, valid under arbitrary suspension. -/
+theorem dirtyRawFormNoOrReader {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.or →
+      n+r ∉ (gateAt C j).inputs) :
+    ∀ w < n+C.gates.length, w ≠ n+r → ¬ CleanWire G C w →
+      ∃ S : Finset (Fin n), RawForm C r w S false := by
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw hne hd
+    by_cases hn : w < n
+    · refine ⟨{⟨w,hn⟩},by simp,?_⟩
+      intro V hV x
+      rw [hV.1 x ⟨w,hn⟩]
+      simp
+    · obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+      have hj : j < C.gates.length := by omega
+      have hjr : j ≠ r := by omega
+      have hor : (gateAt C j).op = GateOp.or := by
+        rcases h.1.1 _ (gateAt_mem hj) with hand | ho
+        · exact (hjr (uniqueDirtyAnd G C hJ hj hd hand)).elim
+        · exact ho
+      obtain ⟨a,b,hab⟩ := twoOperands h.1 hj
+      have hma : a ∈ (gateAt C j).inputs := by simp [hab]
+      have hmb : b ∈ (gateAt C j).inputs := by simp [hab]
+      have ha := h.1.2.1 j hj a hma
+      have hb := h.1.2.1 j hj b hmb
+      have hda : ¬ CleanWire G C a :=
+        fun hc => hd (cleanWireReader G C h hl hj hma hc).2
+      have hdb : ¬ CleanWire G C b :=
+        fun hc => hd (cleanWireReader G C h hl hj hmb hc).2
+      obtain ⟨A,hA⟩ := ih a ha (by omega) (fun he => hno j hj hor (he ▸ hma)) hda
+      obtain ⟨B,hB⟩ := ih b hb (by omega) (fun he => hno j hj hor (he ▸ hmb)) hdb
+      refine ⟨A∪B,by simp,?_⟩
+      intro V hV x
+      have hAs : V x a = true ↔ hits A x := by simpa [hits] using hA.2 V hV x
+      have hBs : V x b = true ↔ hits B x := by simpa [hits] using hB.2 V hV x
+      rw [evalExcept_or hV hj hjr hor x, hab]
+      simp only [List.mem_cons,List.mem_singleton]
+      constructor
+      · rintro ⟨v,hv,ht⟩
+        have he : v = a ∨ v = b := by simpa using hv
+        rcases he with rfl | rfl
+        · obtain ⟨z,hz,hzx⟩ := hAs.mp ht
+          exact Or.inl ⟨z,Finset.mem_union.mpr (Or.inl hz),hzx⟩
+        · obtain ⟨z,hz,hzx⟩ := hBs.mp ht
+          exact Or.inl ⟨z,Finset.mem_union.mpr (Or.inr hz),hzx⟩
+      · rintro (⟨z,hz,hzx⟩ | ⟨hf,_⟩)
+        · rcases Finset.mem_union.mp hz with hz | hz
+          · exact ⟨a,Or.inl rfl,hAs.mpr ⟨z,hz,hzx⟩⟩
+          · exact ⟨b,Or.inr rfl,hBs.mpr ⟨z,hz,hzx⟩⟩
+        · cases hf
+
+/-- Without an immediate OR reader, all clean AND gates that do not
+    read the junk directly are unchanged by suspension. -/
+theorem cleanTopUnaffectedNoOrReader {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r j : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ i < C.gates.length, (gateAt C i).op = GateOp.or →
+      n+r ∉ (gateAt C i).inputs)
+    (hj : j < C.gates.length) (hand : (gateAt C j).op = GateOp.and)
+    (hc : BelowF G C j) (hnread : n+r ∉ (gateAt C j).inputs)
+    {V W : (Fin n → Bool) → ℕ → Bool}
+    (hV : EvalExcept n C r V) (hW : EvalExcept n C r W)
+    (x : Fin n → Bool) : V x (n+j) = W x (n+j) := by
+  have hdiff := cleanDifferent G C hJ hc
+  rw [hV.2 x j hj hdiff,hW.2 x j hj hdiff]
+  congr 1
+  apply List.map_congr_left
+  intro p hp
+  have hlt := h.1.2.1 j hj p hp
+  obtain ⟨S,hS⟩ := dirtyRawFormNoOrReader G C h hl hJ hno p (by omega)
+    (fun he => hnread (he ▸ hp)) (noCleanAndOperand G C h j p hj hp hand)
+  apply Bool.eq_iff_iff.mpr
+  exact (hS.2 V hV x).trans (hS.2 W hW x).symm
+
+#print axioms dirtyRawFormNoOrReader
+#print axioms cleanTopUnaffectedNoOrReader
+
 end ResearchVerification.OneJunkErase
