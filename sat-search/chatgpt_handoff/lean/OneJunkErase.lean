@@ -2823,4 +2823,126 @@ theorem protectedSharedStarSurvives {n : ℕ} (G : SimpleGraph (Fin n)) [Decidab
 #print axioms adjacentSharedProviderExclusive
 #print axioms protectedSharedStarSurvives
 
+/-- Redirecting the junk to the shared input is sound. Any edge lost by
+    this redirection belongs to the exposed star, away from the shared input. -/
+theorem exposedSingletonRedirect {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {s c : Fin n} (hsA : s ∈ A) (hsB : s ∈ B) (hcB : c ∉ B)
+    (hshared : ∀ z ∈ A, z ∈ B → z = s)
+    (honly : ∀ z, ExposedCentre G C r z → z ∈ A ∨ z ∈ B → z = c)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hfill : ∀ x, W x (n + r) = x s) :
+    (∀ x, W x C.output = true → graphFun G ∅ x = true) ∧
+      ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+        ∃ z ∈ B, z ≠ s ∧ pairInput u v c = true ∧ pairInput u v z = true := by
+  let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  constructor
+  · intro x hx
+    obtain ⟨j, hj, hop, hc, hv⟩ := (collectorSemantics G C h hl hJ hW x).mp hx
+    obtain ⟨S, T, f, ht⟩ := orientedTop G C h hl hJ hj hop hc
+    obtain ⟨hp, hq⟩ := (ht W hW x).mp hv
+    apply hc x ((ht V hV x).mpr ⟨?_, hq⟩)
+    rcases hp with hp | ⟨hf, hw⟩
+    · exact Or.inl hp
+    · have hsx : x s = true := (hfill x).symm.trans hw
+      exact Or.inr ⟨hf, (hprod x).mpr ⟨⟨s, hsA, hsx⟩, ⟨s, hsB, hsx⟩⟩⟩
+  · intro u v huv
+    let x := pairInput u v
+    have hv : V x C.output = true := (congrFun h.2.1 x).trans (pair_true G u v huv)
+    obtain ⟨j, hj, hop, hc, hvj⟩ := (collectorSemantics G C h hl hJ hV x).mp hv
+    obtain ⟨S, T, f, ht⟩ := orientedTop G C h hl hJ hj hop hc
+    obtain ⟨hp, hq⟩ := (ht V hV x).mp hvj
+    have keep (hk : hits S x ∨ (f = true ∧ W x (n + r) = true)) : W x C.output = true :=
+      (collectorSemantics G C h hl hJ hW x).mpr ⟨j, hj, hop, hc, (ht W hW x).mpr ⟨hk, hq⟩⟩
+    by_cases hraw : hits S x
+    · exact Or.inl (keep (Or.inl hraw))
+    · have ⟨hf, hvold⟩ := hp.resolve_left hraw
+      by_cases hsx : x s = true
+      · exact Or.inl (keep (Or.inr ⟨hf, (hfill x).trans hsx⟩))
+      subst f
+      obtain ⟨⟨p, hpA, hpx⟩, ⟨q, hqB, hqx⟩⟩ := (hprod x).mp hvold
+      obtain ⟨z, hzT, hzx⟩ := hq
+      have hpq : p ≠ q := by
+        intro he
+        have hps := hshared p hpA (he.symm ▸ hqB)
+        exact hsx (hps ▸ hpx)
+      have hp' : p = u ∨ p = v := by simpa [x, pairInput] using hpx
+      have hq' : q = u ∨ q = v := by simpa [x, pairInput] using hqx
+      have hz' : z = u ∨ z = v := by simpa [x, pairInput] using hzx
+      have hz : z = p ∨ z = q := by aesop
+      have hex : ExposedCentre G C r z := ⟨j, hj, hop, hc, S, T, ht, hzT⟩
+      rcases hz with hz | hz
+      · have hc' := honly z hex (Or.inl (hz.symm ▸ hpA))
+        exact Or.inr ⟨q, hqB, fun he => hsx (he ▸ hqx), hc' ▸ hzx, hqx⟩
+      · have hzB : z ∈ B := hz.symm ▸ hqB
+        have hc' := honly z hex (Or.inr hzB)
+        exact (hcB (hc' ▸ hzB)).elim
+
+#print axioms exposedSingletonRedirect
+
+/-- An exposed singleton-overlap case with a protected opposite provider
+    admits strict deletion by redirecting to the shared input. -/
+theorem noExposedSingletonProtectedProvider {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (htri : ∀ {s c d : Fin n}, G.Adj s c → G.Adj s d → ¬ G.Adj c d)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {s c t : Fin n} (hsA : s ∈ A) (hsB : s ∈ B) (hcA : c ∈ A) (htB : t ∈ B) (hts : t ≠ s)
+    (hshared : ∀ z ∈ A, z ∈ B → z = s) (hex : ExposedCentre G C r c)
+    (hprotected : AvoidJunk n C r b) : False := by
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have ⟨hsc, hadj, _⟩ := exposedCentreAdjacencies G h.1
+    (originalJunkProduct h.1 hr hand hab hA hB) hsA hsB hex
+  have hcs := (G.ne_of_adj hsc).symm
+  have hcB : c ∉ B := fun hcB => hcs (hshared c hcA hcB)
+  have honly (z : Fin n) (hz : ExposedCentre G C r z) (hzm : z ∈ A ∨ z ∈ B) :=
+    uniqueExposedOverlapCentre G C h h4 htri hJ hab hA hB hsA hsB hcA htB hcs hts hex hz (Or.inl hcA) hzm
+  have hi : s.val < n + r := by omega
+  let D := bypass n C r s.val
+  let W : (Fin n → Bool) → ℕ → Bool := fun x w =>
+    val D (List.ofFn x) (aliasWire (n + r) s.val w)
+  have hW : EvalExcept n C r W := bypassEvalExcept h.1 hr hi
+  have hfill (x : Fin n → Bool) : W x (n + r) = x s := by
+    dsimp [W, D]
+    rw [aliasWire_self, bypass_val_lt (n := n) (by simp) hr s.val hi]
+    exact (originalEvalExcept h.1 r).1 x s
+  have hout (x : Fin n → Bool) : D.eval (List.ofFn x) = W x C.output := rfl
+  have hD : IsAO2 n D := by
+    change IsAO2 n (bypass n C r s.val)
+    rw [← erase_eq_bypass n C r s.val hr]
+    exact erase_exactAO h.1 hr hi
+  obtain ⟨hsafe, hedge⟩ := exposedSingletonRedirect G C h hl hJ hab hA hB hsA hsB hcB hshared honly hW hfill
+  have hstar := protectedSharedStarSurvives G C h hl h4 hJ hab hA hB hsA hsB hsB htB hts
+    (hadj hcA) hprotected hB W hW
+  have hcorrect : circuitFun n D = graphFun G ∅ := by
+    funext x
+    apply Bool.eq_iff_iff.mpr
+    constructor
+    · intro hx
+      exact hsafe x ((hout x).symm.trans hx)
+    · intro hx
+      obtain ⟨u, v, huv, hu, hv⟩ := (graph_true G x).mp hx
+      apply circuit_monotone n D (ao_mono hD) (pairInput u v) x ?_ ?_
+      · intro w hw
+        have hw' : w = u ∨ w = v := by simpa [pairInput] using hw
+        rcases hw' with rfl | rfl
+        · exact hu
+        · exact hv
+      · rw [hout]
+        rcases hedge u v huv with h | ⟨z, hz, _, hcx, hzx⟩
+        · exact h
+        · exact hstar _ ⟨z, hz, hzx⟩ hcx
+  have hmin := h.2.2 D hD hcorrect
+  have hsize : D.size = C.gates.length - 1 := bypass_length n C r s.val
+  change C.gates.length ≤ D.size at hmin
+  omega
+
+#print axioms noExposedSingletonProtectedProvider
+
+
 end ResearchVerification.OneJunkErase

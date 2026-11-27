@@ -102,10 +102,24 @@ that a protected provider containing the shared vertex and a second vertex
 already supplies its entire star at the exposed centre, using C4-freeness
 to identify the common neighbour.
 
-For the other provider, the
+`exposedSingletonRedirect` classifies the edges potentially lost by
+replacing the junk with the shared input. Every lost edge joins the exposed
+centre to a non-shared vertex in the opposite provider. The redirected
+evaluation remains sound on every input. `noExposedSingletonProtectedProvider`
+closes the case where the opposite provider is protected: its raw product
+already covers those edges, so the shared-input alias deletes one gate and
+requires no replacement star.
+
+When the opposite provider is unprotected, the
 [strict trim plan](lean/OneJunkProviders.lean) must be attached to the actual
-retained wires and the cost of adding a clean star. The exposed singleton
-replacement, disjoint-support branches and the many-junk case remain open.
+retained wires and the cost of adding a clean star. On the opposite
+provider's ancestor cone, the first unprotected OR whose support contains
+the shared vertex supplies the strict saving. At least one of its operands
+is the shared input or a protected provider containing that input. The
+shared input is omitted and the protected provider's star is already
+covered. The trimmed OR then needs at most an alias. This argument still
+needs a checked gate-list budget. The disjoint-support and many-junk cases
+also remain open.
 
 ## Verification
 
@@ -137,3 +151,9 @@ The protected-provider check took 71.988 seconds with the same settings and
 passed all 38 axiom audits. The checked source SHA-256 is
 `8040125fb4208026d9d831712d9d9986a2c4b3b4d6ef1f38014f2c7343f4b811`.
 The local evidence is in `.research/ops/1795766092882371500-lean-check/`.
+
+The alias and strict-deletion check took 73.501 seconds and passed all 40
+axiom audits. The exact checked source was transferred from a scratch file
+to `OneJunkErase.lean` with identical SHA-256
+`440f6e90d55daf8d05a1d5b40741124b7638223dea7c569445e5020afbce05ff`.
+The local evidence is in `.research/ops/1795766222329408600-lean-check/`.
