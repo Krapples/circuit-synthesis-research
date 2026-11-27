@@ -4178,4 +4178,107 @@ theorem noOneJunkOneStarWithTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [Deci
 #print axioms noOneJunkWithStarBudget
 #print axioms noOneJunkOneStarWithTwoReaders
 
+
+/-- Even one direct AND reader pays for a one-star repair: if the
+    suspended output survives, a distinct clean OR reader folds. -/
+theorem noOneJunkOneStarWithAndReader {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r j : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n+r) = false)
+    (hj : j < C.gates.length) (hread : n+r ∈ (gateAt C j).inputs)
+    (hand : (gateAt C j).op = GateOp.and)
+    {p : ℕ} (hp : p < n + C.gates.length) {S : Finset (Fin n)}
+    (hS : RawForm C r p S false) (hne : S.Nonempty)
+    (c : Fin n) (hadj : ∀ v ∈ S, G.Adj c v)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      (pairInput u v c = true ∧ ∃ w ∈ S, pairInput u v w = true)) : False := by
+  classical
+  have hr := (junkMember G C hJ).1
+  have hrj : r < j := Nat.lt_of_add_lt_add_left (h.1.2.1 j hj _ hread)
+  let star : RepairStar n := ⟨c,S⟩
+  have hprov : ∀ s ∈ [star], s.support.Nonempty ∧
+      ∃ p < n + C.gates.length, RawForm C r p s.support false := by
+    intro s hs
+    have he : s = star := by simpa using hs
+    subst s
+    exact ⟨hne,p,hp,hS⟩
+  have hedges : ∀ s ∈ [star], ∀ v ∈ s.support, G.Adj s.centre v := by
+    intro s hs
+    have he : s = star := by simpa using hs
+    subst s
+    exact hadj
+  have hcov : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      [star].any (fun s => s.fires (pairInput u v)) = true := by
+    intro u v huv
+    simpa [star,RepairStar.fires,RepairStar.provider] using hcover u v huv
+  by_cases hout : W (fun _ => true) C.output = false
+  · refine noOneJunkWithStarBudget G C h hl hJ hW hzero {r,j} ?_ ?_ [star]
+      (by simp) hprov hedges hcov ?_
+    · intro t ht
+      rcases (show t = r ∨ t = j by simpa using ht) with rfl | rfl
+      · exact Finset.mem_range.mpr hr
+      · exact Finset.mem_range.mpr hj
+    · intro t ht
+      rcases (show t = r ∨ t = j by simpa using ht) with rfl | rfl
+      · exact Or.inl rfl
+      · exact Or.inr ⟨n+r,hread,hzero _⟩
+    · right
+      exact ⟨hout,by simp [hrj.ne]⟩
+  · have htop : W (fun _ => true) C.output = true := by
+      cases he : W (fun _ => true) C.output <;> simp_all
+    obtain ⟨a,b,hab⟩ := twoOperands h.1 hj
+    have hjzero : W (fun _ => true) (n+j) = false := by
+      cases he : W (fun _ => true) (n+j)
+      · rfl
+      · obtain ⟨ha,hb⟩ := (evalExcept_and hW hj hrj.ne.symm hand hab _).mp he
+        have he' : n+r = a ∨ n+r = b := by simpa [hab] using hread
+        rcases he' with he' | he'
+        · rw [← he',hzero] at ha
+          cases ha
+        · rw [← he',hzero] at hb
+          cases hb
+    have hneout : C.output ≠ n+j := by
+      intro he
+      rw [he,hjzero] at htop
+      cases htop
+    obtain ⟨k,hjk,hk,hkr⟩ := noUnreadGate G C h j (n+r) hj
+      (h.1.2.1 j hj _ hread) hneout
+    have hrk : r < k := hrj.trans hjk
+    refine noOneJunkWithStarBudget G C h hl hJ hW hzero {r,j,k} ?_ ?_ [star]
+      (by simp) hprov hedges hcov ?_
+    · intro t ht
+      simp only [Finset.mem_insert,Finset.mem_singleton] at ht
+      rcases ht with rfl | rfl | rfl <;> exact Finset.mem_range.mpr (by assumption)
+    · intro t ht
+      simp only [Finset.mem_insert,Finset.mem_singleton] at ht
+      rcases ht with rfl | rfl | rfl
+      · exact Or.inl rfl
+      · exact Or.inr ⟨n+r,hread,hzero _⟩
+      · exact Or.inr ⟨n+j,hkr,hjzero⟩
+    · left
+      simp [hrj.ne,hrk.ne,hjk.ne]
+
+/-- A mixed-colour raw provider cannot support any surviving clean
+    product. This is the exclusivity criterion needed by the sole-AND
+    two-star branch. -/
+theorem mixedProviderNoResidualUse {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r w : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n+r) = false)
+    {S : Finset (Fin n)} (hS : RawForm C r w S false)
+    {u v : Fin n} (hu : u ∈ S) (hv : v ∈ S) (hmix : colour u ≠ colour v) :
+    ¬ ResidualUse G C r (W (fun _ => true)) w := by
+  intro huse
+  obtain ⟨d, hd⟩ := residualUseCoversSupport G C h hl hJ hW hzero huse
+    (fun x hx => (hS.2 W hW x).mpr (Or.inl hx))
+  have h1 := hcolour u d (hd u hu).1
+  have h2 := hcolour v d (hd v hv).1
+  cases colour u <;> cases colour v <;> cases colour d <;> simp_all
+
+#print axioms noOneJunkOneStarWithAndReader
+#print axioms mixedProviderNoResidualUse
+
 end ResearchVerification.OneJunkErase
