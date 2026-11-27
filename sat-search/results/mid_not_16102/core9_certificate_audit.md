@@ -99,11 +99,7 @@ gives a free-NOT AIG whose gate count is the number of *proper binary* gates (NO
 fan-in, size, function and internal-NOT conditions has size exactly 9, exactly 8 proper binary gates, exactly one NOT, and only
 AND/OR/NOT gates, so `sandwich` applies. The refutation therefore reduces to (A) `hA` and (B) the one-NOT nine-gate core.
 
-**Attempt on (A).** [first_gate_lb.py](first_gate_lb.py) implements a first-gate recursion with three steps. The first is fan-out ≥ 2 restriction (`conditional_restriction`
-in `CircuitLemmas.GateElim` is already formalized). The second is contraction of a fan-out-1 first gate, which requires checking that the function factors through an AND of two literals. The third is the connectivity floor.
-It certifies only **B(f) ≥ 7** ([first_gate_lb.out](first_gate_lb.out)), one short of the 8 needed. Closing (A) therefore needs the stronger cascade casework
-(a fan-out-2 input whose controlled first gate has a reader outside its readers, or the non-minimal two-gate pair), which the paper
-proof replaces with forks, the read-once lemma and the DP.
+**(A) closed on paper, 2026-11-26.** [first_gate_lb.py](first_gate_lb.py) implements a first-gate recursion. Its steps are fan-out ≥ 2 restriction (`conditional_restriction`), contraction of a fan-out-1 first gate, and cascades through the controlling value of the first gate, plus the two-reader minimality case. With all of these it gives **B(f) ≥ 8** ([first_gate_lb.out](first_gate_lb.out), 148 states). Without cascades it gives 7. The soundness argument for each case is in [aig8_recursion_proof.md](aig8_recursion_proof.md). Exhaustive AIG search ([first_gate_lb_crosscheck.py](first_gate_lb_crosscheck.py)) finds no state where LB exceeds the true size, covering every ≤5-input recursion state and 1500 random 3- and 4-input functions. This is a paper proof and is not yet Lean checked. Gap (B) is still SAT-certified only.
 
 Kernel-budget estimate for a direct search. Enumerating 8-gate prefixes and looking up the final gate leaves about
 2·10^10 canonical prefixes per NOT placement, about 2·10^11 in all, against a kernel budget of roughly 10^8 reductions in 20 minutes. A brute-force

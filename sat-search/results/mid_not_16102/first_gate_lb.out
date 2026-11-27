@@ -1,14 +1,16 @@
-LB(f16102) = 7
-  x0=0: LB = 5
+LB(f16102) without cascades = 7
+LB(f16102) with first-level cascades = 7
+LB(f16102) with two-reader cascades = 8
+  x0=0: LB = 6
   x0=1: LB = 4
   x1=0: LB = 5
   x1=1: LB = 4
   x2=0: LB = 5
   x2=1: LB = 4
-  x3=0: LB = 5
+  x3=0: LB = 6
   x3=1: LB = 1
   x4=0: LB = 3
-  x4=1: LB = 5
-  x5=0: LB = 5
+  x4=1: LB = 6
+  x5=0: LB = 6
   x5=1: LB = 2
-states: 46
+states: 148

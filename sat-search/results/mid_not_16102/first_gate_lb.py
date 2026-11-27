@@ -12,6 +12,8 @@ the Lean side would formalize exactly these three steps.
 import sys
 from functools import lru_cache
 
+CASCADE = 2
+
 
 def var_mask(n, i):
     m = 0
@@ -34,6 +36,10 @@ def cofactor(n, tt, i, b):
             hi = x >> (i + 1)
             out |= 1 << (lo | (hi << i))
     return out
+
+
+def nonconst(n, tt):
+    return tt not in (0, (1 << (1 << n)) - 1)
 
 
 def essential(n, tt):
@@ -83,23 +89,58 @@ def factor(n, tt, i, j, a, c):
 
 
 @lru_cache(maxsize=None)
-def LB(n, tt):
+def LB(n, tt, cascade=CASCADE):
     ess = essential(n, tt)
     if len(ess) <= 1:
         return 0
     floor = len(ess) - 1
+    if len(ess) == 2:
+        return 1
+    sub = lambda v, b: LB(*canon(n - 1, cofactor(n, tt, v, b)), cascade)
     best = None
     for p in range(len(ess)):
         for q in range(p + 1, len(ess)):
             i, j = ess[p], ess[q]
             opts = []
+            # Case 2: some first-gate input v has >= 2 readers.
+            case2 = []
             for v in (i, j):
-                opts.append(2 + max(LB(*canon(n - 1, cofactor(n, tt, v, b))) for b in (0, 1)))
+                C = [sub(v, b) for b in (0, 1)]
+                lo, hi = sorted(C)
+                val = 2 + hi
+                if cascade:
+                    # controlling value of the first gate kills R(v) and R(g1), and
+                    # minimality gives R(g1) not inside R(v): >= 3 gates for some b.
+                    val = max(val, 3 + lo)
+                if cascade and cascade >= 2:
+                    nc = [nonconst(n - 1, cofactor(n, tt, v, b)) for b in (0, 1)]
+                    # >= 3 readers: fixing v either way deletes them.
+                    three = 3 + hi
+                    # exactly 2 readers g1, g2; b0 = value making g1 constant.
+                    two = None
+                    for b0 in (0, 1):
+                        o = 1 - b0
+                        alt = []
+                        # g2 constant at o != b0: g1, g2 and R(g2) (nonempty unless f|v=o const)
+                        alt.append((3 if nc[o] else 2) + C[o])
+                        # g2 constant at b0 too: {g1,g2} u R(g1) u R(g2) >= 4 by minimality
+                        alt.append((4 if nc[b0] else 3) + C[b0])
+                        cand = max(3 + C[b0], min(alt))
+                        two = cand if two is None else min(two, cand)
+                    val = max(val, min(three, two))
+                case2.append(val)
+            opts.append(min(case2))
+            # Case 1: both inputs have one reader; the gate is x_i^a AND x_j^c.
             for a in (0, 1):
                 for c in (0, 1):
                     g = factor(n, tt, i, j, a, c)
-                    if g is not None:
-                        opts.append(1 + LB(*canon(n - 1, g)))
+                    if g is None:
+                        continue
+                    val = 1 + LB(*canon(n - 1, g), cascade)
+                    if cascade:
+                        # x_i := not a makes g1 constant: g1 and its reader(s) go.
+                        val = max(val, 2 + sub(i, 1 - a), 2 + sub(j, 1 - c))
+                    opts.append(val)
             val = min(opts)
             best = val if best is None else min(best, val)
     return max(floor, best)
@@ -114,7 +155,9 @@ def table_16102():
 if __name__ == "__main__":
     sys.setrecursionlimit(10000)
     tt = table_16102()
-    print("LB(f16102) =", LB(*canon(6, tt)))
+    print("LB(f16102) without cascades =", LB(*canon(6, tt), False))
+    print("LB(f16102) with first-level cascades =", LB(*canon(6, tt), 1))
+    print("LB(f16102) with two-reader cascades =", LB(*canon(6, tt), 2))
     for v in range(6):
         for b in (0, 1):
             print(f"  x{v}={b}: LB =", LB(*canon(5, cofactor(6, tt, v, b))))
