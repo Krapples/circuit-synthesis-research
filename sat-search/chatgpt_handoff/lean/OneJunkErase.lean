@@ -2523,6 +2523,15 @@ private lemma suspendedValue_evalExcept {n : ℕ} (C : Circuit) (h : IsAO2 n C) 
   intro v _
   exact dite_eq_left (h.2.1 j hj v.val v.property)
 
+/-- The suspended gate can be assigned any Boolean function while retaining
+    all other gate equations. -/
+theorem existsEvalExceptWithJunk {n : ℕ} (C : Circuit) (h : IsAO2 n C) (r : ℕ)
+    (fill : (Fin n → Bool) → Bool) :
+    ∃ V, EvalExcept n C r V ∧ ∀ x, V x (n + r) = fill x :=
+  ⟨suspendedValue C r fill, suspendedValue_evalExcept C h r fill, suspendedValue_hole C r fill⟩
+
+#print axioms existsEvalExceptWithJunk
+
 private lemma suspendedValue_before {n : ℕ} (C : Circuit) (h : IsAO2 n C) (r : ℕ)
     (hr : r < C.gates.length) (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) :
     ∀ w < n + r, suspendedValue C r fill x w = val C (List.ofFn x) w := by

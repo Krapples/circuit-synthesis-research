@@ -110,18 +110,16 @@ and a concrete strict deletion for singleton overlap without exposed
 centres are also Lean-checked. The remaining one-junk replacements are open.
 [Collector proof and verification scope](sat-search/chatgpt_handoff/meta3754_collector_accounting.md)
 
-For L-meta-3754, `noTwoOverlap` rules out two or more shared raw vertices
-in the operands of the unique dirty AND in a least lift-fixed circuit on a
-C4-free graph. The checked gate-list rebuild preserves shared providers,
-replays the suffix and reduces the circuit size. Lean also checks uniqueness
-of the exposing centre under triangle-freeness and the two-vertices-per-side
-condition. In the exposed singleton case, the provider containing the shared
-vertex and its adjacent centre is exclusive to the junk. Protected providers
-on the other side preserve their exposed star contributions after redirection.
-Lean checks strict deletion when that opposite provider is protected. For
-an unprotected opposite provider it checks the candidate zero-cost OR and
-the two-gate star construction. The concrete trimmed-prefix integration and
-the disjoint-support cases remain open.
+For L-meta-3754, `oneJunkSupportsDisjoint` rules out all overlap between
+the raw operand supports of the unique dirty AND in a least lift-fixed
+exact fan-in-two AND/OR circuit on a bipartite C4-free graph. Lean checks
+the singleton case using the merged L-meta-4745 and L-meta-4746 reductions
+plus a local bypass. The independent gate-list rebuild `noTwoOverlap`
+handles larger intersections and preserves shared providers. The L-meta-4747
+bridge narrows the remaining disjoint-support case to circuits with a
+clean AND that reads the junk through ORs and has a unit-active opposite
+operand on an edge where the junk is true. The one-junk contradiction
+under that condition and the many-junk reduction remain open in Lean.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero

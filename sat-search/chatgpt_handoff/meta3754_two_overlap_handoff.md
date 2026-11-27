@@ -123,11 +123,46 @@ construction. Given a redirected circuit with at least three gates removed
 and a wire for the trimmed support that covers the missing edges, it appends
 one AND and one OR and proves that the result computes the graph edge function.
 
-The remaining integration is to compute the per-wire trimmed supports,
+To finish that standalone construction, compute the per-wire trimmed supports,
 prove coverage of every omitted contribution, and bind the two skipped
 prefix indices to the mixed root and the zero-cost OR. The replay must
 carry the trimmed wire's value through the suffix to the final star.
-The disjoint-support and many-junk cases also remain open.
+
+## Bridge to the upstream reductions
+
+The [local bridge](upstream/OneJunkUpstream.lean) uses the merged
+[L-meta-4745](https://github.com/open-goat/pequalnp-proofs/blob/3db0136bf094e975baaf20214b01e4b4579059f2/lean/PEqualNP/Outside/L_meta_4745.lean)
+and [L-meta-4746](https://github.com/open-goat/pequalnp-proofs/blob/3db0136bf094e975baaf20214b01e4b4579059f2/lean/PEqualNP/Outside/L_meta_4746.lean)
+in the exposed singleton case. The two reductions split on whether a
+junk-carrying AND reader has an opposite operand activated by both the
+exposing unit input and a second unit input. Each returns a strictly smaller
+circuit in the same exact AND/OR basis that computes the full graph function.
+
+For the case with no exposed reader, suspend the junk equation, set its
+value to true, and set every raw input to false. A dirty operand with its
+junk flag set evaluates to true. Tracing that value backwards through
+strictly earlier dirty wires gives an OR path to the unique dirty AND.
+This connects the local semantic flag to the upstream reader predicate and
+discharges the premise of the checked no-exposure bypass.
+
+`oneJunkSupportsDisjoint` combines that singleton argument with
+`noTwoOverlap`. Under leastness, lift fixedness, C4-freeness, a proper Boolean
+two-colouring, and exactly one junk AND, the two operand supports are
+disjoint. `oneJunkFalseOnUnit` packages the consequence that the junk is false
+on every unit input. Applying
+[L-meta-4747](https://github.com/open-goat/pequalnp-proofs/blob/3db0136bf094e975baaf20214b01e4b4579059f2/lean/PEqualNP/Outside/L_meta_4747.lean)
+contrapositively then gives `oneJunkHasEdgeReader`. A remaining candidate
+must have a clean AND later than the junk, an OR path from one of its
+operands to the junk, and an edge `{u, z}` on which the junk is true and
+the other operand is already true at the unit input `z`. This witness
+identifies a case to analyze in the disjoint-support replacement. It does
+not assert that the edge would be lost on deleting the junk, since the
+same reader or another reader may cover it.
+
+The bridge is a local research dependency on accepted upstream modules.
+Check the desk's permitted imports for the exact submission before using
+this dependency there. The disjoint case with an edge-reader witness and
+the many-junk reduction remain open in Lean.
 
 ## Verification
 
@@ -170,3 +205,39 @@ The gate-budget and star construction check took 72.730 seconds and passed
 all 43 axiom audits. The checked source SHA-256 is
 `8b9e5838674130a76b2d0b4106350a8ecc50ae97776b36057ded9bf7a58d720e`.
 The local evidence is in `.research/ops/1795766662384002400-lean-check/`.
+
+To replay the upstream bridge, use the same pinned Lake project at
+`3db0136bf094e975baaf20214b01e4b4579059f2`. A sparse checkout needs the
+`PEqualNP/MetaComplexity/Helpers` directory, `PEqualNP/MetaComplexity/L2604.lean`
+and the three imported `PEqualNP/Outside` files in addition to the
+definitions. From the research repository root, run these commands with
+the pinned dependencies available.
+
+```powershell
+$workspace = (Resolve-Path '.research/one-junk-upstream/lean').Path
+$src = (Resolve-Path 'sat-search/chatgpt_handoff/lean/OneJunkErase.lean').Path
+$srcRoot = Split-Path -Parent $src
+$lake = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.elan/bin/lake.exe'
+foreach ($step in '4745', '4746', '4747') {
+  python -B sat-search/workflow/research.py lean $workspace --module "PEqualNP.Outside.L_meta_$step" --timeout 240
+  if ($LASTEXITCODE -ne 0) { throw "Upstream L-meta-$step build failed" }
+}
+Push-Location $workspace
+try {
+  & $lake env lean "--root=$srcRoot" '-DwarningAsError=true' -o '.lake/build/lib/lean/OneJunkErase.olean' $src
+  if ($LASTEXITCODE -ne 0) { throw 'Local OneJunkErase module build failed' }
+} finally { Pop-Location }
+python -B sat-search/workflow/research.py lean $workspace --source sat-search/chatgpt_handoff/upstream/OneJunkUpstream.lean --strict --timeout 240
+```
+
+The strict local core check took 85.480 seconds and passed all 44 axiom
+audits. Its exact SHA-256 is
+`c6a8488627b4ece2d61e04d30226ae36f1b34a081520417765a096d86dc04cdf`.
+The strict bridge check took 37.667 seconds and passed all five audits,
+including the three public conclusions about disjointness, unit inputs,
+and edge readers. Its exact SHA-256 is
+`da26e631fb689fb16c619dec026032976dab4e95abe7041e15ed0b2c1bf55a6f`.
+Both audits report only `propext`, `Classical.choice`, and `Quot.sound`.
+The logs and machine-readable audit records are under
+`.research/ops/1795768110084459100-lean-check/` and
+`.research/ops/1795768275005188200-lean-check/`, respectively.
