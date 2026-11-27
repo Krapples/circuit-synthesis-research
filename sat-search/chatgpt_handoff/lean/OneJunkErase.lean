@@ -4826,4 +4826,141 @@ theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n)
 
 #print axioms indispensableCarrierOppositeSingleton
 
+
+/-- An actual directed OR route from an immediate reader of the unique
+    junk to a wire; the junk itself is not an intermediate OR. -/
+inductive OrCarrierRoute (n : ℕ) (C : Circuit) (r i : ℕ) : ℕ → Prop
+  | direct (hi : i < C.gates.length) (hor : (gateAt C i).op = GateOp.or)
+      (hread : n+r ∈ (gateAt C i).inputs) : OrCarrierRoute n C r i (n+i)
+  | extend {w j : ℕ} (path : OrCarrierRoute n C r i w)
+      (hj : j < C.gates.length) (hjr : j ≠ r)
+      (hor : (gateAt C j).op = GateOp.or) (hm : w ∈ (gateAt C j).inputs) :
+      OrCarrierRoute n C r i (n+j)
+
+theorem carrierRouteFires {n : ℕ} {C : Circuit} {r i w : ℕ}
+    (path : OrCarrierRoute n C r i w)
+    {V : (Fin n → Bool) → ℕ → Bool} (hV : EvalExcept n C r V)
+    (x : Fin n → Bool) (ht : V x (n+i) = true) : V x w = true := by
+  induction path with
+  | direct _ _ _ => exact ht
+  | extend path hj hjr hor hm ih =>
+    exact (evalExcept_or hV hj hjr hor x).mpr ⟨_,hm,ih⟩
+
+/-- An immediate OR reader has a real raw leaf under false suspension.
+    Absorption by a second junk-containing operand would contradict
+    leastness; a pure other operand is nonzero. -/
+theorem immediateOrReaderRawLeaf {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r i : ℕ} (hJ : junk G C = {r}) (hi : i < C.gates.length)
+    (hor : (gateAt C i).op = GateOp.or) (hread : n+r ∈ (gateAt C i).inputs)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W) :
+    ∃ e : Fin n, W (pairInput e e) (n+i) = true := by
+  have hri : r < i := Nat.lt_of_add_lt_add_left (h.1.2.1 i hi _ hread)
+  have hd : ¬ BelowF G C i := by
+    intro hc
+    exact (junkMember G C hJ).2.2 (cleanOrOperands G C h.1 hi hor hc hread)
+  obtain ⟨p,q,hpq⟩ := twoOperands h.1 hi
+  obtain ⟨w,hw⟩ : ∃ w, (gateAt C i).inputs = [n+r,w] ∨
+      (gateAt C i).inputs = [w,n+r] := by
+    rcases (show n+r = p ∨ n+r = q by simpa [hpq] using hread) with he | he
+    · exact ⟨q,Or.inl (by simpa [he] using hpq)⟩
+    · exact ⟨p,Or.inr (by simpa [he] using hpq)⟩
+  have hwm : w ∈ (gateAt C i).inputs := by
+    rcases hw with he | he <;> simp [he]
+  have hwlt := h.1.2.1 i hi w hwm
+  obtain ⟨S,f,hS⟩ := dirtyRawForm G C h hl hJ w (by omega)
+    (fun hc => hd (cleanWireReader G C h hl hi hwm hc).2)
+  let V := fun (x : Fin n → Bool) k => val C (List.ofFn x) k
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have hf : f = false := by
+    cases hflag : f
+    · rfl
+    · exfalso
+      apply noEqualEarlier G C h i w hi hwlt
+      intro x
+      apply Bool.eq_iff_iff.mpr
+      change V x (n+i) = true ↔ V x w = true
+      constructor
+      · intro ht
+        obtain ⟨z,hz,hzt⟩ := (evalExcept_or hV hi hri.ne.symm hor x).mp ht
+        have he : z = n+r ∨ z = w := by
+          rcases hw with he | he
+          · simpa [he] using hz
+          · simpa [he,or_comm] using hz
+        rcases he with he | he
+        · exact (hS.2 V hV x).mpr (Or.inr ⟨hflag,he ▸ hzt⟩)
+        · exact he ▸ hzt
+      · intro ht
+        exact (evalExcept_or hV hi hri.ne.symm hor x).mpr ⟨w,hwm,ht⟩
+  obtain ⟨e,he,_⟩ := ((hS.2 V hV (fun _ => true)).mp
+    (allTrueWires h.1 w (by omega))).resolve_right (by simp [hf])
+  exact ⟨e,(evalExcept_or hW hi hri.ne.symm hor _).mpr
+    ⟨w,hwm,(hS.2 W hW _).mpr (Or.inl ⟨e,he,by simp [pairInput]⟩)⟩⟩
+
+/-- Every dirty non-junk wire that loses a true value traces to an
+    actual immediate OR reader, rather than a merely semantic flag. -/
+theorem lostDirtyWireRoute {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {V W : (Fin n → Bool) → ℕ → Bool} (hV : EvalExcept n C r V)
+    (hW : EvalExcept n C r W) (x : Fin n → Bool) :
+    ∀ w < n+C.gates.length, w ≠ n+r → ¬ CleanWire G C w →
+      V x w = true → W x w = false →
+      ∃ i < C.gates.length, (gateAt C i).op = GateOp.or ∧
+        n+r ∈ (gateAt C i).inputs ∧ OrCarrierRoute n C r i w := by
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw hne hd hvt hwf
+    by_cases hn : w < n
+    · let v : Fin n := ⟨w,hn⟩
+      have he : V x w = W x w := (hV.1 x v).trans (hW.1 x v).symm
+      rw [hvt,hwf] at he
+      cases he
+    obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+    have hj : j < C.gates.length := by omega
+    have hjr : j ≠ r := by omega
+    have hor : (gateAt C j).op = GateOp.or := by
+      rcases h.1.1 _ (gateAt_mem hj) with hand | hor
+      · exact (hjr (uniqueDirtyAnd G C hJ hj hd hand)).elim
+      · exact hor
+    obtain ⟨p,hp,hpv⟩ := (evalExcept_or hV hj hjr hor x).mp hvt
+    have hpw : W x p = false := by
+      cases he : W x p
+      · rfl
+      · have ht := (evalExcept_or hW hj hjr hor x).mpr ⟨p,hp,he⟩
+        rw [hwf] at ht
+        cases ht
+    have hpl := h.1.2.1 j hj p hp
+    by_cases he : p = n+r
+    · have hm : n+r ∈ (gateAt C j).inputs := he ▸ hp
+      exact ⟨j,hj,hor,hm,.direct hj hor hm⟩
+    · obtain ⟨i,hi,hio,hir,path⟩ := ih p hpl (by omega) he
+        (fun hc => hd (cleanWireReader G C h hl hj hp hc).2) hpv hpw
+      exact ⟨i,hi,hio,hir,.extend path hj hjr hor hp⟩
+
+/-- Shared topology supplies the common raw leaf required by the
+    indispensable-carrier geometry. -/
+theorem carrierRoutesShareRawLeaf {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r i p q : ℕ} (hJ : junk G C = {r}) (hi : i < C.gates.length)
+    (hor : (gateAt C i).op = GateOp.or) (hir : n+r ∈ (gateAt C i).inputs)
+    (hp : OrCarrierRoute n C r i p) (hq : OrCarrierRoute n C r i q)
+    {P Q : Finset (Fin n)} {f g : Bool} (hP : RawForm C r p P f) (hQ : RawForm C r q Q g) :
+    ∃ e : Fin n, e ∈ P ∧ e ∈ Q := by
+  obtain ⟨W,hW,hzero⟩ := existsEvalExceptWithJunk C h.1 r (fun _ => false)
+  obtain ⟨e,he⟩ := immediateOrReaderRawLeaf G C h hl hJ hi hor hir hW
+  have member {w : ℕ} {S : Finset (Fin n)} {b : Bool}
+      (path : OrCarrierRoute n C r i w) (hS : RawForm C r w S b) : e ∈ S := by
+    obtain ⟨v,hv,hvx⟩ := ((hS.2 W hW _).mp
+      (carrierRouteFires path hW (pairInput e e) he)).resolve_right (by simp [hzero])
+    have heq : v = e := by simpa [pairInput] using hvx
+    exact heq ▸ hv
+  exact ⟨e,member hp hP,member hq hQ⟩
+
+#print axioms carrierRouteFires
+#print axioms immediateOrReaderRawLeaf
+#print axioms lostDirtyWireRoute
+#print axioms carrierRoutesShareRawLeaf
+
 end ResearchVerification.OneJunkErase
