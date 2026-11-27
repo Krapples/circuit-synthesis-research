@@ -564,16 +564,16 @@ theorem allTrueWires {n : ℕ} {C : Circuit} (h : IsAO2 n C) :
       simp [List.getD_eq_getElem?_getD, hin]
     · obtain ⟨j, rfl⟩ : ∃ j, w = n + j := ⟨w - n, by omega⟩
       have hj : j < C.gates.length := by omega
-      obtain ⟨a, b, hab⟩ := twoOperands h hj
-      have ha : a < n + j := h.2.1 j hj a (by rw [hab]; simp)
-      have hb : b < n + j := h.2.1 j hj b (by rw [hab]; simp)
-      have hva := ih a ha (by omega)
-      have hvb := ih b hb (by omega)
       rcases h.1 _ (gateAt_mem hj) with hand | hor
-      · rw [val_gate (n := n) (by simp) hj, hand, hab]
-        simp [GateOp.eval, ha, hb, hva, hvb]
-      · rw [val_gate (n := n) (by simp) hj, hor, hab]
-        simp [GateOp.eval, ha, hb, hva, hvb]
+      · apply (val_and (n := n) (by simp) hj hand).mpr
+        intro i hi
+        have hlt := h.2.1 j hj i hi
+        exact ⟨hlt, ih i hlt (by omega)⟩
+      · obtain ⟨a, b, hab⟩ := twoOperands h hj
+        have ha : a ∈ (gateAt C j).inputs := by rw [hab]; simp
+        have hlt := h.2.1 j hj a ha
+        exact (val_or (n := n) (by simp) hj hor).mpr
+          ⟨a, ha, hlt, ih a hlt (by omega)⟩
 
 /-- A raw wire is not below the graph function: a singleton is never an edge. -/
 theorem rawNotClean {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
@@ -655,8 +655,8 @@ lemma operandPosition {n : ℕ} {C : Circuit} (h : IsAO2 n C)
     ∃ b : Fin 2, opnd C j b = w := by
   obtain ⟨a, b, hab⟩ := twoOperands h hj
   rw [hab] at hw
-  simp only [List.mem_cons, List.mem_singleton] at hw
-  rcases hw with rfl | rfl
+  have hpair : w = a ∨ w = b := by simpa using hw
+  rcases hpair with rfl | rfl
   · exact ⟨0, by simp [opnd, hab]⟩
   · exact ⟨1, by simp [opnd, hab]⟩
 
