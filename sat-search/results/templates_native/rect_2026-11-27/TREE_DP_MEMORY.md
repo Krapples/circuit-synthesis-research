@@ -142,6 +142,15 @@ Overall saving about 2-3x, and disk removes the hard ceiling at the cost of time
   multisets of a size is larger than the per-shape lattice. It is worse.
 - **Gate elimination (set x_u = 0 to reach a 3x6 sub-instance).** It loses about 1 gate in the
   accounting, so the 3x6 instance would need S = 4. It is worse.
+- **First-gate elimination bound** (`theory/partial_first_gate_bound.py`, monotone, partial labels).
+  Measured 2026-11-27, under 1 s per unit:
+  - 21050 and 21279 (4x5) both give 8. Their known minima are 10 and at least 12.
+  - 22162 and 22172 (4x6) both give 9.
+  - So it only reaches the trivial n-1, with and without the first-gate pair step.
+  - The stronger C++ version, `represents_8x8_11869/repro/rep-elimination.cpp`, is hard-coded to
+    8x8. It reports its exclusions only as "conditional" and reached n+1 there (budget 16 with 16
+    inputs).
+  - The tree DP already proves n+2 on these units, so this direction is weaker than what we have.
 - **Analytic shape pruning with the project's rank certificates (port ranks, rank(H) ≤ 2e).** This
   could rule out the heavy p = 2, e = 1 shapes for a given mask without any DP. It is worth asking
   the theory side whether a mask-rank bound excludes f = (2,2) sharing at S = 3. Untested.
