@@ -531,4 +531,174 @@ theorem noCleanAndOperand {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms noUnreadGate
 #print axioms noCleanAndOperand
 
+
+-- Structural consequences of exact AO2 minimality.
+
+open PEqualNP.EdgeOwnership PEqualNP.Core PEqualNP.ReadTwo
+
+lemma twoOperands {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {j : ℕ} (hj : j < C.gates.length) :
+    ∃ a b : ℕ, (gateAt C j).inputs = [a, b] := by
+  have hl := h.2.2 _ (gateAt_mem hj)
+  generalize he : (gateAt C j).inputs = L at hl ⊢
+  cases L with
+  | nil => simp at hl
+  | cons a L =>
+    cases L with
+    | nil => simp at hl
+    | cons b L =>
+      cases L with
+      | nil => exact ⟨a, b, rfl⟩
+      | cons c L => simp at hl
+
+/-- Every existing wire is true at the all-true input. No constants
+    or invalid reads are permitted in IsAO2. -/
+theorem allTrueWires {n : ℕ} {C : Circuit} (h : IsAO2 n C) :
+    ∀ w < n + C.gates.length, val C (List.ofFn (fun _ : Fin n => true)) w = true := by
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw
+    by_cases hin : w < n
+    · rw [val_input (n := n) (by simp) hin]
+      simp [List.getD_eq_getElem?_getD, hin]
+    · obtain ⟨j, rfl⟩ : ∃ j, w = n + j := ⟨w - n, by omega⟩
+      have hj : j < C.gates.length := by omega
+      obtain ⟨a, b, hab⟩ := twoOperands h hj
+      have ha : a < n + j := h.2.1 j hj a (by rw [hab]; simp)
+      have hb : b < n + j := h.2.1 j hj b (by rw [hab]; simp)
+      have hva := ih a ha (by omega)
+      have hvb := ih b hb (by omega)
+      rcases h.1 _ (gateAt_mem hj) with hand | hor
+      · rw [val_gate (n := n) (by simp) hj, hand, hab]
+        simp [GateOp.eval, ha, hb, hva, hvb]
+      · rw [val_gate (n := n) (by simp) hj, hor, hab]
+        simp [GateOp.eval, ha, hb, hva, hvb]
+
+/-- A raw wire is not below the graph function: a singleton is never an edge. -/
+theorem rawNotClean {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (a : Fin n) :
+    ¬ (∀ x : Fin n → Bool, val C (List.ofFn x) a.val = true →
+      graphFun G ∅ x = true) := by
+  intro h
+  let x : Fin n → Bool := fun v => decide (v = a)
+  have hv : val C (List.ofFn x) a.val = true := by
+    rw [val_input (n := n) (by simp) a.isLt]
+    simp [List.getD_eq_getElem?_getD, a.isLt, x]
+  obtain ⟨p, q, hpq, hp, hq⟩ := (graph_true G x).mp (h x hv)
+  have he1 : p = a := by simpa [x] using hp
+  have he2 : q = a := by simpa [x] using hq
+  exact G.ne_of_adj hpq (he1.trans he2.symm)
+
+/-- Repeated operands would make a gate equal to an earlier wire. -/
+theorem distinctOperands {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) {j a : ℕ} (hj : j < C.gates.length) :
+    (gateAt C j).inputs ≠ [a, a] := by
+  intro he
+  have ha : a ∈ (gateAt C j).inputs := by rw [he]; simp
+  have hlt := h.1.2.1 j hj a ha
+  apply noEqualEarlier G C h j a hj hlt
+  intro x
+  rcases h.1.1 _ (gateAt_mem hj) with hand | hor
+  · rw [val_gate (n := n) (by simp) hj, hand, he]
+    simp [GateOp.eval, hlt]
+  · rw [val_gate (n := n) (by simp) hj, hor, he]
+    simp [GateOp.eval, hlt]
+
+/-- If a least circuit has any gate at all, its last gate is the output.
+    In particular, an invalid output wire is impossible in this case. -/
+theorem outputLast {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hpos : 0 < C.gates.length) :
+    C.output = n + (C.gates.length - 1) := by
+  let j := C.gates.length - 1
+  have hj : j < C.gates.length := by dsimp [j]; omega
+  obtain ⟨a, b, hab⟩ := twoOperands h.1 hj
+  have ha := h.1.2.1 j hj a (by rw [hab]; simp)
+  by_contra hn
+  obtain ⟨k, hjk, hk, _⟩ := noUnreadGate G C h j a hj ha hn
+  dsimp [j] at hjk
+  omega
+
+/-- Empty graph has a zero-gate circuit with a missing output wire.
+    This handles the degenerate case allowed by the actual definitions. -/
+theorem emptyGraphNoGates {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (he : ∀ a b, ¬ G.Adj a b) :
+    C.gates.length = 0 := by
+  let D : Circuit := ⟨[], n⟩
+  have hao : IsAO2 n D := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro g hg
+      simp [D] at hg
+    · intro j hj
+      simp [D] at hj
+    · intro g hg
+      simp [D] at hg
+  have hf : circuitFun n D = graphFun G ∅ := by
+    funext x
+    have hz : graphFun G ∅ x = false := by
+      cases hx : graphFun G ∅ x with
+      | false => rfl
+      | true =>
+        obtain ⟨a, b, hab, _, _⟩ := (graph_true G x).mp hx
+        exact (he a b hab).elim
+    rw [hz]
+    change (List.ofFn x).getD n false = false
+    exact getD_ge _ _ (by simp)
+  have hb := h.2.2 D hao hf
+  change C.gates.length ≤ 0 at hb
+  omega
+
+/-- Membership in a binary gate's input list can be represented by an
+    actual Fin 2 position, as required by the lift definition. -/
+lemma operandPosition {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {j w : ℕ} (hj : j < C.gates.length) (hw : w ∈ (gateAt C j).inputs) :
+    ∃ b : Fin 2, opnd C j b = w := by
+  obtain ⟨a, b, hab⟩ := twoOperands h hj
+  rw [hab] at hw
+  simp only [List.mem_cons, List.mem_singleton] at hw
+  rcases hw with rfl | rfl
+  · exact ⟨0, by simp [opnd, hab]⟩
+  · exact ⟨1, by simp [opnd, hab]⟩
+
+/-- On a clean OR, every operand is clean. -/
+theorem cleanOrOperands {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsAO2 n C) {j w : ℕ} (hj : j < C.gates.length)
+    (hor : (gateAt C j).op = GateOp.or) (hc : BelowF G C j)
+    (hw : w ∈ (gateAt C j).inputs) :
+    ∀ x : Fin n → Bool, val C (List.ofFn x) w = true → graphFun G ∅ x = true := by
+  intro x hx
+  apply hc x
+  exact (val_or (n := n) (by simp) hj hor).mpr ⟨w, hw, h.2.1 j hj w hw, hx⟩
+
+/-- Every live reader of a clean gate in a least lift-fixed circuit is
+    itself a clean OR. Liveness is deliberately explicit: the upstream
+    lift definition does not apply to unread gates. -/
+theorem cleanReader {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hlift : IsLiftFixedPoint G C)
+    {r j : ℕ} (hr : r < C.gates.length) (hc : BelowF G C r)
+    (hj : InOutputCone n C j) (hm : n + r ∈ (gateAt C j).inputs) :
+    (gateAt C j).op = GateOp.or ∧ BelowF G C j := by
+  have hclean : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true →
+      graphFun G ∅ x = true := hc
+  have hor : (gateAt C j).op = GateOp.or := by
+    rcases h.1.1 _ (gateAt_mem hj.1) with hand | hor
+    · exact (noCleanAndOperand G C h j (n + r) hj.1 hm hand hclean).elim
+    · exact hor
+  refine ⟨hor, ?_⟩
+  by_contra hn
+  obtain ⟨b, hb⟩ := operandPosition h.1 hj.1 hm
+  apply hlift
+  refine ⟨j, hj.1, b, hj, hor, hn, ?_⟩
+  rw [hb]
+  refine ⟨hclean, ?_⟩
+  exact ⟨fun _ => true, allTrueWires h.1 (n + r) (by omega)⟩
+
+#print axioms allTrueWires
+#print axioms rawNotClean
+#print axioms distinctOperands
+#print axioms outputLast
+#print axioms emptyGraphNoGates
+#print axioms cleanOrOperands
+#print axioms cleanReader
+
 end ResearchVerification.OneJunkErase
