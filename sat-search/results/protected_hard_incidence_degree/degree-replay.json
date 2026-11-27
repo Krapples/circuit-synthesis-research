@@ -1,0 +1,111 @@
+{
+  "seed": 870069,
+  "raw_evaluations": 791624,
+  "lifted_evaluations": 149504,
+  "profiles": [
+    {
+      "groups": 1,
+      "width": 1,
+      "degree": 0,
+      "expected_degree": 0,
+      "pinned_slot_parities": [
+        0,
+        0
+      ],
+      "affine_lifts": 0
+    },
+    {
+      "groups": 1,
+      "width": 3,
+      "degree": 0,
+      "expected_degree": 0,
+      "pinned_slot_parities": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "affine_lifts": 0
+    },
+    {
+      "groups": 2,
+      "width": 1,
+      "degree": 5,
+      "expected_degree": 5,
+      "pinned_slot_parities": [
+        1,
+        1
+      ],
+      "affine_lifts": 8
+    },
+    {
+      "groups": 3,
+      "width": 1,
+      "degree": 8,
+      "expected_degree": 8,
+      "pinned_slot_parities": [
+        1,
+        1
+      ],
+      "affine_lifts": 8
+    },
+    {
+      "groups": 6,
+      "width": 1,
+      "degree": 17,
+      "expected_degree": 17,
+      "pinned_slot_parities": [
+        1,
+        1
+      ],
+      "affine_lifts": 0
+    },
+    {
+      "groups": 2,
+      "width": 2,
+      "degree": 10,
+      "expected_degree": 10,
+      "pinned_slot_parities": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "affine_lifts": 8
+    },
+    {
+      "groups": 3,
+      "width": 2,
+      "degree": 16,
+      "expected_degree": 16,
+      "pinned_slot_parities": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "affine_lifts": 0
+    },
+    {
+      "groups": 2,
+      "width": 3,
+      "degree": 15,
+      "expected_degree": 15,
+      "pinned_slot_parities": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "affine_lifts": 0
+    }
+  ]
+}

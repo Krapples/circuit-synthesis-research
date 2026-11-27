@@ -1,0 +1,32 @@
+{
+  "seed": 870066,
+  "words": 282,
+  "unit": 135,
+  "hardChecks": 135,
+  "affine": 210,
+  "coords": 10710,
+  "mutation": 102,
+  "profiles": [
+    {
+      "m": 2,
+      "l": 1,
+      "N": 14,
+      "length": 630,
+      "affineXorBudget": 3
+    },
+    {
+      "m": 4,
+      "l": 2,
+      "N": 39,
+      "length": 1534,
+      "affineXorBudget": 7
+    },
+    {
+      "m": 8,
+      "l": 3,
+      "N": 100,
+      "length": 3336,
+      "affineXorBudget": 16
+    }
+  ]
+}

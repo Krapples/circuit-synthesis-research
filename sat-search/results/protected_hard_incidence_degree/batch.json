@@ -1,0 +1,33 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check the exact hard-incidence degree and its preservation by surjective affine projection before using it as a reserve on surviving nonlinear gates. Replay the prerequisite protected grammar and elimination on this checkout because the handoffs recorded JS-runtime results rather than native Node runs.",
+  "jobs": [
+    {
+      "id": "hard-incidence-degree",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/hard_incidence_degree_check.py"],
+      "query": {"task": "L-clb-036", "basis": "B2 nonlinear gate accounting", "scope": "Complete hard-incidence tables through 18 raw bits and seeded affine lifts through 14 parameter bits", "budget": "No exact size query"},
+      "timeout": {"initial": 30, "maximum": 30},
+      "workers": 1,
+      "memory_mib": 128
+    },
+    {
+      "id": "protected-affine-grammar-node",
+      "kind": "command",
+      "argv": ["node", "sat-search/chatgpt_handoff/protected_parameter_grammar_check.js"],
+      "query": {"task": "L-clb-036", "scope": "Existing physical paired-word grammar and DPLL controls"},
+      "timeout": {"initial": 15, "maximum": 15},
+      "workers": 1,
+      "memory_mib": 128
+    },
+    {
+      "id": "protected-complete-elimination-node",
+      "kind": "command",
+      "argv": ["node", "sat-search/chatgpt_handoff/protected_complete_elimination_check.js"],
+      "query": {"task": "L-clb-036", "basis": "Signed AND/XOR", "scope": "Existing selector-only fair-system and stable unit ID controls"},
+      "timeout": {"initial": 15, "maximum": 15},
+      "workers": 1,
+      "memory_mib": 128
+    }
+  ]
+}

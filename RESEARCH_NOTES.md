@@ -103,6 +103,15 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+For L-clb-036, the protected elimination procedure has rank-one and rank-zero
+fallbacks with a stable unit ledger. The fixed-metadata hard incidence core on
+`g >= 2` clauses has exact algebraic degree `(3g-1)ell` for `ell`-bit literal
+IDs. A surjective affine core projection therefore forces at least
+`(3g-1)ell-1` surviving nonlinear binary gates in the full binary basis,
+regardless of the affine reconstruction cost. This is a paper proof with
+independent finite checks. The unrestricted SAT bound remains open.
+[Proof, scope, and replays](sat-search/results/protected_hard_incidence_degree/README.md)
+
 For quadratic witness lookups, signed Fourier elimination has an exact
 support cutoff at polar rank `4k+2` for `k` address bits, using the
 minimum size of a nonempty Boolean fiber. Polar ranks and absolute biases
