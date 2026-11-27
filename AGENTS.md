@@ -1,120 +1,111 @@
-# Autonomous Research Engineer
+# Autonomous Research Workflow
 
-Implement, integrate, independently verify, and benchmark mathematical improvements to this
-repository's exact Boolean circuit synthesis framework. Work with ChatGPT as the complementary
-theoretical researcher. Translate proposed arguments into precise implementation conditions, test
-those conditions, and document proofs, counterexamples, and open questions for theoretical follow-up.
+Build machine-verified knowledge about exact Boolean circuit synthesis: structural theorems,
+circuit transformations, sound pruning, certificates, and Lean proofs that make later problems
+easier. Build toward a solution in checked pieces instead of attempting the whole solution at once.
+Let mathematics guide the work, computation challenge it, and Lean verify it. "No verified
+progress" is an acceptable, honest session outcome.
 
-## Research workflow
+## Roles: Sol leads, Luna does bounded work
 
-1. Read [RESEARCH_NOTES.md](RESEARCH_NOTES.md) and the relevant experiment notes before choosing
-   the next step. Prioritize generalizable methods and unresolved non-graph targets when they
-   provide a useful test of generality.
-2. Challenge the assumptions of each proposed rule. Start with mathematical reasoning,
-   counterexample searches, known answers, and small reproducible experiments. In particular,
-   establish the target basis and whether the proof needs a complete function or applies to
-   partial labels before using a rule for pruning.
-3. Preserve existing implementations and frozen corpora as correctness references. Integrate
-   new rules through the normal solver entry points. Keep costly or unproven performance
-   improvements opt-in and measure each contribution separately.
-4. Independently evaluate circuit witnesses and check UNSAT proof certificates where practical.
-   Record the scope of each verdict, including the target, basis, gate budget, and shard or
-   shape coverage. A timed-out run leaves the corresponding budget open.
-5. Benchmark matched jobs under explicit wall-clock and solver limits. Record analytical lower
-   bounds, verified upper bounds and minima, runtime, peak memory, and relevant search work.
-   Capture negative results and retain raw records, seeds, and reproduction commands.
-6. Assess each result, choose the highest-value next question, and pursue it within the
-   available computational budget. Reassess the direction periodically. Keep benchmark workers
-   under control, clean up child processes, and stop when the experiment reaches its limits
-   or further progress requires human input.
+The workflow is the same in Claude Code and ChatGPT. Map the roles to models here:
 
-## Research efficiency and handoffs
+| Tool | Sol (lead) | Luna (bounded work) |
+| --- | --- | --- |
+| Claude Code | Opus | Haiku subagent (`model: haiku`) |
+| ChatGPT | the lead reasoning model | a smaller, faster model or lightweight task |
 
-- Use the [research workflow runner](sat-search/workflow/README.md) across research tasks.
-  Start or resume with `python -B sat-search/workflow/research.py status --task <step>`.
-  Preserve existing checkouts, leases, run records and proof packets. Check the topic notes
-  for older evidence before launching work the run database has never seen.
-- Give each SAT or Lean batch a decision to inform. Use analytical bounds, small counterexample
-  searches, or independent enumeration to narrow the batch where practical. Check prior runs
-  before launching and record the reason for a repeat or a longer cap. Reused evidence keeps
-  its original target, basis, budget, coverage, and verification grade.
-- Use reusable runners for solver jobs, Lean, lease renewal, PR status, and routine Git checks.
-  Keep full logs and per-job records on disk. Return one bounded batch summary by default and
-  surface actionable errors and meaningful state changes. Keep active leases renewed through
-  the established heartbeat. Run independent jobs in the background and check them when their
-  results are needed.
-- Maintain a compact record for the active research step. Update it at meaningful milestones
-  with the target, basis, budget or restriction, strongest checked result, open obligation,
-  next action, evidence paths, and active jobs or lease state. Resume from this record after
-  compaction or handoff, then open only the evidence or log excerpts needed for the next decision.
-- When measuring a workflow change, use a new representative milestone and record model calls,
-  uncached input and output tokens, tool-result bytes, and verified progress where available.
-  Use existing runs as the baseline.
-- Define basis, budget, reduction scope, resource estimates and timeout bounds in a manifest.
-  Canonicalize whole-graph queries through the cube adapter. Preserve the original labeling
-  and exact scope for pinned jobs, partial labels, or prescribed input roles. Use the shared
-  worker and memory budget, review measurements before escalating, and record the reason for
-  any intentional duplicate. Keep solver verdicts, independently verified witnesses, and
-  checked proofs distinct.
-- Use the Lean project's locked incremental Lake environment. Keep project checker, axiom,
-  permitted-dependency, lease and exact-commit submission requirements in force. Normalize
-  selected source files before staging and checkpoint focused changes after applicable checks.
-  Audit the final theorem's transitive axioms. For promised circuits, start from the
-  [exact evaluator and support checks](sat-search/workflow/README.md#proof-checks-for-promised-circuits).
+- **Sol decides.** Sol selects and pins the target, classifies the bottleneck, designs proofs and
+  reductions, assigns verification grades, and approves every submission. Sol reviews Luna's
+  output before it is graded, committed, or submitted.
+- **Luna executes checkable tasks:** repository and prior-evidence scans, file and log summaries,
+  desk, lease, PR and CI status, batch launches from a Sol-written manifest, and the mechanical
+  submission checklist in [PROOF_WORKFLOW.md](sat-search/workflow/PROOF_WORKFLOW.md#package-and-submit).
+  Give Luna an exact scope, the output format, and a word limit. Luna reports facts with paths
+  and line numbers, and returns an "open" verdict when unsure. Luna never weakens a statement,
+  changes a target, or assigns a grade above "computationally tested".
+- When Claude and ChatGPT both work on a question, their Sols split it into theory and
+  implementation/independent review, and they hand off through the repository record.
 
-## Reports and commits
+## Modes
 
-Maintain [RESEARCH_NOTES.md](RESEARCH_NOTES.md) as the consolidated quick reference. Link it to
-detailed proofs, limitations, counterexamples, benchmarks, implementation changes, and next
-research directions. Distinguish proven claims, verified computational results, experimental
-observations, conjectures, and unresolved questions.
+- **Desk mode** (a leased pequalnp unit, tools in `pequalnp-proofs/tools/pnp.sh`). The lease
+  deadline outranks the research priorities. Start `bash .pnp/keepalive.sh <step> 300 6` when
+  the step is taken. Run one CPU-heavy search at a time, and take proof-only steps in parallel.
+  When the exact packaged file passes `tools/pnp.sh check` and the axiom and `sorry` audit, and
+  upstream has not merged the step, submitting is pre-authorized. Release undoable steps
+  promptly with an honest reason.
+- **Research mode** (everything else). Choose work in this order: general structural theorems,
+  reusable transformations and gate-elimination lemmas, stronger bounds and reductions, sound
+  pruning, reusable Lean and certificate infrastructure, finishing partial results, isolated
+  witnesses. Explicitly assigned objectives come first.
 
-Commit after each major step. Use focused commits that capture the implementation, relevant
-verification, and reproducible records for that milestone. Inspect the staged diff and run the
-applicable checks before committing.
+## Session loop
+
+1. Resume from the record: `python -B sat-search/workflow/research.py status --task <step>`.
+   Check [RESEARCH_NOTES.md](RESEARCH_NOTES.md), recent commits, and whether the target or a
+   stronger result is already proved or held by another agent. Keep this proportionate to the task.
+2. Pin the target: exact statement, upstream commit and definitions, circuit model and basis,
+   gate counting, complete-function or partial-promise semantics, permitted imports and axioms.
+   An alternative formulation needs an explicit reduction to the original.
+3. Classify the bottleneck and use its playbook. Reclassify when the evidence changes.
+   - *Theory*: the argument is unknown. Use small examples, counterexample search, conjecture refinement.
+   - *Reduction*: find sound restrictions, normal forms, decompositions, gate eliminations.
+   - *Search*: see [SEARCH_WORKFLOW.md](sat-search/workflow/SEARCH_WORKFLOW.md).
+   - *Proof*: see [PROOF_WORKFLOW.md](sat-search/workflow/PROOF_WORKFLOW.md).
+   Do not use Lean iteration to compensate for a missing argument or an unfinished search.
+4. Work the critical-path obligation. Test a novel claim on small cases before formalizing it.
+5. Verify independently, grade the result, integrate reusable pieces, update the record, commit.
+6. Reassess. Stop when a lemma is refuted, the budget is spent, a stronger result exists, the
+   lease ends, or progress needs human input. Preserve the strongest verified result, the exact
+   remaining obligation, and the failed approaches.
+
+## Rules that always apply
+
+- Never weaken the target, add hypotheses, or change the circuit model silently. Never transfer
+  bounds between incompatible bases.
+- Grades: conjectured → computationally tested → paper proved → stubbed → conditionally compiled
+  → verified → integrated → submitted → accepted → merged. A proof using `sorryAx`, a forbidden
+  axiom, or an unfinished dependency is not verified. Permitted axioms are `propext`,
+  `Classical.choice`, and `Quot.sound`. Keep solver verdicts, checked witnesses, checked
+  certificates, and formal proofs distinct. A timeout leaves its scope open; finite testing is
+  evidence, not proof.
+- `sorry` belongs only in scratch workspaces, never in a committed target or submission.
+- Preserve existing implementations and frozen corpora as references. New pruning or
+  performance rules go through the normal entry points, opt-in, measured one at a time. Rule
+  combinations without coverage stay disabled (allowlist from `sat-search/verify/make_allowlist.py`).
+- Every SAT, search or Lean batch answers a stated question. Check prior runs first and record
+  why a repeat or a longer cap is justified. Keep full logs on disk and return bounded summaries.
+- Effort split: about 80% mathematics and algorithms, 15% targeted verification of the touched
+  components, 5% documentation. Record historical verification gaps in
+  [AUDIT.md](sat-search/verify/AUDIT.md) without blocking research.
+
+## Records, reports, commits
+
+Keep one compact record per active step in the research runner: target, mode, bottleneck,
+dependency graph and open obligations with grades, strongest checked result, evidence paths,
+failed approaches, next action, and active jobs or lease. Resume from it after compaction or handoff.
+
+Update [RESEARCH_NOTES.md](RESEARCH_NOTES.md) when a bound, minimum, default, or priority
+changes. Put proofs, assumptions, counterexamples, scope, and commands in the topic notes; raw
+results and proof artifacts beside their manifests in `sat-search/results`; transient logs in
+`sat-search/logs`. Commit after each milestone with focused commits, after inspecting the staged
+diff and running the applicable checks. End each session with: objective, strongest verified
+result and its grade, Lean and axiom status, computational scope, open obligations, failed
+approaches, files and commits, and next direction.
 
 ## Research map
 
 | Start here | What it contains |
 | --- | --- |
 | [RESEARCH_NOTES.md](RESEARCH_NOTES.md) | Current results, open endpoints, and links to the detailed records. |
-| [NOTES_SYNTHESIS_BENCH.md](sat-search/NOTES_SYNTHESIS_BENCH.md) and [NOTES_SYNTHESIS_FOLLOWUP.md](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md) | Frozen corpus, endpoint verification, sharing hardness, and regional certificate proofs. |
-| [NOTES_PORT_CERTIFICATES.md](sat-search/NOTES_PORT_CERTIFICATES.md) | Port ranks, provider eligibility, global capacity, known regressions, and negative ablations. |
-| [NOTES_COMPLETE_FRONTIER.md](sat-search/NOTES_COMPLETE_FRONTIER.md) | Complete-function FPT audit, counted NOTs, rank-tight certificates, typed ranks, and affine completion. |
-| [NOTES_SIGNED_MODULES.md](sat-search/NOTES_SIGNED_MODULES.md) | Module contraction, free-NOT core minima, ordered quotients, provider-first layouts, and branch-and-bound. |
-| [NOTES_L1343.md](sat-search/NOTES_L1343.md) | Fixed-prefix and cube-search work, with exact shard scope and surviving cube IDs. |
-| [sat-search/experiments](sat-search/experiments) | Research implementations, correctness references, and reproducible checks. |
-| [sat-search/results](sat-search/results) | Frozen targets, matched run records, witness circuits, and proof packets. |
-
-Update the quick reference when a bound, minimum, implementation default, or research priority
-changes. Add the proof assumptions, counterexamples, verification scope, and commands to the
-topic notes. Keep raw matched results and checked proof artifacts beside their manifests in
-`sat-search/results`. Put transient logs in `sat-search/logs` and link or archive runs that
-support a durable result. Give each new regression an explicit expected verdict and keep the
-independent reference available.
-
-## Current direction and stopping rules
-
-Effort split (from 2026-11-24): about 80% mathematical and algorithmic improvements, 15% targeted
-verification, 5% documentation and maintenance. The verification infrastructure in `sat-search/verify`
-(independent reference, differential harnesses, evidence manifests, coverage inventory) checks the
-components a change touches. Do not re-audit unchanged rules or exhaustively test optional
-configurations. Keep rule combinations without coverage disabled (`verified_combinations.json`), and
-record remaining historical gaps in `sat-search/verify/AUDIT.md` without letting them block research.
-
-Prioritize complete-function FPT synthesis, counted-NOT and nonmonotone synthesis, affine
-certificate reconstruction, construction upper bounds, and hybrids with SAT. Audit proofs
-separately from the prototypes that motivated them. Confirm a candidate with small independent
-enumeration or formal proof before making an asymptotic claim.
-
-The guarded family closes the universal `rank(H) <= 2e` direction. Revisit
-sharing-only FPT for arbitrary partial labels only when a new restriction addresses the known
-hardness. Archive explicit enumeration work superseded by certificate completion. Resume
-provider matching, exact rectangle allocation, and capacity refinements when there is evidence
-of stronger whole-function bounds or an end-to-end benefit. Reopen SAT propagation changes
-with a measurable effect or a new sound pruning argument.
-
-Prefer general methods and mathematically motivated changes to instance-specific rules, GPU
-work, repeated benchmark replays, or longer caps. Record why a direction was closed and what
-result would justify reopening it. Coordinate complementary theory work with ChatGPT so
-implementation and independent review advance the same questions without duplicating effort.
+| [workflow/README.md](sat-search/workflow/README.md) | Research runner: records, manifests, Lean, heartbeat, PR status. |
+| [PROOF_WORKFLOW.md](sat-search/workflow/PROOF_WORKFLOW.md) | Proof-bound playbook, transformation checklist, packaging and submission. |
+| [SEARCH_WORKFLOW.md](sat-search/workflow/SEARCH_WORKFLOW.md) | Search-bound playbook and the theory–search–proof loop. |
+| [DIRECTION.md](sat-search/workflow/DIRECTION.md) | Current priorities, closed directions, and what would reopen them. |
+| [NOTES_SYNTHESIS_BENCH.md](sat-search/NOTES_SYNTHESIS_BENCH.md), [NOTES_SYNTHESIS_FOLLOWUP.md](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md) | Frozen corpus, endpoint verification, sharing hardness, regional certificates. |
+| [NOTES_PORT_CERTIFICATES.md](sat-search/NOTES_PORT_CERTIFICATES.md) | Port ranks, provider eligibility, global capacity, regressions, negative ablations. |
+| [NOTES_COMPLETE_FRONTIER.md](sat-search/NOTES_COMPLETE_FRONTIER.md) | Complete-function FPT, counted NOTs, rank-tight certificates, affine completion. |
+| [NOTES_SIGNED_MODULES.md](sat-search/NOTES_SIGNED_MODULES.md) | Module contraction, free-NOT core minima, ordered quotients, branch-and-bound. |
+| [NOTES_L1343.md](sat-search/NOTES_L1343.md) | Fixed-prefix and cube-search work with exact shard scope. |
+| [sat-search/experiments](sat-search/experiments), [sat-search/results](sat-search/results) | Implementations and references; frozen targets, run records, witnesses, proof packets. |

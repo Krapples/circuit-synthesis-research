@@ -3,8 +3,9 @@
 *Started November 24, 2026. Correctness and certification come before new pruning rules and before
 expensive searches.*
 
-New pruning work and expensive synthesis searches resume only after every rule in use has differential
-coverage in all four classes below, and every historical claim listed at the end has a manifest.
+Since November 24, 2026 (see [AGENTS.md](../../AGENTS.md)), remaining gaps are recorded here
+without blocking research. A change gets differential coverage for the components it touches, and
+rule combinations without coverage stay disabled.
 
 ## Status vocabulary
 
