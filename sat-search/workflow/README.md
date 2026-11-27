@@ -91,6 +91,7 @@ streams. A Lean timeout summary identifies the time limit and includes any avail
 
 ```powershell
 python -B sat-search/workflow/research.py lean sat-search/lean --source sat-search/lean/AxiomsCheck.lean --timeout 90
+python -B sat-search/workflow/research.py lean .research/one-junk-upstream/lean --source sat-search/chatgpt_handoff/lean/OneJunkErase.lean --strict --timeout 120
 python -B sat-search/workflow/research.py lean sat-search/lean --module CircuitLemmas --timeout 300
 python -B sat-search/workflow/research.py pr 22538 --watch
 python -B sat-search/workflow/research.py normalize path/to/selected-source.lean
@@ -98,7 +99,12 @@ python -B sat-search/workflow/research.py checkpoint path/to/selected-source.lea
 ```
 
 - `lean` records the toolchain and Lake lockfiles and uses the project's incremental `.lake`
-  dependencies. A source check still runs Lean. Keep Lake's caches in their matching workspace
+  dependencies. `--source --strict` treats warnings as errors, records the source SHA-256, and
+  checks all declarations reported by the source's `#print axioms` commands against
+  `propext`, `Classical.choice`, and `Quot.sound`. Put `#print axioms` on each target theorem.
+  Missing or unexpected axiom reports fail the strict check. `lean-result.json` and
+  `axioms.json` are kept alongside the command logs. Match the reported hash to the staged
+  theorem source before committing. Keep Lake's caches in their matching workspace
   and use the official checker, permitted dependencies, axiom restrictions, and exact submitted
   commit verification for project submissions.
 - Start `heartbeat <private-lease-file>` in a background terminal for a new lease, once per step.

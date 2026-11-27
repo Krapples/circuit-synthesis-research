@@ -139,6 +139,7 @@ def main():
     choice.add_argument("--module")
     choice.add_argument("--source", type=Path)
     lean.add_argument("--lake")
+    lean.add_argument("--strict", action="store_true", help="treat warnings as errors and audit the source's printed axioms")
     lean.add_argument("--timeout", type=float, default=300)
 
     args = parser.parse_args()
@@ -207,7 +208,8 @@ def main():
             time.sleep(args.interval)
     else:
         finite_number(args.timeout, "Lean timeout", 0.01)
-        result = lean_command(state, args.workspace, args.module, args.source, args.timeout, args.lake)
+        result = lean_command(state, args.workspace, args.module, args.source, args.timeout, args.lake,
+                              strict=args.strict)
         emit(result)
         return int(result["status"] != "ok")
     return 0

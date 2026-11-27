@@ -11,8 +11,26 @@ from threading import Event
 
 from common import ROOT, process_alive, read_json, run_logged
 from graph import canonical_graph
-from ops import beat, command_failure, heartbeat, normalize
+from ops import audit_lean_axioms, beat, command_failure, heartbeat, normalize
 from runs import build_jobs, run_batch
+
+
+class LeanAuditTests(unittest.TestCase):
+    def test_wrapped_and_axiom_free_reports(self):
+        report = audit_lean_axioms("'Proof.main' depends on axioms: [propext,\n"
+                                   "  Classical.choice, Quot.sound]\n"
+                                   "'Proof.direct' does not depend on any axioms\n")
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["declarations"], {"Proof.main": ["Classical.choice", "Quot.sound", "propext"],
+                                                  "Proof.direct": []})
+
+    def test_unexpected_and_missing_reports(self):
+        report = audit_lean_axioms("'Proof.direct' does not depend on any axioms\n"
+                                   "'Proof.main'' depends on axioms: [propext, sorryAx]\n"
+                                   "'Proof.quoted' depends on axioms: [«bad]»]\n")
+        self.assertEqual(report["status"], "unexpected")
+        self.assertEqual(report["unexpected"], {"Proof.main'": ["sorryAx"], "Proof.quoted": ["«bad]»"]})
+        self.assertEqual(audit_lean_axioms("Build finished\n")["status"], "missing")
 
 
 class CanonicalGraphTests(unittest.TestCase):

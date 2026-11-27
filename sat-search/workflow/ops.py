@@ -21,6 +21,11 @@ DESK = "https://pequalnp.com/desk"
 STOP_NOTICE = f"https://raw.githubusercontent.com/{REPOSITORY}/main/STOP"
 STEP = re.compile(r"[LDR]-(?:meta|gct)-[0-9]+(?:-[0-9]+)?\Z")
 MODULE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\Z")
+LEAN_AXIOMS = frozenset({"propext", "Classical.choice", "Quot.sound"})
+LEAN_AXIOM_REPORT = re.compile(
+    r"^'(?P<name>[^\r\n]+?)' (?:depends on axioms:\s*\[(?P<axioms>[\s\S]*?)\]"
+    r"|does not depend on any axioms)[ \t]*\r?$", re.MULTILINE,
+)
 TEXT_EXTENSIONS = {".lean", ".py", ".ps1", ".json", ".jsonl", ".toml", ".md", ".txt", ".yml", ".yaml", ".sh", ".cpp", ".h"}
 TEXT_FILENAMES = {".gitignore", ".gitattributes", "lean-toolchain", "Makefile"}
 
@@ -215,7 +220,20 @@ def pr_status(state, number, repository=REPOSITORY):
     return result
 
 
-def lean_command(state, workspace, module, source, timeout, lake=None):
+def audit_lean_axioms(output):
+    """Read Lean's transitive axiom reports, including wrapped lists."""
+    declarations = {}
+    for report in LEAN_AXIOM_REPORT.finditer(output):
+        axioms = (axiom.strip() for axiom in (report["axioms"] or "").split(","))
+        declarations.setdefault(report["name"], set()).update(axiom for axiom in axioms if axiom)
+    unexpected = {name: sorted(axioms - LEAN_AXIOMS) for name, axioms in declarations.items()
+                  if axioms - LEAN_AXIOMS}
+    status = "missing" if not declarations else "unexpected" if unexpected else "ok"
+    return {"status": status, "declarations": {name: sorted(axioms) for name, axioms in declarations.items()},
+            "unexpected": unexpected}
+
+
+def lean_command(state, workspace, module, source, timeout, lake=None, *, strict=False):
     workspace = workspace.resolve()
     lockfiles = [p for p in (workspace / "lean-toolchain", workspace / "lake-manifest.json") if p.is_file()]
     if len(lockfiles) != 2:
@@ -223,6 +241,11 @@ def lean_command(state, workspace, module, source, timeout, lake=None):
     executable = lake or shutil.which("lake") or str(Path.home() / ".elan" / "bin" / ("lake.exe" if os.name == "nt" else "lake"))
     if module and not MODULE.fullmatch(module):
         raise ValueError("module must be a Lean module name")
+    if strict and source is None:
+        raise ValueError("strict Lean checking requires --source")
+    if source is not None:
+        source = source.resolve()
+    source_hash = file_hash(source) if source is not None else None
     metadata = command(state, "lean-version", [executable, "env", "lean", "--version"], workspace, 20)
     if not command_ok(metadata):
         raise ValueError(command_failure(metadata))
@@ -230,9 +253,31 @@ def lean_command(state, workspace, module, source, timeout, lake=None):
                "lockfiles": {p.name: file_hash(p) for p in lockfiles}}
     profile_path = state / "lean" / (digest(profile) + ".json")
     write_json(profile_path, profile)
-    argv = [executable, "build", module] if module else [executable, "env", "lean", str(source.resolve())]
+    if module:
+        argv = [executable, "build", module]
+    else:
+        argv = [executable, "env", "lean"]
+        if strict:
+            argv.append("-DwarningAsError=true")
+        argv.append(str(source))
     result = command(state, "lean-build" if module else "lean-check", argv, workspace, timeout)
-    return {"status": "ok" if command_ok(result) else "open" if result["timeout"] else "error",
-            "cached_environment": str(profile_path), "log": result["stdout"], "stderr": result["stderr"],
-            "cleanup": result["cleanup"],
-            "seconds": result["seconds"], "excerpt": None if command_ok(result) else command_failure(result)}
+    report = {"status": "ok" if command_ok(result) else "open" if result["timeout"] else "error",
+              "cached_environment": str(profile_path), "log": result["stdout"], "stderr": result["stderr"],
+              "cleanup": result["cleanup"], "seconds": result["seconds"],
+              "excerpt": None if command_ok(result) else command_failure(result)}
+    if source is not None:
+        report.update(source=str(source), source_sha256=source_hash)
+    if strict and command_ok(result):
+        audit = audit_lean_axioms(Path(result["stdout"]).read_text(encoding="utf-8"))
+        audit_log = Path(result["stdout"]).with_name("axioms.json")
+        write_json(audit_log, audit)
+        report.update(axiom_audit=str(audit_log), axiom_status=audit["status"],
+                      audited_declarations=len(audit["declarations"]))
+        if not source.is_file() or file_hash(source) != source_hash:
+            report.update(status="error", excerpt="Lean source changed during the strict check")
+        elif audit["status"] == "missing":
+            report.update(status="error", excerpt="Lean printed no axiom reports. Add #print axioms for the target declarations.")
+        elif audit["status"] == "unexpected":
+            report.update(status="error", excerpt="Unexpected Lean axioms. See the axiom audit for declaration names.")
+    write_json(Path(result["stdout"]).with_name("lean-result.json"), report)
+    return report
