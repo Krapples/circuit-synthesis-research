@@ -81,15 +81,25 @@ positive. Retaining all providers and appending the filter gives a ten-gate
 equivalent circuit. [Manifest](../results/meta3754_shared_provider/batch.json)
 and [recorded outcomes](../results/meta3754_shared_provider/replay.json).
 
-The next one-junk branch is singleton overlap with an exposed centre. The
-geometry can start at `carrierCross`. The singleton overlap makes every
-opposite support a subset of its neighbourhood. A centre exposed in one
-operand is adjacent to all of the other operand. C4-freeness gives uniqueness
-within each type once containment is excluded. Triangle-freeness rules out
-both types occurring, since they and the overlap vertex would form a triangle.
-The gate-list proof still needs a second filter that omits the overlap vertex
-and a budget for adding a clean star. The disjoint-support branches and the
-many-junk case remain open.
+## Singleton overlap follow-up
+
+`uniqueExposedOverlapCentre` checks the exposed-centre geometry. Each opposite
+support is contained in the neighbourhood of the shared vertex. A centre
+exposed in one operand is adjacent to all of the other operand. When each
+operand has a second vertex, C4-freeness gives uniqueness within each type.
+Triangle-freeness rules out both types occurring, since they and the shared
+vertex would form a triangle. The proof checks these conditions starting from
+the clean-top semantics.
+
+The next gate-list proof must turn this geometry into an exclusive-root
+certificate. If the shared vertex and the exposing centre both occur in a
+provider, it cannot be opposite a junk-carrying operand because that opposite
+support excludes the shared vertex. It cannot be part of a clean raw product
+with a nonempty opposite support either, since a common neighbour of those
+adjacent vertices would give a triangle. For the other provider, the
+[strict trim plan](lean/OneJunkProviders.lean) must be attached to the actual
+retained wires and the cost of adding a clean star. The exposed singleton
+replacement, disjoint-support branches and the many-junk case remain open.
 
 ## Verification
 
@@ -102,10 +112,17 @@ python -B sat-search/workflow/research.py lean .research/one-junk-upstream/lean 
 python -B sat-search/results/meta3754_shared_provider/replay.py
 ```
 
-Lean ran for 66.507 seconds with warnings treated as errors. All 34 printed
-declarations, including `noTwoOverlap`, used only `propext`,
+For the multiple-overlap checkpoint, Lean ran for 66.507 seconds with
+warnings treated as errors. All 34 printed declarations, including
+`noTwoOverlap`, used only `propext`,
 `Classical.choice`, and `Quot.sound`. The checked source SHA-256 is
 `68588953fad1132afc95e7440c16f2c66b12c3e6a2a3d187f74ba41785b5cf78`.
 The local strict-run evidence is in
 `.research/ops/1795765643102984300-lean-check/`. The earlier 52.826-second
 check covered a smaller source and is a separate verification record.
+
+The follow-up check took 68.142 seconds with the same settings and passed
+all 35 axiom audits, including `uniqueExposedOverlapCentre`. The checked
+source SHA-256 is
+`23b0de0bcd48c5291d2582c359b3abd7429d043158b7e3a0be50931144318a71`.
+The local evidence is in `.research/ops/1795765822150491100-lean-check/`.

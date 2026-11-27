@@ -113,8 +113,9 @@ centres are also Lean-checked. The remaining one-junk replacements are open.
 For L-meta-3754, `noTwoOverlap` rules out two or more shared raw vertices
 in the operands of the unique dirty AND in a least lift-fixed circuit on a
 C4-free graph. The checked gate-list rebuild preserves shared providers,
-replays the suffix and reduces the circuit size. Singleton overlap with an
-exposed centre and the disjoint-support cases remain open in Lean.
+replays the suffix and reduces the circuit size. Lean also checks uniqueness
+of the exposing centre under triangle-freeness and the two-vertices-per-side
+condition. Its singleton replacement and the disjoint-support cases remain open.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero

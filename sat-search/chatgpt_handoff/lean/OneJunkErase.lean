@@ -2672,4 +2672,45 @@ theorem noTwoOverlap {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
 
 #print axioms noTwoOverlap
 
+/-- A centre is exposed when it belongs to an opposite support of a clean
+    AND whose other operand carries the junk. -/
+def ExposedCentre {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (r : ℕ) (c : Fin n) : Prop :=
+  ∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧
+    ∃ S T, OrientedTop C r j S T true ∧ c ∈ T
+
+private lemma exposedCentreAdjacencies {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    {C : Circuit} (h : IsAO2 n C) {r : ℕ} {A B : Finset (Fin n)}
+    (hp : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)
+    {s c : Fin n} (hsA : s ∈ A) (hsB : s ∈ B) (hc : ExposedCentre G C r c) :
+    G.Adj s c ∧ (c ∈ A → ∀ b ∈ B, G.Adj b c) ∧ (c ∈ B → ∀ a ∈ A, G.Adj a c) := by
+  obtain ⟨j, _, _, hclean, S, T, htop, hcT⟩ := hc
+  exact ⟨carrierCross G h hp hclean htop hsA hsB hcT (Or.inl rfl) (Or.inl rfl),
+    fun hcA _ hb => carrierCross G h hp hclean htop hcA hb hcT (Or.inr rfl) (Or.inl rfl),
+    fun hcB _ ha => carrierCross G h hp hclean htop ha hcB hcT (Or.inl rfl) (Or.inr rfl)⟩
+
+/-- With a shared vertex and at least two vertices per operand, at most
+    one vertex in either operand is exposed. Only the triangle and C4
+    exclusions are needed for this geometry. -/
+theorem uniqueExposedOverlapCentre {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (h4 : NoFourCycle G)
+    (htri : ∀ {s c d : Fin n}, G.Adj s c → G.Adj s d → ¬ G.Adj c d)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {s u v : Fin n} (hsA : s ∈ A) (hsB : s ∈ B) (hu : u ∈ A) (hv : v ∈ B)
+    (hus : u ≠ s) (hvs : v ≠ s)
+    {c d : Fin n} (hc : ExposedCentre G C r c) (hd : ExposedCentre G C r d)
+    (hcm : c ∈ A ∨ c ∈ B) (hdm : d ∈ A ∨ d ∈ B) : d = c := by
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  have hp := originalJunkProduct h.1 hr hand hab hA hB
+  obtain ⟨hsc, hcA, hcB⟩ := exposedCentreAdjacencies G h.1 hp hsA hsB hc
+  obtain ⟨hsd, hdA, hdB⟩ := exposedCentreAdjacencies G h.1 hp hsA hsB hd
+  rcases hcm with hca | hcb <;> rcases hdm with hda | hdb
+  · exact commonNeighborUnique G h4 hvs (hcA hca v hv) hsc (hdA hda v hv) hsd
+  · exact (htri hsc hsd (hdB hdb c hca)).elim
+  · exact (htri hsc hsd (hdA hda c hcb)).elim
+  · exact commonNeighborUnique G h4 hus (hcB hcb u hu) hsc (hdB hdb u hu) hsd
+
+#print axioms uniqueExposedOverlapCentre
+
 end ResearchVerification.OneJunkErase
