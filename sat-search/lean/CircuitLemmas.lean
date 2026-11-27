@@ -1,6 +1,7 @@
 import CircuitLemmas.Basic
 import CircuitLemmas.Module
 import CircuitLemmas.GateElim
+import CircuitLemmas.FirstGate
 import CircuitLemmas.XnorConj
 import CircuitLemmas.Excess
 import CircuitLemmas.Composition

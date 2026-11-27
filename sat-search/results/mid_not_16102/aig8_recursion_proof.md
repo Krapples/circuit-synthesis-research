@@ -1,6 +1,6 @@
 # L-meta-16102 gap (A): B(f) ≥ 8 by a first-gate cascade recursion (2026-11-26)
 
-Status: **paper proof plus computed recursion, not yet Lean checked.** This replaces the fork, read-once and DP
+Status: **Lean checked** (`SatBridge.Meta16102Aig.hA`, 2026-11-26; see [core9_certificate_audit.md](core9_certificate_audit.md) §4). This replaces the fork, read-once and DP
 argument of [two_fork_handoff.md](two_fork_handoff.md) for the bound alone. It does not address gap (B), the one-NOT core.
 
 Model: free-NOT AIG (`CircuitLemmas.GateElim`). Gates are `x^p ∧ y^q` over earlier wires, and negations and output phase are free.

@@ -37,3 +37,5 @@ import CircuitLemmas.Unfold
 #print axioms SatBridge.CubicPairWitness.exists_evaluate_iff
 #print axioms SatBridge.CubicPairWitness.surjective_of_all_allowed
 #print axioms SatBridge.CubicPairWitness.trivial_period
+#print axioms SatBridge.Meta16102Aig.hA
+#print axioms SatBridge.Meta16102.posted_core_closed
