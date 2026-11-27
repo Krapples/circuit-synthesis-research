@@ -255,3 +255,11 @@ Reproduce:
 python -I sat-search/experiments/pequalnp_graph_check.py
 python -I sat-search/experiments/pequalnp_fanout_check.py --cap 7 --cap4 5
 ```
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| pequalnp-proofs review | Their counted-NOT model is identical to our corpus `not` basis. Their lower bounds therefore also bound `mono`, but never AIG. Upstream Lean rows L102/L104/L106/L112 reproduce path-4, C4, cycle-5 and four forest minima. The checked L154 cover circuit lowers recorded upper bounds for `graph-03` (15 → 11), `petersen-10` (29 → 20) and `comparator-08` (22 → 14). Chaining L107 with exact 3-input minima independently matches the first-gate totals parity-5 = 14 and exactly-2-of-5 = 11, but beats no best bound. The L154 cover is now the default upper-bound seed in `synthesis_bench` and skips sizes ≥ the bound in `cube_search`. The native kernels are fixed-budget and need no change. [Model transfer, L-clb-041 analysis, prototypes](NOTES_PEQUALNP_PROOFS.md) |

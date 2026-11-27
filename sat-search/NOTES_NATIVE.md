@@ -205,3 +205,11 @@ python experiments/native_kernel_timing.py
 python experiments/native_differential.py startup
 python experiments/native_differential.py percy logs/native_percy_replay.jsonl
 ```
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Native regional completion | Opt-in C++20 kernel and phase-first completion match the Python reference and the independent small-query oracle. Matched free-NOT layout time fell **2.19× at excess 4** and **1.17× at excess 5** for phase-first, with higher peak working sets. Twelve excess-5 jobs still timed out. A profile attributes 46.6% of time to cache normalization. An opt-in port of its row packing passed the exact-key differential and awaits idle-machine timing. [Build, checks, and matched records](NOTES_NATIVE.md) |

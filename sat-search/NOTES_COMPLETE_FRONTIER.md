@@ -142,3 +142,11 @@ its child's affine hull and the Boolean cube. This argument does not apply over
 GF(2). The three singleton rows span the triple row affinely modulo two.
 The 750-query differential replay reduced 35 fixed families while preserving
 feasibility. No symbolic global certificate rows are compressed.
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Complete frontier audit | Checked 1,063 complete-function decisions and 540 direct multislice queries, including counted NOT. The guarded family has rank $3e-1$ and optimum $7e$ by an explicit certificate minor. Affine completion replaced 56 local reconstructions in the matched solver sample. [Proofs and limitations](NOTES_COMPLETE_FRONTIER.md) |

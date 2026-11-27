@@ -21,3 +21,22 @@ instance-specific rules, GPU work, repeated benchmark replays, or longer caps.
 - SAT propagation changes: reopen with a measurable effect or a new sound pruning argument.
 
 When closing a direction, record why and what result would justify reopening it.
+
+## Effort split and research targets
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+**Current priority: mathematical and algorithmic improvements.** About 80% of effort goes to research, 15%
+to targeted verification of changed components, and 5% to documentation. The research targets are:
+
+- stronger general lower bounds;
+- exact synthesis algorithms that shrink the search space;
+- nonmonotone AND/OR/NOT circuits;
+- practical complete-function FPT synthesis;
+- shared-subexpression construction;
+- adaptive analytical branch-and-bound;
+- hybrids with SAT that show measurable gains.
+
+The [verification audit](../verify/AUDIT.md) supplies the reference, the differential harnesses and
+the evidence manifests. Rule combinations without coverage stay disabled. Historical verification gaps are
+recorded there and do not block new work.

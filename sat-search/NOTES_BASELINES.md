@@ -199,3 +199,11 @@ Workloads: `npn4` (all 222 classes by brute-force NPN canonicalization), `corpus
 - Corpus sample (`results/baselines/corpus_sample.jsonl`), 1,000 stratified five-input NPN classes, six-input DSD
   benchmarks, single-output functions from https://github.com/alanminko/resub, generated 6-8 input families.
 - Diagnose the ABC empty-output failure late in the clean run before any further ABC runs.
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| External baselines (AIG) | On 165 four-input NPN classes (60 s cap, same machine, cold processes, every witness verified, no size disagreements), Percy (SSV, satoko) solved **160** with a 0.087 s median on commonly solved targets, ABC `twoexact -a -g` 150 (0.50 s), our production hybrid 149 (0.20 s), our SAT encoding 149 (1.13 s), Cirbo 117. Our ladder is 2.1x faster than ABC at excess <= 3, but at excess 4 we are 11x slower than Percy, and Percy's whole solved-count lead is at excess 5-6. Next lever: a stronger SAT stage for excess >= 4. Hybrid-Percy (our modules, bounds and ladder, then Percy on the core) beats standalone Percy with the same configuration: 22 vs 20 of a 32-target corpus sample, 8x less matched time, and 27 vs 26 hard four-input classes. Primary-reader caps cut UNSAT time 19% in an SSV encoder on top of full no-reapplication. Restoring no-reapplication inside Percy's AIG mode (which Percy disables) is the biggest gain: hybrid-Percy with it solves 32 of 43 hard four-input classes vs 23 for Percy; the caps add nothing inside Percy. [Setup, records, and caveats](NOTES_BASELINES.md) |

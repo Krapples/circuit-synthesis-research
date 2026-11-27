@@ -222,3 +222,11 @@ python -B sat-search/experiments/native_cofactor_check.py sat-search/results/cof
 * Six-input corpus ladders below native bounds (not run).
 * Percy cegar on partial tables loops at k=1 (partial-07).
 * Whether the existing percy cascade counter D counts exactly the gates `cascade` admits. The Lean bound covers every gate with a constant operand under the restriction, so any D that is a subset of these is sound.
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Cofactor two-signal upper bounds | ChatGPT's construction f = d(a(Y), b(Y), x) with exact three-input pair costs, reproduced (222 witnesses, equal sizes). An importer verifies all 65,536 four-input NPN transforms; `percy_run --upper-witness` re-checks the chain and proves only budgets below U (no witness pass, no known minima). Check: 253 jobs, 0 mismatches, 0 unknown. Extended tier, cone+cond: 166b = 10 in 1.8 s, 1686 = 9 in 1.6 s, 1669 = 10 in 0.7 s, 1668 = 9 (below the 11-gate witness) in 0.3 s; archived ascending ladders took 66-224 s or timed out at k=10. Native C++20 port for any 3..6-input target with care set: exact library match on all 65,536 four-input functions; m >= 5 stage is heuristic. It is strengthened by a-first partial-b signals and root build-and-measure, which close all 11 verified-minimum corpus gaps. Proof ladders below native bounds on all 22 five-input corpus cases (390 s total): 20 bounds proved minimal (complete-5 = 10 in 74 s), partial-07 improved 7 -> 6, threshold-5-3 = 10 (k <= 9 UNSAT, plus an externally supplied 10-gate chain that was independently verified). Lean: `cascade_restriction` proves the full cascade count D. [Construction, runs, port](NOTES_COFACTOR_WITNESS.md) |

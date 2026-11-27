@@ -1045,3 +1045,17 @@ python sat-search/experiments/lazy_certificates_check.py --frontier --seconds 6 
 python sat-search/experiments/lazy_certificates_check.py --job hypergraph-12 7 lazy-local-intersection --proof
 python sat-search/experiments/lazy_certificates_check.py --job comparator-04 12 lazy-local-intersection --proof
 ```
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Sharing parameter | Partial monotone synthesis is NP-hard already at zero sharing with every input mandatory and the exact hitting number supplied. The opt-in two-coloring shortcut applied to 121 of 20,439 output-formula query calls in 316 completed benchmark jobs. [Proof and reproduction](NOTES_SYNTHESIS_FOLLOWUP.md#hardness-at-zero-sharing) |
+| Formula obligations | Typed subtree cuts excluded 929 further output queries on the 316-job replay. Exact obligation search matched exhaustive formula enumeration on 900 partial tables. The replay established no end-to-end speedup. [Proof and measurements](NOTES_SYNTHESIS_FOLLOWUP.md#operation-aware-formula-obligations) |
+| Regional SAT | A cograph encodes each read-once region with consistent symbolic ports. Joint SAT recovered the five-cycle's seven-gate minimum in 12 port patterns. A proof checker verified every pattern for the six-gate exclusions on the five-cycle and `hypergraph-07`. [Encoding and measurements](NOTES_SYNTHESIS_FOLLOWUP.md#cograph-sat-encoding-for-linked-regions) |
+| Rectangular distinctions | For `δ = positives × negatives − κ`, the support bound is exact through `δ=3`. A six-label example at `δ=4` needs an extra gate. [Proofs and known answers](NOTES_SYNTHESIS_FOLLOWUP.md#distinction-rectangles-and-the-first-sharing-obstruction) |
+| Circuit synthesis in `δ` | Certificate intersection, request matching, and bounded extra input choices give exact synthesis with overlapping distinctions and arbitrary monotone sharing in `2^O((δ+1)^4 log(δ+2)) · poly(M,R)` time. A reduction from below-universe Set Cover gives a conditional barrier to polynomial kernels. [Proof, scope, and checks](NOTES_SYNTHESIS_FOLLOWUP.md#certificate-reduction-for-overlapping-circuit-distinctions) |
+| Certificate intersections | Rank, ordered decomposition, and coexistence coloring give sharing lower bounds on complete functions. The exact terminal encoding closed `complete-5` and `threshold-5-3` at **10 gates each** with checked nine-gate exclusions. [Proofs and reproduction](NOTES_SYNTHESIS_FOLLOWUP.md#certificate-intersection-rank-and-regional-decomposition) |
+| Lazy certificates | Local intersection constraints and checked spanning-tree clauses gave an exact at-most backend without cograph variables. It matched all eight reference jobs at 0.323 s versus 1.440 s in the serial sample and established five additional non-graph minima. [Proofs and matched comparison](NOTES_SYNTHESIS_FOLLOWUP.md#lazy-regional-certificate-compatibility) |

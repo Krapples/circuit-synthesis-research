@@ -140,3 +140,16 @@ python sat-search/experiments/synthesis_bench.py --seconds 0.5 --probes 2 --work
 python sat-search/experiments/summarize_synthesis.py fresh-ablation.jsonl
 python sat-search/experiments/synthesis_bench_check.py -v
 ```
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Cross-family benchmark | 100 functions, 2,085 solver jobs, and 583 verified witnesses in the full sweep. Certified minima for 55 monotone cases and 45 NOT-enabled cases. |
+| Endpoint follow-up | Retested all 45 open monotone intervals at their lower endpoints. Narrowed 39 intervals and certified 10 more minima, bringing the total to **65 of 100**. Four exclusions have independently checked DRUP certificates. |
+| Non-graph lower bounds | Tight-frontier analysis raised the input-support bound on 61 cases, including 21 of 24 hypergraphs. The ablation raised the monotone lower endpoint beyond every direct SAT job under the cap in 32 cases. |
+| Example | `hypergraph-07` has monotone minimum **7**. Antichain search excluded six gates, and direct SAT returned a verified seven-gate circuit. The NOT-enabled interval is **[6, 7]**. |
+| Other graph results | The L-meta-519 seven-cycle with two leaves requires at least 12 gates. The L-meta-1023 Fano-plane search ruled out 13 AND/OR gates in its weights 2–3 model. |
+| NOT comparison | All 45 cases with certified minima in both bases agreed. The other 55 NOT-enabled minima remain open. The graph-specific polarity and recursive bounds tightened eight NOT-enabled intervals beyond direct SAT under the cap. |

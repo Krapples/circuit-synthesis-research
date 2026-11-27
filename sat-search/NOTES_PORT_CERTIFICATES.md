@@ -456,3 +456,14 @@ exact allocation gave zero further whole-target gains. The reference setup
 took 0.191 s, structural layout screening 0.206 s, and allocation 0.226–0.228 s.
 This closes the follow-up experiment. Revisit larger allocation modes with
 evidence of new target bounds or a solver gain. [Results](results/regional_algebra_ablation.jsonl)
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Regional certificate ports | Compatibility raised the ordered bound on 42 of 90 complete targets, and rank raised it on two more. Clique and exact partition gave no additional target-level gains. The SAT ablation found no speedup. Factoring improved nine construction upper bounds, and the follow-up certified `hypergraph-19` at **10 gates**. [Proofs, benchmarks, and reproduction](NOTES_PORT_CERTIFICATES.md) |
+| Provider-compatible ports | Full certificate identities preserve provider eligibility and shared-provider consistency. Of 793 sampled layouts, empty lists excluded 367, matching and forced consistency excluded 113 more, and exact partition excluded 11 more. The ordered and SAT replay left target lower bounds and minima unchanged. [Proof, checks, and ablation](NOTES_PORT_CERTIFICATES.md#provider-compatible-certificate-bounds) |
+| Global provider capacity | Mandatory certificate obligations refine provider lists. Singleton capacity tests excluded 96 of 16,416 ordered four-input layouts beyond the primary and mandatory checks. The ten frozen SAT budgets produced matching verdicts across variants. [Proof, regression, and ablation](NOTES_PORT_CERTIFICATES.md#global-provider-capacity-prescreen) |
+| Unknown capacity allocation | Deficit raised three whole-target ordered bounds on a 56-case replay, all already covered by independent evidence. Packing and exact allocation added zero whole-target gains. [Conditional bound and benchmark](NOTES_PORT_CERTIFICATES.md#allocating-unknown-outgoing-capacity) |

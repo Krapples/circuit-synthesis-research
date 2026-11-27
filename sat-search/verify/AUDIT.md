@@ -165,3 +165,11 @@ recorded in the manifest.
 - drivers that call `run_cube` directly are not guarded by the command-line allowlist and must consult
   the inventory's prefix classes;
 - instances whose minimum is about 10 or more are beyond the unpruned reference.
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| Verification audit | An independent reference solver shares no code with `cube_search` and agrees with brute force on 2,780 cases. Rules were differentially tested through `run_cube` and through the production command line, at M−1, M, M+1, M+2 and M+4 and on pinned and redundant prefixes. Analytical bounds had no violations in 48,130 evaluations. Five defects were found, minimized and fixed or disabled. None affects a recorded result. The rank-tight family closes the universal rank(H) ≤ 2e direction (tested for e ≤ 30). Historical exclusions remain rule-dependent until they have manifests. [Audit, statuses, and revalidation list](AUDIT.md) |

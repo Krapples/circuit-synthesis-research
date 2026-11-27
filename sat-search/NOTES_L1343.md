@@ -623,3 +623,11 @@ python $script sat-search/logs/l1343_deeper_recheck.jsonl --recheck $screen --wo
 python $script sat-search/logs/l1343_deeper_20k_replay.jsonl --screen $screen --workers 8 --seconds 65 --conflicts 20000
 python $script sat-search/logs/l1343_deeper_500k_replay.jsonl --screen $screen --workers 5 --seconds 65 --conflicts 500000
 ```
+
+## Quick-reference summary
+
+Moved word for word from the root RESEARCH_NOTES.md on November 27, 2026.
+
+| Topic | Result |
+| --- | --- |
+| L-meta-1343 shard 2 | SAT ruled out sizes through 17. The ordered bound ruled out all 338 size-18 cubes and 315 of 338 size-19 cubes. Splitting the surviving case-A `x0 OR x2` prefix one gate deeper and screening against the budget excluded 204 of 208 continuations in 8.72 s. Four continuations and the other 22 original prefixes remain open. [Deeper split and SAT probes](NOTES_L1343.md#one-more-pinned-gate-after-x0-or-x2-2026-11-25) |
