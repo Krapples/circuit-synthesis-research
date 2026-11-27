@@ -4810,7 +4810,8 @@ theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n)
   have hp' : p = u ∨ p = v ∨ p = c := by simpa [x] using hp
   have hq' : q = u ∨ q = v ∨ q = c := by simpa [x] using hq
   have hcv : G.Adj c v := by
-    rcases hp' with rfl | rfl | rfl <;> rcases hq' with rfl | rfl | rfl
+    rcases hp' with hp' | hp' | hp' <;> rcases hq' with hq' | hq' | hq' <;>
+      rw [hp', hq'] at hpq
     · exact (G.ne_of_adj hpq rfl).elim
     · exact (huv hpq).elim
     · exact (hcolour u c hpq huc).elim
