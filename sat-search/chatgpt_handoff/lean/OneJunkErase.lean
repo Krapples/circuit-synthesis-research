@@ -5081,10 +5081,12 @@ theorem indispensableCarrierClass {n : ℕ} (G : SimpleGraph (Fin n))
     (hmiss : W (pairInput s v) C.output = false) :
     ∃ i < C.gates.length, (gateAt C i).op = GateOp.or ∧ n+r ∈ (gateAt C i).inputs ∧
       (∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧
-        ∃ p q S T, ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) ∧
+        ∃ (p q : ℕ) (S T : Finset (Fin n)),
+          ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) ∧
           RawForm C r p S true ∧ RawForm C r q T false ∧ OrCarrierRoute n C r i p ∧ s ∈ T) ∧
       ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → BelowF G C j →
-        ∀ p q S T, ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) →
+        ∀ (p q : ℕ) (S T : Finset (Fin n)),
+          ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) →
           RawForm C r p S true → RawForm C r q T false → OrCarrierRoute n C r i p →
           ∀ c ∈ T, c = s := by
   obtain ⟨i,j,p,q,S,T,hi,hio,hir,hj,hja,hjc,hpq,hS,hT,path,hitsT⟩ :=
