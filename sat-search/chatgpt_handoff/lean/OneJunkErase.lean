@@ -4364,4 +4364,131 @@ theorem cleanTopUnaffectedNoOrReader {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms dirtyRawFormNoOrReader
 #print axioms cleanTopUnaffectedNoOrReader
 
+
+/-- Additional operand suppression cannot increase any wire. The two
+    evaluations use the same suspended junk value. -/
+private theorem maskedValueLe {n : ℕ} (C : Circuit) (h : IsAO2 n C)
+    (r : ℕ) (M N : ℕ → ℕ → Bool)
+    (hm : ∀ j w, M j w = true → N j w = true)
+    (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) :
+    ∀ w < n + C.gates.length,
+      maskedValue C r N fill x w = true → maskedValue C r M fill x w = true := by
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw ht
+    by_cases hraw : w < n
+    · let v : Fin n := ⟨w,hraw⟩
+      rw [maskedValue_raw C r N fill x v] at ht
+      rw [maskedValue_raw C r M fill x v]
+      exact ht
+    obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+    by_cases hjr : j = r
+    · subst j
+      rw [maskedValue_hole C r N fill x] at ht
+      rw [maskedValue_hole C r M fill x]
+      exact ht
+    have hj : j < C.gates.length := by omega
+    rw [maskedValue_gate C h r N fill x hj hjr] at ht
+    rw [maskedValue_gate C h r M fill x hj hjr]
+    have hi (v) (hv : v ∈ (gateAt C j).inputs)
+        (he : (if N j v then false else maskedValue C r N fill x v) = true) :
+        (if M j v then false else maskedValue C r M fill x v) = true := by
+      have hn : N j v = false := by
+        cases hh : N j v <;> simp_all
+      have hm' : M j v = false := by
+        cases hh : M j v
+        · rfl
+        · have hz := hm j v hh
+          rw [hn] at hz
+          contradiction
+      rw [hn, if_false] at he
+      rw [hm', if_false]
+      have hlt := h.2.1 j hj v hv
+      exact ih v hlt (by omega) he
+    rcases h.1 _ (gateAt_mem hj) with hand | hor
+    · simp only [hand,GateOp.eval,List.all_map,List.all_eq_true,Function.comp_apply] at ht ⊢
+      exact fun v hv => hi v hv (ht v hv)
+    · simp only [hor,GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply] at ht ⊢
+      obtain ⟨v,hv,he⟩ := ht
+      exact ⟨v,hv,hi v hv he⟩
+
+/-- A second mask concentrated at q leaves a pre-junk pure provider
+    unchanged if a singleton witnesses that q cannot feed it. This
+    holds even when the first mask has already trimmed another provider. -/
+private theorem extraMaskPreservesProvider {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r q : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (s : Fin n)
+    (hq : W (pairInput s s) (n+q) = true)
+    (M N : ℕ → ℕ → Bool) (hm : ∀ j w, j ≠ q → N j w = M j w)
+    (fill : (Fin n → Bool) → Bool) (x : Fin n → Bool) :
+    ∀ w < n+r, ¬ CleanWire G C w → W (pairInput s s) w = false →
+      maskedValue C r N fill x w = maskedValue C r M fill x w := by
+  have hr := (junkMember G C hJ).1
+  intro w
+  induction w using Nat.strong_induction_on with
+  | _ w ih =>
+    intro hw hd hfalse
+    by_cases hraw : w < n
+    · let v : Fin n := ⟨w,hraw⟩
+      exact (maskedValue_raw C r N fill x v).trans (maskedValue_raw C r M fill x v).symm
+    obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+    have hj : j < C.gates.length := by omega
+    have hjr : j ≠ r := by omega
+    have hjq : j ≠ q := by
+      rintro rfl
+      exact Bool.noConfusion (hfalse.symm.trans hq)
+    have hor : (gateAt C j).op = GateOp.or := by
+      rcases h.1.1 _ (gateAt_mem hj) with hand | ho
+      · exact (hjr (uniqueDirtyAnd G C hJ hj hd hand)).elim
+      · exact ho
+    rw [maskedValue_gate C h.1 r N fill x hj hjr,
+      maskedValue_gate C h.1 r M fill x hj hjr]
+    congr 1
+    apply List.map_congr_left
+    intro v hv
+    have hlt := h.1.2.1 j hj v hv
+    have hvd : ¬ CleanWire G C v := fun hc =>
+      hd (cleanWireReader G C h hl hj hv hc).2
+    have hvfalse : W (pairInput s s) v = false := by
+      cases he : W (pairInput s s) v
+      · rfl
+      · exact Bool.noConfusion (hfalse.symm.trans
+          ((evalExcept_or hW hj hjr hor (pairInput s s)).mpr ⟨v,hv,he⟩))
+    rw [hm j v hjq, ih v hlt (hlt.trans hw) hvd hvfalse]
+
+/-- An active dirty pre-junk ancestor forces its value through the OR
+    cone of a dirty provider. -/
+private theorem preJunkConeTrue {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (x : Fin n → Bool) :
+    ∀ j < r, ¬ CleanWire G C (n+j) → ∀ k, (k = j ∨ InCone n C k j) →
+      W x (n+k) = true → W x (n+j) = true := by
+  have hr := (junkMember G C hJ).1
+  intro j
+  induction j using Nat.strong_induction_on with
+  | _ j ih =>
+    intro hj hd k hk hv
+    rcases hk with rfl | hk
+    · exact hv
+    have hjl := hj.trans hr
+    have hjr := hj.ne
+    have hor : (gateAt C j).op = GateOp.or := by
+      rcases h.1.1 _ (gateAt_mem hjl) with hand | ho
+      · exact (hjr (uniqueDirtyAnd G C hJ hjl hd hand)).elim
+      · exact ho
+    obtain ⟨w,hm,hn,hw,hpath⟩ := (coneRec hjl k).mp hk
+    obtain ⟨i,rfl⟩ : ∃ i, w = n+i := ⟨w-n,by omega⟩
+    have hid : ¬ CleanWire G C (n+i) := fun hc =>
+      hd (cleanWireReader G C h hl hjl hm hc).2
+    have hpath' : k = i ∨ InCone n C k i := by simpa using hpath
+    exact (evalExcept_or hW hjl hjr hor x).mpr
+      ⟨n+i,hm,ih i (by omega) (by omega) hid k hpath' hv⟩
+
+#print axioms maskedValueLe
+#print axioms extraMaskPreservesProvider
+#print axioms preJunkConeTrue
+
 end ResearchVerification.OneJunkErase
