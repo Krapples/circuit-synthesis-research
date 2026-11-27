@@ -2713,4 +2713,114 @@ theorem uniqueExposedOverlapCentre {n : ℕ} (G : SimpleGraph (Fin n)) [Decidabl
 
 #print axioms uniqueExposedOverlapCentre
 
+/-- A protected provider reaching a shared vertex contributes through a
+    clean raw product. Those contributions survive any junk redirection. -/
+theorem protectedSharedSupport {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {s : Fin n} (hsA : s ∈ A) (hsB : s ∈ B)
+    {R : Finset (Fin n)} (hs : s ∈ R) {w : ℕ} (hp : AvoidJunk n C r w)
+    (hforce : ∀ V, EvalExcept n C r V → ∀ x, hits R x → V x w = true) :
+    ∃ d : Fin n, (∀ z ∈ R, G.Adj d z) ∧
+      ∀ V, EvalExcept n C r V → ∀ x, hits R x → x d = true → V x C.output = true := by
+  let U := fun (x : Fin n → Bool) k => val C (List.ofFn x) k
+  have hU : EvalExcept n C r U := originalEvalExcept h.1 r
+  obtain ⟨hr, hjunk, _⟩ := junkMember G C hJ
+  have hprod := originalJunkProduct h.1 hr hjunk hab hA hB
+  have htop : ∀ {j p q : ℕ} {Q : Finset (Fin n)} {g : Bool},
+      j < C.gates.length → (gateAt C j).op = GateOp.and → BelowF G C j →
+      ((gateAt C j).inputs = [p, q] ∨ (gateAt C j).inputs = [q, p]) →
+      RawForm C r q Q g →
+      (∀ V, EvalExcept n C r V → ∀ x, hits R x → V x p = true) →
+      ∃ d : Fin n, (∀ z ∈ R, G.Adj d z) ∧
+        ∀ V, EvalExcept n C r V → ∀ x, hits R x → x d = true → V x C.output = true := by
+    intro j p q Q g hj hand hc hpq hQ hfp
+    have hand' (V) (hV : EvalExcept n C r V) (x) (hp' : V x p = true)
+        (hq' : V x q = true) : V x (n + j) = true := by
+      have hnr := cleanDifferent G C hJ hc
+      rcases hpq with he | he
+      · exact (evalExcept_and hV hj hnr hand he x).mpr ⟨hp', hq'⟩
+      · exact (evalExcept_and hV hj hnr hand he x).mpr ⟨hq', hp'⟩
+    have hg : g = false := by
+      cases g with
+      | false => rfl
+      | true =>
+        let x := pairInput s s
+        have hx : x s = true := by simp [x, pairInput]
+        have hj : U x (n + r) = true := (hprod x).mpr ⟨⟨s, hsA, hx⟩, ⟨s, hsB, hx⟩⟩
+        have hq := (hQ.2 U hU x).mpr (Or.inr ⟨rfl, hj⟩)
+        have hp := hfp U hU x ⟨s, hs, hx⟩
+        exact (G.ne_of_adj (adjOfPair G (hc x (hand' U hU x hp hq))) rfl).elim
+    subst g
+    have hq : q < n + j := by
+      apply h.1.2.1 j hj q
+      rcases hpq with he | he <;> simp [he]
+    have hall : U (fun _ => true) q = true := allTrueWires h.1 q (by omega)
+    have hsem (V) (hV : EvalExcept n C r V) (x) : V x q = true ↔ hits Q x := by
+      simpa [hits] using hQ.2 V hV x
+    obtain ⟨d, hd, _⟩ := (hsem U hU _).mp hall
+    refine ⟨d, ?_, fun V hV x hx hdx => (collectorSemantics G C h hl hJ hV x).mpr
+      ⟨j, hj, hand, hc, hand' V hV x (hfp V hV x hx) ((hsem V hV x).mpr ⟨d, hd, hdx⟩)⟩⟩
+    intro z hz
+    let x := pairInput d z
+    have hdx : x d = true := by simp [x, pairInput]
+    have hzx : x z = true := by simp [x, pairInput]
+    exact adjOfPair G (hc x (hand' U hU x (hfp U hU x ⟨z, hz, hzx⟩)
+      ((hsem U hU x).mpr ⟨d, hd, hdx⟩)))
+  induction hp with
+  | output =>
+    let x := pairInput s s
+    have hx : x s = true := by simp [x, pairInput]
+    have ho : U x C.output = true := hforce U hU x ⟨s, hs, hx⟩
+    have he : U x C.output = graphFun G ∅ x := congrFun h.2.1 x
+    exact (G.ne_of_adj (adjOfPair G (he.symm.trans ho)) rfl).elim
+  | @input j w hj hjr hmem _ ih =>
+    rcases h.1.1 _ (gateAt_mem hj) with hand | hor
+    · have hc : BelowF G C j := by
+        by_contra hd
+        exact hjr (uniqueDirtyAnd G C hJ hj hd hand)
+      obtain ⟨p, q, P, Q, f, g, he, hP, hQ, _⟩ := topProduct G C h hl hJ hj hand hc
+      have hw : w = p ∨ w = q := by simpa [he] using hmem
+      rcases hw with rfl | rfl
+      · exact htop hj hand hc (Or.inl he) hQ hforce
+      · exact htop hj hand hc (Or.inr he) hP hforce
+    · exact ih (fun V hV x hx => (evalExcept_or hV hj hjr hor x).mpr ⟨w, hmem, hforce V hV x hx⟩)
+
+/-- A provider containing the shared vertex and an adjacent vertex cannot
+    have an output path avoiding the junk. -/
+theorem adjacentSharedProviderExclusive {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (htri : ∀ {s c d : Fin n}, G.Adj s c → G.Adj s d → ¬ G.Adj c d)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {s c : Fin n} (hsA : s ∈ A) (hsB : s ∈ B) (hadj : G.Adj s c)
+    {R : Finset (Fin n)} (hs : s ∈ R) (hc : c ∈ R) {w : ℕ}
+    (hR : RawForm C r w R false) : ¬ AvoidJunk n C r w := by
+  intro hp
+  obtain ⟨d, hd, _⟩ := protectedSharedSupport G C h hl hJ hab hA hB hsA hsB hs hp
+    (fun V hV x hx => (hR.2 V hV x).mpr (Or.inl hx))
+  exact htri (hd s hs) (hd c hc) hadj
+
+/-- A protected provider with at least two vertices already covers its
+    star when its support lies in the exposed centre's neighbourhood. -/
+theorem protectedSharedStarSurvives {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    {s c : Fin n} (hsA : s ∈ A) (hsB : s ∈ B)
+    {R : Finset (Fin n)} (hs : s ∈ R) {t : Fin n} (ht : t ∈ R) (hts : t ≠ s)
+    (hadj : ∀ z ∈ R, G.Adj z c) {w : ℕ} (hp : AvoidJunk n C r w)
+    (hR : RawForm C r w R false) :
+    ∀ V, EvalExcept n C r V → ∀ x, hits R x → x c = true → V x C.output = true := by
+  obtain ⟨d, hd, hout⟩ := protectedSharedSupport G C h hl hJ hab hA hB hsA hsB hs hp
+    (fun V hV x hx => (hR.2 V hV x).mpr (Or.inl hx))
+  have he := commonNeighborUnique G h4 hts (hadj t ht) (hadj s hs)
+    ((G.adj_comm d t).mp (hd t ht)) ((G.adj_comm d s).mp (hd s hs))
+  simpa [he] using hout
+
+#print axioms protectedSharedSupport
+#print axioms adjacentSharedProviderExclusive
+#print axioms protectedSharedStarSurvives
+
 end ResearchVerification.OneJunkErase

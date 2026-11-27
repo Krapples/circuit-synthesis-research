@@ -91,12 +91,18 @@ Triangle-freeness rules out both types occurring, since they and the shared
 vertex would form a triangle. The proof checks these conditions starting from
 the clean-top semantics.
 
-The next gate-list proof must turn this geometry into an exclusive-root
-certificate. If the shared vertex and the exposing centre both occur in a
-provider, it cannot be opposite a junk-carrying operand because that opposite
-support excludes the shared vertex. It cannot be part of a clean raw product
-with a nonempty opposite support either, since a common neighbour of those
-adjacent vertices would give a triangle. For the other provider, the
+`protectedSharedSupport` follows an output path avoiding the junk to the
+first clean AND. The shared singleton input rules out an opposite operand
+carrying the junk. The remaining raw product yields a common neighbour, and
+its contribution is preserved by every evaluation satisfying the original
+gate equations away from the junk. `adjacentSharedProviderExclusive` uses
+triangle-freeness to rule out such a path for a provider containing the shared
+vertex and the adjacent exposed centre. `protectedSharedStarSurvives` shows
+that a protected provider containing the shared vertex and a second vertex
+already supplies its entire star at the exposed centre, using C4-freeness
+to identify the common neighbour.
+
+For the other provider, the
 [strict trim plan](lean/OneJunkProviders.lean) must be attached to the actual
 retained wires and the cost of adding a clean star. The exposed singleton
 replacement, disjoint-support branches and the many-junk case remain open.
@@ -126,3 +132,8 @@ all 35 axiom audits, including `uniqueExposedOverlapCentre`. The checked
 source SHA-256 is
 `23b0de0bcd48c5291d2582c359b3abd7429d043158b7e3a0be50931144318a71`.
 The local evidence is in `.research/ops/1795765822150491100-lean-check/`.
+
+The protected-provider check took 71.988 seconds with the same settings and
+passed all 38 axiom audits. The checked source SHA-256 is
+`8040125fb4208026d9d831712d9d9986a2c4b3b4d6ef1f38014f2c7343f4b811`.
+The local evidence is in `.research/ops/1795766092882371500-lean-check/`.

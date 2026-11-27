@@ -115,7 +115,10 @@ in the operands of the unique dirty AND in a least lift-fixed circuit on a
 C4-free graph. The checked gate-list rebuild preserves shared providers,
 replays the suffix and reduces the circuit size. Lean also checks uniqueness
 of the exposing centre under triangle-freeness and the two-vertices-per-side
-condition. Its singleton replacement and the disjoint-support cases remain open.
+condition. In the exposed singleton case, the provider containing the shared
+vertex and its adjacent centre is exclusive to the junk. Protected providers
+on the other side preserve their exposed star contributions after redirection.
+The full singleton replacement and the disjoint-support cases remain open.
 [Overlap proof and verification](sat-search/chatgpt_handoff/meta3754_two_overlap_handoff.md)
 
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero
