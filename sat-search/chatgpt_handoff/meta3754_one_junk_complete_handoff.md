@@ -135,3 +135,34 @@ Run 46029757019 (job 140610297755) reported only two parser errors: declaration-
 ### Bridge-only correction
 
 Run 46030474888 passed every independent research proof. The bridge checked noOneJunkTwoReaders with permitted axioms; its sole error was the gateVal/val conversion in noLeastOneJunk's output-not-junk argument. Rewrite the output wire equality explicitly and expose the definitional gate value at the hypothesis. No mathematical proof obligations remain identified; exact bridge and final audit still pending. No upstream submission.
+
+## 9. Completion certificate — exact one-junk case checked (2026-11-27)
+
+**Status: complete, Lean-checked at research revision `eae3c2e9c8b41618f2ed31559db172d32c667d46`.** This section supersedes all earlier pending statuses and paper-only caveats for the exact one-junk statement. It does not claim the many-junk case or the full L-meta-3754 gap.
+
+- Verified commit: https://github.com/Krapples/circuit-synthesis-research/commit/eae3c2e9c8b41618f2ed31559db172d32c667d46
+- Successful run: https://github.com/Krapples/circuit-synthesis-research/actions/runs/46031994002
+- Successful job: https://github.com/Krapples/circuit-synthesis-research/actions/runs/46031994002/job/140617843938
+- All three independent research Lean files checked with warnings as errors, zero failures; the pinned upstream bridge checked; all 101 reported declarations across four files passed the transitive axiom allowlist.
+- Exact declarations `ResearchVerification.OneJunkErase.noLeastOneJunk` and `ResearchVerification.OneJunkErase.oneJunkExact` each reported exactly `propext, Classical.choice, Quot.sound`. No sorryAx, additional axiom or native_decide. The same run checked the sole AND, two OR, and sole OR reader contradictions.
+- Upstream definitions and five explicit outside modules (L_meta_4712, 4743, 4745, 4746, 4747) pinned at open-goat/pequalnp-proofs 3db0136bf094e975baaf20214b01e4b4579059f2; Lean 4.36.0; Mathlib fc4f59e577feb1a4956671bc04ac18aaaf8cd842.
+- Verified source blobs: `lean/OneJunkErase.lean` b1e70338aa79fe63888ef5ece2e2f75a16312841; `upstream/OneJunkUpstream.lean` 91661eab03049653db0c4d10f84817bb2b288a7c (paths relative to this handoff directory). At master f7b84447423e7a0988f6d4aa4ccbdaf160d79f2d, comparison against the verified revision shows only the unrelated TREE_DP_MEMORY.md modified; proof sources and workflow unchanged.
+
+### Exact statement and argument
+
+```lean
+theorem oneJunkExact (n : ℕ) (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (s : Fin n → Bool) :
+    (∀ u v : Fin n, G.Adj u v → s u ≠ s v) →
+    NoFourCycle G → IsLeastAO G C → IsLiftFixedPoint G C →
+    (junk G C).card = 1 →
+    ∀ k < C.gates.length, (gateAt C k).op = GateOp.and → BelowF G C k
+```
+
+This is the literal hone hypothesis from R_meta_3754_1.lean at 167004490776da6ee62464efd592ae667f3fc798 (PR #9140, closed without merge). The stronger noLeastOneJunk proves False from a singleton junk set. Leastness forces a reader, and the previously checked support reductions and repair budgets exclude overlapping, small or mixed supports, three readers, and an AND reader. For two OR readers, both stars must be indispensable; shared raw leaves force two distinct reader classes, allowing a site-specific bypass with opposite providers and a strict deletion. For a sole OR reader, the shared raw leaf forces uniform opposite colour and one-star coverage. The exclusive provider permits deleting three gates and adding at most two; the protected provider forces a common neighbour, allowing a safe earlier-provider or single-raw-leaf bypass. Every constructed circuit remains in exact binary AO2, with soundness on all inputs and completeness via monotonicity on edge inputs. The contradiction to leastness gives the stronger theorem, and cardinality one supplies the singleton for oneJunkExact.
+
+### Upstream eligibility and stopping point
+
+The theorem is mathematically and axiomatically checked against pinned upstream definitions and dependencies. It is **not an accepted or submission-ready upstream artifact**. Current upstream CONTRIBUTING.md requires an assigned open gap, exact desk statement and permitted module list, one UTF-8 file at most 512 KiB, approved helper namespace, and no hash commands. The research proof uses two modules including a local import and 92 audit commands in those two files; these must be packaged separately for any future submission (do not strip audit commands from the checked research sources). Combined source character count is 349436 before packaging; final UTF-8 size must be checked. Three inductive Prop helper definitions may also require manual review under upstream custom-type rules. PR #9140 was closed without merge, so it does not establish a current desk-assigned one-junk subgap or an approved import list. Confirm the live desk target and permitted dependencies before any packaging or submission. Do not submit automatically. Do not claim the full L-meta-3754 gap solved: the case with at least two dirty ANDs remains outside this result.
+
+Stop redundant one-junk proof work. This documentation-only update does not trigger the path-filtered Lean CI and does not change any verified proof. If explicitly authorized to continue beyond this completed subcase, first inspect current many-junk research and desk status rather than start a duplicate effort.
