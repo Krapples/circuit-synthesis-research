@@ -5187,7 +5187,9 @@ private lemma siteValGate {n : ℕ} {C : Circuit} (h : IsAO2 n C)
   dsimp only [SiteVal]
   by_cases hlt : j < r
   · rw [aliasWire_lt_self (by omega : n+j < n+r),siteBypassBefore hr x (n+j) (by omega)]
-    rw [(originalEvalExcept h r).2 x j hj hjr]
+    have heq := (originalEvalExcept h r).2 x j hj hjr
+    dsimp only at heq
+    rw [heq]
     congr 1
     apply List.map_congr_left
     intro w hw
@@ -5210,8 +5212,8 @@ private lemma siteValGate {n : ℕ} {C : Circuit} (h : IsAO2 n C)
     simp only [Function.comp_apply]
     rw [ite_eq_left hren]
     by_cases he : w = n+r
-    · rw [if_pos he,he,aliasWire_self,siteBypassBefore hr x _ (hρ _)]
-    · rw [if_neg he]
+    · rw [ite_eq_left he,he,aliasWire_self,siteBypassBefore hr x _ (hρ _)]
+    · rw [ite_eq_right he]
       congr 1
       by_cases hwlt : w < n+r
       · rw [aliasWire_lt_self hwlt,aliasWire_lt_self hwlt]
@@ -5259,6 +5261,21 @@ private lemma routeExistsOfFlag {n : ℕ} (G : SimpleGraph (Fin n))
   obtain ⟨i,_,_,_,hp⟩ := lostDirtyWireRoute G C h hl hJ hV hW x w hw hne hd hv hf
   exact ⟨i,hp⟩
 
+private lemma siteRouteFires {n : ℕ} {C : Circuit} (h : IsAO2 n C)
+    {r i w : ℕ} {ρ : ℕ → ℕ} (hr : r < C.gates.length) (hρ : ∀ j, ρ j < n+r)
+    (x : Fin n → Bool) (path : OrCarrierRoute n C r i w)
+    (hf : val C (List.ofFn x) (ρ i) = true) : SiteVal C r ρ x w = true := by
+  induction path with
+  | direct hi ho hm =>
+    have hir : i ≠ r := by have := h.2.1 i hi _ hm; omega
+    rw [siteValGate h hr hρ x hi hir,ho]
+    simp only [GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply,id_eq]
+    exact ⟨n+r,hm,by simpa using hf⟩
+  | @extend w j path hj hjr ho hm ih =>
+    rw [siteValGate h hr hρ x hj hjr,ho]
+    simp only [GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply,id_eq]
+    exact ⟨w,hm,by rw [ite_eq_right (Nat.ne_of_gt (routeAfterHole h path))]; exact ih⟩
+
 /-- Dirty wires after a site-specific erasure retain the raw part
     of their false suspension and receive exactly the OR-route fills. -/
 private theorem siteDirtySemantics {n : ℕ} (G : SimpleGraph (Fin n))
@@ -5298,7 +5315,7 @@ private theorem siteDirtySemantics {n : ℕ} (G : SimpleGraph (Fin n))
     · rintro ⟨p,hp,hpt⟩
       by_cases he : p = n+r
       · exact Or.inr ⟨j,.direct hj hor (he ▸ hp),by simpa [he] using hpt⟩
-      · rw [if_neg he] at hpt
+      · rw [ite_eq_right he] at hpt
         have hp' := h.1.2.1 j hj p hp
         rcases (ih p hp' (by omega) he
           (fun hc => hd (cleanWireReader G C h hl hj hp hc).2)).mp hpt with ht | ⟨i,path,hfill⟩
@@ -5311,18 +5328,13 @@ private theorem siteDirtySemantics {n : ℕ} (G : SimpleGraph (Fin n))
           rw [he,hzero] at hpt
           cases hpt
         refine ⟨p,hp,?_⟩
-        rw [if_neg he]
-        exact (ih p (h.1.2.1 j hj p hp) (by omega) he
+        rw [ite_eq_right he]
+        have hpl := h.1.2.1 j hj p hp
+        exact (ih p hpl (by omega) he
           (fun hc => hd (cleanWireReader G C h hl hj hp hc).2)).mpr (Or.inl hpt)
-      · cases path with
-        | direct hi ho hm =>
-          exact ⟨n+r,hm,by simpa using hfill⟩
-        | extend path hk hkr ho hm =>
-          have hne' : _ ≠ n+r := Nat.ne_of_gt (routeAfterHole h.1 path)
-          refine ⟨_,hm,?_⟩
-          rw [if_neg hne']
-          exact (ih _ (h.1.2.1 j hj _ hm) (by omega) hne'
-            (fun hc => hd (cleanWireReader G C h hl hj hm hc).2)).mpr (Or.inr ⟨i,path,hfill⟩)
+      · have hv := siteRouteFires h.1 hr hρ x path hfill
+        rw [siteValGate h.1 hr hρ x hj hjr,hor] at hv
+        simpa only [GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply,id_eq] using hv
 
 /-- A clean OR collector uses only clean equations. Site-specific
     redirection cannot change any of those OR read sites. -/
@@ -5341,7 +5353,9 @@ private theorem siteCollector {n : ℕ} (G : SimpleGraph (Fin n))
       fun hm => (junkMember G C hJ).2.2 (cleanOrOperands G C h.1 hj hor hc hm)
     rw [siteValGate h.1 hr hρ x hj (cleanDifferent G C hJ hc),hor]
     simp only [GateOp.eval,List.any_map,List.any_eq_true,Function.comp_apply,id_eq]
-    exact exists_congr (fun w => and_congr_right (fun hm => by rw [if_neg (fun he => hno (he ▸ hm))]))
+    exact exists_congr (fun w => and_congr_right (fun hm => by
+      have hne : w ≠ n+r := fun he => hno (he ▸ hm)
+      rw [ite_eq_right hne]))
   have down : ∀ j < C.gates.length, BelowF G C j → SiteVal C r ρ x (n+j) = true →
       ∃ k < C.gates.length, (gateAt C k).op = GateOp.and ∧
         BelowF G C k ∧ SiteVal C r ρ x (n+k) = true := by
@@ -5406,7 +5420,7 @@ theorem noOneJunkSiteReplacement {n : ℕ} (G : SimpleGraph (Fin n))
     False := by
   have hr := (junkMember G C hJ).1
   let D := siteBypass n C r ρ
-  let Z := SiteVal C r ρ
+  let Z := SiteVal (n := n) C r ρ
   have hD : IsAO2 n D := siteBypassAO h.1 hρ
   have hlen : D.gates.length = C.gates.length-1 := siteBypassLength n C r ρ
   have hfun (x : Fin n → Bool) : circuitFun n D x = Z x C.output := rfl
@@ -5469,8 +5483,8 @@ theorem noOneJunkSiteReplacement {n : ℕ} (G : SimpleGraph (Fin n))
       obtain ⟨hp,hq⟩ := (evalExcept_and hW hj (cleanDifferent G C hJ hc) ha hpq x).mp ht
       exact (siteCollector G C h hl hJ ρ hρ x).mpr ⟨j,hj,ha,hc,
         (topEq x j hj ha hc (Or.inl hpq)).mpr
-          ⟨(wireEq x j hj ha (by simp [hpq])).mpr (Or.inl hp),
-           (wireEq x j hj ha (by simp [hpq])).mpr (Or.inl hq)⟩⟩
+          ⟨(wireEq x j hj ha (p := p) (by simp [hpq])).mpr (Or.inl hp),
+           (wireEq x j hj ha (p := q) (by simp [hpq])).mpr (Or.inl hq)⟩⟩
     · have hf : W x C.output = false := by cases he : W x C.output <;> simp_all
       obtain ⟨i,j,p,q,S,T,hi,hio,hir,hj,hja,hjc,hpq,hS,hT,path,hTx⟩ :=
         lostRoutedTop G C h hl hJ hno hW x (pair_true G u v huv) hf
@@ -5533,13 +5547,15 @@ theorem noTwoOrReadersBothStars {n : ℕ} (G : SimpleGraph (Fin n))
       (hclassK j hj hja hjc p q S T hpq hS hT (he ▸ path) s hsT)
   let R := (Finset.range C.gates.length).filter (fun j => n+r ∈ (gateAt C j).inputs)
   have classify (j) (hj : j < C.gates.length) (hm : n+r ∈ (gateAt C j).inputs) : j = i ∨ j = k := by
-    by_contra! hn
+    by_contra hn
+    have hni : j ≠ i := fun he => hn (Or.inl he)
+    have hnk : j ≠ k := fun he => hn (Or.inr he)
     have hsub : ({i,k,j} : Finset ℕ) ⊆ R := by
       intro t ht
       rcases (show t = i ∨ t = k ∨ t = j by simpa using ht) with rfl | rfl | rfl <;>
-        simp [R,Finset.mem_range,*]
+        simp [R,Finset.mem_range, hi, hir, hk, hkr, hj, hm]
     have hle := Finset.card_le_card hsub
-    have hthree : ({i,k,j} : Finset ℕ).card = 3 := by simp [hik,hn.1.symm,hn.2.symm]
+    have hthree : ({i,k,j} : Finset ℕ).card = 3 := by simp [hik,hni.symm,hnk.symm]
     rw [hthree] at hle
     change R.card ≤ 2 at hcount
     omega
@@ -5547,7 +5563,7 @@ theorem noTwoOrReadersBothStars {n : ℕ} (G : SimpleGraph (Fin n))
   have hbl := h.1.2.1 r hr b (by simp [hab])
   let ρ := fun j => if j = i then b else a
   apply noOneJunkSiteReplacement G C h hl hJ hno ρ
-    (fun j => by dsimp [ρ]; split_ifs <;> assumption) hW hzero
+    (fun j => by change (if j = i then b else a) < n+r; split_ifs <;> assumption) hW hzero
   · intro j hj hja hjc p q S T hpq hS hT t path x hf ht
     obtain ⟨htl,_,htm⟩ := routeReadSite path
     obtain ⟨z,hz,hzx⟩ := ht
@@ -5579,7 +5595,7 @@ theorem noTwoOrReadersBothStars {n : ℕ} (G : SimpleGraph (Fin n))
     have hva := (hA.2 V hV x).mpr (Or.inl ha)
     have hvb := (hB.2 V hV x).mpr (Or.inl hb)
     change V x (ρ t) = true
-    dsimp [ρ]
+    change V x (if t = i then b else a) = true
     split_ifs <;> assumption
 
 #print axioms noOneJunkSiteReplacement
@@ -5627,14 +5643,14 @@ private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
     {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
     (hdisj : Disjoint A B) (hcardA : 1 < A.card)
     {s : Fin n} (hs : s ∈ A) (hstar : ∀ v ∈ B, G.Adj s v)
-    (huse : ¬ ResidualUse G C r (suspendedValue C r (fun _ => false) (fun _ => true)) a)
+    (huse : ¬ ResidualUse G C r (suspendedValue (n := n) C r (fun _ => false) (fun _ => true)) a)
     (hcover : ∀ u v, G.Adj u v →
-      suspendedValue C r (fun _ => false) (pairInput u v) C.output = true ∨
+      suspendedValue (n := n) C r (fun _ => false) (pairInput u v) C.output = true ∨
       (pairInput u v s = true ∧ hits B (pairInput u v))) : False := by
   classical
   have hr := (junkMember G C hJ).1
   have hri : r < i := Nat.lt_of_add_lt_add_left (h.1.2.1 i hi _ hir)
-  let W := suspendedValue C r (fun _ => false)
+  let W := suspendedValue (n := n) C r (fun _ => false)
   have hW : EvalExcept n C r W := suspendedValue_evalExcept C h.1 r _
   have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
   have hna : n ≤ a := by
@@ -5657,7 +5673,7 @@ private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
       have heq : z = s := by simpa [pairInput] using hzx
       exact (Finset.disjoint_left.mp hdisj hs (heq ▸ hz)).elim
   let M : ℕ → ℕ → Bool := fun k _ => decide (k = j)
-  let Z := maskedValue C r M (fun _ => false)
+  let Z := maskedValue (n := n) C r M (fun _ => false)
   have hZraw := maskedValue_raw C r M (fun _ : Fin n → Bool => false)
   have hZzero := maskedValue_hole C r M (fun _ : Fin n → Bool => false)
   have hZgate (x) (k) (hk : k < C.gates.length) (hkr : k ≠ r) :=
@@ -5670,9 +5686,7 @@ private theorem exclusiveProviderOneStar {n : ℕ} (G : SimpleGraph (Fin n))
     have hkj : k ≠ j := by
       rintro rfl
       rcases hu with hc | hu
-      · have hnot := residualUseDirty G C h hl (ResidualUse.top (G := G) (C := C))
-        -- Instead use the dirty junk operand's original support on its singleton.
-        exact (rawNotClean G C s (fun x hx => hc x
+      · exact (rawNotClean G C s (fun x hx => hc x
           ((hA.2 _ (originalEvalExcept h.1 r) x).mpr (Or.inl ⟨s,hs,hx⟩)))).elim
       · exact huse hu
     simpa [M,hkj] using hZgate x k hk hkr
@@ -5770,7 +5784,7 @@ private theorem noSoleOrReaderOfSeed {n : ℕ} (G : SimpleGraph (Fin n))
     (hS : RawForm C r p S true) (hT : RawForm C r q T false)
     (path : OrCarrierRoute n C r i p) (hsT : s ∈ T) : False := by
   classical
-  let W := suspendedValue C r (fun _ => false)
+  let W := suspendedValue (n := n) C r (fun _ => false)
   have hW : EvalExcept n C r W := suspendedValue_evalExcept C h.1 r _
   have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
   have ht := routedTopSemantics hj (cleanDifferent G C hJ hjc) hja hpq hS hT
@@ -5919,7 +5933,7 @@ theorem noSoleOrReaderLargeSupports {n : ℕ} (G : SimpleGraph (Fin n))
   classical
   obtain ⟨hr,hand,_⟩ := junkMember G C hJ
   have hprod := originalJunkProduct h.1 hr hand hab hA hB
-  let W := suspendedValue C r (fun _ => false)
+  let W := suspendedValue (n := n) C r (fun _ => false)
   have hW : EvalExcept n C r W := suspendedValue_evalExcept C h.1 r _
   have hzero (x) : W x (n+r) = false := suspendedValue_hole C r _ x
   by_cases hall : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true
