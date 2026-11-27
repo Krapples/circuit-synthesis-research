@@ -3728,7 +3728,7 @@ private theorem pairInputComm {n : ℕ} (u v : Fin n) : pairInput u v = pairInpu
 
 /-- With three direct junk readers, one exclusive provider OR pays for
     the second star even when the suspended output survives. -/
-theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
+theorem noOneJunkWithTrimmedTwoStarsBudget {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) {r a b : ℕ} (hJ : junk G C = {r})
     (hab : (gateAt C r).inputs = [a, b])
@@ -3742,8 +3742,10 @@ theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
     (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
       (pairInput u v s = true ∧ hits B (pairInput u v)) ∨
       (pairInput u v d = true ∧ hits A (pairInput u v)))
-    (readers : Finset ℕ) (hcount : 3 ≤ readers.card)
-    (hread : ∀ j ∈ readers, j < C.gates.length ∧ n + r ∈ (gateAt C j).inputs) : False := by
+    (charges : Finset ℕ) (hcount : 2 ≤ charges.card)
+    (hbudget : 3 ≤ charges.card ∨ W (fun _ => true) C.output = false)
+    (hcharge : ∀ i ∈ charges, r < i ∧ i < C.gates.length ∧
+      ∃ w ∈ (gateAt C i).inputs, W (fun _ => true) w = false) : False := by
   classical
   obtain ⟨hr, hand, _⟩ := junkMember G C hJ
   have ham : a ∈ (gateAt C r).inputs := by simp [hab]
@@ -3839,18 +3841,16 @@ theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
     · obtain ⟨u, hu, hux⟩ := (hsemA x).mp
         ((trimValueCompare C h.1 hW hzero k p x (n + j) habound).1 ha)
       exact (graph_true G x).mpr ⟨u, d, hstarB u hu, hux, hx⟩
-  have readerAfter (i) (hi : i ∈ readers) : r < i :=
-    Nat.lt_of_add_lt_add_left (h.1.2.1 i (hread i hi).1 _ (hread i hi).2)
-  have hrnot : r ∉ readers := fun hm => (Nat.lt_irrefl r) (readerAfter r hm)
-  have hknot : k ∉ insert r readers := by
+  have hrnot : r ∉ charges := fun hm => (Nat.lt_irrefl r) (hcharge r hm).1
+  have hknot : k ∉ insert r charges := by
     intro hm
     rcases Finset.mem_insert.mp hm with he | hm
     · omega
-    · have := readerAfter k hm
+    · have := (hcharge k hm).1
       omega
-  let dropped := insert k (insert r readers)
-  have hsize : 5 ≤ dropped.card := by
-    rw [show dropped = insert k (insert r readers) from rfl,
+  let dropped := insert k (insert r charges)
+  have hsize : dropped.card = charges.card + 2 := by
+    rw [show dropped = insert k (insert r charges) from rfl,
       Finset.card_insert_of_notMem hknot, Finset.card_insert_of_notMem hrnot]
     omega
   obtain ⟨D, hD, hlen, hwires⟩ := compileMaskedSuspension C h.1 (trimOperand k p)
@@ -3860,19 +3860,29 @@ theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
       · exact Finset.mem_range.mpr hkl
       · rcases Finset.mem_insert.mp hi with rfl | hi
         · exact Finset.mem_range.mpr hr
-        · exact Finset.mem_range.mpr (hread i hi).1) (by
+        · exact Finset.mem_range.mpr (hcharge i hi).2.1) (by
       intro i hi
       rcases Finset.mem_insert.mp hi with rfl | hi
       · exact Or.inr ⟨p, hp, Or.inl (by simp [trimOperand])⟩
       · rcases Finset.mem_insert.mp hi with rfl | hi
         · exact Or.inl rfl
-        · exact Or.inr ⟨n + r, (hread i hi).2, Or.inr (hZzero _)⟩)
+        · obtain ⟨w, hw, hz⟩ := (hcharge i hi).2.2
+          have hwb : w < n + C.gates.length :=
+            (h.1.2.1 i (hcharge i hi).2.1 w hw).trans
+              (Nat.add_lt_add_left (hcharge i hi).2.1 n)
+          have hz' : Z (fun _ => true) w = false := by
+            cases he : Z (fun _ => true) w
+            · rfl
+            · have ht := (trimValueCompare C h.1 hW hzero k p (fun _ => true) w hwb).1 he
+              rw [hz] at ht
+              contradiction
+          exact Or.inr ⟨w, hw, Or.inr hz'⟩)
   have rawAvailable (F : Circuit) (hF : IsAO2 n F) (v : Fin n) :
       WireAvailable F (fun x => x v) :=
     Or.inr ⟨v, by have := v.isLt; omega, fun x => (originalEvalExcept hF r).1 x v⟩
   obtain ⟨D₁, hD₁, h₁, hlen₁, _, hs₁⟩ :=
     appendAvailableAnd D hD (rawAvailable D hD s) (hwires b hbbound)
-  obtain ⟨D₂, hD₂, h₂, hlen₂, _, hs₂⟩ :=
+  obtain ⟨D₂, hD₂, h₂, hlen₂, hfree₂, hs₂⟩ :=
     appendAvailableOr D₁ hD₁ (wireAvailablePreserved h₁ (hwires C.output outBound)) hs₁
   obtain ⟨D₃, hD₃, h₃, hlen₃, _, hs₃⟩ := appendAvailableAnd D₂ hD₂ (rawAvailable D₂ hD₂ d)
     (wireAvailablePreserved h₂ (wireAvailablePreserved h₁ (hwires (n + j) habound)))
@@ -3900,7 +3910,41 @@ theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
         · exact (hfun _).trans (hpositive u v huv)
     have hmin := h.2.2 E hE hcorrect
     change C.gates.length ≤ D₄.gates.length at hmin
-    omega
+    rcases hbudget with hmany | hfalse
+    · omega
+    · have hZfalse : Z (fun _ => true) C.output = false := by
+        cases he : Z (fun _ => true) C.output
+        · rfl
+        · have ht := (trimValueCompare C h.1 hW hzero k p (fun _ => true) C.output outBound).1 he
+          rw [hfalse] at ht
+          contradiction
+      have hfree := hfree₂ (Or.inl (wireAvailableFalseOfTop hD₁
+        (wireAvailablePreserved h₁ (hwires C.output outBound)) hZfalse))
+      omega
+
+theorem noOneJunkWithTrimmedTwoStars {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) {r a b : ℕ} (hJ : junk G C = {r})
+    (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false)
+    (hB : RawForm C r b B false) (hdisj : Disjoint A B) (hcardA : 1 < A.card)
+    {s d : Fin n} (hs : s ∈ A) (hd : d ∈ B)
+    (hstarA : ∀ v ∈ B, G.Adj s v) (hstarB : ∀ u ∈ A, G.Adj u d)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (hlost : ∃ z ∈ A, W (pairInput z d) C.output = false)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      (pairInput u v s = true ∧ hits B (pairInput u v)) ∨
+      (pairInput u v d = true ∧ hits A (pairInput u v)))
+    (readers : Finset ℕ) (hcount : 3 ≤ readers.card)
+    (hread : ∀ j ∈ readers, j < C.gates.length ∧ n + r ∈ (gateAt C j).inputs) : False := by
+  apply noOneJunkWithTrimmedTwoStarsBudget G C h hl h4 hJ hab hA hB hdisj hcardA
+    hs hd hstarA hstarB hW hzero hlost hcover readers (by omega) (Or.inl hcount)
+  intro i hi
+  obtain ⟨hil, hm⟩ := hread i hi
+  exact ⟨Nat.lt_of_add_lt_add_left (h.1.2.1 i hil _ hm), hil, n + r, hm, hzero _⟩
+
+#print axioms noOneJunkWithTrimmedTwoStarsBudget
 
 #print axioms noOneJunkWithTrimmedTwoStars
 
