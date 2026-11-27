@@ -4747,13 +4747,14 @@ theorem noOneJunkWithMixedProviderAndTrim {n : ℕ} (G : SimpleGraph (Fin n))
     common-neighbour condition, this uses the actual suspended output:
     the shared raw leaf cannot already cover the missing edge s-v.
     No claim about identifying the shared carrier path is assumed here. -/
-theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n))
+private theorem indispensableCarrierOppositeSingletonOfProduct {n : ℕ} (G : SimpleGraph (Fin n))
     [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     (h4 : NoFourCycle G) (colour : Fin n → Bool)
     (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
-    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a,b])
-    {A B : Finset (Fin n)} (hA : RawForm C r a A false)
-    (hB : RawForm C r b B false) (hcardA : 1 < A.card)
+    {r : ℕ} (hJ : junk G C = {r})
+    {A B : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n+r) = true ↔ hits A x ∧ hits B x)
+    (hcardA : 1 < A.card)
     {s d v : Fin n} (hs : s ∈ A) (hv : v ∈ B) (hvd : v ≠ d)
     (hstarA : ∀ z ∈ B, G.Adj s z) (hstarB : ∀ z ∈ A, G.Adj d z)
     {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
@@ -4765,8 +4766,6 @@ theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n)
     (hsQ : s ∈ Q) {e : Fin n} (heP : e ∈ P) (heS : e ∈ S) :
     ∀ c ∈ T, c = s := by
   classical
-  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
-  have hprod := originalJunkProduct h.1 hr hand hab hA hB
   have rawCross {k : ℕ} {R U : Finset (Fin n)} (hc : BelowF G C k)
       (ht : OrientedTop C r k R U true) {p q : Fin n}
       (hp : p ∈ R) (hq : q ∈ U) : G.Adj p q := by
@@ -4823,6 +4822,29 @@ theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n)
     · exact (G.ne_of_adj hpq rfl).elim
   by_contra hcs
   exact hev (commonNeighborUnique G h4 (Ne.symm hcs) (hstarA v hv) hcv hes hce)
+
+
+theorem indispensableCarrierOppositeSingleton {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a,b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false)
+    (hB : RawForm C r b B false) (hcardA : 1 < A.card)
+    {s d v : Fin n} (hs : s ∈ A) (hv : v ∈ B) (hvd : v ≠ d)
+    (hstarA : ∀ z ∈ B, G.Adj s z) (hstarB : ∀ z ∈ A, G.Adj d z)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hmiss : W (pairInput s v) C.output = false)
+    {i j : ℕ} (hi : i < C.gates.length) (hia : (gateAt C i).op = GateOp.and)
+    (hic : BelowF G C i) (hjc : BelowF G C j)
+    {P Q S T : Finset (Fin n)}
+    (hiTop : OrientedTop C r i P Q true) (hjTop : OrientedTop C r j S T true)
+    (hsQ : s ∈ Q) {e : Fin n} (heP : e ∈ P) (heS : e ∈ S) :
+    ∀ c ∈ T, c = s := by
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  exact indispensableCarrierOppositeSingletonOfProduct G C h hl h4 colour hcolour hJ
+    (originalJunkProduct h.1 hr hand hab hA hB) hcardA hs hv hvd hstarA hstarB
+    hW hmiss hi hia hic hjc hiTop hjTop hsQ heP heS
 
 #print axioms indispensableCarrierOppositeSingleton
 
@@ -4962,5 +4984,132 @@ theorem carrierRoutesShareRawLeaf {n : ℕ} (G : SimpleGraph (Fin n))
 #print axioms immediateOrReaderRawLeaf
 #print axioms lostDirtyWireRoute
 #print axioms carrierRoutesShareRawLeaf
+
+
+/-- A lost positive input identifies a concrete top and a concrete OR
+    route to its junk-dependent operand. The opposite operand is pure.
+    Direct AND readers are excluded by the already checked bridge. -/
+theorem lostRoutedTop {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and →
+      n+r ∉ (gateAt C j).inputs)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (x : Fin n → Bool) (hx : graphFun G ∅ x = true) (hm : W x C.output = false) :
+    ∃ i j p q : ℕ, ∃ S T : Finset (Fin n),
+      i < C.gates.length ∧ (gateAt C i).op = GateOp.or ∧ n+r ∈ (gateAt C i).inputs ∧
+      j < C.gates.length ∧ (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧
+      ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) ∧
+      RawForm C r p S true ∧ RawForm C r q T false ∧
+      OrCarrierRoute n C r i p ∧ hits T x := by
+  let V := fun (y : Fin n → Bool) w => val C (List.ofFn y) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have ho : V x C.output = true := (congrFun h.2.1 x).trans hx
+  obtain ⟨j,hj,hja,hjc,hjv⟩ := (collectorSemantics G C h hl hJ hV x).mp ho
+  have hjw : W x (n+j) = false := by
+    cases he : W x (n+j)
+    · rfl
+    · have ht := (collectorSemantics G C h hl hJ hW x).mpr ⟨j,hj,hja,hjc,he⟩
+      rw [hm] at ht
+      cases ht
+  obtain ⟨a,b,A,B,f,g,hab,hA,hB,hfg⟩ := topProduct G C h hl hJ hj hja hjc
+  have orient {p q : ℕ} {S T : Finset (Fin n)} {k : Bool}
+      (hpq : (gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p])
+      (hP : RawForm C r p S k) (hQ : RawForm C r q T false) :
+      ∃ i : ℕ, i < C.gates.length ∧ (gateAt C i).op = GateOp.or ∧
+        n+r ∈ (gateAt C i).inputs ∧ RawForm C r p S true ∧
+        OrCarrierRoute n C r i p ∧ hits T x := by
+    have ht (U : (Fin n → Bool) → ℕ → Bool) (hU : EvalExcept n C r U) :
+        U x (n+j) = true ↔ U x p = true ∧ U x q = true := by
+      rcases hpq with he | he
+      · exact evalExcept_and hU hj (cleanDifferent G C hJ hjc) hja he x
+      · rw [evalExcept_and hU hj (cleanDifferent G C hJ hjc) hja he x]
+        exact and_comm
+    obtain ⟨hpv,hqv⟩ := (ht V hV).mp hjv
+    have hT : hits T x := by simpa [hits] using (hQ.2 V hV x).mp hqv
+    have hqw : W x q = true := (hQ.2 W hW x).mpr (Or.inl hT)
+    have hpw : W x p = false := by
+      cases he : W x p
+      · rfl
+      · have htw := (ht W hW).mpr ⟨he,hqw⟩
+        rw [hjw] at htw
+        cases htw
+    have hp : p ∈ (gateAt C j).inputs := by
+      rcases hpq with he | he <;> simp [he]
+    have hne : p ≠ n+r := fun he => hno j hj hja (he ▸ hp)
+    have hpl := h.1.2.1 j hj p hp
+    have hk := (rawFormLost hP hV hW x hpv hpw).1
+    obtain ⟨i,hi,hio,hir,path⟩ := lostDirtyWireRoute G C h hl hJ hV hW x p
+      (by omega) hne (noCleanAndOperand G C h j p hj hp hja) hpv hpw
+    exact ⟨i,hi,hio,hir,hk ▸ hP,path,hT⟩
+  rcases hfg with hf | hg
+  · obtain ⟨i,hi,hio,hir,hB',hp,hT⟩ := orient (Or.inr hab) hB (hf ▸ hA)
+    exact ⟨i,j,b,a,B,A,hi,hio,hir,hj,hja,hjc,Or.inr hab,hB',hf ▸ hA,hp,hT⟩
+  · obtain ⟨i,hi,hio,hir,hA',hp,hT⟩ := orient (Or.inl hab) hA (hg ▸ hB)
+    exact ⟨i,j,a,b,A,B,hi,hio,hir,hj,hja,hjc,Or.inl hab,hA',hg ▸ hB,hp,hT⟩
+
+private lemma routedTopSemantics {n : ℕ} {C : Circuit} {r j p q : ℕ}
+    (hj : j < C.gates.length) (hjr : j ≠ r) (hja : (gateAt C j).op = GateOp.and)
+    (hpq : (gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p])
+    {S T : Finset (Fin n)} (hS : RawForm C r p S true) (hT : RawForm C r q T false) :
+    OrientedTop C r j S T true := by
+  intro V hV x
+  rcases hpq with he | he
+  · rw [evalExcept_and hV hj hjr hja he x,hS.2 V hV x,hT.2 V hV x]
+    simp [hits]
+  · rw [evalExcept_and hV hj hjr hja he x,hS.2 V hV x,hT.2 V hV x]
+    simp [hits,and_comm]
+
+/-- The missing noncentral edge s-v pins an actual immediate OR reader.
+    Every clean top on this reader's route has opposite support {s}
+    (the subset conclusion suffices; nonemptiness is automatic for pure
+    operands in a constant-free AO circuit). The proof is symmetric in
+    the two junk supports because only their product semantics is used. -/
+theorem indispensableCarrierClass {n : ℕ} (G : SimpleGraph (Fin n))
+    [DecidableRel G.Adj] (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    (h4 : NoFourCycle G) (colour : Fin n → Bool)
+    (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r : ℕ} (hJ : junk G C = {r})
+    (hno : ∀ j < C.gates.length, (gateAt C j).op = GateOp.and →
+      n+r ∉ (gateAt C j).inputs)
+    {A B : Finset (Fin n)}
+    (hprod : ∀ x : Fin n → Bool, val C (List.ofFn x) (n+r) = true ↔ hits A x ∧ hits B x)
+    (hcardA : 1 < A.card)
+    {s d v : Fin n} (hs : s ∈ A) (hv : v ∈ B) (hvd : v ≠ d)
+    (hstarA : ∀ z ∈ B, G.Adj s z) (hstarB : ∀ z ∈ A, G.Adj d z)
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hmiss : W (pairInput s v) C.output = false) :
+    ∃ i < C.gates.length, (gateAt C i).op = GateOp.or ∧ n+r ∈ (gateAt C i).inputs ∧
+      (∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧
+        ∃ p q S T, ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) ∧
+          RawForm C r p S true ∧ RawForm C r q T false ∧ OrCarrierRoute n C r i p ∧ s ∈ T) ∧
+      ∀ j < C.gates.length, (gateAt C j).op = GateOp.and → BelowF G C j →
+        ∀ p q S T, ((gateAt C j).inputs = [p,q] ∨ (gateAt C j).inputs = [q,p]) →
+          RawForm C r p S true → RawForm C r q T false → OrCarrierRoute n C r i p →
+          ∀ c ∈ T, c = s := by
+  obtain ⟨i,j,p,q,S,T,hi,hio,hir,hj,hja,hjc,hpq,hS,hT,path,hitsT⟩ :=
+    lostRoutedTop G C h hl hJ hno hW (pairInput s v) (pair_true G s v (hstarA v hv)) hmiss
+  have ht := routedTopSemantics hj (cleanDifferent G C hJ hjc) hja hpq hS hT
+  have hvT : v ∉ T := by
+    intro hvt
+    obtain ⟨a,ha,b,hb,hab⟩ := Finset.one_lt_card.mp hcardA
+    have hcross (z) (hz : z ∈ A) : G.Adj z v :=
+      carrierCross G h.1 hprod hjc ht hz hv hvt (Or.inl rfl) (Or.inr rfl)
+    exact hvd (commonNeighborUnique G h4 hab (hstarB a ha).symm (hstarB b hb).symm
+      (hcross a ha) (hcross b hb))
+  have hsT : s ∈ T := by
+    obtain ⟨z,hz,hzx⟩ := hitsT
+    rcases (show z = s ∨ z = v by simpa [pairInput] using hzx) with he | he
+    · exact he ▸ hz
+    · exact (hvT (he ▸ hz)).elim
+  refine ⟨i,hi,hio,hir,⟨j,hj,hja,hjc,p,q,S,T,hpq,hS,hT,path,hsT⟩,?_⟩
+  intro k hk hka hkc u w P Q huw hP hQ path'
+  obtain ⟨e,heS,heP⟩ := carrierRoutesShareRawLeaf G C h hl hJ hi hio hir path path' hS hP
+  exact indispensableCarrierOppositeSingletonOfProduct G C h hl h4 colour hcolour hJ
+    hprod hcardA hs hv hvd hstarA hstarB hW hmiss hj hja hjc hkc ht
+    (routedTopSemantics hk (cleanDifferent G C hJ hkc) hka huw hP hQ) hsT heS heP
+
+#print axioms lostRoutedTop
+#print axioms indispensableCarrierClass
 
 end ResearchVerification.OneJunkErase
