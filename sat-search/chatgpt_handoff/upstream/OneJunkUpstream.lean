@@ -909,4 +909,160 @@ theorem oneJunkAndReaderNeedsBothStars {n : ℕ} (G : SimpleGraph (Fin n))
 
 #print axioms oneJunkAndReaderNeedsBothStars
 
+
+/-- A direct AND reader is impossible: it is the sole reader by the
+    earlier bound, and both necessary stars force its opposite input
+    to be an exclusive mixed-colour provider. -/
+theorem noOneJunkAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    (colour : Fin n → Bool) (hcolour : ∀ u v, G.Adj u v → colour u ≠ colour v)
+    {r i : ℕ} (hJ : junk G C = {r})
+    (hi : i ∈ immediateJunkReaders (n := n) C r)
+    (hand : (gateAt C i).op = GateOp.and) : False := by
+  classical
+  have H := fromLeastOneJunk G C h hl hJ
+  obtain ⟨hir,him⟩ := Finset.mem_filter.mp hi
+  have hil := Finset.mem_range.mp hir
+  have hri : r < i := Nat.lt_of_add_lt_add_left (h.1.2.1 i hil _ him)
+  have hic := H.others i hil hand hri.ne.symm
+  have hcard := oneJunkAtMostOneWithAndReader G C h hl h4 colour hcolour hJ hi hand
+  have onlyReader (j) (hj : j < C.gates.length) (hm : n+r ∈ (gateAt C j).inputs) : j = i :=
+    Finset.card_le_one.mp hcard j (Finset.mem_filter.mpr ⟨Finset.mem_range.mpr hj,hm⟩) i hi
+  have hno (j) (hj : j < C.gates.length) (hor : (gateAt C j).op = GateOp.or) :
+      n+r ∉ (gateAt C j).inputs := by
+    intro hm
+    have he := onlyReader j hj hm
+    rw [he,hand] at hor
+    cases hor
+  obtain ⟨a,b,A,B,s,d,u,v,W,hab,hA,hB,hdisj,hcardA,hcardB,hs,hd,hu,hv,hus,hvd,
+    hstarA,hstarB,hW,hzero,hmissB,hmissA,hcover⟩ :=
+    oneJunkAndReaderNeedsBothStars G C h hl h4 colour hcolour hJ hi hand
+  obtain ⟨p,q,hpq⟩ := twoOperands h.1 hil
+  obtain ⟨w,hiw⟩ : ∃ w, (gateAt C i).inputs = [n+r,w] ∨
+      (gateAt C i).inputs = [w,n+r] := by
+    rcases (show n+r = p ∨ n+r = q by simpa [hpq] using him) with he | he
+    · exact ⟨q,Or.inl (by simpa [he] using hpq)⟩
+    · exact ⟨p,Or.inr (by simpa [he] using hpq)⟩
+  have hwm : w ∈ (gateAt C i).inputs := by
+    rcases hiw with he | he <;> simp [he]
+  have hwn : w ≠ n+r := by
+    intro he
+    apply distinctOperands G C h (a := n+r) hil
+    rcases hiw with hh | hh <;> simpa [he] using hh
+  have hwlt := h.1.2.1 i hil w hwm
+  have hwd := noCleanAndOperand G C h i w hil hwm hand
+  obtain ⟨T,hT⟩ := dirtyRawFormNoOrReader G C h hl hJ hno w (by omega) hwn hwd
+  let V := fun (x : Fin n → Bool) k => val C (List.ofFn x) k
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have htop (U : (Fin n → Bool) → ℕ → Bool) (hU : EvalExcept n C r U) (x : Fin n → Bool) :
+      U x (n+i) = true ↔ U x (n+r) = true ∧ U x w = true := by
+    rcases hiw with he | he
+    · exact evalExcept_and hU hil hri.ne.symm hand he x
+    · rw [evalExcept_and hU hil hri.ne.symm hand he x]
+      exact and_comm
+  have lostTop (x : Fin n → Bool) (hx : graphFun G ∅ x = true)
+      (hf : W x C.output = false) : V x (n+i) = true := by
+    have ho : V x C.output = true := (congrFun h.2.1 x).trans hx
+    obtain ⟨j,hj,hja,hjc,hjv⟩ := (collectorSemantics G C h hl hJ hV x).mp ho
+    by_cases hm : n+r ∈ (gateAt C j).inputs
+    · simpa [onlyReader j hj hm] using hjv
+    · have he := cleanTopUnaffectedNoOrReader G C h hl hJ hno hj hja hjc hm hV hW x
+      have ht := (collectorSemantics G C h hl hJ hW x).mpr ⟨j,hj,hja,hjc,he.symm.trans hjv⟩
+      rw [hf] at ht
+      cases ht
+  have hpair (x y : Fin n) (hx : x ∈ A) (hy : y ∈ B) :
+      V (pairInput x y) (n+r) = true :=
+    (junkAtPair h.1 H.hg H.gand hab hA hB x y).mpr ⟨Or.inl hx,Or.inr hy⟩
+  have forcedAdj (x y : Fin n) (hx : x ∈ A) (hy : y ∈ B)
+      (ht : x ∈ T ∨ y ∈ T) : G.Adj x y := by
+    have hw : V (pairInput x y) w = true := by
+      apply (hT.2 V hV _).mpr
+      rcases ht with ht | ht
+      · exact Or.inl ⟨x,ht,by simp [pairInput]⟩
+      · exact Or.inl ⟨y,ht,by simp [pairInput]⟩
+    exact PEqualNP.Outside.L_meta_4745.pair_adj G x y
+      (hic _ ((htop V hV _).mpr ⟨hpair x y hx hy,hw⟩))
+  have hitsT (x y : Fin n) (ha : G.Adj x y) (hf : W (pairInput x y) C.output = false) :
+      x ∈ T ∨ y ∈ T := by
+    have ht := (htop V hV _).mp (lostTop _ (pair_true G x y ha) hf)
+    obtain ⟨z,hz,hzx⟩ := ((hT.2 V hV _).mp ht.2).resolve_right (by simp)
+    rcases (show z = x ∨ z = y by simpa [pairInput] using hzx) with rfl | rfl
+    · exact Or.inl hz
+    · exact Or.inr hz
+  have uniqueA (x : Fin n) (hx : x ∈ A) (ht : x ∈ T) : x = s := by
+    obtain ⟨e,he,f,hf,hef⟩ := Finset.one_lt_card.mp hcardB
+    let S := Finset.univ.filter fun z => G.Adj e z ∧ G.Adj f z
+    have hS : S.card ≤ 1 := h4 e f hef
+    have hxS : x ∈ S := by
+      simp [S,(forcedAdj x e hx he (Or.inl ht)).symm,
+        (forcedAdj x f hx hf (Or.inl ht)).symm]
+    have hsS : s ∈ S := by simp [S,(hstarA e he).symm,(hstarA f hf).symm]
+    exact Finset.card_le_one.mp hS x hxS s hsS
+  have uniqueB (y : Fin n) (hy : y ∈ B) (ht : y ∈ T) : y = d := by
+    obtain ⟨e,he,f,hf,hef⟩ := Finset.one_lt_card.mp hcardA
+    let S := Finset.univ.filter fun z => G.Adj e z ∧ G.Adj f z
+    have hS : S.card ≤ 1 := h4 e f hef
+    have hyS : y ∈ S := by
+      simp [S,forcedAdj e y he hy (Or.inr ht),forcedAdj f y hf hy (Or.inr ht)]
+    have hdS : d ∈ S := by simp [S,(hstarB e he).symm,(hstarB f hf).symm]
+    exact Finset.card_le_one.mp hS y hyS d hdS
+  have hdT : d ∈ T := (hitsT u d (hstarB u hu).symm hmissB).resolve_left
+    (fun ht => hus (uniqueA u hu ht))
+  have hsT : s ∈ T := (hitsT s v (hstarA v hv) hmissA).resolve_right
+    (fun ht => hvd (uniqueB v hv ht))
+  have hsd : s ≠ d := G.ne_of_adj (hstarA d hd)
+  have hng : n ≤ w := by
+    by_contra! hn
+    let z : Fin n := ⟨w,hn⟩
+    have ident (t : Fin n) (ht : t ∈ T) : z = t := by
+      have hval := (hT.2 W hW (pairInput t t)).mpr (Or.inl ⟨t,ht,by simp [pairInput]⟩)
+      simpa [pairInput] using (hW.1 (pairInput t t) z).symm.trans hval
+    exact hsd ((ident s hsT).symm.trans (ident d hdT))
+  obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
+  have hj : j < C.gates.length := by omega
+  have hjr : j ≠ r := by omega
+  have hju := mixedProviderNoResidualUse G C h hl colour hcolour hJ hW hzero hT hsT hdT
+    (hcolour s d (hstarA d hd))
+  have hjs : W (pairInput s s) (n+j) = true :=
+    (hT.2 W hW _).mpr (Or.inl ⟨s,hsT,by simp [pairInput]⟩)
+  have hjd : W (pairInput d d) (n+j) = true :=
+    (hT.2 W hW _).mpr (Or.inl ⟨d,hdT,by simp [pairInput]⟩)
+  have hcharge : ∃ charges : Finset ℕ, j ∉ charges ∧ 1 ≤ charges.card ∧
+      (2 ≤ charges.card ∨ W (fun _ => true) C.output = false) ∧
+      ∀ t ∈ charges, r < t ∧ t < C.gates.length ∧
+        ∃ z ∈ (gateAt C t).inputs, W (fun _ => true) z = false := by
+    by_cases hout : W (fun _ => true) C.output = false
+    · refine ⟨{i},by simp; omega,by simp,Or.inr hout,?_⟩
+      intro t ht
+      have he : t = i := Finset.mem_singleton.mp ht
+      subst t
+      exact ⟨hri,hil,n+r,him,hzero _⟩
+    · have hot : W (fun _ => true) C.output = true := by
+        cases he : W (fun _ => true) C.output <;> simp_all
+      have hz : W (fun _ => true) (n+i) = false := by
+        cases he : W (fun _ => true) (n+i)
+        · rfl
+        · have hh := ((htop W hW _).mp he).1
+          rw [hzero] at hh
+          cases hh
+      have hneout : C.output ≠ n+i := by
+        intro he
+        rw [he,hz] at hot
+        cases hot
+      obtain ⟨k,hik,hk,hkm⟩ := noUnreadGate G C h i (n+r) hil
+        (h.1.2.1 i hil _ him) hneout
+      have hjk : j ≠ k := by omega
+      have hji : j ≠ i := by omega
+      refine ⟨{i,k},by simp [hji,hjk],by simp [hik.ne],Or.inl (by simp [hik.ne]),?_⟩
+      intro t ht
+      rcases (show t = i ∨ t = k by simpa using ht) with rfl | rfl
+      · exact ⟨hri,hil,n+r,him,hzero _⟩
+      · exact ⟨hri.trans hik,hk,n+i,hkm,hz⟩
+  obtain ⟨charges,hjn,hcc,hbudget,hch⟩ := hcharge
+  exact noOneJunkWithMixedProviderAndTrim G C h hl h4 hJ hab hA hB hdisj hcardA
+    hs hd hstarA (fun z hz => (hstarB z hz).symm) hW hzero ⟨u,hu,hmissB⟩ hcover
+    hj hjr hwd hju hjs hjd charges hjn hcc hbudget hch
+
+#print axioms noOneJunkAndReader
+
 end ResearchVerification.OneJunkErase
