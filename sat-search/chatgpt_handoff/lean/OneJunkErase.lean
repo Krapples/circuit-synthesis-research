@@ -893,9 +893,11 @@ lemma originalEvalExcept {n : ℕ} {C : Circuit} (h : IsAO2 n C) (r : ℕ) :
     EvalExcept n C r (fun x w => val C (List.ofFn x) w) := by
   constructor
   · intro x v
+    dsimp only
     rw [val_input (n := n) (by simp) v.isLt]
     simp [List.getD_eq_getElem?_getD, v.isLt]
   · intro x j hj _
+    dsimp only
     rw [val_gate (n := n) (by simp) hj]
     congr 1
     apply List.map_congr_left
@@ -910,14 +912,18 @@ theorem bypassEvalExcept {n : ℕ} {C : Circuit} (h : IsAO2 n C)
       val (bypass n C r i) (List.ofFn x) (aliasWire (n + r) i w)) := by
   constructor
   · intro x v
+    dsimp only
     rw [aliasWire_lt_self (by omega : v.val < n + r)]
     rw [bypass_val_lt (n := n) (by simp) hr v.val (by omega)]
     exact (originalEvalExcept h r).1 x v
   · intro x j hj hne
+    dsimp only
     by_cases hlt : j < r
     · rw [aliasWire_lt_self (by omega : n + j < n + r)]
       rw [bypass_val_lt (n := n) (by simp) hr (n + j) (by omega)]
-      rw [(originalEvalExcept h r).2 x j hj hne]
+      have heq := (originalEvalExcept h r).2 x j hj hne
+      dsimp only at heq
+      rw [heq]
       congr 1
       apply List.map_congr_left
       intro w hw
@@ -954,7 +960,7 @@ theorem dirtyRawForm {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
     {r : ℕ} (hJ : junk G C = {r}) :
     ∀ w < n + C.gates.length, ¬ CleanWire G C w →
-      ∃ S b, RawForm C r w S b := by
+      ∃ (S : Finset (Fin n)) (b : Bool), RawForm C r w S b := by
   intro w
   induction w using Nat.strong_induction_on with
   | _ w ih =>
@@ -993,9 +999,9 @@ theorem dirtyRawForm {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
           · have := hg ht; omega
         · intro V hV x
           rw [hV.2 x j hj he, hor, hab]
-          change (V x a || V x b || false) = true ↔ _
-          simp only [Bool.or_false, Bool.or_eq_true_iff, hA V hV x, hB V hV x]
-          simp only [Finset.mem_union]
+          simp only [GateOp.eval, List.map_cons, List.map_nil, List.any_cons,
+            List.any_nil, id_eq, Bool.or_false, Bool.or_eq_true_iff, hA V hV x, hB V hV x,
+            Finset.mem_union]
           aesop
 
 /-- For a unique junk gate, both its operands have pure raw support.
@@ -1266,6 +1272,7 @@ theorem noSingleOverlapNoExposure {n : ℕ} (G : SimpleGraph (Fin n))
   have hV : EvalExcept n C r V := originalEvalExcept h.1 r
   have hW : EvalExcept n C r W := bypassEvalExcept h.1 hr hi
   have hD : IsAO2 n D := by
+    change IsAO2 n (bypass n C r c.val)
     rw [← erase_eq_bypass n C r c.val hr]
     exact erase_exactAO h.1 hr hi
   have hnew (x : Fin n → Bool) : W x (n+r) = x c := by
@@ -1330,11 +1337,13 @@ theorem noSingleOverlapNoExposure {n : ℕ} (G : SimpleGraph (Fin n))
       | true => rfl
       | false =>
         obtain ⟨hf,hjv',hjw⟩ := rawFormLost hS hV hW x hvp he
-        have hg : g = false := by rcases hfg with hh | hh
-                                 · rw [hf] at hh; contradiction
-                                 · exact hh
-        obtain ⟨z,hz,hzx⟩ := (hT.2 V hV x).mp hvq |>.resolve_right
-          (by simp [hg])
+        have hg : g = false := by
+          rcases hfg with hh | hh
+          · rw [hf] at hh; contradiction
+          · exact hh
+        have hraw : ∃ z ∈ T, x z = true := by
+          simpa [hg] using (hT.2 V hV x).mp hvq
+        obtain ⟨z,hz,hzx⟩ := hraw
         obtain ⟨hzA,hzB⟩ := hsafe.1 hf z hz
         exact (pairImpossible z hzx hzA hzB hjv' hjw).elim
     have hwq : W x q = true := by
@@ -1342,11 +1351,13 @@ theorem noSingleOverlapNoExposure {n : ℕ} (G : SimpleGraph (Fin n))
       | true => rfl
       | false =>
         obtain ⟨hg,hjv',hjw⟩ := rawFormLost hT hV hW x hvq he
-        have hf : f = false := by rcases hfg with hh | hh
-                                 · exact hh
-                                 · rw [hg] at hh; contradiction
-        obtain ⟨z,hz,hzx⟩ := (hS.2 V hV x).mp hvp |>.resolve_right
-          (by simp [hf])
+        have hf : f = false := by
+          rcases hfg with hh | hh
+          · exact hh
+          · rw [hg] at hh; contradiction
+        have hraw : ∃ z ∈ S, x z = true := by
+          simpa [hf] using (hS.2 V hV x).mp hvp
+        obtain ⟨z,hz,hzx⟩ := hraw
         obtain ⟨hzA,hzB⟩ := hsafe.2 hg z hz
         exact (pairImpossible z hzx hzA hzB hjv' hjw).elim
     have htop := (evalExcept_and hW hj hdiff hop hpq x).mpr ⟨hwp,hwq⟩
@@ -1356,7 +1367,9 @@ theorem noSingleOverlapNoExposure {n : ℕ} (G : SimpleGraph (Fin n))
     apply Bool.eq_iff_iff.mpr
     constructor
     · intro hx
-      exact (congrFun h.2.1 x) ▸ hneg x hx
+      have he : C.eval (List.ofFn x) = graphFun G ∅ x := congrFun h.2.1 x
+      rw [← he]
+      exact hneg x hx
     · intro hx
       obtain ⟨u,v,huv,hu,hv⟩ := (graph_true G x).mp hx
       apply circuit_monotone n D (ao_mono hD) (pairInput u v) x ?_ (hedge u v huv)
