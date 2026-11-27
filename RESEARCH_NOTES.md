@@ -103,6 +103,13 @@ recorded there and do not block new work.
 
 ## Results at a glance
 
+For L-meta-3754, the clean region of a least, lift-fixed circuit in the
+upstream exact fan-in-two AND/OR model has exactly `T - 1` clean OR gates
+for `T` clean AND gates, with natural-number subtraction. Global liveness
+and a concrete strict deletion for singleton overlap without exposed
+centres are also Lean-checked. The remaining one-junk replacements are open.
+[Collector proof and verification scope](sat-search/chatgpt_handoff/meta3754_collector_accounting.md)
+
 For L-clb-036, the protected elimination procedure has rank-one and rank-zero
 fallbacks with a stable unit ledger. The fixed-metadata hard incidence core on
 `g >= 2` clauses has exact algebraic degree `(3g-1)ell` for `ell`-bit literal

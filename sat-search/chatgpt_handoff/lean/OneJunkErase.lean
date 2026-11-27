@@ -862,6 +862,195 @@ theorem cleanWireReader {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
   · obtain ⟨r, rfl⟩ : ∃ r, w = n + r := ⟨w - n, by omega⟩
     exact cleanReader G C h hl (by omega) hc (allLive G C h j hj) hm
 
+noncomputable def cleanGates {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (op : GateOp) : Finset ℕ := by
+  classical
+  exact (Finset.range C.gates.length).filter fun j => (gateAt C j).op = op ∧ BelowF G C j
+
+lemma mem_cleanGates {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (op : GateOp) (j : ℕ) :
+    j ∈ cleanGates G C op ↔ j < C.gates.length ∧ (gateAt C j).op = op ∧ BelowF G C j := by
+  classical
+  simp [cleanGates]
+
+/-- Incidence counting in the original gate list gives the collector lower
+    bound, even if a clean gate has multiple clean readers. -/
+theorem collectorOrLower {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) :
+    (cleanGates G C GateOp.and).card ≤ (cleanGates G C GateOp.or).card + 1 := by
+  classical
+  let A := cleanGates G C GateOp.and
+  let O := cleanGates G C GateOp.or
+  let operands := fun j => (gateAt C j).inputs.toFinset
+  have hd : Disjoint A O := by
+    refine Finset.disjoint_left.mpr ?_
+    intro j hj hk
+    have ha := ((mem_cleanGates G C GateOp.and j).mp hj).2.1
+    have ho := ((mem_cleanGates G C GateOp.or j).mp hk).2.1
+    rw [ha] at ho
+    contradiction
+  have hc : ∀ j ∈ A ∪ O, j < C.gates.length ∧ BelowF G C j := by
+    intro j hj
+    rcases Finset.mem_union.mp hj with hj | hj
+    · obtain ⟨hj, _, hc⟩ := (mem_cleanGates G C GateOp.and j).mp hj
+      exact ⟨hj, hc⟩
+    · obtain ⟨hj, _, hc⟩ := (mem_cleanGates G C GateOp.or j).mp hj
+      exact ⟨hj, hc⟩
+  have hcover : (A ∪ O).image (n + ·) ⊆ insert C.output (O.biUnion operands) := by
+    intro w hw
+    obtain ⟨j, hj, rfl⟩ := Finset.mem_image.mp hw
+    obtain ⟨hj, hjc⟩ := hc j hj
+    by_cases he : C.output = n + j
+    · exact Finset.mem_insert.mpr (Or.inl he.symm)
+    · obtain ⟨a, b, hab⟩ := twoOperands h.1 hj
+      have ha := h.1.2.1 j hj a (by rw [hab]; simp)
+      obtain ⟨k, _, hk, hm⟩ := noUnreadGate G C h j a hj ha he
+      obtain ⟨hor, hkc⟩ := cleanReader G C h hl hj hjc (allLive G C h k hk) hm
+      apply Finset.mem_insert.mpr
+      exact Or.inr (Finset.mem_biUnion.mpr
+        ⟨k, (mem_cleanGates G C GateOp.or k).mpr ⟨hk, hor, hkc⟩, List.mem_toFinset.mpr hm⟩)
+  have hslots : (O.biUnion operands).card ≤ O.card * 2 := by
+    apply Finset.card_biUnion_le_card_mul
+    intro j hj
+    have hj' := ((mem_cleanGates G C GateOp.or j).mp hj).1
+    obtain ⟨a, b, hab⟩ := twoOperands h.1 hj'
+    calc
+      (operands j).card ≤ (gateAt C j).inputs.length := List.toFinset_card_le _
+      _ = 2 := by simp [hab]
+  have hcard := Finset.card_le_card hcover
+  rw [Finset.card_image_of_injective _ (fun _ _ he => Nat.add_left_cancel he),
+    Finset.card_union_of_disjoint hd] at hcard
+  have hins := Finset.card_insert_le C.output (O.biUnion operands)
+  change A.card ≤ O.card + 1
+  omega
+
+#print axioms collectorOrLower
+
+private def appendBinary (D : Circuit) (op : GateOp) (a b : ℕ) : Circuit :=
+  ⟨D.gates ++ [⟨op, [a, b]⟩], D.output⟩
+
+private lemma appendBinary_spec {n : ℕ} {D : Circuit} (h : IsAO2 n D)
+    {op : GateOp} (hop : op = GateOp.and ∨ op = GateOp.or)
+    {a b : ℕ} (ha : a < n + D.gates.length) (hb : b < n + D.gates.length) :
+    let E := appendBinary D op a b
+    E.gates.length = D.gates.length + 1 ∧ IsAO2 n E ∧
+      (∀ (x : Fin n → Bool) w, w < n + D.gates.length →
+        val E (List.ofFn x) w = val D (List.ofFn x) w) ∧
+      (∀ x : Fin n → Bool, val E (List.ofFn x) (n + D.gates.length) =
+        op.eval [val D (List.ofFn x) a, val D (List.ofFn x) b]) := by
+  let E := appendBinary D op a b
+  have hlen : E.gates.length = D.gates.length + 1 := by simp [E, appendBinary]
+  have old : ∀ j < D.gates.length, gateAt E j = gateAt D j := by
+    intro j hj
+    rw [gateAt_eq (by omega : j < E.gates.length), gateAt_eq hj]
+    exact List.getElem_append_left hj
+  have fresh : gateAt E D.gates.length = ⟨op, [a, b]⟩ := by
+    rw [gateAt_eq (by omega : D.gates.length < E.gates.length)]
+    simp [E, appendBinary, List.getElem_append_right (le_refl D.gates.length)]
+  have keep (x : Fin n → Bool) (w : ℕ) (hw : w < n + D.gates.length) :
+      val E (List.ofFn x) w = val D (List.ofFn x) w := by
+    exact val_prefix (n := n) (by simp) le_rfl (by omega) old w hw
+  refine ⟨hlen, ⟨?_, ?_, ?_⟩, keep, ?_⟩
+  · intro g hg
+    rcases List.mem_append.mp hg with hg | hg
+    · exact h.1 _ hg
+    · obtain rfl := List.mem_singleton.mp hg
+      exact hop
+  · intro j hj w hw
+    change j < E.gates.length at hj
+    by_cases hj' : j < D.gates.length
+    · rw [old j hj'] at hw
+      exact h.2.1 j hj' w hw
+    · have he : j = D.gates.length := by omega
+      subst j
+      rw [fresh] at hw
+      have hw' : w = a ∨ w = b := by simpa using hw
+      rcases hw' with rfl | rfl
+      · exact ha
+      · exact hb
+  · intro g hg
+    rcases List.mem_append.mp hg with hg | hg
+    · exact h.2.2 _ hg
+    · obtain rfl := List.mem_singleton.mp hg
+      rfl
+  · intro x
+    rw [val_gate (n := n) (by simp) (by omega : D.gates.length < E.gates.length), fresh]
+    simp [ha, hb, keep x a ha, keep x b hb]
+
+private def RetainedWire (n : ℕ) (P : ℕ → Prop) (k w : ℕ) : Prop :=
+  w < n ∨ ∃ j < k, P j ∧ w = n + j
+
+/-- Compile an ancestor-closed selection, preserving its raw and gate values. -/
+private lemma compileSelection {n : ℕ} (C : Circuit) (h : IsAO2 n C)
+    (P : ℕ → Prop) [DecidablePred P]
+    (closed : ∀ j < C.gates.length, P j → ∀ w ∈ (gateAt C j).inputs,
+      RetainedWire n P j w) :
+    ∀ k ≤ C.gates.length, ∃ (D : Circuit) (ρ : ℕ → ℕ), IsAO2 n D ∧
+      D.gates.length = ((Finset.range k).filter P).card ∧
+      ∀ w, RetainedWire n P k w → ρ w < n + D.gates.length ∧
+        ∀ x : Fin n → Bool, val D (List.ofFn x) (ρ w) = val C (List.ofFn x) w := by
+  intro k
+  induction k with
+  | zero =>
+    intro _
+    let D : Circuit := ⟨[], 0⟩
+    refine ⟨D, id, ⟨?_, ?_, ?_⟩, by simp [D], ?_⟩
+    · simp [AndOrOnly, D]
+    · simp [ReadsBack, D]
+    · simp [D]
+    · intro w hw
+      have hw' : w < n := by simpa [RetainedWire] using hw
+      refine ⟨by simpa [D] using hw', ?_⟩
+      intro x
+      change val D (List.ofFn x) w = val C (List.ofFn x) w
+      rw [val_input (n := n) (by simp) hw', val_input (n := n) (by simp) hw']
+  | succ k ih =>
+    intro hk
+    obtain ⟨D, ρ, hD, hlen, hρ⟩ := ih (by omega)
+    have hj : k < C.gates.length := by omega
+    have liftOld {w : ℕ} (hw : RetainedWire n P (k + 1) w) (hne : w ≠ n + k) :
+        RetainedWire n P k w := by
+      rcases hw with hw | ⟨j, hj, hp, rfl⟩
+      · exact Or.inl hw
+      · exact Or.inr ⟨j, by omega, hp, rfl⟩
+    by_cases hp : P k
+    · obtain ⟨a, b, hab⟩ := twoOperands h hj
+      have hma : a ∈ (gateAt C k).inputs := by rw [hab]; simp
+      have hmb : b ∈ (gateAt C k).inputs := by rw [hab]; simp
+      have ha := hρ a (closed k hj hp a hma)
+      have hb := hρ b (closed k hj hp b hmb)
+      let op := (gateAt C k).op
+      let E := appendBinary D op (ρ a) (ρ b)
+      obtain ⟨hlenE, hE, hold, hnew⟩ := appendBinary_spec hD (h.1 _ (gateAt_mem hj)) ha.1 hb.1
+      change E.gates.length = D.gates.length + 1 at hlenE
+      refine ⟨E, fun w => if w = n + k then n + D.gates.length else ρ w, hE, ?_, ?_⟩
+      · rw [hlenE, hlen, Finset.range_add_one, Finset.filter_insert, ite_eq_left hp,
+          Finset.card_insert_of_notMem (by simp)]
+      · intro w hw
+        by_cases he : w = n + k
+        · subst w
+          dsimp only
+          rw [ite_eq_left rfl]
+          refine ⟨by omega, ?_⟩
+          intro x
+          rw [hnew x, ha.2 x, hb.2 x, val_gate (n := n) (by simp) hj, hab]
+          have hlt := h.2.1 k hj a hma
+          have hlt' := h.2.1 k hj b hmb
+          simp [hlt, hlt']
+        · dsimp only
+          rw [ite_eq_right he]
+          have ht := hρ w (liftOld hw he)
+          exact ⟨by omega, fun x => (hold x _ ht.1).trans (ht.2 x)⟩
+    · refine ⟨D, ρ, hD, ?_, ?_⟩
+      · rw [hlen, Finset.range_add_one, Finset.filter_insert, ite_eq_right hp]
+      · intro w hw
+        apply hρ w (liftOld hw ?_)
+        rintro rfl
+        rcases hw with hw | ⟨j, _, hp', he⟩
+        · omega
+        · have he' : j = k := by omega
+          exact hp (he' ▸ hp')
+
 lemma uniqueDirtyAnd {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     (C : Circuit) {r : ℕ} (hJ : junk G C = {r}) {j : ℕ}
     (hj : j < C.gates.length) (hd : ¬ BelowF G C j)
@@ -1162,7 +1351,8 @@ theorem topProduct {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
 /-- A clean gate that fires must have a firing clean AND beneath it,
     even when the dirty gate is assigned a different value. -/
 lemma cleanHasTop {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
-    (C : Circuit) (h : IsLeastAO G C) {r : ℕ} (hJ : junk G C = {r})
+    (C : Circuit) (h : IsLeastAO G C) {r : ℕ}
+    (hskip : ∀ j < C.gates.length, BelowF G C j → j ≠ r)
     {V : (Fin n → Bool) → ℕ → Bool} (hV : EvalExcept n C r V) (x : Fin n → Bool) :
     ∀ j < C.gates.length, BelowF G C j → V x (n+j) = true →
       ∃ k < C.gates.length, (gateAt C k).op = GateOp.and ∧
@@ -1174,7 +1364,7 @@ lemma cleanHasTop {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     rcases h.1.1 _ (gateAt_mem hj) with hand | hor
     · exact ⟨j,hj,hand,hc,hv⟩
     · obtain ⟨w,hm,hw⟩ := (evalExcept_or hV hj
-        (cleanDifferent G C hJ hc) hor x).mp hv
+        (hskip j hj hc) hor x).mp hv
       have hclean : CleanWire G C w := cleanOrOperands G C h.1 hj hor hc hm
       have hlt := h.1.2.1 j hj w hm
       by_cases hn : w < n
@@ -1186,7 +1376,7 @@ lemma cleanHasTop {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     readers. This uses global liveness, not a tree assumption. -/
 lemma cleanToOutput {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
-    {r : ℕ} (hJ : junk G C = {r})
+    {r : ℕ} (hskip : ∀ j < C.gates.length, BelowF G C j → j ≠ r)
     {V : (Fin n → Bool) → ℕ → Bool} (hV : EvalExcept n C r V) (x : Fin n → Bool) :
     ∀ j < C.gates.length, BelowF G C j → V x (n+j) = true → V x C.output = true := by
   have main : ∀ d : ℕ, ∀ j < C.gates.length, C.gates.length-j = d →
@@ -1201,19 +1391,18 @@ lemma cleanToOutput {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
         have ha := h.1.2.1 j hj a (by rw [hab]; simp)
         obtain ⟨k,hjk,hk,hm⟩ := noUnreadGate G C h j a hj ha he
         obtain ⟨hor,hck⟩ := cleanReader G C h hl hj hc (allLive G C h k hk) hm
-        have hvk := (evalExcept_or hV hk (cleanDifferent G C hJ hck) hor x).mpr
+        have hvk := (evalExcept_or hV hk (hskip k hk hck) hor x).mpr
           ⟨n+j,hm,hv⟩
         exact ih (C.gates.length-k) (by omega) k hk rfl hck hvk
   intro j hj hc hv
   exact main _ j hj rfl hc hv
 
-theorem collectorSemantics {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+private theorem collectorSemanticsExcept {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
-    {r : ℕ} (hJ : junk G C = {r})
+    (hpos : 0 < C.gates.length) {r : ℕ} (hskip : ∀ j < C.gates.length, BelowF G C j → j ≠ r)
     {V : (Fin n → Bool) → ℕ → Bool} (hV : EvalExcept n C r V) (x : Fin n → Bool) :
     V x C.output = true ↔ ∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧
       BelowF G C j ∧ V x (n+j) = true := by
-  have hpos : 0 < C.gates.length := by have := (junkMember G C hJ).1; omega
   have ho := outputLast G C h hpos
   constructor
   · intro hv
@@ -1225,9 +1414,134 @@ theorem collectorSemantics {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.A
       rw [ho]
       exact hy
     rw [ho] at hv
-    exact cleanHasTop G C h hJ hV x _ (by omega) hclean hv
+    exact cleanHasTop G C h hskip hV x _ (by omega) hclean hv
   · rintro ⟨j,hj,_,hc,hv⟩
-    exact cleanToOutput G C h hl hJ hV x j hj hc hv
+    exact cleanToOutput G C h hl hskip hV x j hj hc hv
+
+theorem collectorSemantics {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {V : (Fin n → Bool) → ℕ → Bool} (hV : EvalExcept n C r V) (x : Fin n → Bool) :
+    V x C.output = true ↔ ∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧
+      BelowF G C j ∧ V x (n+j) = true := by
+  have hr := (junkMember G C hJ).1
+  exact collectorSemanticsExcept G C h hl (by omega) (fun _ _ hc => cleanDifferent G C hJ hc) hV x
+
+private lemma compileCollector {n : ℕ} (D : Circuit) (hD : IsAO2 n D)
+    (a : ℕ) (ha : a < n + D.gates.length) (rest : List ℕ)
+    (hr : ∀ b ∈ rest, b < n + D.gates.length) :
+    ∃ E : Circuit, IsAO2 n E ∧ E.gates.length = D.gates.length + rest.length ∧
+      (∀ (x : Fin n → Bool) b, b < n + D.gates.length →
+        val E (List.ofFn x) b = val D (List.ofFn x) b) ∧
+      (∀ x : Fin n → Bool, E.eval (List.ofFn x) = true ↔
+        val D (List.ofFn x) a = true ∨ ∃ b ∈ rest, val D (List.ofFn x) b = true) ∧
+      E.output < n + E.gates.length := by
+  induction rest with
+  | nil =>
+    exact ⟨⟨D.gates, a⟩, hD, by simp, fun _ _ _ => rfl,
+      fun x => by simp [Circuit.eval, val, Circuit.wires], ha⟩
+  | cons b rest ih =>
+    obtain ⟨F, hF, hlen, hkeep, heval, hout⟩ := ih
+      (fun c hc => hr c (List.mem_cons_of_mem _ hc))
+    have hb := hr b (by simp)
+    have hbF : b < n + F.gates.length := by omega
+    let F' := appendBinary F GateOp.or F.output b
+    obtain ⟨hlen', hF', hkeep', hnew⟩ := appendBinary_spec hF (Or.inr rfl) hout hbF
+    let E : Circuit := ⟨F'.gates, n + F.gates.length⟩
+    have hsize : E.gates.length = F.gates.length + 1 := hlen'
+    refine ⟨E, hF', by simp only [List.length_cons]; omega, ?_, ?_, ?_⟩
+    · intro x c hc
+      exact (hkeep' x c (by omega)).trans (hkeep x c hc)
+    · intro x
+      change val F' (List.ofFn x) (n + F.gates.length) = true ↔ _
+      rw [hnew x, hkeep x b hb]
+      simp only [GateOp.eval, List.any_cons, List.any_nil, Bool.or_false, Bool.or_eq_true,
+        ← eval_eq_val, List.mem_cons]
+      aesop
+    · change n + F.gates.length < n + E.gates.length
+      omega
+
+/-- Exact collector budget in the original list. Recompile the gates outside
+    the collector and append a chain with one OR per additional clean AND. -/
+theorem collectorOrExact {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) :
+    (cleanGates G C GateOp.or).card = (cleanGates G C GateOp.and).card - 1 := by
+  classical
+  by_cases hzero : C.gates.length = 0
+  · simp [cleanGates, hzero]
+  have hpos : 0 < C.gates.length := by omega
+  let A := cleanGates G C GateOp.and
+  let O := cleanGates G C GateOp.or
+  let P := fun j => ¬ ((gateAt C j).op = GateOp.or ∧ BelowF G C j)
+  have hspec (x : Fin n → Bool) : C.eval (List.ofFn x) = true ↔
+      ∃ j ∈ A, val C (List.ofFn x) (n + j) = true := by
+    have he := collectorSemanticsExcept G C h hl hpos (r := C.gates.length)
+      (fun _ hj _ hne => (Nat.ne_of_lt hj) hne) (originalEvalExcept h.1 C.gates.length) x
+    simpa only [eval_eq_val, A, mem_cleanGates, and_assoc] using he
+  have hA : A.Nonempty := by
+    have hout := outputLast G C h hpos
+    have hv : C.eval (List.ofFn (fun _ : Fin n => true)) = true := by
+      rw [eval_eq_val]
+      exact allTrueWires h.1 _ (by omega)
+    obtain ⟨j, hj, _⟩ := (hspec _).mp hv
+    exact ⟨j, hj⟩
+  have closed (j : ℕ) (hj : j < C.gates.length) (hp : P j)
+      (w : ℕ) (hm : w ∈ (gateAt C j).inputs) : RetainedWire n P j w := by
+    have hlt := h.1.2.1 j hj w hm
+    by_cases hw : w < n
+    · exact Or.inl hw
+    · obtain ⟨k, rfl⟩ : ∃ k, w = n + k := ⟨w - n, by omega⟩
+      refine Or.inr ⟨k, by omega, ?_, rfl⟩
+      exact fun hc => hp (cleanWireReader G C h hl hj hm hc.2)
+  obtain ⟨D, ρ, hD, hlen, hρ⟩ := compileSelection C h.1 P closed C.gates.length le_rfl
+  have hbase : D.gates.length + O.card = C.gates.length := by
+    rw [hlen, Nat.add_comm]
+    exact (Finset.card_filter_add_card_filter_not
+      (s := Finset.range C.gates.length) (p := fun j => (gateAt C j).op = GateOp.or ∧ BelowF G C j)).trans
+      (Finset.card_range _)
+  have htop (j : ℕ) (hj : j ∈ A) : ρ (n + j) < n + D.gates.length ∧
+      ∀ x : Fin n → Bool, val D (List.ofFn x) (ρ (n + j)) = val C (List.ofFn x) (n + j) := by
+    obtain ⟨hj, ha, _⟩ := (mem_cleanGates G C GateOp.and j).mp hj
+    apply hρ (n + j)
+    refine Or.inr ⟨j, hj, ?_, rfl⟩
+    intro hh
+    rw [ha] at hh
+    exact GateOp.noConfusion hh.1
+  obtain ⟨i, hi⟩ := hA
+  let rest := (A.erase i).toList.map fun j => ρ (n + j)
+  have hr : ∀ w ∈ rest, w < n + D.gates.length := by
+    intro w hw
+    obtain ⟨j, hj, rfl⟩ := List.mem_map.mp hw
+    exact (htop j (Finset.mem_of_mem_erase (Finset.mem_toList.mp hj))).1
+  obtain ⟨E, hE, hsize, _, hrun, _⟩ := compileCollector D hD _ (htop i hi).1 rest hr
+  have hcorrect : circuitFun n E = graphFun G ∅ := by
+    rw [← h.2.1]
+    funext x
+    apply Bool.eq_iff_iff.mpr
+    change E.eval (List.ofFn x) = true ↔ C.eval (List.ofFn x) = true
+    rw [hrun x, hspec x, (htop i hi).2 x]
+    constructor
+    · rintro (hv | ⟨w, hw, hv⟩)
+      · exact ⟨i, hi, hv⟩
+      · obtain ⟨j, hj, rfl⟩ := List.mem_map.mp hw
+        have hjA := Finset.mem_of_mem_erase (Finset.mem_toList.mp hj)
+        exact ⟨j, hjA, (htop j hjA).2 x ▸ hv⟩
+    · rintro ⟨j, hj, hv⟩
+      by_cases he : j = i
+      · exact Or.inl (he ▸ hv)
+      · refine Or.inr ⟨ρ (n + j), List.mem_map.mpr ⟨j, ?_, rfl⟩, ?_⟩
+        · exact Finset.mem_toList.mpr (Finset.mem_erase.mpr ⟨he, hj⟩)
+        · exact ((htop j hj).2 x).trans hv
+  have hmin := h.2.2 E hE hcorrect
+  change C.gates.length ≤ E.gates.length at hmin
+  have hrest : rest.length + 1 = A.card := by
+    simpa [rest] using Finset.card_erase_add_one hi
+  have hlo := collectorOrLower G C h hl
+  change A.card ≤ O.card + 1 at hlo
+  change O.card = A.card - 1
+  omega
+
+#print axioms collectorOrExact
 
 lemma rawFormLost {n : ℕ} {C : Circuit} {r w : ℕ} {S : Finset (Fin n)} {b : Bool}
     (hS : RawForm C r w S b)
