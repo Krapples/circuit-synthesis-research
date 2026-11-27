@@ -616,8 +616,9 @@ lemma availableUnion {n : ℕ} {C : Circuit} (h : IsAO2 n C)
     exact ⟨C,h,extendsRefl C,by omega,by simpa using hB⟩
   rcases hB with heB | ⟨b,hb,hbv⟩
   · subst B
-    exact ⟨C,h,extendsRefl C,by omega,by simpa using
-      (Or.inr ⟨a,ha,hav⟩ : Available C A)⟩
+    refine ⟨C,h,extendsRefl C,by omega,?_⟩
+    rw [Finset.union_empty]
+    exact Or.inr ⟨a,ha,hav⟩
   let D := appendOr C a b
   have he : Extends C D := appendOrExtends C a b
   have hD : IsAO2 n D := appendOrAO h ha hb
@@ -674,8 +675,8 @@ theorem compileFilteredPlan {n : ℕ} (C : Circuit) (h : IsAO2 n C)
     intro S hS
     rcases List.mem_cons.mp hS with rfl | hm
     · rcases hfree with hb | hc
-      · exact availableExtends he (hbase R hb)
-      · exact availableSmall D R hc
+      · exact availableExtends he (hbase S hb)
+      · exact availableSmall D S hc
     · exact havail S hm
   | merge A B ha hb _ ih =>
     obtain ⟨D,hD,he,hsize,havail⟩ := ih
