@@ -6080,7 +6080,7 @@ private lemma memJunkIff {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj
     (C : Circuit) (j : ℕ) :
     j ∈ junk G C ↔ j < C.gates.length ∧ (gateAt C j).op = GateOp.and ∧ ¬ BelowF G C j := by
   classical
-  simp only [junk,gatesWhere,Finset.mem_filter,Finset.mem_range,IsDirtyAnd,IsDirty]
+  simp only [junk,gatesWhere,Finset.mem_filter,Finset.mem_range,PEqualNP.CleanedNonEdge.IsDirtyAnd,PEqualNP.CleanedNonEdge.IsDirty]
   constructor
   · rintro ⟨hj,ha,_,x,hx,hf⟩
     exact ⟨hj,ha,fun hc => Bool.false_ne_true (hf.symm.trans (hc x hx))⟩
@@ -6237,6 +6237,7 @@ private theorem suffixLiftStep {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel
   let B := bypass n D k p
   have hBlen : B.gates.length = D.gates.length-1 := bypass_length n D k p
   have hB : IsAO2 n B := by
+    change IsAO2 n (bypass n D k p)
     rw [← erase_eq_bypass n D k p hk]
     exact erase_exactAO h.1 hk hpl
   have hout := outputLast G D h (by omega : 0 < D.gates.length)
@@ -6248,14 +6249,20 @@ private theorem suffixLiftStep {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel
   obtain ⟨hAlen,hA,hkeep,hfresh⟩ := appendBinary_spec hB (Or.inr rfl) hob hqb
   let E : Circuit := ⟨A.gates,n+B.gates.length⟩
   have hE : IsAO2 n E := hA
-  have hlen : E.gates.length = D.gates.length := by change A.gates.length = _; omega
+  have hAlen' : A.gates.length = B.gates.length+1 := hAlen
+  have hlen : E.gates.length = D.gates.length := by
+    change A.gates.length = D.gates.length
+    rw [hAlen',hBlen]
+    omega
   have hqval (x : Fin n → Bool) : val B (List.ofFn x) q = val D (List.ofFn x) q :=
     bypass_val_lt (n := n) (by simp) hk q hql
   have hval (x : Fin n → Bool) : circuitFun n E x =
       (circuitFun n B x || val D (List.ofFn x) q) := by
     change val A (List.ofFn x) (n+B.gates.length) = _
     rw [hfresh x,hqval]
-    rfl
+    change GateOp.or.eval [val B (List.ofFn x) B.output,val D (List.ofFn x) q] =
+      (val B (List.ofFn x) B.output || val D (List.ofFn x) q)
+    simp [GateOp.eval]
   have hAO := mono_ops (ao_mono h.1)
   have hdec (x : Fin n → Bool) :
       val D (List.ofFn x) p = true → val D (List.ofFn x) (n+k) = true :=
