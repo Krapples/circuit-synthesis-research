@@ -2719,6 +2719,83 @@ def ExposedCentre {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
   ∃ j < C.gates.length, (gateAt C j).op = GateOp.and ∧ BelowF G C j ∧
     ∃ S T, OrientedTop C r j S T true ∧ c ∈ T
 
+theorem suspendedFalseSound {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r}) {W : (Fin n → Bool) → ℕ → Bool}
+    (hW : EvalExcept n C r W) (hzero : ∀ x, W x (n + r) = false) :
+    ∀ x, W x C.output = true → graphFun G ∅ x = true := by
+  intro x hx
+  obtain ⟨j, hj, hop, hc, hw⟩ := (collectorSemantics G C h hl hJ hW x).mp hx
+  obtain ⟨S, T, f, htop⟩ := orientedTop G C h hl hJ hj hop hc
+  obtain ⟨hs, ht⟩ := (htop W hW x).mp hw
+  have hraw : hits S x := by simpa [hzero x] using hs
+  exact hc x ((htop _ (originalEvalExcept h.1 r) x).mpr ⟨Or.inl hraw, ht⟩)
+
+/-- Suspending the junk at false is sound. Every lost edge belongs to one
+    of the stars at the exposed centres, at most one for each support. -/
+theorem lostEdgesInExposedStars {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C) (h4 : NoFourCycle G)
+    {r a b : ℕ} (hJ : junk G C = {r}) (hab : (gateAt C r).inputs = [a, b])
+    {A B : Finset (Fin n)} (hA : RawForm C r a A false) (hB : RawForm C r b B false)
+    (hd : Disjoint A B) (ha : 1 < A.card) (hb : 1 < B.card) :
+    ∃ EA EB : Finset (Fin n), EA ⊆ A ∧ EB ⊆ B ∧ EA.card ≤ 1 ∧ EB.card ≤ 1 ∧
+      (∀ c ∈ EA, ∀ v ∈ B, G.Adj c v) ∧ (∀ c ∈ EB, ∀ v ∈ A, G.Adj c v) ∧
+      ∀ W, EvalExcept n C r W → (∀ x, W x (n + r) = false) →
+        (∀ x, W x C.output = true → graphFun G ∅ x = true) ∧
+        ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+          (∃ c ∈ EA, ∃ w ∈ B, pairInput u v c = true ∧ pairInput u v w = true) ∨
+          (∃ c ∈ EB, ∃ w ∈ A, pairInput u v c = true ∧ pairInput u v w = true) := by
+  classical
+  let EA := A.filter (ExposedCentre G C r)
+  let EB := B.filter (ExposedCentre G C r)
+  obtain ⟨hr, hand, _⟩ := junkMember G C hJ
+  let V := fun (x : Fin n → Bool) w => val C (List.ofFn x) w
+  have hV : EvalExcept n C r V := originalEvalExcept h.1 r
+  have hprod := originalJunkProduct h.1 hr hand hab hA hB
+  have starA (c : Fin n) (hc : c ∈ EA) (v : Fin n) (hv : v ∈ B) : G.Adj c v := by
+    obtain ⟨hcA, j, _, _, hclean, S, T, htop, hcT⟩ := Finset.mem_filter.mp hc
+    exact (carrierCross G h.1 hprod hclean htop hcA hv hcT
+      (u := v) (v := c) (Or.inr rfl) (Or.inl rfl)).symm
+  have starB (c : Fin n) (hc : c ∈ EB) (v : Fin n) (hv : v ∈ A) : G.Adj c v := by
+    obtain ⟨hcB, j, _, _, hclean, S, T, htop, hcT⟩ := Finset.mem_filter.mp hc
+    exact (carrierCross G h.1 hprod hclean htop hv hcB hcT
+      (u := v) (v := c) (Or.inl rfl) (Or.inr rfl)).symm
+  obtain ⟨p, hp, q, hq, hpq⟩ := Finset.one_lt_card.mp ha
+  obtain ⟨s, hs, t, ht, hst⟩ := Finset.one_lt_card.mp hb
+  have smallA : EA.card ≤ 1 := Finset.card_le_one.mpr fun c hc d hc' =>
+    (commonNeighborUnique G h4 hst (starA c hc s hs).symm (starA c hc t ht).symm
+      (starA d hc' s hs).symm (starA d hc' t ht).symm).symm
+  have smallB : EB.card ≤ 1 := Finset.card_le_one.mpr fun c hc d hc' =>
+    (commonNeighborUnique G h4 hpq (starB c hc p hp).symm (starB c hc q hq).symm
+      (starB d hc' p hp).symm (starB d hc' q hq).symm).symm
+  refine ⟨EA, EB, Finset.filter_subset _ _, Finset.filter_subset _ _, smallA, smallB,
+    starA, starB, ?_⟩
+  intro W hW hzero
+  refine ⟨suspendedFalseSound G C h hl hJ hW hzero, ?_⟩
+  · intro u v huv
+    let x := pairInput u v
+    have hv : V x C.output = true := (congrFun h.2.1 x).trans (pair_true G u v huv)
+    obtain ⟨j, hj, hop, hc, hvj⟩ := (collectorSemantics G C h hl hJ hV x).mp hv
+    obtain ⟨S, T, f, htop⟩ := orientedTop G C h hl hJ hj hop hc
+    obtain ⟨hs, ht⟩ := (htop V hV x).mp hvj
+    rcases hs with hs | ⟨rfl, hjunk⟩
+    · exact Or.inl ((collectorSemantics G C h hl hJ hW x).mpr
+        ⟨j, hj, hop, hc, (htop W hW x).mpr ⟨Or.inl hs, ht⟩⟩)
+    · obtain ⟨⟨p, hpA, hpx⟩, ⟨q, hqB, hqx⟩⟩ := (hprod x).mp hjunk
+      obtain ⟨z, hzT, hzx⟩ := ht
+      have hpq : p ≠ q := fun he => Finset.disjoint_left.mp hd hpA (he.symm ▸ hqB)
+      have hp' : p = u ∨ p = v := by simpa [x, pairInput] using hpx
+      have hq' : q = u ∨ q = v := by simpa [x, pairInput] using hqx
+      have hz' : z = u ∨ z = v := by simpa [x, pairInput] using hzx
+      have hz : z = p ∨ z = q := by aesop
+      have hex : ExposedCentre G C r z := ⟨j, hj, hop, hc, S, T, htop, hzT⟩
+      rcases hz with rfl | rfl
+      · exact Or.inr (Or.inl ⟨z, Finset.mem_filter.mpr ⟨hpA, hex⟩, q, hqB, hzx, hqx⟩)
+      · exact Or.inr (Or.inr ⟨z, Finset.mem_filter.mpr ⟨hqB, hex⟩, p, hpA, hzx, hpx⟩)
+
+#print axioms suspendedFalseSound
+#print axioms lostEdgesInExposedStars
+
 private lemma exposedCentreAdjacencies {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     {C : Circuit} (h : IsAO2 n C) {r : ℕ} {A B : Finset (Fin n)}
     (hp : ∀ x : Fin n → Bool, val C (List.ofFn x) (n + r) = true ↔ hits A x ∧ hits B x)

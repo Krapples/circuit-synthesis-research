@@ -13,6 +13,9 @@ open PEqualNP.CleanedNonEdge (OrReaches wireVal)
 open PEqualNP.EdgeOwnership (gateVal pairInput)
 open PEqualNP.SplitCount (unitInput)
 open PEqualNP.MetaComplexity.LowerPart (opnd_lt reach_gate reach_le OneDirty)
+open PEqualNP.MetaComplexity.FoldProg
+  (Closed Sol Res srcAt opv kept wireVal_input isAO2_snoc wireVal_new wireVal_old
+    srcOf srcOf_inr progOf isA)
 open PEqualNP.Outside.L_meta_4745 (PZ)
 
 private theorem fromLeastOneJunk {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
@@ -364,11 +367,212 @@ theorem oneJunkLargeOppositeSupports {n : ℕ} (G : SimpleGraph (Fin n)) [Decida
   exact ⟨a, b, A, B, colour v, hab, hA, hB, hd, ha, hb, colourA, colourB,
     z, centre, j, hj, hjand, hex⟩
 
+/-- Fold the false junk value out of the exact AND/OR circuit. The junk and
+    every immediate reader can be charged against the size, and each original
+    wire is either identically false or represented by a wire of the result. -/
+theorem foldSuspendedFalse {n : ℕ} (C : Circuit) (h : IsAO2 n C) {r : ℕ}
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (dropped : Finset ℕ) (hd : dropped ⊆ Finset.range C.gates.length)
+    (hdrop : ∀ j ∈ dropped, j = r ∨ n + r ∈ (gateAt C j).inputs) :
+    ∃ gs : List Gate, IsAO2 n ⟨gs, 0⟩ ∧ gs.length + dropped.card ≤ C.gates.length ∧
+      ∀ w < n + C.gates.length, Res gs (fun x => W x w) := by
+  classical
+  let K := (Finset.range C.gates.length).erase r
+  let ρ := fun j d => if opnd C j d = n + r then none else srcOf n (opnd C j d)
+  let P := progOf C ρ
+  let value := fun j (x : Fin n → Bool) => W x (n + j)
+  have source (x : Fin n → Bool) (j : ℕ) (d : Fin 2) :
+      srcAt x (fun k => value k x) (ρ j d) = W x (opnd C j d) := by
+    by_cases he : opnd C j d = n + r
+    · simp [ρ, he, srcAt, hzero]
+    · simp only [ρ, he, ite_false, srcOf]
+      split_ifs with hw
+      · exact (hW.1 x ⟨opnd C j d, hw⟩).symm
+      · have heq : n + (opnd C j d - n) = opnd C j d := by omega
+        change W x (n + (opnd C j d - n)) = W x (opnd C j d)
+        rw [heq]
+  have closed : Closed P id K := by
+    intro j hj d k hk
+    have hjlen := Finset.mem_range.mp (Finset.mem_erase.mp hj).2
+    change ρ j d = some (Sum.inr k) at hk
+    by_cases he : opnd C j d = n + r
+    · simp [ρ, he] at hk
+    · simp only [ρ, he, ite_false] at hk
+      have heq := srcOf_inr _ _ hk
+      have hlt := opnd_lt C h j hjlen d
+      have hkj : k < j := by omega
+      exact ⟨Finset.mem_erase.mpr ⟨by omega, Finset.mem_range.mpr (hkj.trans hjlen)⟩, hkj⟩
+  have sol : Sol P K value := by
+    intro x j hj
+    obtain ⟨hne, hj⟩ := Finset.mem_erase.mp hj
+    have hjlen := Finset.mem_range.mp hj
+    obtain ⟨p, q, hpq⟩ := twoOperands h hjlen
+    change W x (n + j) = opv (isA (gateAt C j).op)
+      (srcAt x (fun k => value k x) (ρ j 0)) (srcAt x (fun k => value k x) (ρ j 1))
+    rw [source, source, hW.2 x j hjlen hne, hpq]
+    rcases h.1 _ (gateAt_mem hjlen) with ho | ho <;> simp [ho, opnd, hpq, isA, opv, GateOp.eval]
+  obtain ⟨gs, hgs, hlen, hres⟩ := PEqualNP.MetaComplexity.FoldProg.build P id value K closed sol
+  have hkept : kept P value K ⊆ Finset.range C.gates.length :=
+    (Finset.filter_subset _ _).trans (Finset.erase_subset _ _)
+  have hdisj : Disjoint (kept P value K) dropped := by
+    refine Finset.disjoint_left.mpr ?_
+    intro j hj hjd
+    obtain ⟨hjK, hleft, hright⟩ := Finset.mem_filter.mp hj
+    rcases hdrop j hjd with rfl | hread
+    · exact (Finset.mem_erase.mp hjK).1 rfl
+    · have hjlen := Finset.mem_range.mp (Finset.mem_erase.mp hjK).2
+      obtain ⟨d, hd⟩ := PEqualNP.MetaComplexity.LowerPart.mem_opnd C h j hjlen _ hread
+      have hz : srcAt (fun _ => true) (fun k => value k fun _ => true) (ρ j d) = false := by
+        simp [ρ, hd, srcAt]
+      fin_cases d
+      · exact Bool.false_ne_true (hz.symm.trans hleft)
+      · exact Bool.false_ne_true (hz.symm.trans hright)
+  have hcard := Finset.card_le_card (Finset.union_subset hkept hd)
+  rw [Finset.card_union_of_disjoint hdisj, Finset.card_range] at hcard
+  refine ⟨gs, hgs, by omega, ?_⟩
+  intro w hw
+  by_cases hraw : w < n
+  · let v : Fin n := ⟨w, hraw⟩
+    exact Or.inr ⟨hW.1 _ v, w, by omega, fun x => (wireVal_input gs v x).trans (hW.1 x v).symm⟩
+  · obtain ⟨j, rfl⟩ : ∃ j, w = n + j := ⟨w - n, by omega⟩
+    by_cases he : j = r
+    · subst j
+      exact Or.inl hzero
+    · exact hres j (Finset.mem_erase.mpr ⟨he, Finset.mem_range.mpr (by omega)⟩)
+
+/-- Erasing the junk and folding its readers strictly reduces the gate count
+    when every edge survives the suspension. -/
+theorem noOneJunkWithoutLostEdges {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true) : False := by
+  classical
+  have hr := (junkMember G C hJ).1
+  have hout := outputLast G C h (Nat.zero_lt_of_lt hr)
+  have houtBound : C.output < n + C.gates.length := by omega
+  obtain ⟨gs, hao, hlen, hwires⟩ := foldSuspendedFalse C h.1 hW hzero {r}
+    (by simpa using hr) (by intro j hj; exact Or.inl (Finset.mem_singleton.mp hj))
+  have hlen' : gs.length + 1 ≤ C.gates.length := by simpa using hlen
+  rcases hwires C.output houtBound with hfalse | ⟨_, w, _, hwire⟩
+  · have hnone (u v : Fin n) (huv : G.Adj u v) : False :=
+      Bool.false_ne_true ((hfalse _).symm.trans (hcover u v huv))
+    have := emptyGraphNoGates G C h hnone
+    omega
+  · let D : Circuit := ⟨gs, w⟩
+    have hD : IsAO2 n D := hao
+    have hval (x : Fin n → Bool) : circuitFun n D x = W x C.output := hwire x
+    have hcorrect : circuitFun n D = graphFun G ∅ := by
+      funext x
+      apply Bool.eq_iff_iff.mpr
+      refine ⟨fun hx => suspendedFalseSound G C h hl hJ hW hzero x ((hval x).symm.trans hx), ?_⟩
+      intro hx
+      obtain ⟨u, v, hadj, hu, hv⟩ := (graph_true G x).mp hx
+      apply circuit_monotone n D (ao_mono hD) (pairInput u v) x ?_ ((hval _).trans (hcover u v hadj))
+      intro t ht
+      have he : t = u ∨ t = v := by simpa [pairInput] using ht
+      rcases he with rfl | rfl
+      · exact hu
+      · exact hv
+    have hmin := h.2.2 D hD hcorrect
+    change C.gates.length ≤ gs.length at hmin
+    omega
+
+/-- Two immediate readers pay for a strict one-star repair. The provider is
+    preserved by the fold, so the repair uses at most one AND and one OR. -/
+theorem noOneJunkOneStarWithTwoReaders {n : ℕ} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+    (C : Circuit) (h : IsLeastAO G C) (hl : IsLiftFixedPoint G C)
+    {r : ℕ} (hJ : junk G C = {r})
+    {W : (Fin n → Bool) → ℕ → Bool} (hW : EvalExcept n C r W)
+    (hzero : ∀ x, W x (n + r) = false)
+    {j k : ℕ} (hj : j < C.gates.length) (hk : k < C.gates.length) (hjk : j ≠ k)
+    (hjr : n + r ∈ (gateAt C j).inputs) (hkr : n + r ∈ (gateAt C k).inputs)
+    {p : ℕ} (hp : p < n + C.gates.length) {S : Finset (Fin n)} (hS : RawForm C r p S false)
+    (hne : S.Nonempty) (c : Fin n) (hadj : ∀ v ∈ S, G.Adj c v)
+    (hcover : ∀ u v, G.Adj u v → W (pairInput u v) C.output = true ∨
+      (pairInput u v c = true ∧ ∃ w ∈ S, pairInput u v w = true)) : False := by
+  classical
+  have hr := (junkMember G C hJ).1
+  have hjr' : r ≠ j := by have := h.1.2.1 j hj _ hjr; omega
+  have hkr' : r ≠ k := by have := h.1.2.1 k hk _ hkr; omega
+  have hout := outputLast G C h (Nat.zero_lt_of_lt hr)
+  have houtBound : C.output < n + C.gates.length := by omega
+  obtain ⟨gs, hgs, hlen, hwires⟩ := foldSuspendedFalse C h.1 hW hzero {r, j, k}
+    (by intro t ht; simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+        rcases ht with rfl | rfl | rfl <;> exact Finset.mem_range.mpr (by assumption))
+    (by intro t ht; simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+        rcases ht with rfl | rfl | rfl
+        · exact Or.inl rfl
+        · exact Or.inr hjr
+        · exact Or.inr hkr)
+  have hlen' : gs.length + 3 ≤ C.gates.length := by
+    simpa [hjr', hkr', hjk] using hlen
+  have hsupport (x : Fin n → Bool) : W x p = true ↔ ∃ v ∈ S, x v = true := by
+    simpa using hS.2 W hW x
+  obtain ⟨v, hv⟩ := hne
+  have htop : W (fun _ => true) p = true := (hsupport _).mpr ⟨v, hv, rfl⟩
+  rcases hwires p hp with hfalse | ⟨_, w, hw, hwire⟩
+  · exact Bool.false_ne_true ((hfalse _).symm.trans htop)
+  let star : Gate := ⟨GateOp.and, [c.val, w]⟩
+  let base := gs ++ [star]
+  let b := n + gs.length
+  have hbase : IsAO2 n ⟨base, 0⟩ := isAO2_snoc gs GateOp.and (Or.inl rfl) _ _
+    (by have := c.isLt; omega) hw hgs
+  have hblen : base.length = gs.length + 1 := by simp [base]
+  have hstar (x : Fin n → Bool) : wireVal n ⟨base, 0⟩ b x = true ↔
+      x c = true ∧ ∃ v ∈ S, x v = true := by
+    change wireVal n ⟨gs ++ [star], 0⟩ (n + gs.length) x = true ↔ _
+    rw [wireVal_new]
+    simp [star, GateOp.eval, wireVal_input gs c x, hwire x, hsupport x]
+  have rebuilt : ∃ E : Circuit, IsAO2 n E ∧ E.gates.length ≤ gs.length + 2 ∧
+      ∀ x, circuitFun n E x = true ↔
+        W x C.output = true ∨ (x c = true ∧ ∃ v ∈ S, x v = true) := by
+    rcases hwires C.output houtBound with hfalse | ⟨_, o, ho, hold⟩
+    · refine ⟨⟨base, b⟩, hbase, by change base.length ≤ gs.length + 2; omega, fun x => ?_⟩
+      change wireVal n ⟨base, 0⟩ b x = true ↔ _
+      have hzeroOutput : W x C.output = false := hfalse x
+      simp [hstar, hzeroOutput]
+    · let join : Gate := ⟨GateOp.or, [o, b]⟩
+      have ho' : o < n + base.length := by omega
+      have hb' : b < n + base.length := by dsimp [b]; omega
+      have hao := isAO2_snoc base GateOp.or (Or.inr rfl) o b ho' hb' hbase
+      refine ⟨⟨base ++ [join], n + base.length⟩, hao, by simp [hblen], fun x => ?_⟩
+      change wireVal n ⟨base ++ [join], 0⟩ (n + base.length) x = true ↔ _
+      rw [wireVal_new]
+      simp [join, GateOp.eval, wireVal_old gs star o ho x, base, hold x,
+        show wireVal n ⟨gs ++ [star], 0⟩ b x = true ↔ _ from hstar x]
+  obtain ⟨E, hE, hEsize, heval⟩ := rebuilt
+  have hcorrect : circuitFun n E = graphFun G ∅ := by
+    funext x
+    apply Bool.eq_iff_iff.mpr
+    constructor
+    · intro hx
+      rcases (heval x).mp hx with hy | ⟨hc, z, hz, hzx⟩
+      · exact suspendedFalseSound G C h hl hJ hW hzero x hy
+      · exact (graph_true G x).mpr ⟨c, z, hadj z hz, hc, hzx⟩
+    · intro hx
+      obtain ⟨u, z, huz, hu, hz⟩ := (graph_true G x).mp hx
+      apply circuit_monotone n E (ao_mono hE) (pairInput u z) x ?_
+        ((heval _).mpr (hcover u z huz))
+      intro t ht
+      have eq : t = u ∨ t = z := by simpa [pairInput] using ht
+      rcases eq with rfl | rfl
+      · exact hu
+      · exact hz
+  have hmin := h.2.2 E hE hcorrect
+  change C.gates.length ≤ E.gates.length at hmin
+  omega
+
 #print axioms rawFormJunkReaches
 #print axioms noSingletonOverlapWithUpstream
 #print axioms oneJunkSupportsDisjoint
 #print axioms oneJunkFalseOnUnit
 #print axioms oneJunkHasEdgeReader
 #print axioms oneJunkLargeOppositeSupports
+#print axioms foldSuspendedFalse
+#print axioms noOneJunkWithoutLostEdges
+#print axioms noOneJunkOneStarWithTwoReaders
 
 end ResearchVerification.OneJunkErase

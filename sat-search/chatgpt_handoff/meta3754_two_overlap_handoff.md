@@ -177,11 +177,36 @@ this dependency there. The remaining one-junk case has two large disjoint
 supports in opposite colour classes, with at least one exposed centre.
 The strict replacement must account for shared OR providers and the
 gate budget. The many-junk reduction also remains open in Lean.
-For the next proof, set the junk value to false and classify the edge
-inputs lost by that suspension. The
-[paper argument](meta3754_one_junk_complete_handoff.md#5-disjoint-large-supports-exposed-stars-and-deletion-budget)
-uses at most two stars, one centred in each support. That classification
-gives a common correctness condition for the later gate-budget cases.
+
+## Suspended circuit and strict repair
+
+`lostEdgesInExposedStars` gives the classification used by the
+[paper argument](meta3754_one_junk_complete_handoff.md#5-disjoint-large-supports-exposed-stars-and-deletion-budget).
+For any valuation satisfying the original gate equations apart from the
+junk set to false, an edge input that is lost must hit a raw support of
+each junk operand. A firing clean AND in the original circuit supplies
+an exposing endpoint in one of those supports. Its opposite endpoint
+lies in the other support. Each exposed endpoint is adjacent to every
+vertex of its opposite support, and C4-freeness bounds each support to
+one such endpoint. The soundness result `suspendedFalseSound` holds on
+every input and requires neither support-size nor colour hypotheses.
+
+`foldSuspendedFalse` uses the pinned upstream `FoldProg.build` to
+compile this valuation back into the exact constant-free model. It
+certifies each original wire as identically false or represents its
+value by an available wire in the compiled gate list. The gate bound
+charges the junk and each immediate reader once. A reader AND becomes
+false and a reader OR forwards its other operand, so each saves a gate.
+
+`noOneJunkWithoutLostEdges` closes the case where all edge inputs survive.
+`noOneJunkOneStarWithTwoReaders` closes the case where one star covers
+all lost edges and at least two distinct gates read the junk directly.
+The compiler keeps a wire for the opposite support. The repair adds an
+AND and, when the suspended output is nonzero, an OR. At least three
+original gates are charged and at most two are added. The edge-input
+coverage test and monotonicity establish equality on the whole input cube.
+The remaining one-junk cases require a smaller budget or simultaneous
+coverage by two stars. The many-junk reduction remains open.
 
 ## Verification
 
@@ -266,3 +291,13 @@ and passed all six bridge audits, including the exposing-reader witness
 in `oneJunkLargeOppositeSupports`. The checked bridge SHA-256 is
 `a688d17f9dc266905a7619bc249e5a4227d53c182527e38ecfee461ebbd95c77`.
 The evidence is in `.research/ops/1795768613970960300-lean-check/`.
+
+The suspended-circuit checkpoint passed the strict core check in 70.259
+seconds with 46 audited declarations and the bridge check in 39.188
+seconds with nine. Both checks report only `propext`, `Classical.choice`,
+and `Quot.sound`. The exact core SHA-256 is
+`17aa055368460a0b9e694f425d41b7986e376e83d9524f041c11fa941d4fb63c`
+and the bridge SHA-256 is
+`9ae5e8ac206e6f49cbd9f80c5b9233853061e7269399a325e71902efb058f9d0`.
+The logs and audits are in `.research/ops/1795768918355008700-lean-check/`
+and `.research/ops/1795769255343341300-lean-check/`.
