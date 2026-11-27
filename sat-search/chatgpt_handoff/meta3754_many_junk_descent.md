@@ -102,3 +102,7 @@ The next obstruction is quantitative and graph-specific: for an arbitrary least 
 ## Low-excess structural branch (paper)
 
 [Low-excess handoff](meta3754_low_excess_handoff.md): by a read-count identity, pivotal proof-tree arguments and the unique repeated-leaf LCA, any least lift-fixed circuit with at most one unit of read excess has at most one dirty AND. The checked one-junk impossibility then proves the full clean conclusion for bipartite C4-free graphs in that size range, including m+tau<=v+1 via a star-cover upper bound. This is a paper proof, not yet a Lean theorem. It exploits leastness through everyGateHasLostEdge rather than assuming a local repair cover. Active exclusive-cone CI was preserved; the general excess>=2 case remains open.
+
+## Exclusive-cone first CI correction
+
+Run 46045805869 (job 140664656250) failed with seven diagnostics originating in three locations: the untyped existential binder in existsEvalHoles, the raw-wire equation requiring an explicit definitional conversion in holesCompare, and parsing a pair of inline tactic lambdas in its false-hole branch. The patch types the existential, names the raw equality, and uses separate constructor tactics. The remaining compiler and strict-budget declarations elaborated but their transitive reports contain error placeholders via holesCompare, so they are not verified. The previously verified 106 declarations are unchanged; no verification settings were changed. The low-excess handoff at dadf7c6 is a paper argument separate from this CI correction.

@@ -6960,7 +6960,7 @@ private def holesValue {n : ℕ} (C : Circuit) (holes : Finset ℕ)
 termination_by w
 
 theorem existsEvalHoles {n : ℕ} (C : Circuit) (h : IsAO2 n C) (holes : Finset ℕ) :
-    ∃ W, EvalHoles C holes W := by
+    ∃ W : (Fin n → Bool) → ℕ → Bool, EvalHoles C holes W := by
   refine ⟨holesValue C holes,?_,?_,?_⟩
   · intro x v
     rw [holesValue,dite_eq_left v.isLt]
@@ -6989,13 +6989,14 @@ private theorem holesCompare {n : ℕ} {C : Circuit} (h : IsAO2 n C)
     intro hw
     by_cases hn : w < n
     · let v : Fin n := ⟨w,hn⟩
-      rw [hW.1 x v,hW.1 (fun _ => true) v,(originalEvalExcept h 0).1 x v]
+      have he : val C (List.ofFn x) w = x v := (originalEvalExcept h 0).1 x v
+      rw [hW.1 x v,hW.1 (fun _ => true) v,he]
       exact ⟨id,fun _ => rfl⟩
     obtain ⟨j,rfl⟩ : ∃ j, w = n+j := ⟨w-n,by omega⟩
     have hj : j < C.gates.length := by omega
     by_cases hm : j ∈ holes
     · rw [hW.2.1 x j hj hm]
-      exact ⟨fun hf => by cases hf,fun hf => by cases hf⟩
+      constructor <;> intro hf <;> cases hf
     have he := (originalEvalExcept h C.gates.length).2 x j hj (by omega)
     dsimp only at he
     rw [hW.2.2 x j hj hm,hW.2.2 (fun _ => true) j hj hm,he]
