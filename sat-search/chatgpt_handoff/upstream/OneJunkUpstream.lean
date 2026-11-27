@@ -673,7 +673,7 @@ theorem oneJunkAtMostOneWithAndReader {n : ℕ} (G : SimpleGraph (Fin n)) [Decid
       obtain ⟨hql, hqm⟩ := hread q hq
       exact ⟨Nat.lt_of_add_lt_add_left (h.1.2.1 q hql _ hqm), hql, n+r, hqm, hzero _⟩
     cases htop : W (fun _ => true) C.output
-    · exact ⟨readers, by omega, Or.inr htop, hbase⟩
+    · exact ⟨readers, by omega, Or.inr rfl, hbase⟩
     · have H := fromLeastOneJunk G C h hl hJ
       obtain ⟨hri, hil, w, hw, hwzero⟩ := hbase i hi
       have hclean := H.others i hil hand hri.ne.symm
