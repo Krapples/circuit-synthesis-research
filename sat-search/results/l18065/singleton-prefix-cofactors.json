@@ -1,0 +1,191 @@
+{
+  "case": "comparator-05",
+  "budget": 14,
+  "cuts": [
+    19,
+    35,
+    67,
+    131,
+    14,
+    134,
+    138,
+    50,
+    82,
+    98,
+    162,
+    140,
+    148,
+    196,
+    152,
+    200,
+    15,
+    53,
+    149,
+    197,
+    57,
+    153,
+    201,
+    30,
+    46,
+    78,
+    142,
+    150,
+    198,
+    154,
+    202,
+    156,
+    204,
+    180,
+    212,
+    228,
+    184,
+    216,
+    232
+  ],
+  "checked": [
+    {
+      "width": 5,
+      "truth": "0xffe8e800",
+      "verdict": "SAT",
+      "traces": []
+    },
+    {
+      "width": 5,
+      "truth": "0xfee08000",
+      "verdict": "UNSAT",
+      "traces": [
+        {
+          "readers": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "checked_steps": 285
+        }
+      ]
+    },
+    {
+      "width": 5,
+      "truth": "0xfffefe80",
+      "verdict": "UNSAT",
+      "traces": [
+        {
+          "readers": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "checked_steps": 86
+        }
+      ]
+    },
+    {
+      "width": 5,
+      "truth": "0xfee8ec00",
+      "verdict": "SAT",
+      "traces": []
+    },
+    {
+      "width": 5,
+      "truth": "0xffe8e888",
+      "verdict": "SAT",
+      "traces": []
+    },
+    {
+      "width": 4,
+      "truth": "0xfee8",
+      "verdict": "UNSAT",
+      "traces": [
+        {
+          "readers": [
+            2,
+            2,
+            2
+          ],
+          "checked_steps": 14
+        }
+      ]
+    },
+    {
+      "width": 4,
+      "truth": "0xe880",
+      "verdict": "UNSAT",
+      "traces": [
+        {
+          "readers": [
+            2,
+            2,
+            2
+          ],
+          "checked_steps": 12
+        }
+      ]
+    },
+    {
+      "width": 5,
+      "truth": "0xffeae880",
+      "verdict": "UNSAT",
+      "traces": [
+        {
+          "readers": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "checked_steps": 193
+        }
+      ]
+    },
+    {
+      "width": 4,
+      "truth": "0xfe80",
+      "verdict": "SAT",
+      "traces": []
+    },
+    {
+      "width": 5,
+      "truth": "0xfea88000",
+      "verdict": "UNSAT",
+      "traces": [
+        {
+          "readers": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "checked_steps": 176
+        }
+      ]
+    },
+    {
+      "width": 5,
+      "truth": "0xffe8e8c0",
+      "verdict": "SAT",
+      "traces": []
+    },
+    {
+      "width": 5,
+      "truth": "0xfeeae8c0",
+      "verdict": "SAT",
+      "traces": []
+    }
+  ],
+  "derived": [
+    {
+      "width": 5,
+      "truth": "0xfee8ec80"
+    },
+    {
+      "width": 5,
+      "truth": "0xfffefee8"
+    },
+    {
+      "width": 5,
+      "truth": "0xfee8e8c0"
+    }
+  ]
+}

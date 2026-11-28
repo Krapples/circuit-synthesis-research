@@ -107,6 +107,24 @@ def _port_sources(readers):
     return tuple(i + 1 for i, degree in enumerate(readers) for _ in range(degree))
 
 
+def _add_closed_set_cut(clauses, pool, readers, owners, port_owners, fixed):
+    inside = [pool.id() for _ in range(len(readers) + 1)]
+    atoms = _bits(fixed)
+    for region, indicator in enumerate(inside):
+        choices = [owners[atom][region] for atom in atoms]
+        clauses.append([-indicator, *choices])
+        clauses.extend([-choice, indicator] for choice in choices)
+    crossings = []
+    for source, choices in zip(_port_sources(readers), port_owners):
+        # A port has exactly one owner. One witness can select the port and
+        # let that owner's region determine the target of the crossing.
+        crossing = pool.id()
+        crossings.append(crossing)
+        clauses.append([-crossing, -inside[source]])
+        clauses.extend([-crossing, -owner, inside[target]] for target, owner in enumerate(choices))
+    clauses.append(crossings)
+
+
 def _capacity_owner_cut(topology, readers, certificates, assignments, level, stats, stage):
     groups = [0] * (len(readers) + 1)
     for atom, region in zip(topology.atoms, assignments):
@@ -420,8 +438,14 @@ def _decode_topology(topology, readers, model):
 
 def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certificates=None, lazy=False,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
-                         stats=None, static_coexistence=False):
-    """Encode one ordered reader-count pattern, without constructing circuit gates."""
+                         stats=None, static_coexistence=False, singleton_prefix_exclusions=(),
+                         closed_set_cofactors=False):
+    """Encode one ordered reader-count pattern, without constructing circuit gates.
+
+    Singleton prefix exclusions are input masks whose checked cofactor lower
+    bound exceeds the residual budget after removing two gates per fixed
+    input. Apply them only to the saturated singleton layout.
+    """
     pool = IDPool()
     clauses = []
     height, width = len(matrix), len(matrix[0])
@@ -451,14 +475,31 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
     topology = None
     if lazy:
         topology = _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clauses)
-        if static_coexistence:
+        if static_coexistence or singleton_prefix_exclusions:
             owners = dict(zip(topology.atoms, topology.owners[-len(topology.atoms):]))
+            pairs = incompatible_primary_pairs(*map(tuple, certificates))
             before = len(clauses)
-            for pair in incompatible_primary_pairs(*map(tuple, certificates)):
+            for pair in pairs:
                 a, b = _bits(pair)
                 clauses.extend([-x, -y] for x, y in zip(owners[a], owners[b]))
             if stats is not None:
                 stats['coexistence_clauses'] += len(clauses) - before
+            if (singleton_prefix_exclusions and len(owners) == len(readers) + 1
+                    and all(degree == 2 for degree in readers)
+                    and len(pairs) == len(owners) * (len(owners) - 1) // 2):
+                before = len(clauses)
+                for fixed in singleton_prefix_exclusions:
+                    first = len(owners) - fixed.bit_count()
+                    clauses.append([pick for atom in _bits(fixed) for pick in owners[atom][:first]])
+                if stats is not None:
+                    stats['singleton_prefix_clauses'] += len(clauses) - before
+                if closed_set_cofactors:
+                    before = len(clauses)
+                    for fixed in singleton_prefix_exclusions:
+                        _add_closed_set_cut(clauses, pool, readers, owners,
+                                            topology.owners[:-len(owners)], fixed)
+                    if stats is not None:
+                        stats['closed_set_clauses'] += len(clauses) - before
         if provider_level is not None and local_intersection:
             before = len(clauses)
             _add_provider_ancestry(topology, readers, certificates, pool, clauses)
@@ -512,7 +553,8 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
 def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cells=400, conflicts=2000,
                          verify_unsat=None, certificates=None, on_sat=None, backend='complete-terminal', stats=None,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
-                         provider_capacity=None, affine_completion=None, static_coexistence=False):
+                         provider_capacity=None, affine_completion=None, static_coexistence=False,
+                         singleton_prefix_exclusions=(), closed_set_cofactors=False):
     """Return SAT, UNSAT, or UNKNOWN for the relaxation at an at-most excess budget."""
     matrix = tuple(map(tuple, matrix))
     if excess < 0 or any(value < 0 for row in matrix for value in row):
@@ -522,8 +564,8 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
         raise ValueError('expected a complete certificate set for the lazy backend')
     if local_intersection and not lazy:
         raise ValueError('local intersection is available with the lazy backend')
-    if static_coexistence and not local_intersection:
-        raise ValueError('static coexistence requires local intersections')
+    if (static_coexistence or singleton_prefix_exclusions) and not local_intersection:
+        raise ValueError('static region restrictions require local intersections')
     if portcertoutput and portcertrank is None:
         raise ValueError('output certificate costs require a port certificate level')
     if portcertrank is not None:
@@ -577,7 +619,9 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                                                                 portcertrank=portcertrank, portcertoutput=portcertoutput,
                                                                 provider_level=provider_level,
                                                                 stats=stats,
-                                                                static_coexistence=static_coexistence)
+                                                                static_coexistence=static_coexistence,
+                                                                singleton_prefix_exclusions=singleton_prefix_exclusions,
+                                                                closed_set_cofactors=closed_set_cofactors)
             capacity_owners = ()
             checked_layouts = set()
             if provider_capacity is not None and readers:

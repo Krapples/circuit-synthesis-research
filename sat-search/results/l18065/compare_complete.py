@@ -9,6 +9,8 @@ from time import perf_counter
 HERE = Path(__file__).resolve().parent
 sys.path[:0] = [str(HERE.parents[1] / "experiments"), str(HERE.parents[1])]
 from certificate_decomposition import complete_status
+from ao2_restriction_bounds import direct_reader_caps
+from check_prefix_cofactors import checked_prefix_cofactors
 from certificate_rank import analyze, coexistence_color_bound
 from certificate_rank_check import gate_count
 from certify_synthesis import check_proof
@@ -19,8 +21,19 @@ from synthesis_followup import load_cases
 from workflow.supervise import Job, run_jobs
 
 
+def small_threshold_bound(table):
+    """Bounds checked for 2-of-4, 2-of-5, and their AND/OR duals."""
+    inputs = len(table).bit_length() - 1
+    if inputs not in (4, 5):
+        return 0
+    for k in (2, inputs - 1):
+        if all(high == (row.bit_count() >= k) for row, high in enumerate(table)):
+            return 7 if inputs == 4 else 10
+    return 0
+
+
 def evaluate(report, case, budget, preflight, max_excess, proof, lazy, preflight_only, conflicts,
-             static_coexistence, max_cells):
+             static_coexistence, max_cells, prefix_cofactors, prefix_oracle, closed_sets):
     start = perf_counter()
     if case.known != full_rows(case.n):
         raise ValueError("expected a complete truth table")
@@ -50,6 +63,19 @@ def evaluate(report, case, budget, preflight, max_excess, proof, lazy, preflight
             witnesses = []
             traces = []
             stats = Counter()
+            prefixes = ()
+            if (prefix_cofactors or prefix_oracle) and case.n <= 8 and budget == 2 * case.n - 2:
+                if prefix_oracle:
+                    prefixes, checked = checked_prefix_cofactors(case.n, case.truth)
+                    evidence["cofactor_checks"] = len(checked["checked"])
+                else:
+                    prefixes = tuple(sum(1 << i for i in fixed)
+                                     for fixed, cap in direct_reader_caps(table, budget, case.n - 1,
+                                                                         lower_bound=small_threshold_bound)
+                                     if cap < 2 * len(fixed))
+                evidence["singleton_prefix_exclusions"] = len(prefixes)
+                report("cofactor_cuts", phase={"event": "cofactor_cuts", "prefixes": len(prefixes)},
+                       prefixes=len(prefixes))
 
             def witness(_, solution):
                 size = gate_count(solution)
@@ -66,11 +92,15 @@ def evaluate(report, case, budget, preflight, max_excess, proof, lazy, preflight
                                      backend="lazy-certificates" if lazy else "complete-terminal",
                                      local_intersection=lazy,
                                      static_coexistence=static_coexistence,
+                                     singleton_prefix_exclusions=prefixes,
+                                     closed_set_cofactors=closed_sets,
                                      verify_unsat=verify if proof else None, stats=stats)
             evidence.update(terminal_status=status, terminal_conflicts=stats["conflicts"],
                             terminal_seconds=perf_counter() - start, traces=traces,
                             initial_clauses=stats["initial_clauses"],
-                            coexistence_clauses=stats["coexistence_clauses"])
+                            coexistence_clauses=stats["coexistence_clauses"],
+                            singleton_prefix_clauses=stats["singleton_prefix_clauses"],
+                            closed_set_clauses=stats["closed_set_clauses"])
             if status == "UNSAT":
                 return finish(status, "decomposition")
             if witnesses:
@@ -103,6 +133,13 @@ def main():
     parser.add_argument("--preflight-only", action="store_true", help="Skip full synthesis on an open preflight")
     parser.add_argument("--conflicts", type=int, default=500, help="Requested conflicts per sharing pattern")
     parser.add_argument("--max-cells", type=int, default=400, help="Largest certificate matrix to encode")
+    prefixes = parser.add_mutually_exclusive_group()
+    prefixes.add_argument("--prefix-cofactors", action="store_true",
+                        help="Screen singleton region prefixes with checked small thresholds")
+    prefixes.add_argument("--prefix-oracle", action="store_true",
+                        help="Check a broader collection of small singleton prefix cofactors")
+    parser.add_argument("--closed-sets", action="store_true",
+                        help="Apply cofactor cuts to all dependency-closed region sets")
     parser.add_argument("--wall", type=float, default=5)
     args = parser.parse_args()
     cases = load_cases(HERE.parent / "synthesis_cases.json")
@@ -110,15 +147,19 @@ def main():
         parser.error("expected a corpus target and nonnegative limits")
     if args.conflicts < 1 or (args.lazy or args.preflight_only or args.proof) and not args.preflight:
         parser.error("preflight options require --preflight and a positive conflict limit")
-    if args.static_coexistence and not args.lazy:
-        parser.error("--static-coexistence requires --lazy")
+    if (args.static_coexistence or args.prefix_cofactors or args.prefix_oracle) and not args.lazy:
+        parser.error("static region restrictions require --lazy")
+    if args.closed_sets and not (args.prefix_cofactors or args.prefix_oracle):
+        parser.error("--closed-sets requires a cofactor screen")
     case = cases[args.target]
     job = Job(case.name, (case, args.budget, args.preflight, args.max_excess, args.proof,
                           args.lazy, args.preflight_only, args.conflicts, args.static_coexistence,
-                          args.max_cells),
+                          args.max_cells, args.prefix_cofactors, args.prefix_oracle, args.closed_sets),
               dict(budget=args.budget, preflight=args.preflight, max_excess=args.max_excess,
                    proof=args.proof, lazy=args.lazy, conflicts=args.conflicts,
-                   static_coexistence=args.static_coexistence, max_cells=args.max_cells, n=case.n))
+                   static_coexistence=args.static_coexistence, max_cells=args.max_cells,
+                   prefix_cofactors=args.prefix_cofactors, prefix_oracle=args.prefix_oracle,
+                   closed_sets=args.closed_sets, n=case.n))
     return run_jobs([job], evaluate, workers=1, wall=args.wall, heartbeat=2)
 
 

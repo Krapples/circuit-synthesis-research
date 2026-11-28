@@ -1,0 +1,33 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Replay the comparator with a smaller equivalent crossing encoding and check feasible and infeasible small controls.",
+  "jobs": [
+    {
+      "id": "comparator-05-14-compact",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--prefix-oracle","--closed-sets","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"closed_sets":"one-witness-per-port","basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "hypergraph-21-8-compact",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-21","8","--preflight","--preflight-only","--lazy","--static-coexistence","--prefix-oracle","--closed-sets","--max-excess","7","--max-cells","600","--conflicts","1500","--wall","6"],
+      "query": {"task":"L18065","target":"hypergraph-21","budget":8,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":1500,"closed_sets":"one-witness-per-port","basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "threshold-5-3-8-compact",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","8","--preflight","--preflight-only","--lazy","--static-coexistence","--prefix-oracle","--closed-sets","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--proof"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":8,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"closed_sets":"one-witness-per-port","basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    }
+  ]
+}

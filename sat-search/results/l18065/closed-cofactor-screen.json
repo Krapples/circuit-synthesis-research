@@ -1,0 +1,51 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Compare checked small cofactor exclusions on prefixes and on all dependency-closed region sets. Use matching caps and include one infeasible and one feasible small control.",
+  "jobs": [
+    {
+      "id": "comparator-05-14-control",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_oracle":false,"closed_sets":false,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "comparator-05-14-oracle",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-oracle"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_oracle":true,"closed_sets":false,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "comparator-05-14-closed",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-oracle","--closed-sets"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_oracle":true,"closed_sets":true,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "threshold-5-3-8-closed",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","8","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-oracle","--closed-sets","--proof"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":8,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_oracle":true,"closed_sets":true,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "hypergraph-21-8-closed",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-21","8","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-oracle","--closed-sets"],
+      "query": {"task":"L18065","target":"hypergraph-21","budget":8,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_oracle":true,"closed_sets":true,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    }
+  ]
+}

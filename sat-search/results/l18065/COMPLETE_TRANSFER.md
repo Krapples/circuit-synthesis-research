@@ -74,6 +74,8 @@ has a single pattern. Its eight mutually incompatible inputs need eight
 regions, which forces seven repeated wires. The budget has only seven
 extra reads, so each repeated wire has exactly two readers. This case
 isolates the cost of assigning and connecting regions within one pattern.
+The [singleton-region follow-up](SINGLETON_COFACTORS.md) rules out
+approximately half its input orders using cofactor restrictions.
 
 ## Reproduction
 

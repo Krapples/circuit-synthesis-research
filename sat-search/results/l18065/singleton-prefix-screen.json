@@ -1,0 +1,42 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Compare new singleton prefix cofactor clauses with a matched control on the forced comparator pattern. Use a short conflict target to expose the returned search evidence. Replay two small exclusion controls.",
+  "jobs": [
+    {
+      "id": "comparator-05-14-control",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_cofactors":false,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "comparator-05-14-prefix",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-cofactors"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_cofactors":true,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "threshold-5-3-8-prefix",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","8","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-cofactors"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":8,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_cofactors":true,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    },
+    {
+      "id": "comparator-02-8-prefix",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-02","8","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","7","--max-cells","600","--conflicts","100","--wall","6","--prefix-cofactors"],
+      "query": {"task":"L18065","target":"comparator-02","budget":8,"wall_seconds":6,"max_excess":7,"max_cells":600,"conflicts_per_pattern":100,"prefix_cofactors":true,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":13,"maximum":13}
+    }
+  ]
+}
