@@ -49,6 +49,9 @@ The workflow is the same in Claude Code and ChatGPT. Map the roles to models her
 1. Resume from the record: `python -B sat-search/workflow/research.py status --task <step>`.
    Check [RESEARCH_NOTES.md](RESEARCH_NOTES.md), recent commits, and whether the target or a
    stronger result is already proved or held by another agent. Keep this proportionate to the task.
+   On a new step, Luna goes first, in this order: pull the desk clone and this repository
+   (fast-forward only), search the repository, then search the internet for evidence, and return
+   one bounded report. Sol pins the target only after that report.
 2. Pin the target: exact statement, upstream commit and definitions, circuit model and basis,
    gate counting, complete-function or partial-promise semantics, permitted imports and axioms.
    An alternative formulation needs an explicit reduction to the original.
