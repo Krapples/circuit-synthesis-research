@@ -420,7 +420,7 @@ def _decode_topology(topology, readers, model):
 
 def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certificates=None, lazy=False,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
-                         stats=None):
+                         stats=None, static_coexistence=False):
     """Encode one ordered reader-count pattern, without constructing circuit gates."""
     pool = IDPool()
     clauses = []
@@ -451,6 +451,14 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
     topology = None
     if lazy:
         topology = _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clauses)
+        if static_coexistence:
+            owners = dict(zip(topology.atoms, topology.owners[-len(topology.atoms):]))
+            before = len(clauses)
+            for pair in incompatible_primary_pairs(*map(tuple, certificates)):
+                a, b = _bits(pair)
+                clauses.extend([-x, -y] for x, y in zip(owners[a], owners[b]))
+            if stats is not None:
+                stats['coexistence_clauses'] += len(clauses) - before
         if provider_level is not None and local_intersection:
             before = len(clauses)
             _add_provider_ancestry(topology, readers, certificates, pool, clauses)
@@ -504,7 +512,7 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
 def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cells=400, conflicts=2000,
                          verify_unsat=None, certificates=None, on_sat=None, backend='complete-terminal', stats=None,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
-                         provider_capacity=None, affine_completion=None):
+                         provider_capacity=None, affine_completion=None, static_coexistence=False):
     """Return SAT, UNSAT, or UNKNOWN for the relaxation at an at-most excess budget."""
     matrix = tuple(map(tuple, matrix))
     if excess < 0 or any(value < 0 for row in matrix for value in row):
@@ -514,6 +522,8 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
         raise ValueError('expected a complete certificate set for the lazy backend')
     if local_intersection and not lazy:
         raise ValueError('local intersection is available with the lazy backend')
+    if static_coexistence and not local_intersection:
+        raise ValueError('static coexistence requires local intersections')
     if portcertoutput and portcertrank is None:
         raise ValueError('output certificate costs require a port certificate level')
     if portcertrank is not None:
@@ -566,7 +576,8 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                                                                 local_intersection=local_intersection,
                                                                 portcertrank=portcertrank, portcertoutput=portcertoutput,
                                                                 provider_level=provider_level,
-                                                                stats=stats)
+                                                                stats=stats,
+                                                                static_coexistence=static_coexistence)
             capacity_owners = ()
             checked_layouts = set()
             if provider_capacity is not None and readers:

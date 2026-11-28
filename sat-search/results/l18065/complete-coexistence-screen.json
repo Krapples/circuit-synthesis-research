@@ -1,0 +1,78 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Measure the incremental effect of explicit same-region exclusion for incompatible primary pairs. Include small feasible and infeasible controls and a previously wall-limited endpoint at a smaller conflict target.",
+  "jobs": [
+    {
+      "id": "hypergraph-07-7-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-07","7","--preflight","--preflight-only","--lazy","--wall","5"],
+      "query": {"task":"L18065","target":"hypergraph-07","budget":7,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":false},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-07-7-static",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-07","7","--preflight","--preflight-only","--lazy","--wall","5","--static-coexistence"],
+      "query": {"task":"L18065","target":"hypergraph-07","budget":7,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-9-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","9","--preflight","--preflight-only","--lazy","--wall","5"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":9,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":false},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-9-static",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","9","--preflight","--preflight-only","--lazy","--wall","5","--static-coexistence"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":9,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-10-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","10","--preflight","--preflight-only","--lazy","--wall","5"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":10,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":false},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-10-static",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","10","--preflight","--preflight-only","--lazy","--wall","5","--static-coexistence"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":10,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-04-12-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-04","12","--preflight","--preflight-only","--lazy","--wall","5"],
+      "query": {"task":"L18065","target":"hypergraph-04","budget":12,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":false},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-04-12-static",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-04","12","--preflight","--preflight-only","--lazy","--wall","5","--static-coexistence"],
+      "query": {"task":"L18065","target":"hypergraph-04","budget":12,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":6,"conflicts_per_pattern":500,"basis":"complete-counted-binary-AND-OR","static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    }
+  ]
+}

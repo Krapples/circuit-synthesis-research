@@ -1,0 +1,78 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Try the reference and local-intersection backends with the same short limits on three open complete-monotone targets. Stop before the full-synthesis fallback to isolate regional search.",
+  "jobs": [
+    {
+      "id": "hypergraph-04-12-terminal",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-04","12","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5"],
+      "query": {"task":"L18065","target":"hypergraph-04","budget":12,"wall_seconds":5,"backend":"complete-terminal","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-04-12-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-04","12","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5","--lazy"],
+      "query": {"task":"L18065","target":"hypergraph-04","budget":12,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-04-13-terminal",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-04","13","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5"],
+      "query": {"task":"L18065","target":"hypergraph-04","budget":13,"wall_seconds":5,"backend":"complete-terminal","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-04-13-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-04","13","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5","--lazy"],
+      "query": {"task":"L18065","target":"hypergraph-04","budget":13,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-05-14-terminal",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":5,"backend":"complete-terminal","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-05-14-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5","--lazy"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-6-4-12-terminal",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-6-4","12","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5"],
+      "query": {"task":"L18065","target":"threshold-6-4","budget":12,"wall_seconds":5,"backend":"complete-terminal","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-6-4-12-local",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-6-4","12","--preflight","--preflight-only","--max-excess","9","--conflicts","1500","--wall","5","--lazy"],
+      "query": {"task":"L18065","target":"threshold-6-4","budget":12,"wall_seconds":5,"backend":"lazy-local-intersection","max_excess":9,"conflicts_per_pattern":1500,"basis":"complete-counted-binary-AND-OR"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    }
+  ]
+}

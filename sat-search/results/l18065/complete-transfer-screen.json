@@ -1,0 +1,114 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Pair a certificate preflight with the same boundary-row full synthesis fallback on complete non-graph targets. Include two feasible budgets, prior checked exclusions, and a color-bound comparator.",
+  "jobs": [
+    {
+      "id": "hypergraph-07-6-full",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-07","6"],
+      "query": {"task":"L18065","target":"hypergraph-07","budget":6,"wall_seconds":5,"preflight":false,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-07-6-preflight",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-07","6","--preflight"],
+      "query": {"task":"L18065","target":"hypergraph-07","budget":6,"wall_seconds":5,"preflight":true,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-07-7-full",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-07","7"],
+      "query": {"task":"L18065","target":"hypergraph-07","budget":7,"wall_seconds":5,"preflight":false,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "hypergraph-07-7-preflight",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","hypergraph-07","7","--preflight"],
+      "query": {"task":"L18065","target":"hypergraph-07","budget":7,"wall_seconds":5,"preflight":true,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-9-full",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","9"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":9,"wall_seconds":5,"preflight":false,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-9-preflight",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","9","--preflight"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":9,"wall_seconds":5,"preflight":true,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-10-full",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","10"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":10,"wall_seconds":5,"preflight":false,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-5-3-10-preflight",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","10","--preflight"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":10,"wall_seconds":5,"preflight":true,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-02-8-full",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-02","8"],
+      "query": {"task":"L18065","target":"comparator-02","budget":8,"wall_seconds":5,"preflight":false,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-02-8-preflight",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-02","8","--preflight"],
+      "query": {"task":"L18065","target":"comparator-02","budget":8,"wall_seconds":5,"preflight":true,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-05-13-full",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","13"],
+      "query": {"task":"L18065","target":"comparator-05","budget":13,"wall_seconds":5,"preflight":false,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-05-13-preflight",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","13","--preflight"],
+      "query": {"task":"L18065","target":"comparator-05","budget":13,"wall_seconds":5,"preflight":true,"basis":"complete-counted-binary-AND-OR","max_excess":6},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    }
+  ]
+}

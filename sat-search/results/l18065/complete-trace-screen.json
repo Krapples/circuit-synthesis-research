@@ -1,0 +1,42 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check the decisive proof traces at two closed budgets and test static region constraints on a larger threshold and a comparator previously skipped by the certificate-matrix cap.",
+  "jobs": [
+    {
+      "id": "threshold-5-3-9-proof",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-5-3","9","--preflight","--preflight-only","--lazy","--static-coexistence","--proof"],
+      "query": {"task":"L18065","target":"threshold-5-3","budget":9,"wall_seconds":5,"max_excess":6,"conflicts_per_pattern":500,"max_cells":400,"basis":"complete-counted-binary-AND-OR","proof":true,"static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-02-8-proof",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-02","8","--preflight","--preflight-only","--proof"],
+      "query": {"task":"L18065","target":"comparator-02","budget":8,"wall_seconds":5,"max_excess":6,"conflicts_per_pattern":500,"max_cells":400,"basis":"complete-counted-binary-AND-OR","proof":true,"static_coexistence":false},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "threshold-6-4-12-extended",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","threshold-6-4","12","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","9","--conflicts","1500"],
+      "query": {"task":"L18065","target":"threshold-6-4","budget":12,"wall_seconds":5,"max_excess":9,"conflicts_per_pattern":1500,"max_cells":400,"basis":"complete-counted-binary-AND-OR","proof":false,"static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    },
+    {
+      "id": "comparator-05-14-extended",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/results/l18065/compare_complete.py","comparator-05","14","--preflight","--preflight-only","--lazy","--static-coexistence","--max-excess","9","--conflicts","1500","--max-cells","600"],
+      "query": {"task":"L18065","target":"comparator-05","budget":14,"wall_seconds":5,"max_excess":9,"conflicts_per_pattern":1500,"max_cells":600,"basis":"complete-counted-binary-AND-OR","proof":false,"static_coexistence":true},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":12,"maximum":12}
+    }
+  ]
+}

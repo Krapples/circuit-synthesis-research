@@ -1,5 +1,9 @@
 # Rank and certificate preflight for complete AO2 synthesis
 
+The [non-graph transfer screen](COMPLETE_TRANSFER.md) compares the same
+root-first idea with full synthesis on complete monotone thresholds,
+comparators, and hypergraph functions.
+
 Sol ran the screens and checked the witnesses. Luna reviewed reuse of the
 existing [rank checker](../../experiments/certificate_rank.py) and the prior
 replay evidence. All targets are complete monotone functions. Count only
