@@ -11,6 +11,35 @@ inputs, sharing allowance and excess, symmetry and canonicalization, reader and 
 support restrictions, partial-label structure, dynamic programming, regional decomposition,
 incremental SAT, certificate completion, and alternative encodings or solver portfolios.
 
+## Choose the solver and settings for the instance
+
+Do this before any long run. Solver performance depends on the instance family, so no one setting
+is right everywhere.
+
+1. **Classify the instance.** Note the encoding and generator (`cube_search.py` CNFs versus
+   native `template_synth --dump` CNFs), the basis, the size, and the expected answer. Hunting a
+   witness (expected SAT) and proving an exclusion (expected UNSAT) favor different settings.
+   Note what the run needs: incremental assumptions, a working interrupt or STOP file, or a
+   checkable proof (DRUP/LRAT logging costs time but turns a verdict into a certificate).
+2. **Start from the recorded winner for that family.**
+   - `cube_search.py` and other pysat drivers: `maplechrono`, with `maplecm` as the runner-up.
+     It honors `interrupt()`; CaDiCaL 1.9.5 ignores it and breaks the STOP file.
+   - Native `template_synth.exe` template CNFs: CaDiCaL 2.2, congruence off.
+   - Witness hunting: a small mixed portfolio. `mergesat3` once found a SAT case first.
+   - Pruning flags: start from `cube_search.py --fast`. Keep `--bottleneck` off (about 4.5x more
+     CPU), and add `--minimal` only after sizes G-1 and G-2 are UNSAT without it.
+3. **Re-screen when the family or encoding is new or has changed.** Take two to four
+   representative instances, hard ones included, since rules that are neutral on easy cases can
+   pay off on hard ones. Run single-threaded with about three seeds. Run the baseline first, cap
+   each challenger at max(10 s, 1.5 x the baseline time), and record "stopped-worse". Switch only
+   when the gain exceeds the seed spread.
+4. **Set the parallel layout and caps.** Fill up to 22 threads with independent pieces (by case,
+   cube or first gate) rather than many-thread solving of one CNF; much finer static splitting
+   has hurt before (about 25x). Give each job an initial timeout with a factor and a ceiling, and
+   estimate memory per worker.
+5. **Record the choice.** Put the solver, version, flags, seeds, caps and screen results in the
+   manifest or results README, and update the topic note when a family's winner changes.
+
 ## Run batches that answer a question
 
 - Write the question and the decision it informs in the manifest, with basis, budget, reduction

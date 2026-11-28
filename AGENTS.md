@@ -62,7 +62,10 @@ Use the role names Sol and Luna in records, reports and messages. Don't mix them
 3. Classify the bottleneck and use its playbook. Reclassify when the evidence changes.
    - *Theory*: the argument is unknown. Use small examples, counterexample search, conjecture refinement.
    - *Reduction*: find sound restrictions, normal forms, decompositions, gate eliminations.
-   - *Search*: see [SEARCH_WORKFLOW.md](sat-search/workflow/SEARCH_WORKFLOW.md).
+   - *Search*: see [SEARCH_WORKFLOW.md](sat-search/workflow/SEARCH_WORKFLOW.md). Choose the SAT
+     solver and its settings for the instance family with its
+     [solver-selection steps](sat-search/workflow/SEARCH_WORKFLOW.md#choose-the-solver-and-settings-for-the-instance)
+     before any long run.
    - *Proof*: see [PROOF_WORKFLOW.md](sat-search/workflow/PROOF_WORKFLOW.md).
    Do not use Lean iteration to compensate for a missing argument or an unfinished search.
 4. Work the critical-path obligation. Test a novel claim on small cases before formalizing it.
