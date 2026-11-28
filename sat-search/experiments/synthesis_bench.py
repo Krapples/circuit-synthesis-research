@@ -105,8 +105,7 @@ def analytical(case):
 
 
 def peak_bytes(pid=None):
-    system = platform.system()
-    if system == 'Windows':
+    if os.name == 'nt':
         import ctypes as c
         from ctypes import wintypes as w
 

@@ -1,6 +1,9 @@
 {
+  "schema": "singleton-prefix-cofactors/1",
   "case": "comparator-05",
+  "inputs": 8,
   "budget": 14,
+  "truth_sha256": "fde12149fb3b969e703f98057d7ab101f881fee0a84cdcb968d589216b306e6f",
   "cuts": [
     19,
     35,

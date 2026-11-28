@@ -3,6 +3,8 @@
 from collections import Counter
 from functools import lru_cache
 from itertools import combinations, product
+from threading import Timer
+from time import perf_counter
 from typing import NamedTuple
 
 from affine_completion import complete_affine
@@ -105,6 +107,11 @@ class LazyTopology(NamedTuple):
 
 def _port_sources(readers):
     return tuple(i + 1 for i, degree in enumerate(readers) for _ in range(degree))
+
+
+def _profile(profile, stage, **data):
+    if profile is not None:
+        profile(stage, **data)
 
 
 def _add_closed_set_cut(clauses, pool, readers, owners, port_owners, fixed):
@@ -439,7 +446,7 @@ def _decode_topology(topology, readers, model):
 def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certificates=None, lazy=False,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
                          stats=None, static_coexistence=False, singleton_prefix_exclusions=(),
-                         closed_set_cofactors=False):
+                         closed_set_cofactors=False, profile=None):
     """Encode one ordered reader-count pattern, without constructing circuit gates.
 
     Singleton prefix exclusions are input masks whose checked cofactor lower
@@ -450,6 +457,7 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
     clauses = []
     height, width = len(matrix), len(matrix[0])
 
+    stage_start = perf_counter()
     def memberships(size):
         groups = []
         for _ in range(size):
@@ -472,7 +480,10 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
     for _, edges in row_wires[0]:
         # Reader slots are interchangeable. Sort the first row's membership bits.
         clauses.extend([left, -right] for left, right in zip(edges, edges[1:]))
+    _profile(profile, 'membership_encoding', seconds=perf_counter() - stage_start,
+             variables=pool.top, clauses=len(clauses))
     topology = None
+    stage_start = perf_counter()
     if lazy:
         topology = _add_lazy_topology(row_wires, col_wires, readers, certificates, pool, clauses)
         if static_coexistence or singleton_prefix_exclusions:
@@ -501,8 +512,13 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
                     if stats is not None:
                         stats['closed_set_clauses'] += len(clauses) - before
         if provider_level is not None and local_intersection:
+            provider_start = perf_counter()
             before = len(clauses)
+            variables_before = pool.top
             _add_provider_ancestry(topology, readers, certificates, pool, clauses)
+            _profile(profile, 'provider_ancestry_encoding', seconds=perf_counter() - provider_start,
+                     requested_level=provider_level, variables_added=pool.top - variables_before,
+                     clauses_added=len(clauses) - before)
             if stats is not None:
                 stats['provider_static_clauses'] += len(clauses) - before
         if portcertrank is not None and local_intersection:
@@ -512,6 +528,9 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
                 stats['port_static_clauses'] += len(clauses) - before
     elif regions or certificates is not None:
         topology = _add_topology(row_wires, col_wires, readers, certificates, pool, clauses)
+    _profile(profile, 'topology_encoding', seconds=perf_counter() - stage_start,
+             variables=pool.top, clauses=len(clauses))
+    stage_start = perf_counter()
     for i, row in enumerate(matrix):
         for j, target in enumerate(row):
             if target > len(readers):
@@ -547,6 +566,10 @@ def encode_decomposition(matrix, readers, *, prefix=True, regions=False, certifi
                 reached.append(common(a, b))
             lits = reached + [-edge for edge in incoming]
             clauses.extend(CardEnc.equals(lits, target + len(incoming), vpool=pool).clauses)
+    _profile(profile, 'intersection_encoding', seconds=perf_counter() - stage_start,
+             variables=pool.top, clauses=len(clauses))
+    _profile(profile, 'encoding_complete', variables=pool.top, clauses=len(clauses),
+             primary_pairs=height * width, reader_slots=sum(readers), regions=len(readers) + 1)
     return pool.top, clauses, topology
 
 
@@ -554,11 +577,16 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                          verify_unsat=None, certificates=None, on_sat=None, backend='complete-terminal', stats=None,
                          local_intersection=False, portcertrank=None, portcertoutput=False, provider_level=None,
                          provider_capacity=None, affine_completion=None, static_coexistence=False,
-                         singleton_prefix_exclusions=(), closed_set_cofactors=False):
+                         singleton_prefix_exclusions=(), closed_set_cofactors=False, profile=None,
+                         encode_only=False, solve_seconds=None, solver_name='g4'):
     """Return SAT, UNSAT, or UNKNOWN for the relaxation at an at-most excess budget."""
     matrix = tuple(map(tuple, matrix))
     if excess < 0 or any(value < 0 for row in matrix for value in row):
         raise ValueError('expected nonnegative intersections and excess')
+    if solve_seconds is not None and solve_seconds <= 0:
+        raise ValueError('expected a positive per-call solve limit')
+    if solve_seconds is not None and solver_name.startswith('cadical'):
+        raise ValueError('CaDiCaL does not support interruptible solve calls')
     lazy = backend == 'lazy-certificates'
     if backend not in ('complete-terminal', 'lazy-certificates') or lazy and certificates is None:
         raise ValueError('expected a complete certificate set for the lazy backend')
@@ -585,6 +613,7 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                 or matrix != intersection_matrix(*certificates)):
             raise ValueError('certificate port bounds require matching complete monotone certificates')
     stats = stats if stats is not None else Counter()
+    preflight_start = perf_counter()
     if certificates is None:
         matrix = _compress(matrix)
     if not matrix:
@@ -603,16 +632,31 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
     if colors > excess + 1:
         return 'UNSAT'
     if max_cells is not None and height * width > max_cells:
+        _profile(profile, 'preflight_result', seconds=perf_counter() - preflight_start,
+                 status='UNKNOWN', reason='matrix_cell_limit', cells=height * width, excess=excess)
         return 'UNKNOWN'
+    _profile(profile, 'preflight_complete', seconds=perf_counter() - preflight_start,
+             height=height, width=width, cells=height * width, rank=rank,
+             max_entry=max_entry, colors=colors, excess=excess)
 
     unknown = False
     first = 0 if not max_entry else 1 if one_share else 2
+    patterns_considered = 0
+    patterns_filtered = 0
     for used in range(max(first, max_entry, colors - 1), excess + 1):
         for readers in _reader_counts(used):
+            patterns_considered += 1
             first_saves_rank = prefix and bool(readers) and readers[0] == 2
             available_rank = sum(degree + 1 for degree in readers) - int(first_saves_rank)
             if len(readers) < max(max_entry, colors - 1) or available_rank < rank:
+                patterns_filtered += 1
+                _profile(profile, 'reader_pattern_filtered', used=used, readers=readers,
+                         available_rank=available_rank, rank=rank)
                 continue
+            pattern_start = perf_counter()
+            encoding_start = perf_counter()
+            _profile(profile, 'reader_pattern_start', used=used, readers=readers,
+                     available_rank=available_rank, rank=rank)
             variables, clauses, topology = encode_decomposition(matrix, readers, prefix=prefix, regions=regions,
                                                                 certificates=certificates, lazy=lazy,
                                                                 local_intersection=local_intersection,
@@ -621,10 +665,19 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                                                                 stats=stats,
                                                                 static_coexistence=static_coexistence,
                                                                 singleton_prefix_exclusions=singleton_prefix_exclusions,
-                                                                closed_set_cofactors=closed_set_cofactors)
+                                                                closed_set_cofactors=closed_set_cofactors,
+                                                                profile=profile)
+            encoding_seconds = perf_counter() - encoding_start
+            stats['encoding_seconds'] += encoding_seconds
+            _profile(profile, 'pattern_encoding_complete', seconds=encoding_seconds,
+                     variables=variables, clauses=len(clauses), readers=readers)
             capacity_owners = ()
             checked_layouts = set()
             if provider_capacity is not None and readers:
+                capacity_start = perf_counter()
+                capacity_keys_before = {key: value for key, value in stats.items()
+                                        if key.startswith('capacity_')}
+                clauses_before_capacity = len(clauses)
                 count = len(topology.atoms)
                 if (len(readers) + 1) ** count <= 128 and provider_capacity != 'exact':
                     # Check small primary layouts without constructing any port
@@ -640,20 +693,84 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                     clauses.extend(_capacity_prefix_clauses(topology, readers, certificates, provider_capacity, stats))
                 else:
                     capacity_owners = topology.owners[len(topology.owners) - count:]
+                capacity_metrics = {key: value - capacity_keys_before.get(key, 0)
+                                    for key, value in stats.items()
+                                    if key.startswith('capacity_')}
+                _profile(profile, 'provider_capacity_prescreen', seconds=perf_counter() - capacity_start,
+                         requested_level=provider_capacity,
+                         layouts=sum(value for key, value in capacity_metrics.items()
+                                     if key.endswith('_layouts')),
+                         obstructions=sum(value for key, value in capacity_metrics.items()
+                                          if key.endswith(('_mandatory', '_eligibility', '_primary', '_subsets'))),
+                         clauses_added=len(clauses) - clauses_before_capacity,
+                         **capacity_metrics)
             stats['patterns'] += 1
             stats['initial_variables'] += variables
             stats['initial_clauses'] += len(clauses)
-            with Solver(name='g4', bootstrap_with=clauses) as solver:
+            if encode_only:
+                _profile(profile, 'encoding_stopped_before_solver', readers=readers,
+                         variables=variables, clauses=len(clauses))
+                return 'UNKNOWN'
+            solver_start = perf_counter()
+            with Solver(name=solver_name, bootstrap_with=clauses) as solver:
+                solver_init_seconds = perf_counter() - solver_start
+                stats['solver_init_seconds'] += solver_init_seconds
+                _profile(profile, 'solver_ready', seconds=solver_init_seconds,
+                         variables=solver.nof_vars(), clauses=solver.nof_clauses(), readers=readers)
+                iteration = 0
                 while True:
-                    if conflicts is None:
-                        answer = solver.solve()
-                    else:
-                        remaining = conflicts - solver.accum_stats()['conflicts']
-                        if remaining <= 0:
-                            answer = None
-                            break
+                    remaining = (None if conflicts is None
+                                 else conflicts - solver.accum_stats()['conflicts'])
+                    if remaining is not None and remaining <= 0:
+                        answer = None
+                        break
+                    if remaining is not None:
                         solver.conf_budget(remaining)
-                        answer = solver.solve_limited()
+                    solver_stats = solver.accum_stats()
+                    _profile(profile, 'solver_call_start', iteration=iteration + 1,
+                             remaining_conflicts=remaining, time_limit_seconds=solve_seconds,
+                             conflicts=solver_stats['conflicts'],
+                             clauses=solver.nof_clauses(), readers=readers)
+                    interruption_time = [None]
+                    timer = None
+                    if solve_seconds is not None:
+                        def interrupt_solver():
+                            interruption_time[0] = perf_counter()
+                            solver.interrupt()
+
+                        timer = Timer(solve_seconds, interrupt_solver)
+                        timer.start()
+                    solve_start = perf_counter()
+                    solve_return_time = None
+                    try:
+                        if remaining is None and timer is None:
+                            answer = solver.solve()
+                        elif timer is None:
+                            answer = solver.solve_limited()
+                        else:
+                            answer = solver.solve_limited(expect_interrupt=True)
+                    finally:
+                        solve_return_time = perf_counter()
+                        if timer is not None:
+                            timer.cancel()
+                            timer.join()
+                            solver.clear_interrupt()
+                    solve_elapsed = solve_return_time - solve_start
+                    stats['solve_seconds'] += solve_elapsed
+                    time_limit_fired = (interruption_time[0] is not None
+                                        and interruption_time[0] <= solve_return_time)
+                    interrupt_lag = (solve_return_time - interruption_time[0]
+                                     if time_limit_fired else 0.0)
+                    if time_limit_fired:
+                        stats['solve_timeouts'] += 1
+                    iteration += 1
+                    solver_stats = solver.accum_stats()
+                    _profile(profile, 'solver_iteration', iteration=iteration, answer=answer,
+                             seconds=solve_elapsed, conflicts=solver_stats['conflicts'],
+                             decisions=solver_stats['decisions'], propagations=solver_stats['propagations'],
+                             time_limit_fired=time_limit_fired, interrupt_lag_seconds=interrupt_lag,
+                             clauses=solver.nof_clauses(),
+                             readers=readers)
                     if answer is not True:
                         break
                     stats['models'] += 1
@@ -663,45 +780,98 @@ def decomposition_status(matrix, excess, *, prefix=True, regions=False, max_cell
                         break
                     model = set(solver.get_model())
                     cuts = ()
+                    candidate_start = perf_counter()
+                    formula_seconds = 0.0
                     if capacity_owners:
                         assignments = tuple(next(r for r, pick in enumerate(choices) if pick in model)
                                             for choices in capacity_owners)
                         if assignments not in checked_layouts:
                             checked_layouts.add(assignments)
+                            capacity_cut_start = perf_counter()
                             cut = _capacity_owner_cut(topology, readers, certificates, assignments,
                                                       provider_capacity, stats, 'lazy')
+                            capacity_cut_seconds = perf_counter() - capacity_cut_start
+                            stats['capacity_model_cut_seconds'] += capacity_cut_seconds
+                            _profile(profile, 'capacity_model_cut', iteration=iteration,
+                                     seconds=capacity_cut_seconds, level=provider_capacity,
+                                     clauses=1 if cut is not None else 0, readers=readers)
                             if cut is not None:
                                 cuts = (cut,)
+                                stats['capacity_model_cut_clauses'] += 1
                     if not cuts and portcertrank and not local_intersection:
                         cuts = _lazy_port_cuts(topology, model, certificates, portcertrank, portcertoutput)
                         if cuts:
                             stats['port_cuts'] += len(cuts)
                             stats['port_cut_literals'] += sum(map(len, cuts))
                     if not cuts and provider_level is not None and not local_intersection:
+                        provider_cut_start = perf_counter()
                         reason, cuts = _provider_model_cuts(topology, readers, model, certificates, provider_level)
+                        provider_cut_seconds = perf_counter() - provider_cut_start
+                        stats['provider_model_cut_seconds'] += provider_cut_seconds
                         if cuts:
                             stats[f'provider_{reason}_cuts'] += len(cuts)
+                            stats['provider_model_cut_clauses'] += len(cuts)
+                        _profile(profile, 'provider_model_cut', iteration=iteration,
+                                 seconds=provider_cut_seconds, level=provider_level, reason=reason,
+                                 clauses=len(cuts), readers=readers)
                     if not cuts:
+                        formula_start = perf_counter()
                         formulas, cuts = _lazy_formulas(topology, model, affine_completion, stats)
+                        formula_seconds = perf_counter() - formula_start
+                        stats['formula_seconds'] += formula_seconds
                     if not cuts:
+                        decode_start = perf_counter()
+                        solution = _decode_lazy(formulas, topology.atoms, readers)
+                        stats['decode_seconds'] += perf_counter() - decode_start
                         if on_sat is not None:
-                            on_sat(used, _decode_lazy(formulas, topology.atoms, readers))
+                            on_sat(used, solution)
+                        _profile(profile, 'candidate_accepted', iteration=iteration,
+                                 seconds=perf_counter() - candidate_start, formula_seconds=formula_seconds,
+                                 readers=readers)
                         break
+                    cut_start = perf_counter()
                     stats['cuts'] += len(cuts)
                     stats['cut_literals'] += sum(map(len, cuts))
                     for cut in cuts:
                         solver.add_clause(cut)
                     clauses.extend(cuts)
+                    cut_seconds = perf_counter() - cut_start
+                    stats['cut_seconds'] += cut_seconds
+                    _profile(profile, 'candidate_rejected', iteration=iteration,
+                             candidate_seconds=perf_counter() - candidate_start,
+                             formula_seconds=formula_seconds, cut_seconds=cut_seconds,
+                             cuts=len(cuts), cut_literals=sum(map(len, cuts)),
+                             clauses=solver.nof_clauses(), readers=readers)
                 stats['conflicts'] += solver.accum_stats()['conflicts']
             if answer is False and verify_unsat is not None:
-                # Check the final clause set in a fresh proof-producing solver.
+                # Recheck independently with the proof-capable backend; solver selection
+                # for timed search does not imply proof support from every backend.
+                proof_start = perf_counter()
+                _profile(profile, 'proof_replay_start', solver='g4', readers=readers)
                 with Solver(name='g4', bootstrap_with=clauses, with_proof=True) as proof_solver:
                     if proof_solver.solve() is not False:
                         raise RuntimeError('UNSAT clause set did not reproduce in proof replay')
                     verify_unsat(readers, variables, clauses, proof_solver.get_proof())
+                stats['proof_seconds'] += perf_counter() - proof_start
+                _profile(profile, 'proof_replay_complete', solver='g4',
+                         seconds=perf_counter() - proof_start, readers=readers)
             if answer is True:
+                _profile(profile, 'reader_pattern_result', status='SAT', readers=readers,
+                         seconds=perf_counter() - pattern_start, iterations=iteration)
+                _profile(profile, 'decomposition_complete', status='SAT',
+                         patterns_considered=patterns_considered, patterns_encoded=stats['patterns'],
+                         patterns_filtered=patterns_filtered, solver_seconds=stats['solve_seconds'],
+                         encoding_seconds=stats['encoding_seconds'],
+                         formula_seconds=stats['formula_seconds'], cut_seconds=stats['cut_seconds'])
                 return 'SAT'
+            _profile(profile, 'reader_pattern_result', status='UNKNOWN' if answer is None else 'UNSAT',
+                     readers=readers, seconds=perf_counter() - pattern_start, iterations=iteration)
             unknown |= answer is None
+    _profile(profile, 'decomposition_complete', seconds=perf_counter() - preflight_start,
+             status='UNKNOWN' if unknown else 'UNSAT', patterns_considered=patterns_considered,
+             patterns_encoded=stats['patterns'], patterns_filtered=patterns_filtered,
+             solver_seconds=stats['solve_seconds'], encoding_seconds=stats['encoding_seconds'],
+             formula_seconds=stats['formula_seconds'], cut_seconds=stats['cut_seconds'])
     return 'UNKNOWN' if unknown else 'UNSAT'
 
 

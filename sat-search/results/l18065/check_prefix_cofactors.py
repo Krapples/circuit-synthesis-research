@@ -1,6 +1,7 @@
 """Build checked prefix exclusions for saturated singleton AO2 layouts."""
 import argparse
 from functools import lru_cache
+import hashlib
 from itertools import combinations, permutations, product
 import json
 from pathlib import Path
@@ -80,6 +81,24 @@ def checked_prefix_cofactors(n, truth):
     return cuts, dict(checked=checked, derived=derived)
 
 
+def target_fingerprint(n, truth):
+    return hashlib.sha256(f"{n}:{truth:x}".encode("ascii")).hexdigest()
+
+
+def load_checked_prefixes(path, n, truth):
+    """Load the checked cuts for the exact complete target and budget."""
+    data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if (data.get("schema") != "singleton-prefix-cofactors/1"
+            or data.get("inputs") != n
+            or data.get("truth_sha256") != target_fingerprint(n, truth)
+            or data.get("budget") != 2 * n - 2):
+        raise ValueError("cofactor evidence does not match the complete target and budget")
+    cuts = tuple(data["cuts"])
+    if len(cuts) != len(set(cuts)) or any(not 0 < cut < 1 << n for cut in cuts):
+        raise ValueError("cofactor evidence contains invalid input sets")
+    return cuts, data
+
+
 def check_crossing_encoding():
     """Compare projected CNF models with all four-region port placements."""
     sources = (1, 1, 2, 2, 3, 3)
@@ -118,7 +137,10 @@ def main():
     if case is None or not 2 <= case.n <= 8 or case.known != full_rows(case.n):
         parser.error("expected a complete target with two through eight inputs")
     cuts, evidence = checked_prefix_cofactors(case.n, case.truth)
-    print(json.dumps(dict(case=case.name, budget=2 * case.n - 2, cuts=cuts, **evidence), indent=2))
+    print(json.dumps(dict(schema="singleton-prefix-cofactors/1", case=case.name,
+                          inputs=case.n, budget=2 * case.n - 2,
+                          truth_sha256=target_fingerprint(case.n, case.truth),
+                          cuts=cuts, **evidence), indent=2))
 
 
 if __name__ == "__main__":

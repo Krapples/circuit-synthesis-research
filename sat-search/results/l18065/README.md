@@ -117,3 +117,6 @@ Case indices apply to the specified sizes. Subsequent work tested
 [rank and terminal decomposition before full synthesis](RANK_PREFLIGHT.md).
 The latter record contains the exact minimum checker for the 21 sweep
 graphs and the matched results for stronger cofactor bounds.
+The separate complete monotone comparator-05 query at budget 14 remains
+open; its stage timings, solver comparisons, and profiling caveats are in
+the [comparator-05 profiling record](PROFILE_COMPARATOR05_2026-11-27.md).
