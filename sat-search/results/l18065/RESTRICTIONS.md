@@ -65,6 +65,41 @@ flags opt-in and using singleton read-once as the first candidate in a broader
 screen. Timed-out variants leave their replay scopes open. The archived
 case-8 solver verdict is discussed in the [sweep record](README.md).
 
+## Case 8 resolved by certificate rank
+
+The [certificate-intersection rank bound](../../NOTES_SYNTHESIS_FOLLOWUP.md#L730)
+gives a plain AO2 minimum of nine for case 8. For minterm `S` and minimal
+zero certificate `T`, use the matrix entry `H[S,T] = |S ∩ T| − 1`.
+With `r` essential inputs, a circuit with `k` gates has at most
+`e = k − r + 1` extra wire uses in its output cone. At zero excess the
+matrix is zero. At excess one, its support consists of at most two disjoint
+rectangles, so its rank is at most two.
+
+For the case-8 graph, choose minterms `{x0,y1}`, `{x1,y1}`, and
+`{x1,y2}`. In that order choose these minimal zero certificates:
+
+1. `{x0,y1,y2,y3}`
+2. `{x1,x2,y0,y1,y3}`
+3. `{x0,x1,y2,y3}`
+
+The resulting minor is the identity. All eight inputs are essential, so
+eight or fewer gates would allow at most one extra use and rank at most two.
+For the upper bound use
+`(x0 ∧ (y0 ∨ y1)) ∨ (x1 ∧ (y1 ∨ y2)) ∨ (x2 ∧ y2) ∨ (x3 ∧ y3)`.
+This takes two inner ORs, four ANDs, and three collector ORs. The matrix
+and the witness were checked on the complete 256-row target. The existing
+[rank checker](../../experiments/certificate_rank.py) returned rank three
+and a lower bound of nine. This is a paper lower bound with a computationally
+checked witness. The wall-limited replay above remains part of the historical
+record.
+
+The rank checker also tightens three case-8 reader caps through width three,
+relative to the read-once bound. The two singleton caps for `x3` and `y3`
+each go from one to zero at the eight-gate budget. The pair cap goes from two
+to one. At case 6's seven-gate budget, none of the width-one through
+width-three caps tighten. The rank check at the root is sufficient for both
+lower bounds, eight gates for case 6 and nine for case 8.
+
 The [finite checker](verify_restrictions.py) independently enumerated 44,718
 three-input circuits through four gates and 7,452 four-input circuits through
 three gates. It checked the caps through width three, including outputs
