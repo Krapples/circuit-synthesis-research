@@ -43,8 +43,11 @@ Use the role names Sol and Luna in records, reports and messages. Don't mix them
   upstream has not merged the step, submitting is pre-authorized. Release undoable steps
   promptly with an honest reason. Every session and script shares one desk handle, so a plain
   `next` returns a unit someone else already holds: take every unit with `next --another`
-  (`another=1`), and release only a unit you took yourself. Check the keepalive log while
-  working; after a 410, find out who released the unit before taking another.
+  (`another=1`), and release only a unit you took yourself. Losing a lease does not stop the
+  work: keep proving, and `tools/pnp.sh submit` asks the desk for the unit again before
+  sending (`--unleased` sends anyway, for the 10-point floor). Stop only on a 410 with
+  `withdrawn: true` or when the unit's file is already on upstream main. After an unexpected
+  410, find out who released the unit.
 - **Research mode** (everything else). Choose work in this order: general structural theorems,
   reusable transformations and gate-elimination lemmas, stronger bounds and reductions, sound
   pruning, reusable Lean and certificate infrastructure, finishing partial results, isolated
