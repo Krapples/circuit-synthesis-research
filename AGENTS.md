@@ -15,6 +15,9 @@ The workflow is the same in Claude Code and ChatGPT. Map the roles to models her
 | Claude Code | Opus | Haiku subagent (`model: haiku`) |
 | ChatGPT | the lead reasoning model | a smaller, faster model or lightweight task |
 
+Use the role names Sol and Luna in records, reports and messages. Don't mix them with model names
+(write "Luna", not "Haiku (Luna)"; write "Sol", not "Opus").
+
 - **Sol decides.** Sol selects and pins the target, classifies the bottleneck, designs proofs and
   reductions, assigns verification grades, and approves every submission. Sol reviews Luna's
   output before it is graded, committed, or submitted.
