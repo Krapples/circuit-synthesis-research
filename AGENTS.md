@@ -41,7 +41,11 @@ Use the role names Sol and Luna in records, reports and messages. Don't mix them
   the step is taken. Run one CPU-heavy search at a time (up to 22 threads), and take proof-only steps in parallel.
   When the exact packaged file passes `tools/pnp.sh check` and the axiom and `sorry` audit, and
   upstream has not merged the step, submitting is pre-authorized. Release undoable steps
-  promptly with an honest reason. Every session and script shares one desk handle, so a plain
+  promptly with an honest reason. Keep the desk clone current: `main` and `submit-base` track
+  `upstream/main`, so `git pull --ff-only` works before every step. Never commit to them; step
+  files stay untracked or on their step branch. If a fast-forward fails, back up the local
+  commits on a `backup/` branch, move the branch to `upstream/main` with `git reset --keep`, and
+  report it. Every session and script shares one desk handle, so a plain
   `next` returns a unit someone else already holds: take every unit with `next --another`
   (`another=1`), and release only a unit you took yourself. Losing a lease does not stop the
   work: keep proving, and `tools/pnp.sh submit` asks the desk for the unit again before
