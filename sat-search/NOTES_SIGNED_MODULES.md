@@ -117,7 +117,7 @@ model of `CircuitLemmas/Basic.lean`, not about the Python implementation.
   `verify/reference.py` SAT search and is uncertified unless a checked exclusion exists
   (`certify_split.py`).
 - **Effort.** About 1.5 hours of agent time for 807 lines. Checking `Module.lean` takes 30–45 s with
-  the direct `lean` call; `Basic.lean` must be compiled to an `.olean` first (see `HANDOFF.md`).
+  the direct `lean` call; `Basic.lean` must be compiled to an `.olean` first (see [workflow/README.md](workflow/README.md#environment)).
 
 ### Corpus (`experiments/module_corpus.py`, `results/module_corpus.jsonl`)
 

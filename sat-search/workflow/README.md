@@ -21,6 +21,36 @@ result at meaningful milestones and link durable evidence from `RESEARCH_NOTES.m
 `.research` survives context compaction. Keep archival proofs and reproducible records under
 `sat-search/results` for handoffs to other machines.
 
+## Environment
+
+Facts about this Windows machine, carried over from the archived
+[2026-11-24 handoff](archive/HANDOFF_2026-11-24.md).
+
+- **Remote:** `https://github.com/Krapples/circuit-synthesis-research` (private), branch `master`.
+  The desk clone `pequalnp-proofs/` is a separate repository with its own remotes.
+- **Python:** python-sat is vendored in `.scratch-sat/`, which `cube_search.py` and
+  `verify/reference.py` add to `sys.path`. Run scripts with plain `python`.
+- **Concurrent edits:** other agents may leave uncommitted edits in the tree. Stage only your own
+  files. When a file has someone else's edits, patch the index (`git apply --cached`) and test the
+  staged state in a clean `git worktree` before committing.
+- **Lean in `sat-search/lean`:** Mathlib v4.36.0 is built in `pequalnp-proofs/lean/.lake/packages`.
+  `lake env` hangs here, so call `lean` directly:
+  `LEAN_PATH="$(cat .leanpath)" ~/.elan/toolchains/leanprover--lean4---v4.36.0/bin/lean.exe CircuitLemmas/Basic.lean`.
+  For a file that imports `Basic`, first compile `Basic` with `-o .lake/build/lib/lean/CircuitLemmas/Basic.olean`,
+  then append `;.lake/build/lib/lean` to `LEAN_PATH`. Expect about 30 s per file.
+- **Desk keepalive:** `pequalnp-proofs/.pnp/keepalive.sh`, run from `pequalnp-proofs/` as
+  `bash .pnp/keepalive.sh <step> 300 6`.
+- **Workers:** the CPU has 24 threads. Use up to 22 worker threads in total, with one CPU-heavy
+  search at a time; split single-threaded work by case or by first gate so the threads stay busy.
+  Launch each job in the background with per-item progress in `sat-search/logs/`.
+- **Stopping jobs on Windows:** never wrap a Python Pool in `timeout`, which orphans workers. Stop a
+  job by its task ID, then list Python processes and kill your own leftover `spawn_main` workers by
+  explicit PID. Strip `\r` from PowerShell output before piping PIDs to `taskkill`.
+- **Coverage guard:** `cube_search.py` refuses rule combinations without coverage unless given
+  `--allow-unverified`. The verification harnesses pass it in order to test new combinations;
+  research runs stay on the allowlist. After adding coverage, regenerate it with
+  `python verify/inventory.py && python verify/make_allowlist.py`.
+
 ## Run a bounded experiment
 
 `research-batch/1` manifests contain a `decision` and a `jobs` list. Use

@@ -2,6 +2,10 @@
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+
+# Editor settings
+.vscode/
 
 # Separate repository (fork of brilliant-hq/pequalnp-proofs); has its own git history
 pequalnp-proofs/
@@ -20,6 +24,16 @@ sat-search/STOP
 sat-search/STOP_FILLER
 !sat-search/results/*.jsonl
 !sat-search/results/**/*.jsonl
+# New run output in logs/ stays local (logs already tracked stay tracked; use git add -f to keep one)
+sat-search/logs/**/*.out
+sat-search/logs/**/*.err
+sat-search/logs/16102-proof-shards/
+
+# Native build output
+sat-search/native/*.exe
+sat-search/native/*.pdb
+sat-search/native/*.obj
+sat-search/native/*.ilk
 
 # External baseline tools (cloned; exact commits recorded in sat-search/baselines/VERSIONS.md)
 external/

@@ -30,8 +30,8 @@ The workflow is the same in Claude Code and ChatGPT. Map the roles to models her
 ## Modes
 
 - **Desk mode** (a leased pequalnp unit, tools in `pequalnp-proofs/tools/pnp.sh`). The lease
-  deadline outranks the research priorities. Start `bash .pnp/keepalive.sh <step> 300 6` when
-  the step is taken. Run one CPU-heavy search at a time, and take proof-only steps in parallel.
+  deadline outranks the research priorities. Start `bash .pnp/keepalive.sh <step> 300 6` (in `pequalnp-proofs/`) when
+  the step is taken. Run one CPU-heavy search at a time (up to 22 threads), and take proof-only steps in parallel.
   When the exact packaged file passes `tools/pnp.sh check` and the axiom and `sorry` audit, and
   upstream has not merged the step, submitting is pre-authorized. Release undoable steps
   promptly with an honest reason.

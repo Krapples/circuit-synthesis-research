@@ -78,7 +78,7 @@ python-sat with a 300 s cap, which was never reached. Each DRUP proof was checke
 - 22/22 shards were UNSAT, and all 22 were independently verified (`s VERIFIED`). There were no timeouts and no SAT.
 - The longest solve took 21.7 s. The shards used 4,057,882 conflicts in total, and the DRUP proofs total 792 MB, with the largest at 71 MB.
 - As a cross-check, drat-trim converted shard 9 to LRAT, and the separate `lrat-check` reported `c VERIFIED`.
-- Raw CNFs, proofs and logs are in `sat-search/logs/16102-proof-shards/` and are not committed because of their size. They are
+- Raw CNFs and logs are in `sat-search/logs/16102-proof-shards/` and are not committed. The DRUP and LRAT proofs were deleted on 2026-11-27 to save 787 MB; the verifier outputs (`*.verify.txt`) remain. They are
   reproducible from the manifests: the CNF hashes are fixed, while the proofs are solver-dependent.
 
 The Mission 3 pruning (reader caps, pair caps and NOT boundary clauses) was **not needed** and was not integrated.
