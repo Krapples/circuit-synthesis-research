@@ -10,6 +10,9 @@ import time
 from pysat.solvers import Solver
 from pysat.card import CardEnc
 from monotone_frontier import monotone_frontier
+from ao2_restriction_bounds import (
+    append_direct_reader_caps, direct_reader_caps, read_once_lower_bound, support_lower_bound,
+)
 
 
 def fval(m, edges, x):
@@ -23,7 +26,8 @@ def simulate(N, gates, x):
     return w
 
 
-def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None):
+def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None, restrictions=0,
+          read_once_bound=False):
     wall_start = time.perf_counter()
     cpu_start = time.process_time()
     encode_seconds = 0.0
@@ -56,6 +60,11 @@ def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None):
         w = N + j
         readers = [sel[t][p] for t in range(j + 1, k) for p in sel[t] if w in p]
         cl.append(readers)
+    if restrictions:
+        lower = read_once_lower_bound if read_once_bound else support_lower_bound
+        cnt[0] = append_direct_reader_caps(
+            cl, sel, direct_reader_caps(F, k, restrictions, lower_bound=lower), cnt[0], CardEnc.atmost
+        )
     s = Solver(name='cadical195', bootstrap_with=cl)
     rows_added = set()
 

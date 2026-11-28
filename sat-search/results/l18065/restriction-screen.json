@@ -1,0 +1,60 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Compare support-based direct-reader caps for one and two fixed inputs against the same frontier encoding. Matched baseline rerun gives all variants the same 12-second cap and host conditions.",
+  "jobs": [
+    {
+      "id": "case-6-direct-0",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","6","--plain-budget","7","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","0"],
+      "query": {"task":"L18065","case":6,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":7,"rows":"frontier","solver":"cadical195","restriction_width":0,"wall_seconds":12},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    },
+    {
+      "id": "case-6-direct-1",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","6","--plain-budget","7","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","1"],
+      "query": {"task":"L18065","case":6,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":7,"rows":"frontier","solver":"cadical195","restriction_width":1,"wall_seconds":12},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    },
+    {
+      "id": "case-6-direct-2",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","6","--plain-budget","7","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","2"],
+      "query": {"task":"L18065","case":6,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":7,"rows":"frontier","solver":"cadical195","restriction_width":2,"wall_seconds":12},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    },
+    {
+      "id": "case-8-direct-0",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","8","--plain-budget","8","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","0"],
+      "query": {"task":"L18065","case":8,"m":4,"edges":[[0,0],[0,1],[1,1],[1,2],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"frontier","solver":"cadical195","restriction_width":0,"wall_seconds":12},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    },
+    {
+      "id": "case-8-direct-1",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","8","--plain-budget","8","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","1"],
+      "query": {"task":"L18065","case":8,"m":4,"edges":[[0,0],[0,1],[1,1],[1,2],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"frontier","solver":"cadical195","restriction_width":1,"wall_seconds":12},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    },
+    {
+      "id": "case-8-direct-2",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","8","--plain-budget","8","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","2"],
+      "query": {"task":"L18065","case":8,"m":4,"edges":[[0,0],[0,1],[1,1],[1,2],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"frontier","solver":"cadical195","restriction_width":2,"wall_seconds":12},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    }
+  ]
+}

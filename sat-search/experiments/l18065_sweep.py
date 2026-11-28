@@ -48,7 +48,7 @@ def graphs(m):
                 yield m, sorted(E)
 
 
-def work(report, m, edges, row_mode, plain_budget, conflict_limit):
+def work(report, m, edges, row_mode, plain_budget, conflict_limit, restrictions, read_once_bound):
     def publish(event, **data):
         snapshot = {key: data[key] for key in (
             "budget", "owned", "rows", "rounds", "conflicts", "verdict") if key in data}
@@ -56,7 +56,8 @@ def work(report, m, edges, row_mode, plain_budget, conflict_limit):
 
     def check(budget, owned):
         result = solve(m, edges, budget, owned, row_mode=row_mode, report=publish,
-                       conflict_limit=conflict_limit)
+                       conflict_limit=conflict_limit, restrictions=restrictions,
+                       read_once_bound=read_once_bound)
         publish("budget_result", budget=budget, owned=owned, **result)
         return result["verdict"]
 
@@ -81,6 +82,10 @@ def main():
     parser.add_argument("--list", action="store_true", help="List graph cases without solving")
     parser.add_argument("--plain-budget", type=int, help="Replay a fixed plain budget only")
     parser.add_argument("--rows", choices=("legacy", "frontier"), default="legacy")
+    parser.add_argument("--restrictions", type=int, choices=(0, 1, 2, 3), default=0,
+                        help="Bound direct gate readers of up to this many fixed inputs")
+    parser.add_argument("--read-once-bound", action="store_true",
+                        help="Strengthen cofactor bounds with a minterm/maxterm obstruction")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--wall", type=float, default=60.0, help="Hard seconds per graph")
     parser.add_argument("--heartbeat", type=float, default=5.0, help="Seconds between parent updates")
@@ -92,6 +97,8 @@ def main():
     for limit in (args.conflicts, args.plain_budget):
         if limit is not None and limit <= 0:
             parser.error("conflict and plain gate budgets must be positive")
+    if args.read_once_bound and not args.restrictions:
+        parser.error("--read-once-bound requires --restrictions")
     items = [g for m in sorted(set(args.sizes or [3, 4])) for g in graphs(m)]
     items.sort(key=lambda g: (g[0], len(g[1])))
     if any(not 0 <= case < len(items) for case in (args.case or [])):
@@ -103,10 +110,13 @@ def main():
             emit("graph", case=case, m=m, E=edges)
         return 0
     emit("run_start", graphs=len(jobs), rows=args.rows, wall=args.wall, workers=args.workers,
-         conflicts=args.conflicts, plain_budget=args.plain_budget, python=platform.python_version(),
+         conflicts=args.conflicts, plain_budget=args.plain_budget, restrictions=args.restrictions,
+         read_once_bound=args.read_once_bound, python=platform.python_version(),
          pysat=pysat.__version__, solver="cadical195")
     work_items = [
-        Job(case, (m, edges, args.rows, args.plain_budget, args.conflicts), {"m": m, "E": edges})
+        Job(case, (m, edges, args.rows, args.plain_budget, args.conflicts, args.restrictions,
+                   args.read_once_bound),
+            {"m": m, "E": edges})
         for case, (m, edges) in jobs
     ]
     return run_jobs(work_items, work, workers=args.workers, wall=args.wall, heartbeat=args.heartbeat)

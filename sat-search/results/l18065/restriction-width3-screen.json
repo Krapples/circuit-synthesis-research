@@ -1,0 +1,24 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Check whether adding three-input read-once cofactor cuts improves the 8-gate case within the same 12-second wall cap, with the 7-gate case as the solved control.",
+  "jobs": [
+    {
+      "id": "case-6-read-once-3",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","6","--plain-budget","7","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","3","--read-once-bound"],
+      "query": {"task":"L18065","case":6,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":7,"rows":"frontier","solver":"cadical195","restriction_width":3,"wall_seconds":12,"cofactor_bound":"read-once"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    },
+    {
+      "id": "case-8-read-once-3",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","8","--plain-budget","8","--rows","frontier","--wall","12","--heartbeat","2","--restrictions","3","--read-once-bound"],
+      "query": {"task":"L18065","case":8,"m":4,"edges":[[0,0],[0,1],[1,1],[1,2],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"frontier","solver":"cadical195","restriction_width":3,"wall_seconds":12,"cofactor_bound":"read-once"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial":19,"maximum":19}
+    }
+  ]
+}

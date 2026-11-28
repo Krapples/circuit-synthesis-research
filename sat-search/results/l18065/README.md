@@ -113,6 +113,6 @@ python -B sat-search/workflow/research.py run sat-search/results/l18065/triage-w
 ```
 
 Case indices apply to the specified sizes. The next decision is whether
-to test a single compatible gate-elimination or bypass rule on a hard
-plain budget with a matched baseline. The present sample supports
-keeping frontier rows opt-in.
+the [cofactor reader bounds](RESTRICTIONS.md) help on a wider set of complete
+monotone functions and synthesis budgets. The present sample supports keeping
+frontier rows and reader bounds opt-in.
