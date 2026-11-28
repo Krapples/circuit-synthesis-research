@@ -1,0 +1,49 @@
+{
+ "gap": {
+  "id": "L-meta-17889",
+  "title": "A step toward: 4-cycle-free bipartite incidence: every fan-in-two AND/OR circuit for it can be replaced by a two-level one (point ORs, line ORs, their ANDs, ORs) no larger (step 2 of 2)",
+  "statement": "\u2200 (x1 x2 : \u2115) (x3 : Finset (Fin x1 \u00d7 Fin x2)) (x4 : Fin x1 \u00d7 Fin x2) (x5 : PEqualNP.CircuitLowerBounds.Circuit), x4 \u2208 x3 \u2192 (fun (x7 : Finset (Fin x1 \u00d7 Fin x2)) (x8 : PEqualNP.CircuitLowerBounds.Circuit) => PEqualNP.TopForm.IsAO2 (x1 + x2) x8 \u2227 \u2200 (x9 : Fin (x1 + x2) \u2192 Bool), PEqualNP.MetaComplexity.circuitFun (x1 + x2) x8 x9 = Decidable.decide (\u2203 (x10 : Fin x1) (x11 : Fin x2), (x10, x11) \u2208 x7 \u2227 x9 (Fin.castAdd x2 x10) = Bool.true \u2227 x9 (Fin.natAdd x1 x11) = Bool.true)) x3 x5 \u2192 \u2203 (x8 : PEqualNP.CircuitLowerBounds.Circuit), x8.size < x5.size \u2227 (fun (x9 : Finset (Fin x1 \u00d7 Fin x2)) (x10 : PEqualNP.CircuitLowerBounds.Circuit) => PEqualNP.TopForm.IsAO2 (x1 + x2) x10 \u2227 \u2200 (x11 : Fin (x1 + x2) \u2192 Bool), PEqualNP.MetaComplexity.circuitFun (x1 + x2) x10 x11 = Decidable.decide (\u2203 (x12 : Fin x1) (x13 : Fin x2), (x12, x13) \u2208 x9 \u2227 x11 (Fin.castAdd x2 x12) = Bool.true \u2227 x11 (Fin.natAdd x1 x13) = Bool.true)) (x3.erase x4) x8",
+  "file": "lean/PEqualNP/Outside/L_meta_17889.lean",
+  "module": "PEqualNP.Outside.L_meta_17889",
+  "imports": [
+   "PEqualNP.Defs"
+  ],
+  "unlocks": "With its 1 sibling(s) it proves a posted step.",
+  "context": "A hypothesis of a checked reduction, as Lean printed it.",
+  "dead": [],
+  "weight": 100,
+  "parallel": 1,
+  "lane": "main",
+  "depth": 4,
+  "reductions": true,
+  "takes_cuts": false,
+  "sketch": "Step 2 of 2 of a checked cut of L-meta-8181. Its sibling steps: L-meta-17887. Together they give the parent; the parent's own sketch: Step 2 of 2 of a checked cut of L-meta-5373. Its sibling steps: L-meta-8179. Together they give the parent; the parent's own sketch: Step 2 of 2 of a checked cut of L-meta-3527. Its sibling steps: L-meta-5371. Together they give the parent; the parent's own sketch: Step 3 of 3 of a checked cut of L-meta-2872. Its sibling steps: L-meta-3523, L-meta-3525. Together they give the parent; the parent's own sketch: Step 1 of 2 of a checked cut of L-meta-2685. Its sibli",
+  "pr_open": 0,
+  "pr_numbers": [],
+  "unlocks_ids": [
+   "L-meta-8181"
+  ],
+  "level": "hard",
+  "held_now": false,
+  "holders_now": 0,
+  "offerable_now": false
+ },
+ "lease": {
+  "id": "f3451273-fc37-40b0-984c-97fc76e1700f",
+  "expires_at": "2026-11-28T00:18:45.530Z",
+  "renew": "POST /desk/beat?lease=f3451273-fc37-40b0-984c-97fc76e1700f",
+  "beat": "Renew every 5 minutes (POST the renew link). A 410 means stop: the step was withdrawn or proved.",
+  "release": "POST /desk/release?lease=f3451273-fc37-40b0-984c-97fc76e1700f&reason=<submitted|hypothesis_too_weak|missing_lemma|statement_seems_false|does_not_elaborate|exhausted|rechecked|recheck_failed|reduced|out_of_time|other>",
+  "terms": {
+   "kind": "prove",
+   "level": "hard",
+   "points": 191,
+   "reductions_open": false,
+   "issued_at": "2026-11-27T23:58:45.530Z"
+  }
+ },
+ "rule": "Never change a file that is already on main. Every proof is a NEW file; a recorded proof is final.",
+ "holding": 1,
+ "capacity": 4,
+ "capacity_note": "You hold 1 of 4 steps. 4 grows as your proofs are checked."
+}

@@ -80,6 +80,14 @@ Two synthesis encodings exclude the requested nine-gate circuit with a NOT readi
 The exclusion is computational evidence. [Exact syntax, coverage, and replay](results/mid_not_16102/README.md)
 Update (2026-11-26): Lean now proves that at least 8 binary gates are needed even with free NOTs (`SatBridge.Meta16102Aig.hA`, a first-gate recursion certificate over 95 tables, standard axioms only); `posted_core_closed` carries the reduction. It leaves only the nine-gate excess-3 core, and all 22 first-gate shards of that core have drat-trim-checked DRUP UNSAT proofs. The posted statement is existential and, on this evidence, false. It has no refute twin and is no longer on the desk board, so no upstream PR is possible. [Audit and certificates](results/mid_not_16102/core9_certificate_audit.md)
 
+L-meta-17889 (step 2 of 2 of a cut of L-meta-8181) is false as posted. Lean proves its negation
+(`not_L_meta_17889`, standard axioms only, statement copied verbatim from the desk JSON). The
+posted statement has no `NoFourCycle` hypothesis. Counterexample: `E = K_{2,2}`, erase `(0,0)`;
+`[OR 0 1, OR 2 3, AND 4 5]` computes `f_E` with 3 gates, but the remaining path function depends
+on all four inputs while an `IsAO2` circuit with at most 2 gates reads at most 3. Released as
+`statement_seems_false` on 2026-11-27. It has no refute twin, so nothing was submitted.
+[Refutation and reproduction](results/refutation_17889/README.md)
+
 For the Fano incidence function in L-meta-4874, Lean checked a 28-gate circuit with
 the required final AND and singleton constraints. A 28-gate lower bound applies to a
 factorized star-cover form. The unrestricted budget of 27 remains open.

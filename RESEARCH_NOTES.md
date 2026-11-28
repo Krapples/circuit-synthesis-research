@@ -27,6 +27,7 @@ Full statements: [desk step results](sat-search/NOTES_DESK_STEPS.md).
 | L-meta-11869 | Computational lower bound 17; Lean upper bound 30 | budget 20 |
 | L-meta-2216 | Lean: 62-gate construction; 62 lower bound for single-level graph-output cone | budget 61 |
 | L-meta-16102 | Lean: 8-gate monotone construction; ≥ 8 binary gates even with free NOTs; excess-3 core shards DRUP-checked UNSAT | posted statement false on this evidence; no PR possible |
+| L-meta-17889 | Lean: posted statement is false (K_{2,2} counterexample; the 4-cycle-free hypothesis was dropped); released | no refute twin; no PR possible |
 | L-meta-4874 | Lean: 28-gate circuit; 28 lower bound in factorized star-cover form | budget 27 |
 | L-meta-9063 | Merged reduction; 29-gate child L-meta-17643 merged | 28-gate child L-meta-17641 |
 | L-meta-3754 | Lean: clean-region accounting (`T - 1` ORs), singleton and two-overlap cases | remaining one-junk replacements, many-junk reduction |
