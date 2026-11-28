@@ -52,7 +52,7 @@ Each note ends with a "Quick-reference summary" table of its headline results.
 | [NOTES_THEORY_RESULTS](sat-search/NOTES_THEORY_RESULTS.md) | L-clb-036 degree bound, quadratic witness lookups, sparse routing, cubic cluster, Andreev projection, SAT weight slice, coupled first-gate audit, fork mode cores. |
 | [NOTES_SIGNED_MODULES](sat-search/NOTES_SIGNED_MODULES.md) | Signed regional bounds, provider-first projection, regional and phase-first completion, certificate prescreen, padding. |
 | [NOTES_FIRST_LAYER](sat-search/NOTES_FIRST_LAYER.md) | First-layer boundaries (tight, slack one to three), restriction certificates and counters, residual completion. |
-| [L18065 sweep triage](sat-search/results/l18065/README.md) | [Cofactor reader bounds](sat-search/results/l18065/RESTRICTIONS.md) reduced conflicts from 48,197 to 229 at one 7-gate budget. Certificate rank establishes the previously wall-limited case 8's plain AO2 minimum of nine, with a checked witness. |
+| [L18065 sweep triage](sat-search/results/l18065/README.md) | [Rank and terminal decomposition](sat-search/results/l18065/RANK_PREFLIGHT.md) establish the plain and owned AO2 minima of all 21 sweep graphs with checked witnesses. [Cofactor reader bounds](sat-search/results/l18065/RESTRICTIONS.md) remain opt-in. |
 | [NOTES_NATIVE](sat-search/NOTES_NATIVE.md), [NOTES_BASELINES](sat-search/NOTES_BASELINES.md) | Native C++ kernels; external AIG baselines. |
 | [NOTES_SYNTHESIS_BENCH](sat-search/NOTES_SYNTHESIS_BENCH.md), [NOTES_SYNTHESIS_FOLLOWUP](sat-search/NOTES_SYNTHESIS_FOLLOWUP.md) | Frozen corpus, endpoint verification, sharing hardness, regional certificates. |
 | [NOTES_PORT_CERTIFICATES](sat-search/NOTES_PORT_CERTIFICATES.md) | Port ranks, provider eligibility, global capacity. |

@@ -48,7 +48,8 @@ def graphs(m):
                 yield m, sorted(E)
 
 
-def work(report, m, edges, row_mode, plain_budget, conflict_limit, restrictions, read_once_bound):
+def work(report, m, edges, row_mode, plain_budget, conflict_limit, restrictions, read_once_bound,
+         root_rank, rank_cofactors, root_decomposition):
     def publish(event, **data):
         snapshot = {key: data[key] for key in (
             "budget", "owned", "rows", "rounds", "conflicts", "verdict") if key in data}
@@ -57,7 +58,8 @@ def work(report, m, edges, row_mode, plain_budget, conflict_limit, restrictions,
     def check(budget, owned):
         result = solve(m, edges, budget, owned, row_mode=row_mode, report=publish,
                        conflict_limit=conflict_limit, restrictions=restrictions,
-                       read_once_bound=read_once_bound)
+                       read_once_bound=read_once_bound, root_rank=root_rank,
+                       rank_cofactors=rank_cofactors, root_decomposition=root_decomposition)
         publish("budget_result", budget=budget, owned=owned, **result)
         return result["verdict"]
 
@@ -84,8 +86,15 @@ def main():
     parser.add_argument("--rows", choices=("legacy", "frontier"), default="legacy")
     parser.add_argument("--restrictions", type=int, choices=(0, 1, 2, 3), default=0,
                         help="Bound direct gate readers of up to this many fixed inputs")
-    parser.add_argument("--read-once-bound", action="store_true",
+    bounds = parser.add_mutually_exclusive_group()
+    bounds.add_argument("--read-once-bound", action="store_true",
                         help="Strengthen cofactor bounds with a minterm/maxterm obstruction")
+    bounds.add_argument("--rank-cofactors", action="store_true",
+                        help="Strengthen cofactor bounds with certificate rank")
+    parser.add_argument("--root-rank", action="store_true",
+                        help="Test the whole-function certificate-rank bound before encoding")
+    parser.add_argument("--root-decomposition", action="store_true",
+                        help="Try root rank and a bounded certificate decomposition before encoding")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--wall", type=float, default=60.0, help="Hard seconds per graph")
     parser.add_argument("--heartbeat", type=float, default=5.0, help="Seconds between parent updates")
@@ -99,6 +108,8 @@ def main():
             parser.error("conflict and plain gate budgets must be positive")
     if args.read_once_bound and not args.restrictions:
         parser.error("--read-once-bound requires --restrictions")
+    if args.rank_cofactors and not args.restrictions:
+        parser.error("--rank-cofactors requires --restrictions")
     items = [g for m in sorted(set(args.sizes or [3, 4])) for g in graphs(m)]
     items.sort(key=lambda g: (g[0], len(g[1])))
     if any(not 0 <= case < len(items) for case in (args.case or [])):
@@ -111,11 +122,14 @@ def main():
         return 0
     emit("run_start", graphs=len(jobs), rows=args.rows, wall=args.wall, workers=args.workers,
          conflicts=args.conflicts, plain_budget=args.plain_budget, restrictions=args.restrictions,
-         read_once_bound=args.read_once_bound, python=platform.python_version(),
+         read_once_bound=args.read_once_bound, root_rank=args.root_rank,
+         rank_cofactors=args.rank_cofactors, root_decomposition=args.root_decomposition,
+         python=platform.python_version(),
          pysat=pysat.__version__, solver="cadical195")
     work_items = [
         Job(case, (m, edges, args.rows, args.plain_budget, args.conflicts, args.restrictions,
-                   args.read_once_bound),
+                   args.read_once_bound, args.root_rank, args.rank_cofactors,
+                   args.root_decomposition),
             {"m": m, "E": edges})
         for case, (m, edges) in jobs
     ]

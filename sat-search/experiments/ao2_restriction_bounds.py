@@ -1,5 +1,6 @@
 """Bounds on gates that read fixed inputs in a complete AO2 circuit."""
 from itertools import combinations
+from certificate_rank import analyze
 from monotone_frontier import monotone_frontier
 
 
@@ -27,6 +28,19 @@ def read_once_lower_bound(table):
         for negative in maximal_false
     )
     return support - 1 + obstruction
+
+
+def frontier_rank_bound(positive, negative, universe):
+    """Return the certificate-rank result for a nonconstant complete function."""
+    if positive and negative:
+        return analyze(positive, (universe ^ row for row in negative))
+    return None
+
+
+def rank_lower_bound(table):
+    """Return a gate lower bound for a complete monotone truth table."""
+    result = frontier_rank_bound(*monotone_frontier(table), len(table) - 1)
+    return result.gates if result is not None else 0
 
 
 def direct_reader_caps(table, gates, width, *, lower_bound=support_lower_bound):

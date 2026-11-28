@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "experiments"))
-from ao2_restriction_bounds import direct_reader_caps, read_once_lower_bound
+from ao2_restriction_bounds import direct_reader_caps, rank_lower_bound, read_once_lower_bound
 
 
 def check_circuits(n, max_gates):
@@ -14,11 +14,13 @@ def check_circuits(n, max_gates):
     @lru_cache(maxsize=None)
     def caps(truth_bits, k):
         table = [bool(truth_bits & (1 << row)) for row in range(1 << n)]
-        assert read_once_lower_bound(table) <= k
+        assert read_once_lower_bound(table) <= rank_lower_bound(table) <= k
         baseline = dict(direct_reader_caps(table, k, 3))
         stronger = dict(direct_reader_caps(table, k, 3, lower_bound=read_once_lower_bound))
         assert all(stronger[mask] <= cap for mask, cap in baseline.items())
-        return stronger
+        ranked = dict(direct_reader_caps(table, k, 3, lower_bound=rank_lower_bound))
+        assert all(ranked[mask] <= cap for mask, cap in stronger.items())
+        return ranked
 
     def visit(wires, gates):
         k = len(gates)
@@ -41,6 +43,7 @@ def check_circuits(n, max_gates):
 if __name__ == "__main__":
     majority = [row.bit_count() >= 2 for row in range(8)]
     assert read_once_lower_bound(majority) == 3
+    assert rank_lower_bound(majority) == 4
     for n, k in ((3, 4), (4, 3)):
         circuits, truth_budget_pairs = check_circuits(n, k)
         print(f"{n} inputs through {k} gates: {circuits} circuits, {truth_budget_pairs} truth/budget pairs")

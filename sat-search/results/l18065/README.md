@@ -112,7 +112,8 @@ python -B sat-search/workflow/research.py run sat-search/results/l18065/triage.j
 python -B sat-search/workflow/research.py run sat-search/results/l18065/triage-wall.json --workers 1 --memory-mib 1024
 ```
 
-Case indices apply to the specified sizes. The next decision is whether
-the [cofactor reader bounds](RESTRICTIONS.md) help on a wider set of complete
-monotone functions and synthesis budgets. The present sample supports keeping
-frontier rows and reader bounds opt-in.
+Case indices apply to the specified sizes. Subsequent work tested
+[cofactor reader bounds](RESTRICTIONS.md) and
+[rank and terminal decomposition before full synthesis](RANK_PREFLIGHT.md).
+The latter record contains the exact minimum checker for the 21 sweep
+graphs and the matched results for stronger cofactor bounds.

@@ -6,13 +6,16 @@ CEGAR over input rows: UNSAT on a row subset is UNSAT on all rows (sound); SAT a
 verified on all 2^N rows before being reported.
 Invoked by l18065_sweep.py. The supervising process enforces wall limits.
 """
+from collections import Counter
 import time
 from pysat.solvers import Solver
 from pysat.card import CardEnc
 from monotone_frontier import monotone_frontier
 from ao2_restriction_bounds import (
-    append_direct_reader_caps, direct_reader_caps, read_once_lower_bound, support_lower_bound,
+    append_direct_reader_caps, direct_reader_caps, frontier_rank_bound, rank_lower_bound,
+    read_once_lower_bound, support_lower_bound,
 )
+from certificate_decomposition import complete_status
 
 
 def fval(m, edges, x):
@@ -27,7 +30,7 @@ def simulate(N, gates, x):
 
 
 def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None, restrictions=0,
-          read_once_bound=False):
+          read_once_bound=False, root_rank=False, rank_cofactors=False, root_decomposition=False):
     wall_start = time.perf_counter()
     cpu_start = time.process_time()
     encode_seconds = 0.0
@@ -37,6 +40,35 @@ def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None, restrict
     report("encoding", budget=k, owned=owned)
     N = 2 * m
     F = [fval(m, edges, x) for x in range(1 << N)]
+    screen_root = root_rank or root_decomposition
+    frontier = monotone_frontier(F) if screen_root or row_mode == "frontier" else None
+    if screen_root:
+        positive, negative = frontier
+        bound = frontier_rank_bound(positive, negative, len(F) - 1)
+        method = None
+        if bound is not None:
+            excess = k - (bound.gates - bound.excess)
+            if k < bound.gates:
+                method = "certificate_rank"
+            elif root_decomposition and 1 <= excess <= 3:
+                zeros = [(len(F) - 1) ^ row for row in negative]
+                stats = Counter()
+                report("certificate_decomposition", budget=k, owned=owned, excess=excess)
+                status = complete_status(positive, zeros, excess, regions=True, conflicts=500,
+                                         stats=stats)
+                report("certificate_decomposition_result", budget=k, owned=owned, excess=excess,
+                       status=status, conflicts=stats["conflicts"], patterns=stats["patterns"])
+                if status == "UNSAT":
+                    method = "certificate_decomposition"
+        if method is not None:
+            return {
+                "verdict": "UNSAT", "method": method, "witness": None,
+                "lower_bound": max(bound.gates, k + 1), "rank": bound.rank,
+                "excess_budget": excess, "rank_excess_lower_bound": bound.excess,
+                "rows": 0, "rounds": 0, "conflicts": 0, "solve_seconds": 0.0,
+                "wall_seconds": time.perf_counter() - wall_start,
+                "cpu_seconds": time.process_time() - cpu_start,
+            }
     cnt = [0]
     def new():
         cnt[0] += 1
@@ -61,7 +93,11 @@ def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None, restrict
         readers = [sel[t][p] for t in range(j + 1, k) for p in sel[t] if w in p]
         cl.append(readers)
     if restrictions:
-        lower = read_once_lower_bound if read_once_bound else support_lower_bound
+        lower = support_lower_bound
+        if rank_cofactors:
+            lower = rank_lower_bound
+        elif read_once_bound:
+            lower = read_once_lower_bound
         cnt[0] = append_direct_reader_caps(
             cl, sel, direct_reader_caps(F, k, restrictions, lower_bound=lower), cnt[0], CardEnc.atmost
         )
@@ -114,7 +150,7 @@ def solve(m, edges, k, owned, *, row_mode, report, conflict_limit=None, restrict
 
     try:
         if row_mode == "frontier":
-            positive, negative = monotone_frontier(F)
+            positive, negative = frontier
             seeds = sorted(positive + negative)
         else:
             seeds = [0] + sorted({(1 << a) | (1 << (m + b)) for a, b in edges})
