@@ -18,12 +18,16 @@ The workflow is the same in Claude Code and ChatGPT. Map the roles to models her
 - **Sol decides.** Sol selects and pins the target, classifies the bottleneck, designs proofs and
   reductions, assigns verification grades, and approves every submission. Sol reviews Luna's
   output before it is graded, committed, or submitted.
-- **Luna executes checkable tasks:** repository and prior-evidence scans, file and log summaries,
-  desk, lease, PR and CI status, batch launches from a Sol-written manifest, and the mechanical
-  submission checklist in [PROOF_WORKFLOW.md](sat-search/workflow/PROOF_WORKFLOW.md#package-and-submit).
-  Give Luna an exact scope, the output format, and a word limit. Luna reports facts with paths
-  and line numbers, and returns an "open" verdict when unsure. Luna never weakens a statement,
-  changes a target, or assigns a grade above "computationally tested".
+- **Luna executes checkable tasks:** repository, doc and prior-evidence scans, file and log summaries,
+  desk, lease, PR and CI status, the first error and goal of a Lean build, verbatim statement or
+  negation files generated from desk JSON, staged-diff hygiene checks, batch launches from a
+  Sol-written manifest, and the mechanical submission checklist in
+  [PROOF_WORKFLOW.md](sat-search/workflow/PROOF_WORKFLOW.md#package-and-submit).
+  Sol delegates every sweep of several files to Luna; a single read of a known path stays with Sol.
+  Give Luna exact paths, the output format, and a word limit, and reuse one Luna for follow-ups.
+  Luna reports facts with paths and line numbers, and returns an "open" verdict when unsure.
+  Luna never weakens a statement, changes a target, or assigns a grade above "computationally
+  tested".
 - When Claude and ChatGPT both work on a question, their Sols split it into theory and
   implementation/independent review, and they hand off through the repository record.
 
