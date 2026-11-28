@@ -11,6 +11,16 @@ inputs, sharing allowance and excess, symmetry and canonicalization, reader and 
 support restrictions, partial-label structure, dynamic programming, regional decomposition,
 incremental SAT, certificate completion, and alternative encodings or solver portfolios.
 
+For complete monotone targets in a monotone circuit basis, test encoding
+only minimal true and maximal false assignments. The
+[truth-table frontier helper](../experiments/monotone_frontier.py) checks
+the table's monotonicity and computes both sets. Every positive input is
+above a minimal true row and every negative input is below a maximal
+false row. In a monotone circuit this forces the correct output on the
+whole table. The same argument covers required monotone internal signals
+that must vanish on false inputs. Keep independent full-input witness
+evaluation and compare with the existing encoding on matched budgets.
+
 ## Choose the solver and settings for the instance
 
 Do this before any long run. Solver performance depends on the instance family, so no one setting

@@ -101,6 +101,43 @@ grades. The runner does not import historical experiments. Consult their documen
 before scheduling fresh experiments. Partial output is retained, with no automatic carry-over
 of cube exclusions. For long studies use individually bounded, independently checked shards.
 
+### Observe phases inside a search
+
+Use [supervise.py](supervise.py) for an in-process Python or native-library
+search whose call can block past its internal checks. Pass independent
+`Job` records and a module-level worker to `run_jobs` from a guarded
+`__main__` entry point. The worker accepts `report`, returns a result
+dictionary, and can publish phase snapshots before blocking calls.
+The parent emits case starts, flushed heartbeats, results, and separate
+wall-limit and worker-error events. It terminates only the worker it
+started. Use [run_logged](common.py) when the command starts a subprocess
+tree. [L18065](../results/l18065/README.md) shows an integration.
+
+With `sat-search` on the import path:
+
+```python
+from workflow.supervise import Job, run_jobs
+
+
+def worker(report, instance):
+    report("encoding", phase={"name": "encoding"})
+    encoding = build_encoding(instance)
+    report("solving", phase={"name": "solving"})
+    return {"verdict": solve(encoding)}
+
+
+if __name__ == "__main__":
+    jobs = [Job("pilot", (instance,), {})]
+    raise SystemExit(run_jobs(jobs, worker, workers=1, wall=20, heartbeat=2))
+```
+
+Record budget, phase, row and round counts, and the last available
+solver counters in the snapshot. A heartbeat confirms the parent is
+responsive and identifies the phase the worker entered. Counters remain
+at their last sampled values during a blocking call. Record encoding,
+solve and witness-evaluation times, and distinguish wall limits, solver
+limits, verdicts, and worker errors in result data.
+
 Run independent jobs in a background terminal or command session and retrieve the summary when
 needed. For PowerShell, from the workspace root:
 

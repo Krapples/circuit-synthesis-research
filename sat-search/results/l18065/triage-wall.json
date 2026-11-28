@@ -1,0 +1,42 @@
+{
+  "schema": "research-batch/1",
+  "decision": "The 25k-conflict screen localized cost to solving but decided no budgets. Check whether frontier rows finish the comparison and first hard case under the same 20-second wall cap without a conflict cap.",
+  "jobs": [
+    {
+      "id": "case-6-legacy-wall",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/l18065_sweep.py", "3", "4", "--case", "6", "--plain-budget", "7", "--rows", "legacy", "--wall", "20", "--heartbeat", "2"],
+      "query": {"task": "L18065", "case": 6, "m": 4, "edges": [[0, 0], [0, 1], [1, 1], [2, 2], [3, 3]], "basis": "plain-exact-live-AO2", "budget": 7, "rows": "legacy", "solver": "cadical195", "wall_seconds": 20, "scope": "complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-6-frontier-wall",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/l18065_sweep.py", "3", "4", "--case", "6", "--plain-budget", "7", "--rows", "frontier", "--wall", "20", "--heartbeat", "2"],
+      "query": {"task": "L18065", "case": 6, "m": 4, "edges": [[0, 0], [0, 1], [1, 1], [2, 2], [3, 3]], "basis": "plain-exact-live-AO2", "budget": 7, "rows": "frontier", "solver": "cadical195", "wall_seconds": 20, "scope": "complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-8-legacy-wall",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/l18065_sweep.py", "3", "4", "--case", "8", "--plain-budget", "8", "--rows", "legacy", "--wall", "20", "--heartbeat", "2"],
+      "query": {"task": "L18065", "case": 8, "m": 4, "edges": [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [3, 3]], "basis": "plain-exact-live-AO2", "budget": 8, "rows": "legacy", "solver": "cadical195", "wall_seconds": 20, "scope": "complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-8-frontier-wall",
+      "kind": "command",
+      "argv": ["python", "-B", "sat-search/experiments/l18065_sweep.py", "3", "4", "--case", "8", "--plain-budget", "8", "--rows", "frontier", "--wall", "20", "--heartbeat", "2"],
+      "query": {"task": "L18065", "case": 8, "m": 4, "edges": [[0, 0], [0, 1], [1, 1], [1, 2], [2, 2], [3, 3]], "basis": "plain-exact-live-AO2", "budget": 8, "rows": "frontier", "solver": "cadical195", "wall_seconds": 20, "scope": "complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    }
+  ]
+}

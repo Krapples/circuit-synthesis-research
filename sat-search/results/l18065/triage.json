@@ -1,0 +1,60 @@
+{
+  "schema": "research-batch/1",
+  "decision": "Locate the cost of the L18065 fixed-budget plain AO2 checks and compare frontier rows against the legacy CEGAR seeds at matched bounds.",
+  "jobs": [
+    {
+      "id": "case-6-legacy",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","6","--plain-budget","7","--rows","legacy","--wall","20","--heartbeat","2","--conflicts","25000"],
+      "query": {"task":"L18065","case":6,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":7,"rows":"legacy","solver":"cadical195","conflicts":25000,"wall_seconds":20,"scope":"complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-6-frontier",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","6","--plain-budget","7","--rows","frontier","--wall","20","--heartbeat","2","--conflicts","25000"],
+      "query": {"task":"L18065","case":6,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":7,"rows":"frontier","solver":"cadical195","conflicts":25000,"wall_seconds":20,"scope":"complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-8-legacy",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","8","--plain-budget","8","--rows","legacy","--wall","20","--heartbeat","2","--conflicts","25000"],
+      "query": {"task":"L18065","case":8,"m":4,"edges":[[0,0],[0,1],[1,1],[1,2],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"legacy","solver":"cadical195","conflicts":25000,"wall_seconds":20,"scope":"complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-8-frontier",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","8","--plain-budget","8","--rows","frontier","--wall","20","--heartbeat","2","--conflicts","25000"],
+      "query": {"task":"L18065","case":8,"m":4,"edges":[[0,0],[0,1],[1,1],[1,2],[2,2],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"frontier","solver":"cadical195","conflicts":25000,"wall_seconds":20,"scope":"complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-9-legacy",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","9","--plain-budget","8","--rows","legacy","--wall","20","--heartbeat","2","--conflicts","25000"],
+      "query": {"task":"L18065","case":9,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[2,3],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"legacy","solver":"cadical195","conflicts":25000,"wall_seconds":20,"scope":"complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    },
+    {
+      "id": "case-9-frontier",
+      "kind": "command",
+      "argv": ["python","-B","sat-search/experiments/l18065_sweep.py","3","4","--case","9","--plain-budget","8","--rows","frontier","--wall","20","--heartbeat","2","--conflicts","25000"],
+      "query": {"task":"L18065","case":9,"m":4,"edges":[[0,0],[0,1],[1,1],[2,2],[2,3],[3,3]],"basis":"plain-exact-live-AO2","budget":8,"rows":"frontier","solver":"cadical195","conflicts":25000,"wall_seconds":20,"scope":"complete bipartite edge function; output cone with distinct binary operands"},
+      "workers": 1,
+      "memory_mib": 512,
+      "timeout": {"initial": 27, "maximum": 27}
+    }
+  ]
+}
